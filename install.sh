@@ -14,6 +14,7 @@ mkdir -p "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d"
 ln -sf "$DOTFILES/fish/config.fish" "$HOME/.config/fish/config.fish"
 ln -sf "$DOTFILES/fish/functions/brewsync.fish" "$HOME/.config/fish/functions/brewsync.fish"
 ln -sf "$DOTFILES/fish/functions/edit.fish" "$HOME/.config/fish/functions/edit.fish"
+ln -sf "$DOTFILES/fish/functions/dotpush.fish" "$HOME/.config/fish/functions/dotpush.fish"
 
 # Brewfile
 ln -sf "$DOTFILES/Brewfile" "$HOME/Brewfile"
