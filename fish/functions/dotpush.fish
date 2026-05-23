@@ -4,7 +4,7 @@ function dotpush --description "Commit and push dotfiles with a message"
         return 1
     end
 
-    set -l dotfiles $HOME/dotfiles
+    set -l dotfiles $HOME/.dotfiles-mac
 
     cd $dotfiles
     git add -A
