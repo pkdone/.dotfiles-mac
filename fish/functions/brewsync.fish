@@ -1,6 +1,6 @@
 function brewsync --description "Install, update, and clean up Homebrew packages"
     echo "📦 Bundling from Brewfile..."
-    brew bundle --file ~/dotfiles/Brewfile
+    brew bundle --file ~/.dotfiles-mac/Brewfile
 
     echo ""
     echo "⬆️  Updating & upgrading..."

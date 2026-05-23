@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-DOTFILES="$HOME/dotfiles"
+DOTFILES="$HOME/.dotfiles-mac"
 
 echo "🔗 Creating symlinks..."
 
