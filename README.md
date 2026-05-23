@@ -12,7 +12,7 @@ Personal macOS dotfiles for fish, ghostty, and Homebrew.
 ## New machine setup
 
 ```bash
-git clone git@github.com:pdone/dotfiles-mac.git ~/.dotfiles-mac
+git clone git@github.com:pkdone/.dotfiles-mac.git ~/.dotfiles-mac
 bash ~/.dotfiles-mac/install.sh
 ```
 
