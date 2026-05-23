@@ -16,9 +16,6 @@ ln -sf "$DOTFILES/fish/functions/brewsync.fish" "$HOME/.config/fish/functions/br
 ln -sf "$DOTFILES/fish/functions/edit.fish" "$HOME/.config/fish/functions/edit.fish"
 ln -sf "$DOTFILES/fish/functions/dotpush.fish" "$HOME/.config/fish/functions/dotpush.fish"
 
-# Brewfile
-ln -sf "$DOTFILES/Brewfile" "$HOME/Brewfile"
-
 echo ""
 echo "🍺 Installing from Brewfile..."
 if ! command -v brew &>/dev/null; then
