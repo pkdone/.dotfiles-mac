@@ -27,3 +27,11 @@ dotpush "your message"
 ```
 
 To install new packages, add them to `Brewfile` and run `brewsync`.
+
+## Fish functions
+
+| Function | Description |
+|----------|-------------|
+| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile |
+| `dotpush` | Commits and pushes all dotfile changes to GitHub in one command |
+| `edit` | Opens a file in CotEditor |
