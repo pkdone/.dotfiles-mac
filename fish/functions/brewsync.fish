@@ -20,7 +20,7 @@ function brewsync --description "Install, update, and clean up Homebrew packages
 
     echo ""
     echo "✅ Checking bundle..."
-    brew bundle check --file ~/dotfiles/Brewfile
+    brew bundle check --file ~/.dotfiles-mac/Brewfile
 
     echo ""
     echo "🎉 Done! Everything is fresh."
