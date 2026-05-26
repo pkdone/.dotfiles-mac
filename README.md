@@ -1,6 +1,6 @@
 # dotfiles-mac
 
-Personal macOS dotfiles for fish, ghostty, and Homebrew.
+Personal macOS dotfiles and bootstrap setup.
 
 ## Contents
 
