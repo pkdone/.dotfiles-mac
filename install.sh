@@ -16,6 +16,13 @@ ln -sf "$DOTFILES/fish/functions/brewsync.fish" "$HOME/.config/fish/functions/br
 ln -sf "$DOTFILES/fish/functions/edit.fish" "$HOME/.config/fish/functions/edit.fish"
 ln -sf "$DOTFILES/fish/functions/dotpush.fish" "$HOME/.config/fish/functions/dotpush.fish"
 
+# Mise
+mkdir -p "$HOME/.config/mise"
+ln -sf "$DOTFILES/mise/config.toml" "$HOME/.config/mise/config.toml"
+
+# Git
+ln -sf "$DOTFILES/gitconfig" "$HOME/.gitconfig"
+
 echo ""
 echo "🍺 Installing from Brewfile..."
 if ! command -v brew &>/dev/null; then

@@ -1,0 +1,13 @@
+[user]
+	name = Paul Done
+	email = paul.done@anysphere.co
+[init]
+	defaultBranch = main
+[pull]
+	ff = only
+[core]
+	editor = cursor --wait
+[push]
+	autoSetupRemote = true
+[credential]
+	helper = osxkeychain
