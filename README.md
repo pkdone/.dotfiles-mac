@@ -20,6 +20,12 @@ bash ~/.dotfiles-mac/install.sh
 
 This creates symlinks from `~/.config` into this repo and installs everything in the Brewfile.
 
+After running, trust the `mise` config to silence its warnings:
+
+```bash
+mise trust ~/.dotfiles-mac/mise/config.toml
+```
+
 ## Day-to-day
 
 Edit configs normally — changes go directly into the repo via symlinks. Then push:
