@@ -5,8 +5,8 @@ Personal macOS dotfiles and bootstrap setup.
 ## Contents
 
 - `Brewfile` — all Homebrew packages and casks
-- `fish/` — fish shell config and functions
-- `ghostty/` — ghostty terminal config
+- `fish/` — Fish shell config and functions
+- `ghostty/` — Ghostty terminal config
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned default tool versions (Node, npm)
 - `install.sh` — bootstraps a new machine
@@ -185,3 +185,29 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 | Delete to start of line | Control \+ U |
 | Interrupt process | Control \+ C |
 | Navigate by word | Option \+ Left / Right (may require terminal-specific config) |
+
+### **Ghostty**
+
+Custom keybindings configured in `ghostty/config`.
+
+| Action | Shortcut |
+| :---- | :---- |
+| Toggle fullscreen | Command \+ Enter |
+| Clear screen | Command \+ K |
+| New tab | Command \+ T |
+| Next tab | Control \+ Tab |
+| Previous tab | Control \+ Shift \+ Tab |
+| New split (right) | Command \+ D |
+| New split (down) | Command \+ Shift \+ D |
+| Close surface (tab/split) | Command \+ W |
+| Go to previous split | Command \+ \[ |
+| Go to next split | Command \+ \] |
+| Resize split up | Command \+ Control \+ Up Arrow |
+| Resize split down | Command \+ Control \+ Down Arrow |
+| Resize split left | Command \+ Control \+ Left Arrow |
+| Resize split right | Command \+ Control \+ Right Arrow |
+| Equalize splits | Command \+ Control \+ = |
+| Start search | Command \+ F |
+| End search | Escape |
+| Next search result | Command \+ G |
+| Previous search result | Command \+ Shift \+ G |
