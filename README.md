@@ -85,6 +85,13 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 |------|---------|-------|
 | Mode | General - Font | Monospaced |
 
+## **Fish Commands Configured**
+
+* **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
+* **dotpush \<file\>**  \-  Commits and pushes all dotfile changes to GitHub in one command  
+* **edit \<file\>**  \-  Opens a file in CotEditor
+
+---
 
 ## **macOS Shortcuts**
 
@@ -159,9 +166,3 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 | Delete to start of line | Control \+ U |
 | Interrupt process | Control \+ C |
 | Navigate by word | Option \+ Left / Right (may require terminal-specific config) |
-
-## **Fish Commands Configured**
-
-* **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
-* **dotpush \<file\>**  \-  Commits and pushes all dotfile changes to GitHub in one command  
-* **edit \<file\>**  \-  Opens a file in CotEditor
