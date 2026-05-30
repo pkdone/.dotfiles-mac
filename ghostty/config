@@ -16,12 +16,6 @@ keybind = global:cmd+backquote=toggle_quick_terminal
 #window-width = 90
 #unfocused-split-opacity = 0.75
 #unfocused-split-fill = #000000
-#keybind = super+ctrl+p=new_split:right
-#keybind = super+ctrl+o=new_split:down
-#keybind = super+ctrl+left=goto_split:left
-#keybind = super+ctrl+right=goto_split:right
-#keybind = super+ctrl+up=goto_split:top
-#keybind = super+ctrl+down=goto_split:bottom
-#keybind = super+ctrl+w=close_surface
+
 
 # Re-load config in Ghotty:  Command + Shift + ,

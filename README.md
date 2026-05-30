@@ -211,3 +211,4 @@ Custom keybindings configured in `ghostty/config`.
 | End search | Escape |
 | Next search result | Command \+ G |
 | Previous search result | Command \+ Shift \+ G |
+| Reload config | Command \+ Shift \+ , |
