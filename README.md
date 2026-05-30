@@ -55,7 +55,11 @@ dscacheutil -flushcache
 
 ## Manual macOS tweaks
 
-These System Settings adjustments aren't automated — apply them by hand on a fresh machine to match this setup.
+These settings adjustments aren't automated — apply them by hand on a fresh machine to match this setup.
+
+### System Settings
+
+In Systems Settings:
 
 | Area | Setting | Value |
 |------|---------|-------|
@@ -76,3 +80,92 @@ These System Settings adjustments aren't automated — apply them by hand on a f
 | Trackpad | Point & Click - Lookup & Data Detectors | off |
 | Trackpad | Point & Click - Secondary click | Click in bottom right corner |
 | User & Groups | Paul Done icon | Dog |
+
+### CotEditor
+
+In CotEditor settings:
+
+| Area | Setting | Value |
+|------|---------|-------|
+| Mode | General - Font | Monospaced |
+
+
+## **macOS Shortcuts**
+
+Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line navigation, and Option (⌥) for semantic movements and word navigation. The Control (^) key is reserved for system functions (Lock Screen, Mission Control), screenshot-to-clipboard actions, and Linux/Emacs-style navigation in Terminal (e.g., Control \+ A). These patterns apply to most native macOS applications and text fields (such as Slack or browser bars).
+
+### **Text Navigation and Editing**
+
+| Action | Shortcut |
+| :---- | :---- |
+| Start of line | Command \+ Left Arrow |
+| End of line | Command \+ Right Arrow |
+| Previous word | Option \+ Left Arrow |
+| Next word | Option \+ Right Arrow |
+| Select to start of line | Shift \+ Command \+ Left Arrow |
+| Select to end of line | Shift \+ Command \+ Right Arrow |
+| Select previous word | Shift \+ Option \+ Left Arrow |
+| Select next word | Shift \+ Option \+ Right Arrow |
+| Select all | Command \+ A |
+| Paste without formatting | Command \+ Shift \+ V |
+| Delete character after cursor (Fwd Delete) | Fn \+ Delete |
+| Delete previous word | Option \+ Delete |
+| Delete next word | Fn \+ Option \+ Delete |
+| Delete to start of line | Command \+ Delete |
+
+### **Document Navigation and Selection**
+
+| Action | Shortcut |
+| :---- | :---- |
+| Start of document | Command \+ Up Arrow |
+| End of document | Command \+ Down Arrow |
+| Select to start of document | Shift \+ Command \+ Up Arrow |
+| Select to end of document | Shift \+ Command \+ Down Arrow |
+| Page Up | Fn \+ Up Arrow |
+| Page Down | Fn \+ Down Arrow |
+
+### **Screenshot Actions**
+
+**Pro Tip:** Adding the **Control** key to any of the following shortcuts copies the image to the clipboard instead of saving a file.
+
+| Capture Type | Save to File | Copy to Clipboard |
+| :---- | :---- | :---- |
+| Whole screen | Shift \+ Command \+ 3 | Control \+ Shift \+ Command \+ 3 |
+| Selected area | Shift \+ Command \+ 4 (+ drag) | Control \+ Shift \+ Command \+ 4 (+ drag) |
+| Selected window | Shift \+ Command \+ 4 \+ Space | Control \+ Shift \+ Command \+ 4 \+ Space |
+| Screen Copy Options panel | Shift \+ Command \+ 5 | N/A |
+
+### **System and Utility Actions**
+
+| Action | Shortcut / Gesture |
+| :---- | :---- |
+| Spotlight Search | Command \+ Space |
+| Lock Screen | Control \+ Command \+ Q OR TouchID press |
+| App Switcher | Command \+ Tab |
+| AltTab Switcher | Option \+ Tab |
+| Mission Control / Desktop Overview | Control \+ Up Arrow OR 3-Finger Swipe Up |
+| Switch Desktops | 3-Finger Swipe Up/Sideways |
+| Show Desktop | F11 OR Click desktop space |
+| Move Item to Trash | Command \+ Backspace (in Finder/Desktop) |
+| Show/hide hidden files in Finder | Command \+ Shift \+ . |
+| Ghostty Quick Launcher | Command \+ \`  (if running) |
+| Claude Chat | Option, Optoon (i.e., double-tap) |
+| ChatGPT | Option \+ Space |
+
+### **Terminal and Shell Differences**
+
+Terminal applications often use Linux/Emacs-style bindings, which override standard macOS behavior.
+
+| Terminal Action | Shortcut |
+| :---- | :---- |
+| Start of line | Control \+ A |
+| End of line | Control \+ E |
+| Delete to start of line | Control \+ U |
+| Interrupt process | Control \+ C |
+| Navigate by word | Option \+ Left / Right (may require terminal-specific config) |
+
+### **Fish Commands Configured**
+
+* **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
+* **dotpush \<file\>**  \-  Commits and pushes all dotfile changes to GitHub in one command  
+* **edit \<file\>**  \-  Opens a file in CotEditor
