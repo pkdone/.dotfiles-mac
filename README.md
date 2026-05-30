@@ -82,6 +82,7 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Trackpad | Point & Click - Tap to click | On |
 | Trackpad | More Gestures - Three-finger drag | Off |
 | Accessibility | Pointer Control — Trackpad Options — Use trackpad for dragging | On (Without Drag Lock) |
+| Accessibility | Display — Pointer — Pointer size | One notch above Normal |
 | User & Groups | Paul Done icon | Dog |
 | Control Center | Clock — Show AM/PM | On |
 | Control Center | Clock — Show day of week | On |
