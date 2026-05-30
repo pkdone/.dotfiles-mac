@@ -59,8 +59,6 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 
 ### System Settings
 
-In Systems Settings:
-
 | Area | Setting | Value |
 |------|---------|-------|
 | Apple Account | ID | pkdone.apple@icloud.com |
@@ -82,8 +80,6 @@ In Systems Settings:
 | User & Groups | Paul Done icon | Dog |
 
 ### CotEditor
-
-In CotEditor settings:
 
 | Area | Setting | Value |
 |------|---------|-------|
@@ -164,7 +160,7 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 | Interrupt process | Control \+ C |
 | Navigate by word | Option \+ Left / Right (may require terminal-specific config) |
 
-### **Fish Commands Configured**
+## **Fish Commands Configured**
 
 * **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
 * **dotpush \<file\>**  \-  Commits and pushes all dotfile changes to GitHub in one command  
