@@ -94,6 +94,14 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Mode | General - Font | Monospaced |
 | Appearance | Default theme | Anura (Dark) |
 
+### AltTab
+
+| Area | Setting | Value |
+|------|---------|-------|
+| Controls | Show windows from Spaces | Visible Spaces |
+| Controls | Show apps with no open window | Hide |
+| Exceptions | Slack | Hide windows |
+
 ## **Fish Commands Configured**
 
 * **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
