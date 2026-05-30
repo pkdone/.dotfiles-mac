@@ -66,6 +66,8 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Displays | Built-in Display | More Space | 
 | Dock | Icon size | Smaller than default (~46px) |
 | Dock | Show recent applications | Off |
+| Dock | Hot corner — bottom right | Quick Note |
+| Dock | Auto-rearrange Spaces based on most recent use | Off |
 | Sound | Play feedback when sound is changed | On |
 | Finder | Default view | Icon view |
 | Finder | Show hard drives on Desktop | Off |
@@ -77,13 +79,19 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Trackpad | Point & click - click | Light |
 | Trackpad | Point & Click - Lookup & Data Detectors | off |
 | Trackpad | Point & Click - Secondary click | Click in bottom right corner |
+| Trackpad | Point & Click - Tap to click | On |
+| Trackpad | More Gestures - Three-finger drag | Off |
 | User & Groups | Paul Done icon | Dog |
+| Control Center | Clock — Show AM/PM | On |
+| Control Center | Clock — Show day of week | On |
+| Control Center | Clock — Show date | On |
 
 ### CotEditor
 
 | Area | Setting | Value |
 |------|---------|-------|
 | Mode | General - Font | Monospaced |
+| Appearance | Default theme | Anura (Dark) |
 
 ## **Fish Commands Configured**
 
@@ -152,7 +160,8 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Move Item to Trash | Command \+ Backspace (in Finder/Desktop) |
 | Show/hide hidden files in Finder | Command \+ Shift \+ . |
 | Ghostty Quick Launcher | Command \+ \`  (if running) |
-| Claude Chat | Option, Optoon (i.e., double-tap) |
+| Claude Browser | Command \+E (in Chrome) |
+| Claude Chat | Option, Option (i.e., double-tap) |
 | ChatGPT | Option \+ Space |
 
 ### **Terminal and Shell Differences**
