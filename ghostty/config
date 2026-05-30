@@ -1,5 +1,4 @@
 shell-integration = fish
-copy-on-select = clipboard
 confirm-close-surface = false
 
 shell-integration-features = no-cursor
@@ -12,10 +11,6 @@ background = #111111
 
 keybind = global:cmd+backquote=toggle_quick_terminal
 
-#window-height = 60
-#window-width = 90
-#unfocused-split-opacity = 0.75
-#unfocused-split-fill = #000000
+unfocused-split-opacity = 0.75
+unfocused-split-fill = #000000
 
-
-# Re-load config in Ghotty:  Command + Shift + ,
