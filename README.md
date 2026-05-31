@@ -161,6 +161,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Action | Shortcut / Gesture |
 | :---- | :---- |
 | Spotlight Search | Command \+ Space |
+| Open settings (preferences) for the front app | Command \+ , |
 | Lock Screen | Control \+ Command \+ Q OR TouchID press |
 | App Switcher | Command \+ Tab |
 | AltTab Switcher | Option \+ Tab |
