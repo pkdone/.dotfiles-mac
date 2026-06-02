@@ -66,7 +66,6 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Displays | Built-in Display | More Space | 
 | Dock | Icon size | Smaller than default (~46px) |
 | Dock | Show recent applications | Off |
-| Dock | Hot corner — bottom right | Quick Note |
 | Dock | Auto-rearrange Spaces based on most recent use | Off |
 | Sound | Play feedback when sound is changed | On |
 | Finder | Default view | Icon view |
@@ -80,13 +79,19 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Trackpad | Point & Click - Lookup & Data Detectors | off |
 | Trackpad | Point & Click - Secondary click | Click in bottom right corner |
 | Trackpad | Point & Click - Tap to click | On |
-| Trackpad | More Gestures - Three-finger drag | Off |
 | Accessibility | Pointer Control — Trackpad Options — Use trackpad for dragging | On (Without Drag Lock) |
 | Accessibility | Display — Pointer — Pointer size | One notch above Normal |
 | User & Groups | Paul Done icon | Dog |
 | Control Center | Clock — Show AM/PM | On |
 | Control Center | Clock — Show day of week | On |
 | Control Center | Clock — Show date | On |
+
+### Finder
+
+| Area | Setting | Value |
+|------|---------|-------|
+| General | New Finder windows show | Home folder |
+| Sidebar | Show Recents | Off |
 
 ### CotEditor
 
@@ -161,7 +166,8 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Action | Shortcut / Gesture |
 | :---- | :---- |
 | Spotlight Search | Command \+ Space |
-| Open settings (preferences) for the front app | Command \+ , |
+| Open settings in current app | Command \+ , |
+| Tile windows when dragging | Option \+ |
 | Lock Screen | Control \+ Command \+ Q OR TouchID press |
 | App Switcher | Command \+ Tab |
 | AltTab Switcher | Option \+ Tab |
