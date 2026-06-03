@@ -172,11 +172,10 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | App Switcher | Command \+ Tab |
 | AltTab Switcher | Option \+ Tab |
 | Mission Control / Desktop Overview | Control \+ Up Arrow OR 3-Finger Swipe Up |
-| Switch Desktops | 3-Finger Sideways |
 | Show Desktop | F11 OR Click desktop space |
 | Move Item to Trash | Command \+ Backspace (in Finder/Desktop) |
 | Show/hide hidden files in Finder | Command \+ Shift \+ . |
-| Ghostty Quick Launcher | Command \+ \`  (if running) |
+| Ghostty Quick Launcher | Command \+ \` |
 | Claude Browser | Command \+E (in Chrome) |
 | Claude Chat | Option, Option (i.e., double-tap) |
 | ChatGPT | Option \+ Space |
