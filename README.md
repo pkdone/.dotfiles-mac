@@ -108,6 +108,20 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Controls | Show apps with no open window | Hide |
 | Exceptions | Slack | Hide windows |
 
+### Raycast
+
+On first launch, complete onboarding and pick `Option + Space` as the Raycast activation hotkey (leave `Command + Space` for Spotlight).
+
+To bind a global hotkey for activating Finder from anywhere:
+
+1. Open Raycast (`Option + Space`)
+2. Type **Finder** until "Finder" appears as a command result
+3. Highlight it and press `Command + K` (Actions menu)
+4. Choose **Configure Application…**
+5. Click the **Record Hotkey** field and press `Shift + Control + Command + F`
+
+This bypasses the macOS App Shortcuts limitation that only triggers when the target app is already focused.
+
 ## **Fish Commands Configured**
 
 * **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
@@ -172,7 +186,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | App Switcher | Command \+ Tab |
 | AltTab Switcher | Option \+ Tab |
 | Mission Control / Desktop Overview | Control \+ Up Arrow OR 3-Finger Swipe Up |
-| Show Desktop | F11 OR Click desktop space |
+| Show Desktop | Fn \+ F11 OR Click desktop space |
 | Move Item to Trash | Command \+ Backspace (in Finder/Desktop) |
 | Show/hide hidden files in Finder | Command \+ Shift \+ . |
 | Ghostty Quick Launcher | Command \+ \` |
