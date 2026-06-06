@@ -112,14 +112,11 @@ Op| General | New Finder windows show | Home folder | | Sidebar | Show Recents |
 On first launch, Raycast auto-binds itself to `Option + Space`, which clashes with the ChatGPT app. Change it via Raycast Settings → General → Raycast Hotkey to `Shift + Control + Command + R`.
 
 To bind a global hotkey for activating Finder from anywhere:
-
 1. Open Raycast (`Shift + Control + Command + R`)
 2. Type **Finder** until "Finder" appears as a command result
 3. Highlight it and press `Command + K` (Actions menu)
 4. Choose **Configure Application…**
 5. Click the **Record Hotkey** field and press `Shift + Control + Command + F`
-
-This bypasses the macOS App Shortcuts limitation that only triggers when the target app is already focused.
 
 ## **Fish Commands Configured**
 
@@ -180,6 +177,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | :---- | :---- |
 | Spotlight Search | Command \+ Space |
 | Open settings in current app | Command \+ , |
+| Activate Finder (via Raycast) | Shift \+ Control \+ Command \+ F |
 | Tile windows when dragging | Option \+ |
 | Lock Screen | Control \+ Command \+ Q OR TouchID press |
 | App Switcher | Command \+ Tab |
