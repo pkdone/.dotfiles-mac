@@ -90,8 +90,7 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 
 | Area | Setting | Value |
 |------|---------|-------|
-| General | New Finder windows show | Home folder |
-| Sidebar | Show Recents | Off |
+Op| General | New Finder windows show | Home folder | | Sidebar | Show Recents | Off |
 
 ### CotEditor
 
@@ -110,11 +109,11 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 
 ### Raycast
 
-On first launch, complete onboarding and pick `Option + Space` as the Raycast activation hotkey (leave `Command + Space` for Spotlight).
+On first launch, complete onboarding and pick `Command + Control + Option + Shift + R` (the "Hyper key" combination) as the Raycast activation hotkey. This avoids clashes with Spotlight (`Command + Space`) and the ChatGPT app (`Option + Space`).
 
 To bind a global hotkey for activating Finder from anywhere:
 
-1. Open Raycast (`Option + Space`)
+1. Open Raycast (`Command + Control + Option + Shift + R`)
 2. Type **Finder** until "Finder" appears as a command result
 3. Highlight it and press `Command + K` (Actions menu)
 4. Choose **Configure Application…**
