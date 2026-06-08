@@ -85,7 +85,7 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Control Center | Clock — Show AM/PM | On |
 | Control Center | Clock — Show day of week | On |
 | Control Center | Clock — Show date | On |
-| Screenshots | Default save location | `~/Pictures` (`defaults write com.apple.screencapture location ~/Pictures && killall SystemUIServer`) |
+| Screenshots | Default save location | `~/Pictures` |
 
 ### Finder
 
