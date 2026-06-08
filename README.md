@@ -85,6 +85,7 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Control Center | Clock — Show AM/PM | On |
 | Control Center | Clock — Show day of week | On |
 | Control Center | Clock — Show date | On |
+| Screenshots | Default save location | `~/Pictures` (`defaults write com.apple.screencapture location ~/Pictures && killall SystemUIServer`) |
 
 ### Finder
 
@@ -185,6 +186,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Mission Control / Desktop Overview | Control \+ Up Arrow OR 3-Finger Swipe Up |
 | Show Desktop | Fn \+ F11 OR Click desktop space |
 | Move Item to Trash | Command \+ Backspace (in Finder/Desktop) |
+| Paste file as a move (cut & paste) | Option \+ Command \+ V (in Finder, after Command \+ C) |
 | Show/hide hidden files in Finder | Command \+ Shift \+ . |
 | Ghostty Quick Launcher | Command \+ \` |
 | Claude Browser | Command \+E (in Chrome) |
