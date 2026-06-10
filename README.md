@@ -108,6 +108,12 @@ Op| General | New Finder windows show | Home folder | | Sidebar | Show Recents |
 | Controls | Show apps with no open window | Hide |
 | Exceptions | Slack | Hide windows |
 
+### Logi Options+
+
+| Area | Setting | Value |
+|------|---------|-------|
+| Pointer & Scrolling | Smooth scrolling | On |
+
 ### Raycast
 
 On first launch, Raycast auto-binds itself to `Option + Space`, which clashes with the ChatGPT app. Change it via Raycast Settings → General → Raycast Hotkey to `Shift + Control + Command + R`.
