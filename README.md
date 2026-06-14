@@ -132,8 +132,8 @@ To enable Clipboard History:
 1. Open Raycast and run the **Clipboard History** command once
 2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Accessibility → enable Raycast)
 3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard" → in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V` (avoid `Command + Shift + V` which is "paste without formatting", and `Command + Option + V` which is used for Finder paste-as-move)
-4. Set **Keep History For** to 7 Days
-5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari, Keychain Access, Passwords
+4. Set **Keep History For** to 1 Day
+5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari
 
 ## **Fish Commands Configured**
 
