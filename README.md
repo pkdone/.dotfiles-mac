@@ -216,7 +216,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Claude Browser | Command \+E (in Chrome) |
 | Claude Chat | Option, Option (i.e., double-tap) |
 | ChatGPT | Option \+ Space |
-| Gemini (mini chat) | Control \+ Option \+ G |
+| Gemini | Control \+ Option \+ G |
 
 ### **Terminal and Shell Differences**
 
