@@ -131,7 +131,7 @@ To bind a global hotkey for activating Finder from anywhere:
 To enable Clipboard History:
 1. Open Raycast and run the **Clipboard History** command once
 2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Accessibility → enable Raycast)
-3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard" → in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Command + Option + V` (avoid `Command + Shift + V`, which is the system "paste without formatting" shortcut)
+3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard" → in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V` (avoid `Command + Shift + V` which is "paste without formatting", and `Command + Option + V` which is used for Finder paste-as-move)
 4. Optionally set a retention period and review the password-exclusion settings in that same panel
 
 ## **Fish Commands Configured**
@@ -194,6 +194,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Spotlight Search | Command \+ Space |
 | Open settings in current app | Command \+ , |
 | Activate Finder (via Raycast) | Shift \+ Control \+ Command \+ F |
+| Clipboard History (via Raycast) | Control \+ Command \+ V |
 | Tile windows when dragging | Option \+ |
 | Lock Screen | Control \+ Command \+ Q OR TouchID press |
 | App Switcher | Command \+ Tab |
