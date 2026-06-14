@@ -93,7 +93,8 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 
 | Area | Setting | Value |
 |------|---------|-------|
-Op| General | New Finder windows show | Home folder | | Sidebar | Show Recents | Off |
+| General | New Finder windows show | Home folder |
+| Sidebar | Show Recents | Off |
 
 ### CotEditor
 
@@ -126,6 +127,12 @@ To bind a global hotkey for activating Finder from anywhere:
 3. Highlight it and press `Command + K` (Actions menu)
 4. Choose **Configure Application…**
 5. Click the **Record Hotkey** field and press `Shift + Control + Command + F`
+
+To enable Clipboard History:
+1. Open Raycast and run the **Clipboard History** command once
+2. Grant Accessibility permission when prompted (System Settings → Privacy & Security → Accessibility → enable Raycast)
+3. Bind a hotkey via Raycast Settings → Extensions → Clipboard History → `Command + Shift + V`
+4. Optionally set a retention period and review the password-exclusion settings in that same panel
 
 ## **Fish Commands Configured**
 
