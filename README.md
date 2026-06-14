@@ -79,6 +79,8 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Trackpad | Point & Click - Lookup & Data Detectors | off |
 | Trackpad | Point & Click - Secondary click | Click in bottom right corner |
 | Trackpad | Point & Click - Tap to click | On |
+| Trackpad | Point & Click - Force Click and haptic feedback | Off |
+| Trackpad | More Gestures - Three-finger drag | Off |
 | Accessibility | Pointer Control — Trackpad Options — Use trackpad for dragging | On (Without Drag Lock) |
 | Accessibility | Display — Pointer — Pointer size | One notch above Normal |
 | User & Groups | Paul Done icon | Dog |
