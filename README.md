@@ -135,6 +135,13 @@ To enable Clipboard History:
 4. Set **Keep History For** to 1 Day
 5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari
 
+### Gemini
+
+The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
+
+1. Set **Mini chat keyboard shortcut** to `Control + Option + G`
+2. Set **Full chat keyboard shortcut** to `Control + Option + Shift + G`
+
 ## **Fish Commands Configured**
 
 * **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
@@ -209,6 +216,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Claude Browser | Command \+E (in Chrome) |
 | Claude Chat | Option, Option (i.e., double-tap) |
 | ChatGPT | Option \+ Space |
+| Gemini (mini chat) | Control \+ Option \+ G |
 
 ### **Terminal and Shell Differences**
 
