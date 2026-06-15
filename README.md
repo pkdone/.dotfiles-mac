@@ -89,6 +89,8 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Control Center | Clock — Show AM/PM | On |
 | Control Center | Clock — Show day of week | On |
 | Control Center | Clock — Show date | On |
+| Notifications | Tips — Allow notifications | Off |
+| Spotlight | Search results — Tips | Off |
 | Screenshots | Default save location | `~/Pictures` |
 
 ### Finder
