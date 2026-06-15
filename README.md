@@ -72,6 +72,8 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Finder | Show hard drives on Desktop | Off |
 | Keyboard | Text input sources | British |
 | Mouse | Tracking speed | faster |
+| Mouse | Natural scrolling | Off |
+| Mouse | Secondary click | Click Right Side |
 | Mouse | Double click speed | faster |
 | Mouse | Scrolling speed | faster |
 | Trackpad | Point & click tracking speed | Slower |
