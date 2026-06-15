@@ -90,7 +90,7 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Control Center | Clock — Show day of week | On |
 | Control Center | Clock — Show date | On |
 | Notifications | Tips — Allow notifications | Off |
-| Spotlight | Search results — Tips | Off |
+| Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off |
 | Screenshots | Default save location | `~/Pictures` |
 
 ### Finder
