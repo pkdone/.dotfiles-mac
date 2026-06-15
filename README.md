@@ -89,7 +89,8 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Control Center | Clock — Show AM/PM | On |
 | Control Center | Clock — Show day of week | On |
 | Control Center | Clock — Show date | On |
-| Notifications | Tips — Allow notifications | Off |
+| Notifications | When mirroring or sharing the display | Notifications Off |
+| Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off |
 | Screenshots | Default save location | `~/Pictures` |
 
