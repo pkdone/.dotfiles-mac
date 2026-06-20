@@ -63,7 +63,7 @@ bash ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothin
 bash ~/.dotfiles-mac/macos.sh             # apply
 ```
 
-It is idempotent and safe to re-run. It reads each setting first and only writes when the value differs; it skips any key whose stored type is unexpected (logging a warning); and it treats a missing key as a fresh value to set. Before the first change it backs up each affected domain to `backups/defaults-<timestamp>/` (gitignored — reverse with `defaults import`). Any required UI restarts (Dock, Finder, menu bar) are deferred to the end and run only after you confirm.
+It is safe to re-run and converges to the same end state. It reads and type-checks each setting first, then writes the desired value — re-asserting it even when it already matches — while skipping any key whose stored type is unexpected (logging a warning) and treating a missing key as a fresh value to set. Before the first value *change* it backs up each affected domain to `backups/defaults-<timestamp>/` (gitignored — reverse with `defaults import`). Required UI restarts (Dock, Finder, menu bar) are deferred to the end and run only when a value actually changed, after you confirm.
 
 Covers: Dark mode; Dock icon size, recent apps, Spaces auto-rearrange; sound-change feedback; Finder default view, hard drives on desktop, new-window target; screenshot location; menu-bar clock AM/PM, day, and date.
 

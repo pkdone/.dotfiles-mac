@@ -4,7 +4,7 @@
 #
 # Reads current state first, then per setting:
 #   present, type mismatch    -> WARN, skip (never clobber a wrong-typed value)
-#   present, type ok, equal   -> skip, log "already set"
+#   present, type ok, equal   -> re-assert (write same value), log "already set"
 #   present, type ok, differs -> write, log "changed: old -> new"
 #   missing                   -> write, log "set (was unset)"
 #
@@ -17,8 +17,8 @@
 #
 # Safety:
 #   - No sudo. sudo-only items (e.g. hostname) stay manual (see README).
-#   - Before the first real write, every affected domain is exported to
-#     backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
+#   - Before the first value-changing write, every affected domain is exported
+#     to backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
 #   - UI restarts (killall) are deferred to the end, run only if something
 #     changed, and only after you confirm at the prompt.
 #
@@ -53,6 +53,7 @@ say_warn() { printf '  %swarn%s  %s\n' "$C_WARN" "$C_OFF" "$1"; }
 
 CONSIDERED=0
 CHANGED=0
+REASSERTED=0
 WARNINGS=0
 RESTARTS=''
 NEEDS_LOGOUT=0
@@ -134,7 +135,13 @@ apply_setting() {  # domain key type desired restart
       return 0
     fi
     if values_equal "$etype" "$cur" "$desired"; then
-      say_ok "$domain $key — already set ($cur)"
+      if [ "$DRY_RUN" = 1 ]; then
+        say_ok "$domain $key — would re-assert (already set: $cur)"
+      else
+        write_default "$domain" "$key" "$etype" "$desired"
+        say_ok "$domain $key — re-asserted (already set: $cur)"
+      fi
+      REASSERTED=$((REASSERTED + 1))
       return 0
     fi
     if [ "$DRY_RUN" = 1 ]; then
@@ -183,7 +190,7 @@ while IFS='|' read -r domain key etype desired restart; do
 done <<< "$SETTINGS"
 
 echo
-echo "Summary: $CONSIDERED setting(s) checked, $CHANGED change(s), $WARNINGS warning(s)."
+echo "Summary: $CONSIDERED setting(s) checked, $CHANGED changed, $REASSERTED re-asserted, $WARNINGS warning(s)."
 
 # ---- deferred UI restarts (only if something changed) -------------------
 if [ "$DRY_RUN" != 1 ] && [ "$CHANGED" -gt 0 ] && [ -n "${RESTARTS// /}" ]; then
