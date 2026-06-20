@@ -146,8 +146,10 @@ To enable Clipboard History:
 
 The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
 
-1. Set **Mini chat keyboard shortcut** to `Control + Option + G`
-2. Set **Full chat keyboard shortcut** to `Control + Option + Shift + G`
+| Action | Shortcut |
+|--------|----------|
+| Mini chat | `Control + Option + G` |
+| Full chat | `Control + Option + Shift + G` |
 
 ---
 
