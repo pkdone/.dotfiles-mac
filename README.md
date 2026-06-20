@@ -14,6 +14,16 @@ Personal macOS dotfiles and bootstrap setup.
 
 ## New machine setup
 
+On a fresh machine, first install Homebrew (which also pulls in the Command Line Tools that provide `git`), then the GitHub CLI, and sign in — this is what lets the private repo be cloned over HTTPS:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install gh
+gh auth login
+```
+
+Clone and bootstrap:
+
 ```bash
 git clone https://github.com/pkdone/.dotfiles-mac.git ~/.dotfiles-mac
 bash ~/.dotfiles-mac/install.sh
@@ -21,7 +31,16 @@ bash ~/.dotfiles-mac/install.sh
 
 This creates symlinks from `~/.config` into this repo and installs everything in the Brewfile.
 
-After running, trust the `mise` config to silence its warnings:
+Then a couple of one-time follow-ups.
+
+Make Fish (installed by the Brewfile) your login shell:
+
+```bash
+echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
+chsh -s /opt/homebrew/bin/fish
+```
+
+Trust the `mise` config to silence its warnings:
 
 ```bash
 mise trust ~/.dotfiles-mac/mise/config.toml
@@ -63,7 +82,7 @@ bash ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothin
 bash ~/.dotfiles-mac/macos.sh             # apply
 ```
 
-It is safe to re-run and converges to the same end state. It reads and type-checks each setting first, then writes the desired value — re-asserting it even when it already matches — while skipping any key whose stored type is unexpected (logging a warning) and treating a missing key as a fresh value to set. Before the first value *change* it backs up each affected domain to `backups/defaults-<timestamp>/` (gitignored — reverse with `defaults import`). Required UI restarts (Dock, Finder, menu bar) are deferred to the end and run only when a value actually changed, after you confirm.
+Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/` (gitignored — reverse with `defaults import`). UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
 
 Settings applied:
 
