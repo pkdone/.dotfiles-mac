@@ -59,6 +59,15 @@ sudo scutil --set ComputerName pdone-mac
 dscacheutil -flushcache
 ```
 
+### Dock
+
+Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile):
+
+```bash
+bash ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order (no dockutil needed)
+bash ~/.dotfiles-mac/dock.sh          # apply
+```
+
 ### macOS defaults
 
 A curated set of macOS `defaults` is applied by `macos.sh`:
@@ -138,15 +147,6 @@ The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift
 |------|------|
 | Mini chat | `Control + Option + G` |
 | Full chat | `Control + Option + Shift + G` |
-
-#### Dock
-
-Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile):
-
-```bash
-bash ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order (no dockutil needed)
-bash ~/.dotfiles-mac/dock.sh          # apply
-```
 
 #### Raycast
 
