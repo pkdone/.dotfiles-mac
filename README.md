@@ -65,7 +65,22 @@ bash ~/.dotfiles-mac/macos.sh             # apply
 
 It is safe to re-run and converges to the same end state. It reads and type-checks each setting first, then writes the desired value — re-asserting it even when it already matches — while skipping any key whose stored type is unexpected (logging a warning) and treating a missing key as a fresh value to set. Before the first value *change* it backs up each affected domain to `backups/defaults-<timestamp>/` (gitignored — reverse with `defaults import`). Required UI restarts (Dock, Finder, menu bar) are deferred to the end and run only when a value actually changed, after you confirm.
 
-Covers: Dark mode; Dock icon size, recent apps, Spaces auto-rearrange; sound-change feedback; Finder default view, hard drives on desktop, new-window target; screenshot location; menu-bar clock AM/PM, day, and date.
+Settings applied:
+
+| Area | Setting | `defaults` key | Value |
+|------|---------|----------------|-------|
+| Appearance | Theme | `NSGlobalDomain AppleInterfaceStyle` | `Dark` |
+| Dock | Icon size | `com.apple.dock tilesize` | `46` |
+| Dock | Show recent apps | `com.apple.dock show-recents` | `false` (Off) |
+| Dock | Auto-rearrange Spaces | `com.apple.dock mru-spaces` | `false` (Off) |
+| Finder | Default view | `com.apple.finder FXPreferredViewStyle` | `icnv` (Icon view) |
+| Finder | Hard drives on Desktop | `com.apple.finder ShowHardDrivesOnDesktop` | `false` (Off) |
+| Finder | New window target | `com.apple.finder NewWindowTarget` | `PfHm` (Home) |
+| Screenshots | Save location | `com.apple.screencapture location` | `~/Pictures` |
+| Control Center | Clock — Show AM/PM | `com.apple.menuextra.clock ShowAMPM` | `true` (On) |
+| Control Center | Clock — Show day of week | `com.apple.menuextra.clock ShowDayOfWeek` | `true` (On) |
+| Control Center | Clock — Show date | `com.apple.menuextra.clock ShowDate` | `1` (On) |
+| Sound | Volume-change feedback | `NSGlobalDomain com.apple.sound.beep.feedback` | `1` (On) |
 
 ## Manual macOS tweaks
 
