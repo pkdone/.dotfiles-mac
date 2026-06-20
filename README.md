@@ -269,10 +269,11 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 
 #### Ghostty
 
-Custom keybindings configured in `ghostty/config`.
+Ghostty's default keybindings, plus the quick-terminal toggle set in `ghostty/config`.
 
 | Action | Shortcut |
 |------|------|
+| Command palette | Command + Shift + P |
 | Toggle fullscreen | Command + Enter |
 | Clear screen | Command + K |
 | New tab | Command + T |
