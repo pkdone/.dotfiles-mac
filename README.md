@@ -157,8 +157,6 @@ Run `dock.sh` to pin these apps to the Dock in order (idempotent; uses `dockutil
 12. Spotify
 13. YouTube Music
 
-> `dock.sh` skips any app that isn't installed — so install Cursor Nightly and YouTube Music first (see [Apps not in the Brewfile](#apps-not-in-the-brewfile)).
-
 #### Raycast
 
 On first launch, Raycast auto-binds itself to `Option + Space`, which clashes with the ChatGPT app. Change it via Raycast Settings → General → Raycast Hotkey to `Shift + Control + Command + R`.
