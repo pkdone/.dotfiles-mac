@@ -119,6 +119,24 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 |------|---------|-------|----------------------|
 | Sidebar | Show Recents | Off | Sidebar items are an opaque bookmark blob (sfl), not a clean key |
 
+### Dock
+
+Apps kept in the Dock (drag the app in, then right-click → Options → Keep in Dock), in left-to-right order:
+
+1. Slack
+2. WhatsApp
+3. Granola
+4. Google Chrome
+5. Claude
+6. ChatGPT
+7. Gemini
+8. Ghostty
+9. CotEditor
+10. Cursor
+11. Cursor Nightly
+12. Spotify
+13. YouTube Music
+
 ### CotEditor
 
 | Area | Setting | Value | Reason not automated |
