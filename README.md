@@ -115,30 +115,30 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 
 ### Finder
 
-| Area | Setting | Value | Reason not automated |
-|------|---------|-------|----------------------|
-| Sidebar | Show Recents | Off | Sidebar items are an opaque bookmark blob (sfl), not a clean key |
+| Area | Setting | Value |
+|------|---------|-------|
+| Sidebar | Show Recents | Off |
 
 ### CotEditor
 
-| Area | Setting | Value | Reason not automated |
-|------|---------|-------|----------------------|
-| Mode | General - Font | Monospaced | App-specific preference; out of scope for the macOS defaults script |
-| Appearance | Default theme | Anura (Dark) | App-specific preference; out of scope for the macOS defaults script |
+| Area | Setting | Value |
+|------|---------|-------|
+| Mode | General - Font | Monospaced |
+| Appearance | Default theme | Anura (Dark) |
 
 ### AltTab
 
-| Area | Setting | Value | Reason not automated |
-|------|---------|-------|----------------------|
-| Controls | Show windows from Spaces | Visible Spaces | App-specific (com.lwouis.alt-tab-macos); out of scope (own automation candidate) |
-| Controls | Show apps with no open window | Hide | App-specific (com.lwouis.alt-tab-macos); out of scope (own automation candidate) |
-| Exceptions | Slack | Hide windows | App-specific (com.lwouis.alt-tab-macos); out of scope (own automation candidate) |
+| Area | Setting | Value |
+|------|---------|-------|
+| Controls | Show windows from Spaces | Visible Spaces |
+| Controls | Show apps with no open window | Hide |
+| Exceptions | Slack | Hide windows |
 
 ### Logi Options+
 
-| Area | Setting | Value | Reason not automated |
-|------|---------|-------|----------------------|
-| Pointer & Scrolling | Smooth scrolling | On | Configured in Logi's own app profile, not macOS `defaults` |
+| Area | Setting | Value |
+|------|---------|-------|
+| Pointer & Scrolling | Smooth scrolling | On |
 
 ### Gemini
 
