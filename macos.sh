@@ -13,6 +13,7 @@
 #
 # Flags:
 #   --dry-run   Show every decision, write nothing, take no backups.
+#   --no-color  Disable ANSI colour (also honours the NO_COLOR env var).
 #   -h|--help   Show usage.
 #
 # Safety:
@@ -26,15 +27,18 @@ set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=0
+NO_COLOR_OPT=0
 
 for arg in "$@"; do
   case "$arg" in
-    --dry-run) DRY_RUN=1 ;;
+    --dry-run)  DRY_RUN=1 ;;
+    --no-color) NO_COLOR_OPT=1 ;;
     -h|--help)
       cat <<'USAGE'
-Usage: macos.sh [--dry-run]
-  --dry-run   Show every decision, write nothing, take no backups.
-  -h, --help  Show this help.
+Usage: macos.sh [--dry-run] [--no-color]
+  --dry-run    Show every decision, write nothing, take no backups.
+  --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
+  -h, --help   Show this help.
 USAGE
       exit 0 ;;
     *) echo "Unknown argument: $arg (try --help)" >&2; exit 2 ;;
@@ -42,7 +46,7 @@ USAGE
 done
 
 # ---- logging (colour only on a tty) -------------------------------------
-if [ -t 1 ]; then
+if [ -t 1 ] && [ "$NO_COLOR_OPT" != 1 ] && [ -z "${NO_COLOR+x}" ]; then
   C_OK=$'\033[32m'; C_CHG=$'\033[36m'; C_WARN=$'\033[33m'; C_OFF=$'\033[0m'
 else
   C_OK=''; C_CHG=''; C_WARN=''; C_OFF=''
@@ -105,7 +109,7 @@ ensure_backup() {  # export pre-change state once, before the first real write
   for d in $BACKUP_DOMAINS; do
     defaults export "$d" "$dir/$d.plist" 2>/dev/null || say_warn "could not back up $d"
   done
-  printf '  backups -> %s\n\n' "$dir"
+  printf '  backups -> %s\n' "$dir"
 }
 
 write_default() {  # domain key type value
