@@ -64,7 +64,7 @@ dscacheutil -flushcache
 Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile):
 
 ```bash
-bash ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order (no dockutil needed)
+bash ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order
 bash ~/.dotfiles-mac/dock.sh          # apply
 ```
 
