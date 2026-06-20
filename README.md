@@ -12,7 +12,9 @@ Personal macOS dotfiles and bootstrap setup.
 - `install.sh` — bootstraps a new machine
 - `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
 
-## New machine setup
+## Setup
+
+### New machine setup
 
 On a fresh machine, first install Homebrew (which also pulls in the Command Line Tools that provide `git`), then the GitHub CLI, and sign in — this is what lets the private repo be cloned over HTTPS:
 
@@ -46,27 +48,9 @@ Trust the `mise` config to silence its warnings:
 mise trust ~/.dotfiles-mac/mise/config.toml
 ```
 
-Finally, apply the macOS defaults (see the [macOS defaults](#macos-defaults) section below).
+Then continue with the remaining setup steps below — Set Hostname, macOS defaults, and Manual macOS tweaks.
 
-## Day-to-day
-
-Edit configs normally — changes go directly into the repo via symlinks. Then push:
-
-```bash
-dotpush "your message"
-```
-
-To install new packages, add them to `Brewfile` and run `brewsync`.
-
-## Fish functions
-
-| Function | Description |
-|----------|-------------|
-| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile |
-| `dotpush <message>` | Commits and pushes all dotfile changes to GitHub in one command |
-| `edit <file>` | Opens a file in CotEditor |
-
-## Set Hostname
+### Set Hostname
 
 ```bash
 sudo scutil --set HostName pdone-mac
@@ -75,7 +59,7 @@ sudo scutil --set ComputerName pdone-mac
 dscacheutil -flushcache
 ```
 
-## macOS defaults
+### macOS defaults
 
 A curated set of macOS `defaults` is applied by `macos.sh`:
 
@@ -103,11 +87,11 @@ Settings applied:
 | Control Center | Clock — Show date | `com.apple.menuextra.clock ShowDate` | `1` (On) |
 | Sound | Volume-change feedback | `NSGlobalDomain com.apple.sound.beep.feedback` | `1` (On) |
 
-## Manual macOS tweaks
+### Manual macOS tweaks
 
 The settings below aren't automated (not exposed via `defaults`, require sudo, or out of scope) — apply them by hand on a fresh machine to match this setup.
 
-### System Settings
+#### System Settings
 
 | Area | Setting | Value | Reason not automated |
 |------|---------|-------|----------------------|
@@ -134,20 +118,20 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 
-### Finder
+#### Finder
 
 | Area | Setting | Value |
 |------|---------|-------|
 | Sidebar | Show Recents | Off |
 
-### CotEditor
+#### CotEditor
 
 | Area | Setting | Value |
 |------|---------|-------|
 | Mode | General - Font | Monospaced |
 | Appearance | Default theme | Anura (Dark) |
 
-### AltTab
+#### AltTab
 
 | Area | Setting | Value |
 |------|---------|-------|
@@ -155,13 +139,13 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Controls | Show apps with no open window | Hide |
 | Exceptions | Slack | Hide windows |
 
-### Logi Options+
+#### Logi Options+
 
 | Area | Setting | Value |
 |------|---------|-------|
 | Pointer & Scrolling | Smooth scrolling | On |
 
-### Gemini
+#### Gemini
 
 The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
 
@@ -170,7 +154,7 @@ The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift
 | Mini chat | `Control + Option + G` |
 | Full chat | `Control + Option + Shift + G` |
 
-### Dock
+#### Dock
 
 Apps kept in the Dock (drag the app in, then right-click → Options → Keep in Dock), in left-to-right order:
 
@@ -188,7 +172,7 @@ Apps kept in the Dock (drag the app in, then right-click → Options → Keep in
 12. Spotify
 13. YouTube Music
 
-### Raycast
+#### Raycast
 
 On first launch, Raycast auto-binds itself to `Option + Space`, which clashes with the ChatGPT app. Change it via Raycast Settings → General → Raycast Hotkey to `Shift + Control + Command + R`.
 
@@ -206,13 +190,31 @@ To enable Clipboard History:
 4. Set **Keep History For** to 1 Day
 5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari
 
----
+## Usage & reference
 
-## macOS Shortcuts
+### Day-to-day
+
+Edit configs normally — changes go directly into the repo via symlinks. Then push:
+
+```bash
+dotpush "your message"
+```
+
+To install new packages, add them to `Brewfile` and run `brewsync`.
+
+### Fish functions
+
+| Function | Description |
+|----------|-------------|
+| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile |
+| `dotpush <message>` | Commits and pushes all dotfile changes to GitHub in one command |
+| `edit <file>` | Opens a file in CotEditor |
+
+### macOS Shortcuts
 
 Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line navigation, and Option (⌥) for semantic movements and word navigation. The Control (^) key is reserved for system functions (Lock Screen, Mission Control), screenshot-to-clipboard actions, and Linux/Emacs-style navigation in Terminal (e.g., Control + A). These patterns apply to most native macOS applications and text fields (such as Slack or browser bars).
 
-### Text Navigation and Editing
+#### Text Navigation and Editing
 
 | Action | Shortcut |
 |------|------|
@@ -231,7 +233,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Delete next word | Fn + Option + Delete |
 | Delete to start of line | Command + Delete |
 
-### Document Navigation and Selection
+#### Document Navigation and Selection
 
 | Action | Shortcut |
 |------|------|
@@ -242,7 +244,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Page Up | Fn + Up Arrow |
 | Page Down | Fn + Down Arrow |
 
-### Screenshot Actions
+#### Screenshot Actions
 
 **Pro Tip:** Adding the **Control** key to any of the following shortcuts copies the image to the clipboard instead of saving a file.
 
@@ -253,7 +255,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Selected window | Shift + Command + 4 + Space | Control + Shift + Command + 4 + Space |
 | Screen Copy Options panel | Shift + Command + 5 | N/A |
 
-### System and Utility Actions
+#### System and Utility Actions
 
 | Action | Shortcut / Gesture |
 |------|------|
@@ -276,7 +278,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | ChatGPT | Option + Space |
 | Gemini | Control + Option + G |
 
-### Terminal and Shell Differences
+#### Terminal and Shell Differences
 
 Terminal applications often use Linux/Emacs-style bindings, which override standard macOS behavior.
 
@@ -288,7 +290,7 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 | Interrupt process | Control + C |
 | Navigate by word | Option + Left / Right (may require terminal-specific config) |
 
-### Ghostty
+#### Ghostty
 
 Custom keybindings configured in `ghostty/config`.
 
