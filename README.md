@@ -269,8 +269,6 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 
 #### Ghostty
 
-Ghostty's default keybindings.
-
 | Action | Shortcut |
 |------|------|
 | Command palette | Command + Shift + P |
