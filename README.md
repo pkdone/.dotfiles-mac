@@ -140,6 +140,15 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 |------|---------|-------|----------------------|
 | Pointer & Scrolling | Smooth scrolling | On | Configured in Logi's own app profile, not macOS `defaults` |
 
+### Gemini
+
+The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
+
+| Action | Shortcut |
+|--------|----------|
+| Mini chat | `Control + Option + G` |
+| Full chat | `Control + Option + Shift + G` |
+
 ### Raycast
 
 On first launch, Raycast auto-binds itself to `Option + Space`, which clashes with the ChatGPT app. Change it via Raycast Settings → General → Raycast Hotkey to `Shift + Control + Command + R`.
@@ -157,15 +166,6 @@ To enable Clipboard History:
 3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard" → in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V` (avoid `Command + Shift + V` which is "paste without formatting", and `Command + Option + V` which is used for Finder paste-as-move)
 4. Set **Keep History For** to 1 Day
 5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari
-
-### Gemini
-
-The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
-
-| Action | Shortcut |
-|--------|----------|
-| Mini chat | `Control + Option + G` |
-| Full chat | `Control + Option + Shift + G` |
 
 ---
 
