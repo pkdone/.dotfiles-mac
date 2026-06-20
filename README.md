@@ -42,8 +42,8 @@ To install new packages, add them to `Brewfile` and run `brewsync`.
 | Function | Description |
 |----------|-------------|
 | `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile |
-| `dotpush` | Commits and pushes all dotfile changes to GitHub in one command |
-| `edit` | Opens a file in CotEditor |
+| `dotpush <message>` | Commits and pushes all dotfile changes to GitHub in one command |
+| `edit <file>` | Opens a file in CotEditor |
 
 ## Set Hostname
 
@@ -148,12 +148,6 @@ The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift
 
 1. Set **Mini chat keyboard shortcut** to `Control + Option + G`
 2. Set **Full chat keyboard shortcut** to `Control + Option + Shift + G`
-
-## **Fish Commands Configured**
-
-* **brewsync**   \- Installs, upgrades, and cleans up Homebrew packages from the Brewfile  
-* **dotpush \<file\>**  \-  Commits and pushes all dotfile changes to GitHub in one command  
-* **edit \<file\>**  \-  Opens a file in CotEditor
 
 ---
 
