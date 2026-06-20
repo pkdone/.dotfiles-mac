@@ -73,56 +73,56 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 
 ### System Settings
 
-| Area | Setting | Value |
-|------|---------|-------|
-| Apple Account | ID | pkdone.apple@icloud.com |
-| Displays | Built-in Display | More Space | 
-| Keyboard | Text input sources | British |
-| Mouse | Tracking speed | faster |
-| Mouse | Natural scrolling | Off |
-| Mouse | Secondary click | Click Right Side |
-| Mouse | Double click speed | faster |
-| Mouse | Scrolling speed | faster |
-| Trackpad | Point & click tracking speed | Slower |
-| Trackpad | Point & click - click | Light |
-| Trackpad | Point & Click - Lookup & Data Detectors | off |
-| Trackpad | Point & Click - Secondary click | Click in bottom right corner |
-| Trackpad | Point & Click - Tap to click | On |
-| Trackpad | Point & Click - Force Click and haptic feedback | Off |
-| Trackpad | More Gestures - Three-finger drag | Off |
-| Accessibility | Pointer Control — Trackpad Options — Use trackpad for dragging | On (Without Drag Lock) |
-| Accessibility | Display — Pointer — Pointer size | One notch above Normal |
-| User & Groups | Paul Done icon | Dog |
-| Notifications | When mirroring or sharing the display | Notifications Off |
-| Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off |
-| Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off |
+| Area | Setting | Value | Reason not automated |
+|------|---------|-------|----------------------|
+| Apple Account | ID | pkdone.apple@icloud.com | Interactive Apple ID sign-in; not a `defaults` key |
+| Displays | Built-in Display | More Space | Display scaling is hardware-specific; not reliably scriptable |
+| Keyboard | Text input sources | British | Input sources are a complex array blob; error-prone to script |
+| Mouse | Tracking speed | faster | Device-specific pointer scaling; left manual to preserve feel |
+| Mouse | Natural scrolling | Off | Global key also flips the trackpad; handled via Logi Options+ |
+| Mouse | Secondary click | Click Right Side | Button mapping stored per-device, not a stable global key |
+| Mouse | Double click speed | faster | Device-specific timing; no stable global `defaults` key |
+| Mouse | Scrolling speed | faster | Device-specific scaling; left manual |
+| Trackpad | Point & click tracking speed | Slower | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | Point & click - click | Light | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | Point & Click - Lookup & Data Detectors | off | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | Point & Click - Secondary click | Click in bottom right corner | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | Point & Click - Tap to click | On | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | Point & Click - Force Click and haptic feedback | Off | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | More Gestures - Three-finger drag | Off | Trackpad prefs span two interdependent domains; fragile to script |
+| Accessibility | Pointer Control — Trackpad Options — Use trackpad for dragging | On (Without Drag Lock) | Accessibility settings are TCC-protected; not writable via `defaults` |
+| Accessibility | Display — Pointer — Pointer size | One notch above Normal | Accessibility settings are TCC-protected; not writable via `defaults` |
+| User & Groups | Paul Done icon | Dog | Account picture is set via Directory Services, not `defaults` |
+| Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
+| Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
+| Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 
 ### Finder
 
-| Area | Setting | Value |
-|------|---------|-------|
-| Sidebar | Show Recents | Off |
+| Area | Setting | Value | Reason not automated |
+|------|---------|-------|----------------------|
+| Sidebar | Show Recents | Off | Sidebar items are an opaque bookmark blob (sfl), not a clean key |
 
 ### CotEditor
 
-| Area | Setting | Value |
-|------|---------|-------|
-| Mode | General - Font | Monospaced |
-| Appearance | Default theme | Anura (Dark) |
+| Area | Setting | Value | Reason not automated |
+|------|---------|-------|----------------------|
+| Mode | General - Font | Monospaced | App-specific preference; out of scope for the macOS defaults script |
+| Appearance | Default theme | Anura (Dark) | App-specific preference; out of scope for the macOS defaults script |
 
 ### AltTab
 
-| Area | Setting | Value |
-|------|---------|-------|
-| Controls | Show windows from Spaces | Visible Spaces |
-| Controls | Show apps with no open window | Hide |
-| Exceptions | Slack | Hide windows |
+| Area | Setting | Value | Reason not automated |
+|------|---------|-------|----------------------|
+| Controls | Show windows from Spaces | Visible Spaces | App-specific (com.lwouis.alt-tab-macos); out of scope (own automation candidate) |
+| Controls | Show apps with no open window | Hide | App-specific (com.lwouis.alt-tab-macos); out of scope (own automation candidate) |
+| Exceptions | Slack | Hide windows | App-specific (com.lwouis.alt-tab-macos); out of scope (own automation candidate) |
 
 ### Logi Options+
 
-| Area | Setting | Value |
-|------|---------|-------|
-| Pointer & Scrolling | Smooth scrolling | On |
+| Area | Setting | Value | Reason not automated |
+|------|---------|-------|----------------------|
+| Pointer & Scrolling | Smooth scrolling | On | Configured in Logi's own app profile, not macOS `defaults` |
 
 ### Raycast
 
