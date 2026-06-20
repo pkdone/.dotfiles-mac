@@ -23,4 +23,4 @@ direnv hook fish | source
 set -gx HOMEBREW_NO_ANALYTICS 1
 
 # Aliases
-#alias ll "eza -la --git"
+alias ll "eza -la --git"

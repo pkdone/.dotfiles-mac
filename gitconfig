@@ -6,7 +6,7 @@
 [pull]
 	ff = only
 [core]
-	editor = cursor --wait
+	editor = coteditor --wait
 [push]
 	autoSetupRemote = true
 [credential]
