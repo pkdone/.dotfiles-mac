@@ -10,6 +10,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned default tool versions (Node, npm)
 - `install.sh` — bootstraps a new machine
+- `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
 
 ## New machine setup
 
@@ -53,23 +54,29 @@ sudo scutil --set ComputerName pdone-mac
 dscacheutil -flushcache
 ```
 
+## macOS defaults
+
+A curated set of macOS `defaults` is applied by `macos.sh`:
+
+```bash
+bash ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothing
+bash ~/.dotfiles-mac/macos.sh             # apply
+```
+
+It is idempotent and safe to re-run. It reads each setting first and only writes when the value differs; it skips any key whose stored type is unexpected (logging a warning); and it treats a missing key as a fresh value to set. Before the first change it backs up each affected domain to `backups/defaults-<timestamp>/` (gitignored — reverse with `defaults import`). Any required UI restarts (Dock, Finder, menu bar) are deferred to the end and run only after you confirm.
+
+Covers: Dark mode; Dock icon size, recent apps, Spaces auto-rearrange; sound-change feedback; Finder default view, hard drives on desktop, new-window target; screenshot location; menu-bar clock AM/PM, day, and date.
+
 ## Manual macOS tweaks
 
-These settings adjustments aren't automated — apply them by hand on a fresh machine to match this setup.
+The settings below aren't automated (not exposed via `defaults`, require sudo, or out of scope) — apply them by hand on a fresh machine to match this setup.
 
 ### System Settings
 
 | Area | Setting | Value |
 |------|---------|-------|
 | Apple Account | ID | pkdone.apple@icloud.com |
-| Appearance | Theme | Dark mode |
 | Displays | Built-in Display | More Space | 
-| Dock | Icon size | Smaller than default (~46px) |
-| Dock | Show recent applications | Off |
-| Dock | Auto-rearrange Spaces based on most recent use | Off |
-| Sound | Play feedback when sound is changed | On |
-| Finder | Default view | Icon view |
-| Finder | Show hard drives on Desktop | Off |
 | Keyboard | Text input sources | British |
 | Mouse | Tracking speed | faster |
 | Mouse | Natural scrolling | Off |
@@ -86,19 +93,14 @@ These settings adjustments aren't automated — apply them by hand on a fresh ma
 | Accessibility | Pointer Control — Trackpad Options — Use trackpad for dragging | On (Without Drag Lock) |
 | Accessibility | Display — Pointer — Pointer size | One notch above Normal |
 | User & Groups | Paul Done icon | Dog |
-| Control Center | Clock — Show AM/PM | On |
-| Control Center | Clock — Show day of week | On |
-| Control Center | Clock — Show date | On |
 | Notifications | When mirroring or sharing the display | Notifications Off |
 | Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off |
-| Screenshots | Default save location | `~/Pictures` |
 
 ### Finder
 
 | Area | Setting | Value |
 |------|---------|-------|
-| General | New Finder windows show | Home folder |
 | Sidebar | Show Recents | Off |
 
 ### CotEditor

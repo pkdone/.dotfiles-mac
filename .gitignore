@@ -1,2 +1,5 @@
 .DS_Store
 fish_variables
+
+# macOS defaults backups taken by macos.sh (machine-local)
+backups/
