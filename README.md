@@ -148,8 +148,6 @@ bash ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order (no doc
 bash ~/.dotfiles-mac/dock.sh          # apply
 ```
 
-To set them by hand instead: drag each app in, then right-click → Options → Keep in Dock.
-
 #### Raycast
 
 On first launch, Raycast auto-binds itself to `Option + Space`, which clashes with the ChatGPT app. Change it via Raycast Settings → General → Raycast Hotkey to `Shift + Control + Command + R`.
