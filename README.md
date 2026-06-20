@@ -66,7 +66,7 @@ bash ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothin
 bash ~/.dotfiles-mac/macos.sh             # apply
 ```
 
-Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/` (gitignored — reverse with `defaults import`). UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
+Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/`. UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
 
 Settings applied:
 
