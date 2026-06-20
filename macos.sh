@@ -51,6 +51,7 @@ say_ok()   { printf '  %sok%s    %s\n' "$C_OK"   "$C_OFF" "$1"; }
 say_chg()  { printf '  %schg%s   %s\n' "$C_CHG"  "$C_OFF" "$1"; }
 say_warn() { printf '  %swarn%s  %s\n' "$C_WARN" "$C_OFF" "$1"; }
 
+CONSIDERED=0
 CHANGED=0
 WARNINGS=0
 RESTARTS=''
@@ -119,6 +120,7 @@ write_default() {  # domain key type value
 
 apply_setting() {  # domain key type desired restart
   local domain="$1" key="$2" etype="$3" desired="$4" restart="$5"
+  CONSIDERED=$((CONSIDERED + 1))
   desired="${desired//@HOME@/$HOME}"
   local cur curtype want_token
   want_token="$(type_token "$etype")"
@@ -181,7 +183,7 @@ while IFS='|' read -r domain key etype desired restart; do
 done <<< "$SETTINGS"
 
 echo
-echo "Summary: $CHANGED change(s), $WARNINGS warning(s)."
+echo "Summary: $CONSIDERED setting(s) checked, $CHANGED change(s), $WARNINGS warning(s)."
 
 # ---- deferred UI restarts (only if something changed) -------------------
 if [ "$DRY_RUN" != 1 ] && [ "$CHANGED" -gt 0 ] && [ -n "${RESTARTS// /}" ]; then
