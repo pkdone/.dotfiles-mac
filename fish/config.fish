@@ -19,6 +19,9 @@ mise activate fish | source
 # Auto-loads/unloads .envrc variables when cd-ing between projects
 direnv hook fish | source
 
+# fzf key bindings (Ctrl-R history search, Ctrl-T file finder) and completions
+fzf --fish | source
+
 # Opt out of Homebrew's phone-home anonymous usage analytics
 set -gx HOMEBREW_NO_ANALYTICS 1
 

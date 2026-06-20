@@ -14,6 +14,7 @@
 # Flags:
 #   --dry-run   Show every decision, write nothing, take no backups.
 #   --no-color  Disable ANSI colour (also honours the NO_COLOR env var).
+#   --list      Print the managed settings as a Markdown table and exit.
 #   -h|--help   Show usage.
 #
 # Safety:
@@ -28,16 +29,19 @@ set -euo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=0
 NO_COLOR_OPT=0
+LIST=0
 
 for arg in "$@"; do
   case "$arg" in
     --dry-run)  DRY_RUN=1 ;;
     --no-color) NO_COLOR_OPT=1 ;;
+    --list)     LIST=1 ;;
     -h|--help)
       cat <<'USAGE'
-Usage: macos.sh [--dry-run] [--no-color]
+Usage: macos.sh [--dry-run] [--no-color] [--list]
   --dry-run    Show every decision, write nothing, take no backups.
   --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
+  --list       Print the managed settings as a Markdown table and exit.
   -h, --help   Show this help.
 USAGE
       exit 0 ;;
@@ -169,26 +173,37 @@ apply_setting() {  # domain key type desired restart
 }
 
 # ---- settings table -----------------------------------------------------
-# domain | key | type | desired | restart-target   (@HOME@ -> $HOME)
+# domain | key | type | desired | restart | area | label | display-value   (@HOME@ -> $HOME)
 SETTINGS='
-NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout
-com.apple.dock|tilesize|float|46|Dock
-com.apple.dock|show-recents|bool|false|Dock
-com.apple.dock|mru-spaces|bool|false|Dock
-com.apple.finder|FXPreferredViewStyle|string|icnv|Finder
-com.apple.finder|ShowHardDrivesOnDesktop|bool|false|Finder
-com.apple.finder|NewWindowTarget|string|PfHm|Finder
-com.apple.screencapture|location|string|@HOME@/Pictures|SystemUIServer
-com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer
-com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer
-com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer
-NSGlobalDomain|com.apple.sound.beep.feedback|int|1|
+NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout|Appearance|Theme|`Dark`
+com.apple.dock|tilesize|float|46|Dock|Dock|Icon size|`46`
+com.apple.dock|show-recents|bool|false|Dock|Dock|Show recent apps|`false` (Off)
+com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Off)
+com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)
+com.apple.finder|ShowHardDrivesOnDesktop|bool|false|Finder|Finder|Hard drives on Desktop|`false` (Off)
+com.apple.finder|NewWindowTarget|string|PfHm|Finder|Finder|New window target|`PfHm` (Home)
+com.apple.screencapture|location|string|@HOME@/Pictures|SystemUIServer|Screenshots|Save location|`~/Pictures`
+com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer|Control Center|Clock — Show AM/PM|`true` (On)
+com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|Clock — Show day of week|`true` (On)
+com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock — Show date|`1` (On)
+NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)
 '
+
+list_settings() {
+  printf '| Area | Setting | `defaults` key | Value |\n'
+  printf '|------|------|------|------|\n'
+  while IFS='|' read -r domain key etype desired restart area label disp; do
+    [ -z "$domain" ] && continue
+    printf '| %s | %s | `%s %s` | %s |\n' "$area" "$label" "$domain" "$key" "$disp"
+  done <<< "$SETTINGS"
+}
+
+[ "$LIST" = 1 ] && { list_settings; exit 0; }
 
 echo "macos.sh — $([ "$DRY_RUN" = 1 ] && echo 'DRY RUN (no writes)' || echo 'applying')"
 echo
 
-while IFS='|' read -r domain key etype desired restart; do
+while IFS='|' read -r domain key etype desired restart area label disp; do
   [ -z "$domain" ] && continue
   apply_setting "$domain" "$key" "$etype" "$desired" "$restart"
 done <<< "$SETTINGS"
