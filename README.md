@@ -71,7 +71,7 @@ Safe to re-run: it reads and type-checks each setting first, then writes the des
 Settings applied:
 
 | Area | Setting | `defaults` key | Value |
-|------|---------|----------------|-------|
+|------|------|------|------|
 | Appearance | Theme | `NSGlobalDomain AppleInterfaceStyle` | `Dark` |
 | Dock | Icon size | `com.apple.dock tilesize` | `46` |
 | Dock | Show recent apps | `com.apple.dock show-recents` | `false` (Off) |
@@ -92,7 +92,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 #### System Settings
 
 | Area | Setting | Value | Reason not automated |
-|------|---------|-------|----------------------|
+|------|------|------|------|
 | Apple Account | ID | pkdone.apple@icloud.com | Interactive Apple ID sign-in; not a `defaults` key |
 | Displays | Built-in Display | More Space | Display scaling is hardware-specific; not reliably scriptable |
 | Desktop & Dock | Widgets on desktop | None (all removed) | Widget placement isn't exposed via `defaults`; removed per-widget in the UI |
@@ -102,8 +102,8 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Mouse | Secondary click | Click Right Side | Button mapping stored per-device, not a stable global key |
 | Mouse | Double click speed | faster | Device-specific timing; no stable global `defaults` key |
 | Mouse | Scrolling speed | faster | Device-specific scaling; left manual |
-| Trackpad | Point & click tracking speed | Slower | Trackpad prefs span two interdependent domains; fragile to script |
-| Trackpad | Point & click - click | Light | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | Point & Click tracking speed | Slower | Trackpad prefs span two interdependent domains; fragile to script |
+| Trackpad | Point & Click - click | Light | Trackpad prefs span two interdependent domains; fragile to script |
 | Trackpad | Point & Click - Lookup & Data Detectors | off | Trackpad prefs span two interdependent domains; fragile to script |
 | Trackpad | Point & Click - Secondary click | Click in bottom right corner | Trackpad prefs span two interdependent domains; fragile to script |
 | Trackpad | Point & Click - Tap to click | On | Trackpad prefs span two interdependent domains; fragile to script |
@@ -119,20 +119,20 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 #### Finder
 
 | Area | Setting | Value |
-|------|---------|-------|
+|------|------|------|
 | Sidebar | Show Recents | Off |
 
 #### CotEditor
 
 | Area | Setting | Value |
-|------|---------|-------|
+|------|------|------|
 | Mode | General - Font | Monospaced |
 | Appearance | Default theme | Anura (Dark) |
 
 #### AltTab
 
 | Area | Setting | Value |
-|------|---------|-------|
+|------|------|------|
 | Controls | Show windows from Spaces | Visible Spaces |
 | Controls | Show apps with no open window | Hide |
 | Exceptions | Slack | Hide windows |
@@ -140,7 +140,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 #### Logi Options+
 
 | Area | Setting | Value |
-|------|---------|-------|
+|------|------|------|
 | Pointer & Scrolling | Smooth scrolling | On |
 
 #### Gemini
@@ -148,7 +148,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
 
 | Action | Shortcut |
-|--------|----------|
+|------|------|
 | Mini chat | `Control + Option + G` |
 | Full chat | `Control + Option + Shift + G` |
 
@@ -184,7 +184,8 @@ To bind a global hotkey for activating Finder from anywhere:
 To enable Clipboard History:
 1. Open Raycast and run the **Clipboard History** command once
 2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Accessibility → enable Raycast)
-3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard" → in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V` (avoid `Command + Shift + V` which is "paste without formatting", and `Command + Option + V` which is used for Finder paste-as-move)
+3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard", then in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V`.
+   - Avoid `Command + Shift + V` (paste without formatting) and `Command + Option + V` (Finder paste-as-move).
 4. Set **Keep History For** to 1 Day
 5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari
 
@@ -203,7 +204,7 @@ To install new packages, add them to `Brewfile` and run `brewsync`.
 ### Fish functions
 
 | Function | Description |
-|----------|-------------|
+|------|------|
 | `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile |
 | `dotpush <message>` | Commits and pushes all dotfile changes to GitHub in one command |
 | `edit <file>` | Opens a file in CotEditor |
