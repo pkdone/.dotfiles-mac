@@ -63,12 +63,4 @@ cask "docker-desktop"
 
 # Mac App Store (via mas; requires being signed in to the App Store)
 mas "WhatsApp", id: 310633997
-mas "Okta Verify", id: 490179405
-mas "Okta Extension App", id: 1439967473
-mas "1Password for Safari", id: 1569813296
-mas "Keynote", id: 409183694
-mas "Numbers", id: 409203825
-mas "Pages", id: 409201541
-mas "iMovie", id: 408981434
-mas "GarageBand", id: 682658836
 
