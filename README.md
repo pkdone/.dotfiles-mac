@@ -92,6 +92,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 |------|---------|-------|----------------------|
 | Apple Account | ID | pkdone.apple@icloud.com | Interactive Apple ID sign-in; not a `defaults` key |
 | Displays | Built-in Display | More Space | Display scaling is hardware-specific; not reliably scriptable |
+| Desktop & Dock | Widgets on desktop | None (all removed) | Widget placement isn't exposed via `defaults`; removed per-widget in the UI |
 | Keyboard | Text input sources | British | Input sources are a complex array blob; error-prone to script |
 | Mouse | Tracking speed | faster | Device-specific pointer scaling; left manual to preserve feel |
 | Mouse | Natural scrolling | Off | Global key also flips the trackpad; handled via Logi Options+ |
