@@ -45,7 +45,7 @@ chsh -s /opt/homebrew/bin/fish
 
 Two apps can't be installed by `brew bundle`, so set them up by hand after bootstrapping:
 
-- **Cursor Nightly** — download and install it manually from the [Cursor website](https://cursor.com), as a separate app. It's deliberately kept out of the Brewfile (which installs only the stable Cursor), so the stable build and Nightly sit side by side.
+- **Cursor Nightly** — download and install it manually from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. It's deliberately kept out of the Brewfile (which installs only the stable Cursor), so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
 
 Do both before running `dock.sh`, or it'll skip them.
