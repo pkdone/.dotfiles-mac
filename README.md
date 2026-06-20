@@ -14,7 +14,7 @@ Personal macOS dotfiles and bootstrap setup.
 
 ## Setup
 
-### New machine setup
+### Bootstrap
 
 On a fresh machine, first install Homebrew (which also pulls in the Command Line Tools that provide `git`), then the GitHub CLI, and sign in — this is what lets the private repo be cloned over HTTPS:
 
@@ -47,8 +47,6 @@ Trust the `mise` config to silence its warnings:
 ```bash
 mise trust ~/.dotfiles-mac/mise/config.toml
 ```
-
-Then continue with the remaining setup steps below — Set Hostname, macOS defaults, and Manual macOS tweaks.
 
 ### Set Hostname
 
