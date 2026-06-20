@@ -41,6 +41,15 @@ echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
 chsh -s /opt/homebrew/bin/fish
 ```
 
+### Apps not in the Brewfile
+
+Two apps can't be installed by `brew bundle`, so set them up by hand after bootstrapping:
+
+- **Cursor Nightly** — not a separate download but an update channel. Open Cursor (installed by the Brewfile), press `Cmd + Shift + J`, select **Beta** in the sidebar, and set the channel to **Nightly**. It installs as its own app alongside the stable build.
+- **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
+
+Do both before running `dock.sh`, or it'll skip them.
+
 ### Set Hostname
 
 ```bash
@@ -148,7 +157,7 @@ Run `dock.sh` to pin these apps to the Dock in order (idempotent; uses `dockutil
 12. Spotify
 13. YouTube Music
 
-> **Cursor Nightly** (manual download — no Homebrew cask) and **YouTube Music** (a Chrome PWA) aren't installed by the Brewfile; install them first, or `dock.sh` will skip them.
+> `dock.sh` skips any app that isn't installed — so install Cursor Nightly and YouTube Music first (see [Apps not in the Brewfile](#apps-not-in-the-brewfile)).
 
 #### Raycast
 
