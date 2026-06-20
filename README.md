@@ -141,7 +141,14 @@ The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift
 
 #### Dock
 
-Run `dock.sh` to pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile). Run `dock.sh --list` to see the apps and their order (no dockutil needed). To set them by hand instead: drag each app in, then right-click → Options → Keep in Dock.
+Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile):
+
+```bash
+bash ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order (no dockutil needed)
+bash ~/.dotfiles-mac/dock.sh          # apply
+```
+
+To set them by hand instead: drag each app in, then right-click → Options → Keep in Dock.
 
 #### Raycast
 
