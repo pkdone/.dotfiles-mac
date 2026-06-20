@@ -269,7 +269,7 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 
 #### Ghostty
 
-Ghostty's default keybindings, plus the quick-terminal toggle set in `ghostty/config`.
+Ghostty's default keybindings.
 
 | Action | Shortcut |
 |------|------|
