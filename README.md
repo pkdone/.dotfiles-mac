@@ -289,7 +289,6 @@ Custom keybindings configured in `ghostty/config`.
 | Resize split right | Command + Control + Right Arrow |
 | Equalize splits | Command + Control + = |
 | Start search | Command + F |
-| End search | Escape |
 | Next search result | Command + G |
 | Previous search result | Command + Shift + G |
 | Reload config | Command + Shift + , |
