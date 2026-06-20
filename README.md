@@ -141,21 +141,7 @@ The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift
 
 #### Dock
 
-Run `dock.sh` to pin these apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile). To do it by hand instead: drag each app in, then right-click → Options → Keep in Dock. Left to right:
-
-1. Slack
-2. WhatsApp
-3. Granola
-4. Google Chrome
-5. Claude
-6. ChatGPT
-7. Gemini
-8. Ghostty
-9. CotEditor
-10. Cursor
-11. Cursor Nightly
-12. Spotify
-13. YouTube Music
+Run `dock.sh` to pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile). Run `dock.sh --list` to see the apps and their order (no dockutil needed). To set them by hand instead: drag each app in, then right-click → Options → Keep in Dock.
 
 #### Raycast
 

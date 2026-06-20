@@ -2,49 +2,86 @@
 #
 # dock.sh — pin a fixed, ordered set of apps to the Dock (idempotent).
 #
-# Rebuilds the Dock's app section: clears it, then adds each app below in order.
-# Safe to re-run — it converges to exactly this layout, then restarts the Dock.
-# Requires dockutil (in the Brewfile).
+# With no arguments: clears the Dock's app section and re-adds each app below
+# in order, then restarts the Dock. Safe to re-run — it converges to exactly
+# this layout. Requires dockutil (in the Brewfile).
+#
+# Flags:
+#   --list       Print the Dock apps in order and exit (no changes; no dockutil needed).
+#   -h, --help   Show usage.
 #
 set -euo pipefail
+
+# "Display name | app path" — order is the left-to-right Dock order.
+# WhatsApp's bundle name carries a hidden left-to-right mark (U+200E), so its
+# path is a glob; it contains no spaces, so it expands cleanly at add time.
+# @HOME@ is replaced with $HOME at runtime.
+APPS='
+Slack|/Applications/Slack.app
+WhatsApp|/Applications/*WhatsApp.app
+Granola|/Applications/Granola.app
+Google Chrome|/Applications/Google Chrome.app
+Claude|/Applications/Claude.app
+ChatGPT|/Applications/ChatGPT.app
+Gemini|/Applications/Gemini.app
+Ghostty|/Applications/Ghostty.app
+CotEditor|/Applications/CotEditor.app
+Cursor|/Applications/Cursor.app
+Cursor Nightly|/Applications/Cursor Nightly.app
+Spotify|/Applications/Spotify.app
+YouTube Music|@HOME@/Applications/Chrome Apps.localized/YouTube Music.app
+'
+
+list_apps() {
+  local n=0 name path
+  while IFS='|' read -r name path; do
+    [ -z "$name" ] && continue
+    n=$((n + 1))
+    printf '%2d. %s\n' "$n" "$name"
+  done <<< "$APPS"
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: dock.sh [--list]
+  --list       Print the Dock apps in order and exit (no changes; dockutil not required).
+  -h, --help   Show this help.
+
+With no arguments, dock.sh rebuilds the Dock's app section to exactly these
+apps, in order (idempotent), and restarts the Dock.
+USAGE
+}
+
+case "${1:-}" in
+  --list)     list_apps; exit 0 ;;
+  -h|--help)  usage; exit 0 ;;
+  "")         : ;;
+  *)          echo "Unknown argument: $1 (try --help)" >&2; exit 2 ;;
+esac
 
 if ! command -v dockutil >/dev/null 2>&1; then
   echo "dockutil not found — install it first (it's in the Brewfile)." >&2
   exit 1
 fi
 
-# WhatsApp's bundle name carries a hidden left-to-right mark (U+200E),
-# so resolve it with a glob instead of a literal path.
-whatsapp=(/Applications/*WhatsApp.app)
-
-apps=(
-  "/Applications/Slack.app"
-  "${whatsapp[0]}"
-  "/Applications/Granola.app"
-  "/Applications/Google Chrome.app"
-  "/Applications/Claude.app"
-  "/Applications/ChatGPT.app"
-  "/Applications/Gemini.app"
-  "/Applications/Ghostty.app"
-  "/Applications/CotEditor.app"
-  "/Applications/Cursor.app"
-  "/Applications/Cursor Nightly.app"
-  "/Applications/Spotify.app"
-  "$HOME/Applications/Chrome Apps.localized/YouTube Music.app"
-)
-
 echo "🧹 Clearing the Dock..."
 dockutil --remove all --no-restart >/dev/null
 
 echo "📌 Pinning apps in order..."
-for app in "${apps[@]}"; do
-  if [ -e "$app" ]; then
-    dockutil --add "$app" --no-restart >/dev/null
-    echo "  added $(basename "$app")"
+while IFS='|' read -r name path; do
+  [ -z "$name" ] && continue
+  path="${path/@HOME@/$HOME}"
+  # Expand the one globbed path (WhatsApp); literal paths pass through unchanged.
+  case "$path" in
+    *'*'*) set -- $path; path="$1" ;;
+  esac
+  if [ -e "$path" ]; then
+    dockutil --add "$path" --no-restart >/dev/null
+    echo "  added $name"
   else
-    echo "  [skip] not installed: $app"
+    echo "  [skip] not installed: $name"
   fi
-done
+done <<< "$APPS"
 
 killall Dock || true
 echo "✅ Dock set."
