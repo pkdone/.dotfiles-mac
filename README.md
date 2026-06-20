@@ -46,6 +46,8 @@ Trust the `mise` config to silence its warnings:
 mise trust ~/.dotfiles-mac/mise/config.toml
 ```
 
+Finally, apply the macOS defaults (see the [macOS defaults](#macos-defaults) section below).
+
 ## Day-to-day
 
 Edit configs normally — changes go directly into the repo via symlinks. Then push:
@@ -260,7 +262,6 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Activate Finder (via Raycast) | Shift + Control + Command + F |
 | Clipboard History (via Raycast) | Control + Command + V |
 | Force Quit Applications window | Option + Command + Escape |
-| Tile windows when dragging | Option + |
 | Lock Screen | Control + Command + Q OR TouchID press |
 | App Switcher | Command + Tab |
 | AltTab Switcher | Option + Tab |
