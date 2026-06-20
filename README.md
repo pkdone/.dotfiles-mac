@@ -190,7 +190,7 @@ To enable Clipboard History:
 
 ## Usage & reference
 
-### Day-to-day
+### Making changes
 
 Edit configs normally — changes go directly into the repo via symlinks. Then push:
 
