@@ -97,7 +97,7 @@ fi
 
 # ---- 3. macOS defaults --------------------------------------------------
 hdr "macOS defaults"
-while IFS='|' read -r domain key etype desired restart area label disp; do
+while IFS='|' read -r domain key etype desired _restart _area _label _disp; do
   case "$domain" in ''|'#'*) continue ;; esac
   CHECKED=$((CHECKED + 1))
   desired="${desired//@HOME@/$HOME}"
