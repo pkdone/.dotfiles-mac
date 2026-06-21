@@ -94,20 +94,26 @@ exit 1; clean again afterwards with exit 0.
 Note: portable to bash 3.2 (no `mapfile`, no `printf %b` hex reliance) since the Brewfile
 doesn't pin bash and a fresh machine's `/usr/bin/env bash` may be the system 3.2.
 
-## Phase 4 — Guarded bootstrap scripts
+## Phase 4 — Guarded bootstrap scripts  ✅ complete (gate passed)
 
 Replace the loose README command blocks. Both use `sudo` interactively (no privilege
 bypassed) and both take `--dry-run`.
 
-- [ ] `shell.sh` — resolve `FISH="$(brew --prefix)/bin/fish"`; bail if missing; append to
+- [x] `shell.sh` — resolves `FISH="$(brew --prefix)/bin/fish"`; bails if missing; appends to
       `/etc/shells` only if absent (`grep -qxF`); `chsh` only if current shell differs
-- [ ] `hostname.sh` — desired name as a commented constant at top; per name
+- [x] `hostname.sh` — desired name as a commented constant at top; per name
       (HostName/LocalHostName/ComputerName) `scutil --get` then `sudo scutil --set` only on
-      mismatch; flush cache only if something changed
-- [ ] README updated to reference the scripts instead of raw commands
+      mismatch; flushes DNS cache only if something changed
+- [x] README updated to reference the scripts instead of raw commands
 
-**Verification gate:** run each twice — second run reports all-correct, no changes. Then
-`check.sh` shell + hostname sections pass.
+**Verification gate:** ✅ PASSED — on this (already-configured) machine each script run
+twice reports all-`ok`, exit 0, invoking no sudo/chsh/flush. The *change* branch was
+verified via `--dry-run` on throwaway `/tmp` copies pointed at different targets
+(`DESIRED=probe-xyz`, `FISH=/bin/zsh`): both printed `would set …`/`would chsh …` while the
+real HostName and login shell stayed untouched. `check.sh` shell + hostname sections still
+pass. (The live sudo/chsh paths can't run here — Desktop Commander blocks those commands,
+and they're what runs on a fresh machine — so they're construction + dry-run verified, to
+be exercised for real on first fresh-machine setup.)
 
 ## Phase 5 — Harden `install.sh`
 

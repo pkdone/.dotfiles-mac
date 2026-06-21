@@ -34,11 +34,11 @@ bash ~/.dotfiles-mac/install.sh
 
 This creates symlinks from `~/.config` into this repo, installs everything in the Brewfile, and trusts the `mise` config.
 
-Finally, make Fish (installed by the Brewfile) your login shell:
+Finally, make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/etc/shells` and runs `chsh` for you — idempotent, and it prompts for your password (sudo) only if a change is actually needed:
 
 ```bash
-echo /opt/homebrew/bin/fish | sudo tee -a /etc/shells
-chsh -s /opt/homebrew/bin/fish
+bash ~/.dotfiles-mac/shell.sh --dry-run   # preview
+bash ~/.dotfiles-mac/shell.sh             # apply
 ```
 
 ### Apps not in the Brewfile
@@ -52,11 +52,11 @@ Do both before running `dock.sh`, or it'll skip them.
 
 ### Set Hostname
 
+`hostname.sh` sets HostName, LocalHostName and ComputerName (idempotent; uses sudo only when a name actually differs, and flushes the DNS cache only if something changed):
+
 ```bash
-sudo scutil --set HostName pdone-mac
-sudo scutil --set LocalHostName pdone-mac
-sudo scutil --set ComputerName pdone-mac
-dscacheutil -flushcache
+bash ~/.dotfiles-mac/hostname.sh --dry-run   # preview
+bash ~/.dotfiles-mac/hostname.sh             # apply
 ```
 
 ### Dock
