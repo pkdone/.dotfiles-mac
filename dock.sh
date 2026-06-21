@@ -12,30 +12,17 @@
 #
 set -euo pipefail
 
-# "Display name | app path" — order is the left-to-right Dock order.
-# WhatsApp's bundle name carries a hidden left-to-right mark (U+200E), so its
-# path is a glob; it contains no spaces, so it expands cleanly at add time.
-# @HOME@ is replaced with $HOME at runtime.
-APPS='
-Slack|/Applications/Slack.app
-WhatsApp|/Applications/*WhatsApp.app
-Granola|/Applications/Granola.app
-Google Chrome|/Applications/Google Chrome.app
-Claude|/Applications/Claude.app
-ChatGPT|/Applications/ChatGPT.app
-Gemini|/Applications/Gemini.app
-Ghostty|/Applications/Ghostty.app
-CotEditor|/Applications/CotEditor.app
-Cursor|/Applications/Cursor.app
-Cursor Nightly|/Applications/Cursor Nightly.app
-Spotify|/Applications/Spotify.app
-YouTube Music|@HOME@/Applications/Chrome Apps.localized/YouTube Music.app
-'
+DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The Dock app list lives in lib/dock-apps.list (one "Display name | path" per line;
+# see that file's header for details). Loaded so the list is a single source of truth
+# shared with check.sh. Blank/# lines are skipped by the read loops.
+APPS="$(<"$DOTDIR/lib/dock-apps.list")"
 
 list_apps() {
   local n=0 name path
   while IFS='|' read -r name path; do
-    [ -z "$name" ] && continue
+    case "$name" in ''|'#'*) continue ;; esac
     n=$((n + 1))
     printf '%2d. %s\n' "$n" "$name"
   done <<< "$APPS"
@@ -69,7 +56,7 @@ dockutil --remove all --no-restart >/dev/null
 
 echo "📌 Pinning apps in order..."
 while IFS='|' read -r name path; do
-  [ -z "$name" ] && continue
+  case "$name" in ''|'#'*) continue ;; esac
   path="${path/@HOME@/$HOME}"
   # Expand the one globbed path (WhatsApp); literal paths pass through unchanged.
   # shellcheck disable=SC2086  # intentional: unquoted $path lets the glob expand to its single match

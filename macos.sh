@@ -68,30 +68,10 @@ NEEDS_LOGOUT=0
 BACKED_UP=0
 
 # ---- helpers ------------------------------------------------------------
-norm_bool() {
-  case "$1" in
-    1|true|TRUE|True|yes|YES)  echo 1 ;;
-    0|false|FALSE|False|no|NO) echo 0 ;;
-    *) echo "$1" ;;
-  esac
-}
-
-values_equal() {  # type a b
-  case "$1" in
-    bool)      [ "$(norm_bool "$2")" = "$(norm_bool "$3")" ] ;;
-    int|float) awk -v x="$2" -v y="$3" 'BEGIN{ exit !(x==y) }' ;;
-    *)         [ "$2" = "$3" ] ;;
-  esac
-}
-
-type_token() {  # our type -> `defaults read-type` word
-  case "$1" in
-    string) echo string ;;
-    float)  echo float ;;
-    int)    echo integer ;;
-    bool)   echo boolean ;;
-  esac
-}
+# Value-comparison helpers (norm_bool, values_equal, type_token) live in a shared
+# lib so check.sh can reuse the exact same match semantics.
+# shellcheck source=lib/defaults-lib.sh disable=SC1091
+. "$DOTDIR/lib/defaults-lib.sh"
 
 queue_restart() {
   [ -z "$1" ] && return 0
@@ -173,29 +153,17 @@ apply_setting() {  # domain key type desired restart
 }
 
 # ---- settings table -----------------------------------------------------
-# domain | key | type | desired | restart | area | label | display-value   (@HOME@ -> $HOME)
-# shellcheck disable=SC2016  # the backticks below are literal Markdown in the display column; single quotes are intentional (we do NOT want expansion)
-SETTINGS='
-NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout|Appearance|Theme|`Dark`
-com.apple.dock|tilesize|float|46|Dock|Dock|Icon size|`46`
-com.apple.dock|show-recents|bool|false|Dock|Dock|Show recent apps|`false` (Off)
-com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Off)
-com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)
-com.apple.finder|ShowHardDrivesOnDesktop|bool|false|Finder|Finder|Hard drives on Desktop|`false` (Off)
-com.apple.finder|NewWindowTarget|string|PfHm|Finder|Finder|New window target|`PfHm` (Home)
-com.apple.screencapture|location|string|@HOME@/Pictures|SystemUIServer|Screenshots|Save location|`~/Pictures`
-com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer|Control Center|Clock — Show AM/PM|`true` (On)
-com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|Clock — Show day of week|`true` (On)
-com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock — Show date|`1` (On)
-NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)
-'
+# The managed settings live in lib/macos-defaults.list (one pipe-delimited row per
+# setting; see that file's header for the format). Loaded here so the list is a single
+# source of truth shared with check.sh. Blank/# lines are skipped by the read loops.
+SETTINGS="$(<"$DOTDIR/lib/macos-defaults.list")"
 
 # shellcheck disable=SC2016  # printf formats below contain literal Markdown backticks; single quotes intentional (no expansion wanted)
 list_settings() {
   printf '| Area | Setting | `defaults` key | Value |\n'
   printf '|------|------|------|------|\n'
   while IFS='|' read -r domain key etype desired restart area label disp; do
-    [ -z "$domain" ] && continue
+    case "$domain" in ''|'#'*) continue ;; esac
     printf '| %s | %s | `%s %s` | %s |\n' "$area" "$label" "$domain" "$key" "$disp"
   done <<< "$SETTINGS"
 }
@@ -206,7 +174,7 @@ echo "macos.sh — $([ "$DRY_RUN" = 1 ] && echo 'DRY RUN (no writes)' || echo 'a
 echo
 
 while IFS='|' read -r domain key etype desired restart area label disp; do
-  [ -z "$domain" ] && continue
+  case "$domain" in ''|'#'*) continue ;; esac
   apply_setting "$domain" "$key" "$etype" "$desired" "$restart"
 done <<< "$SETTINGS"
 

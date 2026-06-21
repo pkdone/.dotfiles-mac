@@ -1,0 +1,19 @@
+# Dock apps, in left-to-right order. Loaded by dock.sh (and read by check.sh).
+# Format (pipe-delimited): Display name | app path
+#   WhatsApp's bundle name carries a hidden left-to-right mark (U+200E), so its path is
+#   a glob; it contains no spaces, so it expands cleanly at add time.
+#   @HOME@ -> $HOME at runtime.
+# Blank lines and lines beginning with # are ignored.
+Slack|/Applications/Slack.app
+WhatsApp|/Applications/*WhatsApp.app
+Granola|/Applications/Granola.app
+Google Chrome|/Applications/Google Chrome.app
+Claude|/Applications/Claude.app
+ChatGPT|/Applications/ChatGPT.app
+Gemini|/Applications/Gemini.app
+Ghostty|/Applications/Ghostty.app
+CotEditor|/Applications/CotEditor.app
+Cursor|/Applications/Cursor.app
+Cursor Nightly|/Applications/Cursor Nightly.app
+Spotify|/Applications/Spotify.app
+YouTube Music|@HOME@/Applications/Chrome Apps.localized/YouTube Music.app

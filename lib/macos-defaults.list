@@ -1,0 +1,18 @@
+# Managed macOS `defaults`, one per line. Loaded by macos.sh (and read by check.sh).
+# Format (pipe-delimited): domain | key | type | desired | restart | area | label | display-value
+#   type:    string | int | float | bool
+#   restart: process to killall after a change (Dock / Finder / SystemUIServer), or "logout", or empty
+#   display: uses literal Markdown backticks for `macos.sh --list`; @HOME@ -> $HOME at runtime
+# Blank lines and lines beginning with # are ignored.
+NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout|Appearance|Theme|`Dark`
+com.apple.dock|tilesize|float|46|Dock|Dock|Icon size|`46`
+com.apple.dock|show-recents|bool|false|Dock|Dock|Show recent apps|`false` (Off)
+com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Off)
+com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)
+com.apple.finder|ShowHardDrivesOnDesktop|bool|false|Finder|Finder|Hard drives on Desktop|`false` (Off)
+com.apple.finder|NewWindowTarget|string|PfHm|Finder|Finder|New window target|`PfHm` (Home)
+com.apple.screencapture|location|string|@HOME@/Pictures|SystemUIServer|Screenshots|Save location|`~/Pictures`
+com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer|Control Center|Clock — Show AM/PM|`true` (On)
+com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|Clock — Show day of week|`true` (On)
+com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock — Show date|`1` (On)
+NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)

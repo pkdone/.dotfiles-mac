@@ -48,19 +48,23 @@ Optional (on-theme, low priority):
 - [x] `fish -n` syntax-check job for the fish files (included — repo is fish-heavy)
 - [ ] `actionlint` on the workflow itself (skipped — left as a later nicety)
 
-## Phase 2 — Extract shared data & logic into `lib/`
+## Phase 2 — Extract shared data & logic into `lib/`  ✅ complete (gate passed: byte-identical output)
 
 Refactor of working scripts — comes after CI so the net guards it.
 
-- [ ] `lib/macos-defaults.list` — current `SETTINGS` block, verbatim
-- [ ] `lib/dock-apps.list` — current `APPS` block, verbatim
-- [ ] `lib/defaults-lib.sh` — factor out `norm_bool`, `values_equal`, `type_token`
-- [ ] `macos.sh` loads `SETTINGS` from `lib/` and sources `lib/defaults-lib.sh`
-- [ ] `dock.sh` loads `APPS` from `lib/` (add a `DOTDIR` line — it currently lacks one)
+- [x] `lib/macos-defaults.list` — `SETTINGS` rows verbatim, with a `#` format header
+- [x] `lib/dock-apps.list` — `APPS` rows verbatim, with a `#` format header
+- [x] `lib/defaults-lib.sh` — factored out `norm_bool`, `values_equal`, `type_token`
+      (sourced, not executable; `# shellcheck shell=bash` in lieu of a shebang)
+- [x] `macos.sh` loads `SETTINGS` via `$(<lib/macos-defaults.list)` and sources
+      `lib/defaults-lib.sh` (`# shellcheck source=… disable=SC1091`)
+- [x] `dock.sh` loads `APPS` via `$(<lib/dock-apps.list)` (added the missing `DOTDIR` line)
+- [x] Both scripts' read loops now skip blank **and** `#` lines (`case "$x" in ''|'#'*)`),
+      so the `.list` files can carry self-documenting headers — behaviour-preserving since
+      no data row is blank or starts with `#`
 
-**Verification gate:** capture `macos.sh --list`, `macos.sh --dry-run`, `dock.sh --list`
-output *before* the refactor; diff against the same after. Byte-identical = no behaviour
-change.
+**Verification gate:** ✅ PASSED — `macos.sh --list`, `macos.sh --dry-run`, and
+`dock.sh --list` are byte-identical before vs after the refactor (diff clean on all three).
 
 Optional (follow-up, don't block Phase 3):
 - [ ] `lib/links.list` (source|target pairs) shared by `install.sh` + `check.sh`;
