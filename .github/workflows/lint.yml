@@ -1,0 +1,57 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: shellcheck (bash scripts)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck on all .sh scripts
+        run: |
+          # ubuntu-latest ships with shellcheck preinstalled.
+          shellcheck --version
+          # Lint every .sh file in the repo (bash/sh only — fish files are
+          # checked in the fish-syntax job; shellcheck can't parse fish).
+          mapfile -t scripts < <(find . -type f -name '*.sh' -not -path './.git/*' | sort)
+          printf 'Linting %d script(s):\n' "${#scripts[@]}"
+          printf '  %s\n' "${scripts[@]}"
+          shellcheck "${scripts[@]}"
+
+  brewfile:
+    name: Brewfile (parses)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Brewfile parses
+        run: |
+          # `bundle list --all` evaluates the Brewfile's Ruby DSL and lists every
+          # entry (brews, casks, taps, mas) without installing anything; malformed
+          # syntax fails the job. Must run on macOS — casks/mas aren't valid on Linux.
+          brew bundle list --all --file Brewfile
+
+  fish-syntax:
+    name: fish syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install fish
+        run: sudo apt-get update && sudo apt-get install -y fish
+      - name: Syntax-check fish files
+        run: |
+          # `fish -n` parses without executing. config.fish references runtime
+          # binaries (brew, mise, direnv, fzf) but -n never runs them, so this
+          # is safe and needs nothing installed beyond fish itself.
+          status=0
+          while IFS= read -r f; do
+            echo "checking $f"
+            fish -n "$f" || status=1
+          done < <(find . -type f -name '*.fish' -not -path './.git/*' | sort)
+          exit "$status"

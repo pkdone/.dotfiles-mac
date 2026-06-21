@@ -72,6 +72,7 @@ while IFS='|' read -r name path; do
   [ -z "$name" ] && continue
   path="${path/@HOME@/$HOME}"
   # Expand the one globbed path (WhatsApp); literal paths pass through unchanged.
+  # shellcheck disable=SC2086  # intentional: unquoted $path lets the glob expand to its single match
   case "$path" in
     *'*'*) set -- $path; path="$1" ;;
   esac

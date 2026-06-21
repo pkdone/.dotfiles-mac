@@ -218,6 +218,7 @@ if [ "$DRY_RUN" != 1 ] && [ "$CHANGED" -gt 0 ] && [ -n "${RESTARTS// /}" ]; then
   read -r reply || reply=''
   case "$reply" in
     y|Y|yes|YES)
+      # shellcheck disable=SC2086  # intentional: $RESTARTS is a space-separated list we want word-split
       for p in $RESTARTS; do
         killall "$p" 2>/dev/null && echo "  restarted $p" || echo "  $p not running"
       done ;;
