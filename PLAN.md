@@ -25,7 +25,7 @@ script edit, and the riskiest manual steps become safe and idempotent.
 
 ---
 
-## Phase 1 — CI linting  ✅ implemented (CI gate pending first push)
+## Phase 1 — CI linting  ✅ complete (all jobs green on commit 09ed693)
 
 - [x] `.github/workflows/lint.yml` created
 - [x] `shellcheck` job (Ubuntu runner) over `*.sh` only (not `.fish`) — uses preinstalled
@@ -40,9 +40,9 @@ script edit, and the riskiest manual steps become safe and idempotent.
       (SC2086 and SC2016; directive placed above the enclosing `case`/`for`/assignment/
       function for reliable scoping)
 
-**Verification gate:** workflow green on a PR; every suppression has a justifying comment.
-→ ⏳ *Pending: CI only runs once `lint.yml` is pushed to GitHub. If shellcheck still flags
-the two suppressed lines, move the directive onto the exact offending line and re-push.*
+**Verification gate:** ✅ PASSED — all three jobs green on commit `09ed693` (run
+27916030405): shellcheck, Brewfile parse, fish syntax. Every suppression has a justifying
+comment. (The first push surfaced SC2016 ×3 that manual triage missed; fixed and re-pushed.)
 
 Optional (on-theme, low priority):
 - [x] `fish -n` syntax-check job for the fish files (included — repo is fish-heavy)
