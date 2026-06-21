@@ -31,12 +31,14 @@ script edit, and the riskiest manual steps become safe and idempotent.
 - [x] `shellcheck` job (Ubuntu runner) over `*.sh` only (not `.fish`) — uses preinstalled
       shellcheck, finds scripts via `find -name '*.sh'` so later phases need no edits
 - [x] Brewfile job (`macos-latest` runner): `brew bundle list --all --file Brewfile`, no install
-- [x] Triage existing findings — done by manual analysis (shellcheck not runnable in this
-      env); only two real findings, both intentional SC2086: `macos.sh` `$RESTARTS` loop and
-      `dock.sh` `set -- $path`. `read`-populated unused vars are not flagged. First CI run is
-      the authoritative confirmation.
-- [x] Every deliberate case annotated with targeted `# shellcheck disable=SC2086` + reason
-      (directive placed above the enclosing `case`/`for` for reliable scoping)
+- [x] Triage existing findings — manual analysis missed SC2016; the first CI run was the
+      authoritative check. Findings: SC2086 ×2 (intentional word-splits: `macos.sh`
+      `$RESTARTS` loop, `dock.sh` `set -- $path`) and SC2016 ×3 (literal Markdown backticks
+      in single-quoted strings: `macos.sh` `SETTINGS` block + the two `list_settings`
+      printfs). All suppressed with reasons. `read`-populated unused vars are not flagged.
+- [x] Every deliberate case annotated with a targeted `# shellcheck disable=` + reason
+      (SC2086 and SC2016; directive placed above the enclosing `case`/`for`/assignment/
+      function for reliable scoping)
 
 **Verification gate:** workflow green on a PR; every suppression has a justifying comment.
 → ⏳ *Pending: CI only runs once `lint.yml` is pushed to GitHub. If shellcheck still flags

@@ -174,6 +174,7 @@ apply_setting() {  # domain key type desired restart
 
 # ---- settings table -----------------------------------------------------
 # domain | key | type | desired | restart | area | label | display-value   (@HOME@ -> $HOME)
+# shellcheck disable=SC2016  # the backticks below are literal Markdown in the display column; single quotes are intentional (we do NOT want expansion)
 SETTINGS='
 NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout|Appearance|Theme|`Dark`
 com.apple.dock|tilesize|float|46|Dock|Dock|Icon size|`46`
@@ -189,6 +190,7 @@ com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock —
 NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)
 '
 
+# shellcheck disable=SC2016  # printf formats below contain literal Markdown backticks; single quotes intentional (no expansion wanted)
 list_settings() {
   printf '| Area | Setting | `defaults` key | Value |\n'
   printf '|------|------|------|------|\n'
