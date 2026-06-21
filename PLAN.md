@@ -70,22 +70,29 @@ Optional (follow-up, don't block Phase 3):
 - [ ] `lib/links.list` (source|target pairs) shared by `install.sh` + `check.sh`;
       handle the fish-functions glob as a named special case in both
 
-## Phase 3 — `check.sh` (read-only verifier)
+## Phase 3 — `check.sh` (read-only verifier)  ✅ complete (gate passed)
 
 Mirrors `macos.sh` UX (`--no-color`, ok/warn lines, summary) but **never writes**; exits
-non-zero on any drift.
+non-zero on any drift. Reuses `lib/macos-defaults.list`, `lib/dock-apps.list`, and the
+sourced `lib/defaults-lib.sh`, so the verify path can't diverge from the apply path.
 
-- [ ] Symlinks — each expected link exists, is a symlink, resolves into the repo
-- [ ] Homebrew — `brew bundle check --file Brewfile` (reports missing, no install)
-- [ ] Defaults — each `lib/macos-defaults.list` row: read value+type, compare via
+- [x] Symlinks — each expected link exists, is a symlink, resolves into the repo
+      (ghostty, fish config + each function, mise, gitconfig)
+- [x] Homebrew — `brew bundle check --file Brewfile` (reports missing via `--verbose`, no install)
+- [x] Defaults — each `lib/macos-defaults.list` row: read value+type, compare via
       `lib/defaults-lib.sh` (match / differs / missing / type-mismatch)
-- [ ] Dock — `dockutil --list` vs `lib/dock-apps.list` (set **and** order)
-- [ ] Login shell — `dscl . -read /Users/$USER UserShell` vs fish path
-- [ ] Hostname — `scutil --get HostName` (+ LocalHostName, ComputerName) vs expected
-- [ ] `--no-color` flag + non-zero exit on drift
+- [x] Dock — compares **by path** (mirrors how dock.sh pins) vs `lib/dock-apps.list`, set
+      **and** order; decodes `%20`, lets the `*` glob absorb WhatsApp's U+200E mark
+- [x] Login shell — `dscl . -read /Users/$USER UserShell` vs `$(brew --prefix)/bin/fish`
+- [x] Hostname — `scutil --get` HostName / LocalHostName / ComputerName vs `pdone-mac`
+- [x] `--no-color` flag (honours `NO_COLOR`) + exit 1 on drift, 0 when clean
 
-**Verification gate:** clean bill of health on the current machine; then change one
-`defaults` value by hand and confirm `check.sh` flags exactly that one.
+**Verification gate:** ✅ PASSED — clean machine reports 25/25 ok, exit 0. Injecting one
+change (`com.apple.dock tilesize` 46→50, then restored) produced exactly one DRIFT line and
+exit 1; clean again afterwards with exit 0.
+
+Note: portable to bash 3.2 (no `mapfile`, no `printf %b` hex reliance) since the Brewfile
+doesn't pin bash and a fresh machine's `/usr/bin/env bash` may be the system 3.2.
 
 ## Phase 4 — Guarded bootstrap scripts
 
