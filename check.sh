@@ -75,13 +75,15 @@ check_link() {  # target  expected-source
   fi
 }
 
-check_link "$HOME/.config/ghostty/config"   "$DOTDIR/ghostty/config"
-check_link "$HOME/.config/fish/config.fish" "$DOTDIR/fish/config.fish"
+# Static one-to-one links from lib/links.list (shared with install.sh).
+while IFS='|' read -r src tgt; do
+  case "$src" in ''|'#'*) continue ;; esac
+  check_link "${tgt//@HOME@/$HOME}" "$DOTDIR/$src"
+done < "$DOTDIR/lib/links.list"
+# Fish functions: one-dir-to-many glob, handled as a special case.
 for f in "$DOTDIR"/fish/functions/*.fish; do
   check_link "$HOME/.config/fish/functions/$(basename "$f")" "$f"
 done
-check_link "$HOME/.config/mise/config.toml" "$DOTDIR/mise/config.toml"
-check_link "$HOME/.gitconfig"               "$DOTDIR/gitconfig"
 
 # ---- 2. Homebrew --------------------------------------------------------
 hdr "Homebrew (Brewfile)"

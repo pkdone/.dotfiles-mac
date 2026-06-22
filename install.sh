@@ -52,14 +52,16 @@ link() {  # src dst
 
 echo ""
 echo "🔗 Creating symlinks..."
-link "$DOTFILES/ghostty/config"   "$HOME/.config/ghostty/config"
-link "$DOTFILES/fish/config.fish" "$HOME/.config/fish/config.fish"
+# Static one-to-one links live in lib/links.list (shared with check.sh).
+while IFS='|' read -r src tgt; do
+  case "$src" in ''|'#'*) continue ;; esac
+  link "$DOTFILES/$src" "${tgt//@HOME@/$HOME}"
+done < "$DOTFILES/lib/links.list"
+# Fish functions are one-dir-to-many, so handle the glob as a special case.
 mkdir -p "$HOME/.config/fish/conf.d"   # keep the (currently empty) drop-in dir
 for f in "$DOTFILES"/fish/functions/*.fish; do
   link "$f" "$HOME/.config/fish/functions/$(basename "$f")"
 done
-link "$DOTFILES/mise/config.toml" "$HOME/.config/mise/config.toml"
-link "$DOTFILES/gitconfig"        "$HOME/.gitconfig"
 
 if [ -n "$BACKUP_DIR" ]; then
   echo "  (real files were moved to $BACKUP_DIR)"

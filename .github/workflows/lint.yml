@@ -13,7 +13,7 @@ jobs:
     name: shellcheck (bash scripts)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Run shellcheck on all .sh scripts
         run: |
           # ubuntu-latest ships with shellcheck preinstalled.
@@ -29,7 +29,7 @@ jobs:
     name: Brewfile (parses)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate Brewfile parses
         run: |
           # `bundle list --all` evaluates the Brewfile's Ruby DSL and lists every
@@ -41,7 +41,7 @@ jobs:
     name: fish syntax check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Install fish
         run: sudo apt-get update && sudo apt-get install -y fish
       - name: Syntax-check fish files
@@ -55,3 +55,16 @@ jobs:
             fish -n "$f" || status=1
           done < <(find . -type f -name '*.fish' -not -path './.git/*' | sort)
           exit "$status"
+
+  actionlint:
+    name: actionlint (workflow lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run actionlint
+        run: |
+          # Download the actionlint binary, then lint every workflow under
+          # .github/workflows. shellcheck (preinstalled on the runner) is also
+          # applied to the inline run: scripts as a bonus.
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color

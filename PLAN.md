@@ -48,7 +48,8 @@ comment. (The first push surfaced SC2016 ×3 that manual triage missed; fixed an
 
 Optional (on-theme, low priority):
 - [x] `fish -n` syntax-check job for the fish files (included — repo is fish-heavy)
-- [ ] `actionlint` on the workflow itself (skipped — left as a later nicety)
+- [x] `actionlint` on the workflow itself (added — also shellchecks inline `run:` blocks;
+      `actions/checkout` bumped v4 → v5 to clear the Node-20 deprecation warning)
 
 ## Phase 2 — Extract shared data & logic into `lib/`  ✅ complete (gate passed: byte-identical output)
 
@@ -69,8 +70,8 @@ Refactor of working scripts — comes after CI so the net guards it.
 `dock.sh --list` are byte-identical before vs after the refactor (diff clean on all three).
 
 Optional (follow-up, don't block Phase 3):
-- [ ] `lib/links.list` (source|target pairs) shared by `install.sh` + `check.sh`;
-      handle the fish-functions glob as a named special case in both
+- [x] `lib/links.list` (source|target pairs, `@HOME@` → `$HOME`) shared by `install.sh` +
+      `check.sh`; the fish-functions dir is handled as a glob special-case in both
 
 ## Phase 3 — `check.sh` (read-only verifier)  ✅ complete (gate passed)
 
