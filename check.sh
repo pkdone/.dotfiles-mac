@@ -90,11 +90,20 @@ hdr "Homebrew (Brewfile)"
 CHECKED=$((CHECKED + 1))
 if ! command -v brew >/dev/null 2>&1; then
   warn "brew not installed — skipping Brewfile check"
-elif brew bundle check --file "$DOTDIR/Brewfile" >/dev/null 2>&1; then
-  pass "Brewfile satisfied (all formulae, casks, mas apps installed)"
+elif ! brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" >/dev/null 2>&1; then
+  # --no-upgrade => fail only on genuinely MISSING entries, not merely outdated ones.
+  bad "Brewfile not satisfied — missing entries:"
+  brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" --verbose 2>&1 | sed 's/^/          /' || true
 else
-  bad "Brewfile not satisfied — missing:"
-  brew bundle check --file "$DOTDIR/Brewfile" --verbose 2>&1 | sed 's/^/          /' || true
+  # Everything is installed. The Brewfile pins names, not versions, so a *managed*
+  # package being merely outdated is a soft warning (run brewsync), not drift.
+  bf_names="$(sed -nE 's/^(brew|cask) "([^"]+)".*/\2/p' "$DOTDIR/Brewfile" | sed -E 's#.*/##' | sort -u)"
+  outdated="$(brew outdated --quiet 2>/dev/null | grep -Fxf <(printf '%s\n' "$bf_names") || true)"
+  if [ -n "$outdated" ]; then
+    warn "all installed; outdated (run brewsync to update): $(printf '%s' "$outdated" | tr '\n' ' ')"
+  else
+    pass "Brewfile satisfied (all installed and current)"
+  fi
 fi
 
 # ---- 3. macOS defaults --------------------------------------------------
