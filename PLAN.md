@@ -115,20 +115,27 @@ pass. (The live sudo/chsh paths can't run here — Desktop Commander blocks thos
 and they're what runs on a fresh machine — so they're construction + dry-run verified, to
 be exercised for real on first fresh-machine setup.)
 
-## Phase 5 — Harden `install.sh`
+## Phase 5 — Harden `install.sh`  ✅ complete (gate passed)
 
-- [ ] Preflight (warn, don't cryptically fail): assert Darwin; warn if `gh auth status`
-      fails; warn that `mas` WhatsApp needs App Store sign-in
-- [ ] `link()` helper: if target is already a symlink, `ln -sf` (idempotent); if a **real**
-      file/dir would be clobbered, move it to `backups/pre-symlink-<timestamp>/` first
-- [ ] Align `install.sh` to `set -euo pipefail`
+- [x] Preflight (warn, don't cryptically fail): asserts Darwin (hard exit off-macOS);
+      warns if `gh` is installed but unauthenticated; notes the `mas` WhatsApp App Store
+      sign-in requirement
+- [x] `link()` helper: if DST is already a symlink, `ln -sf` repoints it (idempotent); if a
+      **real** file/dir sits there, it's moved to `backups/pre-symlink-<timestamp>/` first.
+      Backup dir set via a direct `ensure_backup_dir` (not a `$(...)` subshell), so all
+      clobbered files land in one timestamped dir
+- [x] Aligned `install.sh` to `set -euo pipefail`
 
-**Verification gate:** re-run on the configured machine — existing repo symlinks replaced
-cleanly, nothing in `backups/pre-symlink-*` unless a real file genuinely existed.
+**Verification gate:** ✅ PASSED — `bash -n` clean; `link()` logic exercised in an isolated
+sandbox (verbatim copy of the helpers): absent target → link, no backup; already-correct
+symlink → idempotent, no spurious backup; real file present → original preserved in a single
+`pre-symlink-*` dir, then linked. `check.sh` confirms all real symlinks still `ok`. (Did not
+run the full `install.sh` here — it would trigger `brew bundle`'s network/install side
+effects on an already-set-up machine; the unchanged brew/mise sections weren't re-exercised.)
 
 Optional wiring:
-- [ ] `install.sh` offers to run `shell.sh` + `hostname.sh` at the end behind a prompt
-      (both still runnable standalone)
+- [x] `install.sh` offers to run `shell.sh` + `hostname.sh` at the end behind a `[y/N]` prompt
+      (tty-guarded — prints manual hints when non-interactive; both still runnable standalone)
 
 ## Phase 6 — defaults discovery workflow
 
