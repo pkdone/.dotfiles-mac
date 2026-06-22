@@ -136,9 +136,12 @@ symlink → idempotent, no spurious backup; real file present → original prese
 run the full `install.sh` here — it would trigger `brew bundle`'s network/install side
 effects on an already-set-up machine; the unchanged brew/mise sections weren't re-exercised.)
 
-Optional wiring:
-- [x] `install.sh` offers to run `shell.sh` + `hostname.sh` at the end behind a `[y/N]` prompt
-      (tty-guarded — prints manual hints when non-interactive; both still runnable standalone)
+Optional wiring (tried, then removed by design):
+- [ ] `install.sh` offers to run `shell.sh` + `hostname.sh` — was implemented, then removed.
+      The two sudo/identity steps read more clearly as their own README sections ("Set login
+      shell" / "Set Hostname"), and dropping the prompt keeps `install.sh` non-interactive-safe
+      and free of re-run surprises (it won't silently flip a shell/hostname you changed). Both
+      scripts run standalone.
 
 ## Phase 6 — defaults discovery workflow  ✅ complete (gate passed)
 

@@ -38,14 +38,7 @@ git clone https://github.com/pkdone/.dotfiles-mac.git ~/.dotfiles-mac
 bash ~/.dotfiles-mac/install.sh
 ```
 
-This runs a quick preflight, creates symlinks from `~/.config` into this repo (backing up any real file already in the way rather than clobbering it), installs everything in the Brewfile, trusts the `mise` config, and at the end offers to run `shell.sh` and `hostname.sh`. It's safe to re-run.
-
-Finally, make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/etc/shells` and runs `chsh` for you — idempotent, and it prompts for your password (sudo) only if a change is actually needed:
-
-```bash
-bash ~/.dotfiles-mac/shell.sh --dry-run   # preview
-bash ~/.dotfiles-mac/shell.sh             # apply
-```
+This runs a quick preflight, creates symlinks from `~/.config` into this repo (backing up any real file already in the way rather than clobbering it), installs everything in the Brewfile, and trusts the `mise` config. It's safe to re-run.
 
 ### Apps not in the Brewfile
 
@@ -55,6 +48,15 @@ Two apps can't be installed by `brew bundle`, so set them up by hand after boots
 - **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
 
 Do both before running `dock.sh`, or it'll skip them.
+
+### Set login shell
+
+Make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/etc/shells` and runs `chsh` for you — idempotent, and it prompts for your password (sudo) only if a change is actually needed:
+
+```bash
+bash ~/.dotfiles-mac/shell.sh --dry-run   # preview
+bash ~/.dotfiles-mac/shell.sh             # apply
+```
 
 ### Set Hostname
 
@@ -204,12 +206,12 @@ To enable Clipboard History:
 
 | Script | What it does, and when to run it |
 |------|------|
-| `install.sh` | Full bootstrap on a fresh machine: preflight, symlinks, Brewfile, `mise` trust, then offers to run `shell.sh`/`hostname.sh`. Safe to re-run — repoints symlinks, backs up any real file in the way. |
+| `install.sh` | Full bootstrap on a fresh machine: preflight, symlinks, Brewfile, `mise` trust. Safe to re-run — repoints symlinks, backs up any real file in the way. |
 | `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
 | `macos.sh` | Apply the managed macOS `defaults`. Run after bootstrap and whenever you edit `lib/macos-defaults.list`. `--dry-run` previews, `--list` prints the table. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
-| `shell.sh` | Make fish the login shell. Run once on a fresh machine (install.sh offers it). Idempotent; sudo/`chsh` only if needed. |
-| `hostname.sh` | Set HostName/LocalHostName/ComputerName. Run once on a fresh machine (install.sh offers it). Idempotent; sudo only if a name differs. |
+| `shell.sh` | Make fish the login shell. Run once on a fresh machine (see "Set login shell"). Idempotent; sudo/`chsh` only if needed. |
+| `hostname.sh` | Set HostName/LocalHostName/ComputerName. Run once on a fresh machine (see "Set Hostname"). Idempotent; sudo only if a name differs. |
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
 
 All scripts accept `-h`/`--help`.

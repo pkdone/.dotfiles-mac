@@ -79,25 +79,6 @@ echo ""
 echo "🔧 Trusting mise config..."
 "$(brew --prefix)/bin/mise" trust "$DOTFILES/mise/config.toml" || true
 
-# ---- login shell & hostname (need sudo/chsh — offered, not forced) ------
 echo ""
-echo "🐟 Login shell & hostname"
-echo "    These need sudo/chsh, so they're offered rather than run automatically."
-echo "    Both are idempotent and can be run standalone any time."
-if [ -t 0 ]; then
-  printf '    Set fish as your login shell now (shell.sh)? [y/N] '
-  read -r reply || reply=''
-  case "$reply" in y|Y|yes|YES) bash "$DOTFILES/shell.sh" || echo "    (shell.sh reported an issue; re-run manually)" ;;
-                   *) echo '    skipped — run: bash ~/.dotfiles-mac/shell.sh' ;; esac
-  printf '    Set the hostname to pdone-mac now (hostname.sh)? [y/N] '
-  read -r reply || reply=''
-  case "$reply" in y|Y|yes|YES) bash "$DOTFILES/hostname.sh" || echo "    (hostname.sh reported an issue; re-run manually)" ;;
-                   *) echo '    skipped — run: bash ~/.dotfiles-mac/hostname.sh' ;; esac
-else
-  echo "    (non-interactive — run these yourself:)"
-  echo "      bash ~/.dotfiles-mac/shell.sh"
-  echo "      bash ~/.dotfiles-mac/hostname.sh"
-fi
-
-echo ""
-echo "✅ Done! Dotfiles are in place. Run ./check.sh any time to verify."
+echo "✅ Dotfiles are in place. Run ./check.sh any time to verify."
+echo "   Remaining setup steps (login shell, hostname, manual tweaks) are in the README."
