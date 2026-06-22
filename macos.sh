@@ -65,6 +65,8 @@ REASSERTED=0
 WARNINGS=0
 RESTARTS=''
 NEEDS_LOGOUT=0
+LOGOUT_ITEMS=''
+NL=$'\n'
 BACKED_UP=0
 
 # ---- helpers ------------------------------------------------------------
@@ -73,9 +75,13 @@ BACKED_UP=0
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
 . "$DOTDIR/lib/defaults-lib.sh"
 
-queue_restart() {
+queue_restart() {  # restart-token  [descriptor]
   [ -z "$1" ] && return 0
-  if [ "$1" = logout ]; then NEEDS_LOGOUT=1; return 0; fi
+  if [ "$1" = logout ]; then
+    NEEDS_LOGOUT=1
+    LOGOUT_ITEMS="${LOGOUT_ITEMS}${LOGOUT_ITEMS:+$NL}${2:-a setting}"
+    return 0
+  fi
   case " $RESTARTS " in
     *" $1 "*) : ;;
     *) RESTARTS="$RESTARTS $1" ;;
@@ -149,7 +155,7 @@ apply_setting() {  # domain key type desired restart
     fi
   fi
   CHANGED=$((CHANGED + 1))
-  queue_restart "$restart"
+  queue_restart "$restart" "$domain $key"
 }
 
 # ---- settings table -----------------------------------------------------
@@ -198,7 +204,10 @@ fi
 
 if [ "$NEEDS_LOGOUT" = 1 ] && [ "$CHANGED" -gt 0 ]; then
   echo
-  echo 'Note: Dark mode may need a logout/login to fully apply.'
+  echo 'Note: the following changed and may need a logout/login to fully apply:'
+  while IFS= read -r item; do
+    [ -n "$item" ] && printf '  - %s\n' "$item"
+  done <<< "$LOGOUT_ITEMS"
 fi
 
 cat <<'MANUAL'
