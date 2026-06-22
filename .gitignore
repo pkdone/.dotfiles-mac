@@ -3,3 +3,6 @@ fish_variables
 
 # macOS defaults backups taken by macos.sh (machine-local)
 backups/
+
+# defaults discovery snapshots taken by defaults-diff.sh (machine-local)
+discovery/

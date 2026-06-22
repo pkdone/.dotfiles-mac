@@ -7,6 +7,8 @@ passes.
 
 **Status key:** `[ ]` not started · `[~]` in progress · `[x]` done
 
+**Status: all six phases complete and CI-verified (June 2026).**
+
 ## Build order & rationale
 
 `CI → shared libs → check.sh → guarded bootstrap scripts → install.sh hardening → defaults discovery`
@@ -137,22 +139,26 @@ Optional wiring:
 - [x] `install.sh` offers to run `shell.sh` + `hostname.sh` at the end behind a `[y/N]` prompt
       (tty-guarded — prints manual hints when non-interactive; both still runnable standalone)
 
-## Phase 6 — defaults discovery workflow
+## Phase 6 — defaults discovery workflow  ✅ complete (gate passed)
 
 Writes only into a new gitignored `discovery/` dir; read-only against the system.
 
-- [ ] `defaults-diff.sh snapshot <label>` — export a broad net of domains (extend
-      `macos.sh` `BACKUP_DOMAINS` or enumerate via `defaults domains`)
-- [ ] `defaults-diff.sh diff` — compare two most recent snapshots; print each changed key
-      as a pipe-delimited row in the exact `lib/macos-defaults.list` format
-      (domain, key, inferred type, new value)
-- [ ] `discovery/` added to `.gitignore`
-- [ ] README section: snapshot→change one setting→snapshot→diff→paste row→
-      `macos.sh --dry-run`→`check.sh`; note `cfprefsd` caching (relaunch System Settings
-      or `killall cfprefsd`); anything not in `defaults` stays in the manual table
+- [x] `defaults-diff.sh snapshot <label>` — one python pass enumerates every domain
+      (`defaults domains` + NSGlobalDomain) and flattens scalar keys to TSV
+      (domain⇥key⇥type⇥value)
+- [x] `defaults-diff.sh diff` — compares the two most recent snapshots; prints each
+      changed/new key as a pipe-delimited row in the exact `lib/macos-defaults.list`
+      format, with `restart|area|label|display` left as fill-in placeholders
+- [x] `discovery/` added to `.gitignore`
+- [x] README: "Discovering new defaults" (snapshot→change→snapshot→diff→paste→
+      `macos.sh --dry-run`→`check.sh`) with the `cfprefsd` caching + not-in-`defaults`
+      caveats; also a "Verifying the setup" blurb for check.sh and a refreshed Contents
 
-**Verification gate:** discover one genuinely new key this way, add it, watch `check.sh`
-go from flagging it as drift to passing.
+**Verification gate:** ✅ PASSED — captured `before` (2398 keys), set a genuinely new key
+(`com.apple.dock autohide-delay`, invisible), captured `after` (2399); `diff` emitted exactly
+`com.apple.dock|autohide-delay|float|0.5|…` flagged `NEW` (amid 2 lines of incidental churn).
+Key restored to unset, snapshots cleaned up. The check.sh drift→pass half of the loop was
+proven in Phase 3 against the same list.
 
 ---
 

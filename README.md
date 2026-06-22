@@ -9,9 +9,15 @@ Personal macOS dotfiles and bootstrap setup.
 - `ghostty/` — Ghostty terminal config
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned default tool versions (Node, npm)
-- `install.sh` — bootstraps a new machine
+- `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, and `defaults-lib.sh` (comparison helpers)
+- `install.sh` — bootstraps a new machine (symlinks, Brewfile, optional shell/hostname)
 - `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
 - `dock.sh` — pins the Dock apps in order (idempotent; needs dockutil)
+- `shell.sh` — makes fish the login shell (idempotent)
+- `hostname.sh` — sets the host names (idempotent)
+- `check.sh` — read-only check that the machine still matches the repo (drift detector)
+- `defaults-diff.sh` — discover which `defaults` key backs a System Settings toggle
+- `PLAN.md` — automation-hardening roadmap and progress
 
 ## Setup
 
@@ -80,6 +86,31 @@ bash ~/.dotfiles-mac/macos.sh             # apply
 Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/`. UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
 
 Run `macos.sh --list` to see the exact set of settings it manages (printed as a Markdown table).
+
+### Verifying the setup
+
+`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, and hostname. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
+
+```bash
+bash ~/.dotfiles-mac/check.sh
+```
+
+### Discovering new defaults
+
+To find which `defaults` key backs a System Settings toggle (so you can add it to `lib/macos-defaults.list`), use `defaults-diff.sh`:
+
+```bash
+bash ~/.dotfiles-mac/defaults-diff.sh snapshot before   # capture current state
+# ...change ONE setting in System Settings...
+bash ~/.dotfiles-mac/defaults-diff.sh snapshot after    # capture again
+bash ~/.dotfiles-mac/defaults-diff.sh diff              # changed keys, as list rows
+```
+
+`diff` prints each changed/new key as a `domain|key|type|value|…` row in the exact format `lib/macos-defaults.list` expects — paste the matching one in, fill the `restart|area|label|display` columns, then run `macos.sh --dry-run` and `check.sh` to confirm. Notes:
+
+- It scans every domain, so the diff usually includes a little unrelated churn (timestamps, recent-item lists), and each snapshot takes a minute or so. Look for the row matching what you toggled and ignore the rest.
+- `cfprefsd` caches preferences, so a value you just changed may not appear until you quit and reopen System Settings (or run `killall cfprefsd`) before the `after` snapshot.
+- Settings not exposed via `defaults` (private-API sliders, sudo-only, TCC-gated) won't show up — those stay in the manual list below.
 
 ### Manual macOS tweaks
 
