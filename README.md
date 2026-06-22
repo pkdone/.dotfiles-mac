@@ -10,14 +10,13 @@ Personal macOS dotfiles and bootstrap setup.
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned default tool versions (Node, npm)
 - `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, and `defaults-lib.sh` (comparison helpers)
-- `install.sh` — bootstraps a new machine (symlinks, Brewfile, optional shell/hostname)
+- `install.sh` — bootstraps a new machine (symlinks, Brewfile, mise)
 - `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
 - `dock.sh` — pins the Dock apps in order (idempotent; needs dockutil)
 - `shell.sh` — makes fish the login shell (idempotent)
 - `hostname.sh` — sets the host names (idempotent)
 - `check.sh` — read-only check that the machine still matches the repo (drift detector)
 - `defaults-diff.sh` — discover which `defaults` key backs a System Settings toggle
-- `PLAN.md` — automation-hardening roadmap and progress
 
 ## Setup
 
@@ -35,7 +34,7 @@ Clone and bootstrap:
 
 ```bash
 git clone https://github.com/pkdone/.dotfiles-mac.git ~/.dotfiles-mac
-bash ~/.dotfiles-mac/install.sh
+~/.dotfiles-mac/install.sh
 ```
 
 This runs a quick preflight, creates symlinks from `~/.config` into this repo (backing up any real file already in the way rather than clobbering it), installs everything in the Brewfile, and trusts the `mise` config. It's safe to re-run.
@@ -54,8 +53,8 @@ Do both before running `dock.sh`, or it'll skip them.
 Make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/etc/shells` and runs `chsh` for you — idempotent, and it prompts for your password (sudo) only if a change is actually needed:
 
 ```bash
-bash ~/.dotfiles-mac/shell.sh --dry-run   # preview
-bash ~/.dotfiles-mac/shell.sh             # apply
+~/.dotfiles-mac/shell.sh --dry-run   # preview
+~/.dotfiles-mac/shell.sh             # apply
 ```
 
 ### Set Hostname
@@ -63,8 +62,8 @@ bash ~/.dotfiles-mac/shell.sh             # apply
 `hostname.sh` sets HostName, LocalHostName and ComputerName (idempotent; uses sudo only when a name actually differs, and flushes the DNS cache only if something changed):
 
 ```bash
-bash ~/.dotfiles-mac/hostname.sh --dry-run   # preview
-bash ~/.dotfiles-mac/hostname.sh             # apply
+~/.dotfiles-mac/hostname.sh --dry-run   # preview
+~/.dotfiles-mac/hostname.sh             # apply
 ```
 
 ### Dock
@@ -72,8 +71,8 @@ bash ~/.dotfiles-mac/hostname.sh             # apply
 Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile):
 
 ```bash
-bash ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order
-bash ~/.dotfiles-mac/dock.sh          # apply
+~/.dotfiles-mac/dock.sh --list   # preview the apps and their order
+~/.dotfiles-mac/dock.sh          # apply
 ```
 
 ### macOS defaults
@@ -81,8 +80,8 @@ bash ~/.dotfiles-mac/dock.sh          # apply
 A curated set of macOS `defaults` is applied by `macos.sh`:
 
 ```bash
-bash ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothing
-bash ~/.dotfiles-mac/macos.sh             # apply
+~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothing
+~/.dotfiles-mac/macos.sh             # apply
 ```
 
 Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/`. UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
@@ -94,7 +93,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 `check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, and hostname. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
 
 ```bash
-bash ~/.dotfiles-mac/check.sh
+~/.dotfiles-mac/check.sh
 ```
 
 ### Discovering new defaults
@@ -102,10 +101,10 @@ bash ~/.dotfiles-mac/check.sh
 To find which `defaults` key backs a System Settings toggle (so you can add it to `lib/macos-defaults.list`), use `defaults-diff.sh`:
 
 ```bash
-bash ~/.dotfiles-mac/defaults-diff.sh snapshot before   # capture current state
+~/.dotfiles-mac/defaults-diff.sh snapshot before   # capture current state
 # ...change ONE setting in System Settings...
-bash ~/.dotfiles-mac/defaults-diff.sh snapshot after    # capture again
-bash ~/.dotfiles-mac/defaults-diff.sh diff              # changed keys, as list rows
+~/.dotfiles-mac/defaults-diff.sh snapshot after    # capture again
+~/.dotfiles-mac/defaults-diff.sh diff              # changed keys, as list rows
 ```
 
 `diff` prints each changed/new key as a `domain|key|type|value|…` row in the exact format `lib/macos-defaults.list` expects — paste the matching one in, fill the `restart|area|label|display` columns, then run `macos.sh --dry-run` and `check.sh` to confirm. Notes:
