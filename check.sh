@@ -16,6 +16,13 @@
 set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Fail early with a clear message if a required data/helper file is missing.
+require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2; exit 1; }; }
+for f in defaults-lib.sh links.list macos-defaults.list dock-apps.list hostname; do
+  require_file "$DOTDIR/lib/$f"
+done
+
 # Hostname is defined once in lib/hostname (shared with hostname.sh).
 EXPECTED_HOST="$(awk '$1 !~ /^#/ && NF {print $1; exit}' "$DOTDIR/lib/hostname")"
 NO_COLOR_OPT=0
@@ -91,19 +98,30 @@ hdr "Homebrew (Brewfile)"
 CHECKED=$((CHECKED + 1))
 if ! command -v brew >/dev/null 2>&1; then
   warn "brew not installed — skipping Brewfile check"
-elif ! brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" >/dev/null 2>&1; then
-  # --no-upgrade => fail only on genuinely MISSING entries, not merely outdated ones.
-  bad "Brewfile not satisfied — missing entries:"
-  brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" --verbose 2>&1 | sed 's/^/          /' || true
 else
-  # Everything is installed. The Brewfile pins names, not versions, so a *managed*
-  # package being merely outdated is a soft warning (run brewsync), not drift.
   bf_names="$(sed -nE 's/^(brew|cask) "([^"]+)".*/\2/p' "$DOTDIR/Brewfile" | sed -E 's#.*/##' | sort -u)"
-  outdated="$(brew outdated --quiet 2>/dev/null | grep -Fxf <(printf '%s\n' "$bf_names") || true)"
-  if [ -n "$outdated" ]; then
-    warn "all installed; outdated (run brewsync to update): $(printf '%s' "$outdated" | tr '\n' ' ')"
+  if ! brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" >/dev/null 2>&1; then
+    # --no-upgrade => fail only on genuinely MISSING entries, not merely outdated ones.
+    bad "Brewfile not satisfied — missing entries:"
+    brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" --verbose 2>&1 | sed 's/^/          /' || true
   else
-    pass "Brewfile satisfied (all installed and current)"
+    # The Brewfile pins names, not versions, so a *managed* package being merely
+    # outdated is a soft warning (run brewsync), not drift.
+    outdated="$(brew outdated --quiet 2>/dev/null | grep -Fxf <(printf '%s\n' "$bf_names") || true)"
+    if [ -n "$outdated" ]; then
+      warn "all installed; outdated (run brewsync to update): $(printf '%s' "$outdated" | tr '\n' ' ')"
+    else
+      pass "Brewfile satisfied (all installed and current)"
+    fi
+  fi
+  # Extra top-level packages installed but NOT in the Brewfile. Soft warning only: the
+  # Brewfile is additive and deliberate manual installs are allowed (auto-pruning is
+  # theme C, out of scope). The two manual apps (Cursor Nightly, YouTube Music) aren't
+  # brew-managed, so they never appear here.
+  installed="$( { brew leaves 2>/dev/null || true; brew list --cask 2>/dev/null || true; } | sed -E 's#.*/##' | sort -u)"
+  extra="$(comm -23 <(printf '%s\n' "$installed") <(printf '%s\n' "$bf_names") || true)"
+  if [ -n "$extra" ]; then
+    warn "installed but not in Brewfile (manual; add it or ignore): $(printf '%s' "$extra" | tr '\n' ' ')"
   fi
 fi
 

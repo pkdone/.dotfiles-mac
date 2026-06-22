@@ -23,7 +23,7 @@ approach, and a "done when" check.
 Goal: close the remaining single-source-of-truth gaps and make script failures
 legible. All small, internal edits; no new files.
 
-- [ ] **A1 — Derive `BACKUP_DOMAINS` from `lib/macos-defaults.list`**
+- [x] **A1 — Derive `BACKUP_DOMAINS` from `lib/macos-defaults.list`**
   - Files: `macos.sh`
   - Approach: replace the hardcoded `BACKUP_DOMAINS='…'` string with the unique
     set of domains (field 1) parsed from the settings list already loaded into
@@ -31,7 +31,7 @@ legible. All small, internal edits; no new files.
   - Done when: adding a row in a brand-new domain to the list causes that domain
     to be backed up by `ensure_backup`, with no edit to `macos.sh`.
 
-- [ ] **A2 — `check.sh` flags *extra* brew packages not in the Brewfile**
+- [x] **A2 — `check.sh` flags *extra* brew packages not in the Brewfile**
   - Files: `check.sh` (Homebrew section)
   - Approach: diff installed top-level formulae + casks (`brew leaves` /
     `brew list --cask`) against the names parsed from the Brewfile; report any
@@ -40,13 +40,13 @@ legible. All small, internal edits; no new files.
     won't appear.
   - Done when: `brew install <throwaway>` makes `check.sh` warn; removing it clears.
 
-- [ ] **E1 — Lib-file existence preflight**
+- [x] **E1 — Lib-file existence preflight**
   - Files: `macos.sh`, `check.sh`, `dock.sh`, `install.sh` (hostname.sh already guards)
   - Approach: before each `< lib/…` read or `source`, assert readability and exit
     with a clear message, e.g. `[ -r "$f" ] || { echo "missing $f" >&2; exit 1; }`.
   - Done when: renaming a `lib/` file yields a one-line error, not a raw `set -e` abort.
 
-- [ ] **E2 — Shebang consistency**
+- [x] **E2 — Shebang consistency**
   - Files: `install.sh`
   - Approach: change `#!/bin/bash` to `#!/usr/bin/env bash` to match the other scripts.
   - Done when: `head -1 *.sh` is uniform; `bash -n install.sh` still clean.

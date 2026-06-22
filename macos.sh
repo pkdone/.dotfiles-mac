@@ -70,6 +70,10 @@ NL=$'\n'
 BACKED_UP=0
 
 # ---- helpers ------------------------------------------------------------
+# Fail early with a clear message if a required data/helper file is missing.
+require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2; exit 1; }; }
+for f in defaults-lib.sh macos-defaults.list; do require_file "$DOTDIR/lib/$f"; done
+
 # Value-comparison helpers (norm_bool, values_equal, type_token) live in a shared
 # lib so check.sh can reuse the exact same match semantics.
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
@@ -88,8 +92,8 @@ queue_restart() {  # restart-token  [descriptor]
   esac
 }
 
-BACKUP_DOMAINS='NSGlobalDomain com.apple.dock com.apple.finder com.apple.screencapture com.apple.menuextra.clock'
-
+# BACKUP_DOMAINS (the domains exported before the first change) is derived from the
+# settings list further below, so a setting in a new domain is covered automatically.
 ensure_backup() {  # export pre-change state once, before the first real write
   [ "$BACKED_UP" = 1 ] && return 0
   BACKED_UP=1
@@ -163,6 +167,10 @@ apply_setting() {  # domain key type desired restart
 # setting; see that file's header for the format). Loaded here so the list is a single
 # source of truth shared with check.sh. Blank/# lines are skipped by the read loops.
 SETTINGS="$(<"$DOTDIR/lib/macos-defaults.list")"
+
+# Domains backed up before the first change = the unique set of domains the list
+# touches (field 1), derived so a new-domain setting needs no edit to this script.
+BACKUP_DOMAINS="$(awk -F'|' '$1 !~ /^#/ && NF {print $1}' <<< "$SETTINGS" | sort -u | tr '\n' ' ')"
 
 # shellcheck disable=SC2016  # printf formats below contain literal Markdown backticks; single quotes intentional (no expansion wanted)
 list_settings() {

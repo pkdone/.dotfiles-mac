@@ -14,6 +14,10 @@ set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Fail early with a clear message if a required data file is missing.
+require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2; exit 1; }; }
+require_file "$DOTDIR/lib/dock-apps.list"
+
 # The Dock app list lives in lib/dock-apps.list (one "Display name | path" per line;
 # see that file's header for details). Loaded so the list is a single source of truth
 # shared with check.sh. Blank/# lines are skipped by the read loops.

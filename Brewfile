@@ -22,7 +22,7 @@ brew "mas"
 brew "dockutil"
 
 # Build/dev basics
-brew "pkg-config"
+brew "pkgconf"
 brew "openssl"
 brew "python"
 brew "go"

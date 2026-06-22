@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # install.sh — bootstrap this machine: symlink configs into ~/.config, install the
 # Brewfile, trust the mise config, and optionally set the login shell + hostname.
@@ -10,6 +10,9 @@
 set -euo pipefail
 
 DOTFILES="$HOME/.dotfiles-mac"
+
+# Fail early with a clear message if a required data file is missing.
+require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2; exit 1; }; }
 
 # ---- preflight ----------------------------------------------------------
 # Surface must-do-by-hand things up front as warnings, so later steps don't fail
@@ -52,6 +55,7 @@ link() {  # src dst
 
 echo ""
 echo "🔗 Creating symlinks..."
+require_file "$DOTFILES/lib/links.list"
 # Static one-to-one links live in lib/links.list (shared with check.sh).
 while IFS='|' read -r src tgt; do
   case "$src" in ''|'#'*) continue ;; esac
