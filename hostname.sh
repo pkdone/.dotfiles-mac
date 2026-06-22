@@ -12,7 +12,11 @@
 #
 set -euo pipefail
 
-DESIRED="pdone-mac"   # the single place the hostname is defined; check.sh mirrors this
+DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Hostname is defined once in lib/hostname (shared with check.sh).
+DESIRED="$(awk '$1 !~ /^#/ && NF {print $1; exit}' "$DOTDIR/lib/hostname")"
+[ -n "$DESIRED" ] || { echo "Error: no hostname found in $DOTDIR/lib/hostname" >&2; exit 1; }
 
 DRY_RUN=0
 for arg in "$@"; do

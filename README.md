@@ -9,7 +9,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `ghostty/` — Ghostty terminal config
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned default tool versions (Node, npm)
-- `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, and `defaults-lib.sh` (comparison helpers)
+- `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, `links.list`, `hostname`, and `defaults-lib.sh` (comparison helpers)
 - `install.sh` — bootstraps a new machine (symlinks, Brewfile, mise)
 - `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
 - `dock.sh` — pins the Dock apps in order (idempotent; needs dockutil)

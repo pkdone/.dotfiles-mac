@@ -1,0 +1,4 @@
+# Machine hostname — single source of truth for HostName, LocalHostName and ComputerName.
+# Read by hostname.sh (to set, via sudo) and check.sh (to verify). The first non-blank,
+# non-comment line's first whitespace-delimited token is used; # lines and blanks ignored.
+pdone-mac

@@ -5,8 +5,8 @@
 # it's usable in a pre-push hook or CI later.
 #
 # Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname.
-# Reuses lib/macos-defaults.list, lib/dock-apps.list and lib/defaults-lib.sh so the
-# verify path uses the exact same data and comparison semantics as the apply path
+# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
+# so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
 #
 # Flags:
@@ -16,7 +16,8 @@
 set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EXPECTED_HOST="pdone-mac"   # mirrors the hostname block in README (kept manual; needs sudo)
+# Hostname is defined once in lib/hostname (shared with hostname.sh).
+EXPECTED_HOST="$(awk '$1 !~ /^#/ && NF {print $1; exit}' "$DOTDIR/lib/hostname")"
 NO_COLOR_OPT=0
 
 for arg in "$@"; do
