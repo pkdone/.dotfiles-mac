@@ -98,7 +98,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 ### Discovering new defaults
 
-To find which `defaults` key backs a System Settings toggle (so you can add it to `lib/macos-defaults.list`), use `defaults-diff.sh`:
+To find which `defaults` key backs a System Settings toggle (so you can add it to `lib/macos-defaults.list`), use `defaults-diff.sh`. It compares a before/after pair, so you must actually change the setting in System Settings between the two snapshots — otherwise the snapshots are identical and `diff` reports nothing:
 
 ```bash
 ~/.dotfiles-mac/defaults-diff.sh snapshot before   # capture current state
