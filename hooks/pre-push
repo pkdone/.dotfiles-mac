@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# pre-push hook — mirror the CI lint/test gates locally so failures are caught
+# before they reach GitHub. Version-controlled under hooks/ and activated by
+# `git config core.hooksPath hooks` (done by install.sh / bootstrap.sh).
+#
+# Runs shellcheck on *.sh, fish -n on *.fish, and the lib unit tests. A missing
+# tool is skipped with a notice rather than blocking. Bypass with: git push --no-verify
+#
+set -uo pipefail
+
+repo="$(git rev-parse --show-toplevel)" || exit 1
+cd "$repo" || exit 1
+status=0
+
+echo "pre-push: running local lint/test gates..."
+
+# --- shellcheck on bash scripts (bash 3.2-safe: array via while-read, no mapfile) ---
+if command -v shellcheck >/dev/null 2>&1; then
+  sh_files=()
+  while IFS= read -r f; do sh_files+=("$f"); done \
+    < <(find . -type f -name '*.sh' -not -path './.git/*')
+  if [ "${#sh_files[@]}" -gt 0 ]; then
+    echo "  shellcheck (${#sh_files[@]} script(s))"
+    shellcheck "${sh_files[@]}" || status=1
+  fi
+else
+  echo "  shellcheck not installed — skipping (it's in the Brewfile)"
+fi
+
+# --- fish syntax check ---
+if command -v fish >/dev/null 2>&1; then
+  echo "  fish -n (*.fish)"
+  while IFS= read -r f; do
+    fish -n "$f" || status=1
+  done < <(find . -type f -name '*.fish' -not -path './.git/*')
+else
+  echo "  fish not installed — skipping fish syntax check"
+fi
+
+# --- lib unit tests ---
+if [ -x ./tests/defaults-lib.test.sh ]; then
+  echo "  unit tests (lib/defaults-lib.sh)"
+  ./tests/defaults-lib.test.sh || status=1
+fi
+
+if [ "$status" -ne 0 ]; then
+  echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2
+else
+  echo "pre-push: all checks passed."
+fi
+exit "$status"

@@ -18,6 +18,8 @@ Personal macOS dotfiles and bootstrap setup.
 - `hostname.sh` — sets the host names (idempotent)
 - `check.sh` — read-only check that the machine still matches the repo (drift detector)
 - `defaults-diff.sh` — discover which `defaults` key backs a System Settings toggle
+- `tests/` — plain-bash unit tests for the shared `lib/` helpers
+- `hooks/` — git hooks (pre-push lint/test gate), enabled via `core.hooksPath`
 
 ## Setup
 
@@ -222,6 +224,13 @@ To enable Clipboard History:
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
 
 All scripts accept `-h`/`--help`.
+
+### Pre-push checks
+
+A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
+via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests. A missing
+tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes
 

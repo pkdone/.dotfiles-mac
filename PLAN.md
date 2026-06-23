@@ -81,7 +81,7 @@ Goal: lock in the comparison semantics the repo depends on, and catch lint/test
 failures locally before they reach GitHub. (D2 lands before D1 so the hook can
 optionally run the tests.)
 
-- [ ] **D2 — Unit tests for `lib/defaults-lib.sh` + CI job**
+- [x] **D2 — Unit tests for `lib/defaults-lib.sh` + CI job**
   - Files: new `tests/defaults-lib.test.sh`; `.github/workflows/lint.yml`; `Brewfile`
   - Approach: plain-bash test (no new runtime dep) that sources the lib and asserts
     `values_equal`, `norm_bool`, and `type_token` behaviour (e.g. `bool true` == `1`,
@@ -90,7 +90,7 @@ optionally run the tests.)
     needed by D1 and by local linting).
   - Done when: tests pass locally and in CI; deliberately breaking `values_equal` fails them.
 
-- [ ] **D1 — Version-controlled git pre-push hook**
+- [x] **D1 — Version-controlled git pre-push hook**
   - Files: new `hooks/pre-push`; `install.sh`/`bootstrap.sh` (set `core.hooksPath`); `README.md`
   - Approach: a tracked hook (under `hooks/`, wired via
     `git config core.hooksPath hooks` so it lives in the repo, unlike `.git/hooks`)

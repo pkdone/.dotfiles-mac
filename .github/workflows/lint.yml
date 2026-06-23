@@ -68,3 +68,14 @@ jobs:
           # applied to the inline run: scripts as a bonus.
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
           ./actionlint -color
+
+  shell-tests:
+    name: shell unit tests (lib helpers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run lib/defaults-lib.sh unit tests
+        run: |
+          # Plain-bash assertions for the shared value-comparison helpers
+          # (norm_bool, values_equal, type_token). No framework — bash + awk only.
+          ./tests/defaults-lib.test.sh

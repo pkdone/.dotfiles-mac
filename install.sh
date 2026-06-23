@@ -89,6 +89,10 @@ echo "🔧 Trusting mise config..."
 "$(brew --prefix)/bin/mise" trust "$DOTFILES/mise/config.toml" || true
 
 echo ""
+echo "🪝 Enabling the pre-push lint/test hook..."
+git -C "$DOTFILES" config core.hooksPath hooks
+
+echo ""
 if [ "$bundle_ok" = 1 ]; then
   echo "✅ Dotfiles are in place. Run ./check.sh any time to verify."
 else
