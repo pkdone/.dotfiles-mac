@@ -56,7 +56,7 @@ legible. All small, internal edits; no new files.
 Goal: a fresh-machine setup that survives a partial Brewfile failure and runs as
 one guided command instead of seven manual steps.
 
-- [ ] **B1 — A failing App Store (`mas`) entry must not abort `install.sh`**
+- [x] **B1 — A failing App Store (`mas`) entry must not abort `install.sh`**
   - Files: `install.sh`
   - Approach: run `brew bundle` tolerantly (capture its exit code rather than
     letting `set -e` kill the script), then continue to `mise trust` and the final
@@ -65,7 +65,7 @@ one guided command instead of seven manual steps.
   - Done when: a simulated bundle failure still reaches `mise trust` and prints the
     closing summary, with an explicit note about what didn't install.
 
-- [ ] **B2 — Single guided bootstrap entrypoint**
+- [x] **B2 — Single guided bootstrap entrypoint**
   - Files: new `bootstrap.sh`; `README.md`; reconcile `install.sh` header comment
   - Approach: a top-level script that runs `install.sh` → `shell.sh` →
     `hostname.sh` → `macos.sh` → `dock.sh` in order, each behind a confirm prompt

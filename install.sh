@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # install.sh — bootstrap this machine: symlink configs into ~/.config, install the
-# Brewfile, trust the mise config, and optionally set the login shell + hostname.
+# Brewfile, and trust the mise config. Login shell, hostname, macOS defaults and the
+# Dock are separate scripts; bootstrap.sh runs the whole sequence in order.
 #
 # Safe to re-run. Existing correct symlinks are repointed harmlessly; if a *real*
 # file is ever in the way of a symlink, it's moved into backups/pre-symlink-<ts>/
@@ -77,12 +78,23 @@ if ! command -v brew >/dev/null 2>&1; then
   echo "Homebrew not found — installing..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
-brew bundle --file "$DOTFILES/Brewfile"
+# Tolerate a partial failure (e.g. the 'mas' WhatsApp entry when not signed in to the
+# App Store): brew bundle attempts every entry, so we record the outcome and carry on
+# to mise trust + the summary rather than letting set -e abort the whole bootstrap.
+bundle_ok=1
+brew bundle --file "$DOTFILES/Brewfile" || bundle_ok=0
 
 echo ""
 echo "🔧 Trusting mise config..."
 "$(brew --prefix)/bin/mise" trust "$DOTFILES/mise/config.toml" || true
 
 echo ""
-echo "✅ Dotfiles are in place. Run ./check.sh any time to verify."
-echo "   Remaining setup steps (login shell, hostname, manual tweaks) are in the README."
+if [ "$bundle_ok" = 1 ]; then
+  echo "✅ Dotfiles are in place. Run ./check.sh any time to verify."
+else
+  echo "⚠️  Dotfiles are in place, but some Brewfile entries did not install"
+  echo "    (commonly the App Store 'mas' app when not signed in). Fix the cause and"
+  echo "    re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
+fi
+echo "   Remaining setup (login shell, hostname, Dock, defaults) is in the README,"
+echo "   or run ./bootstrap.sh to do the whole sequence."

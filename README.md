@@ -10,6 +10,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned default tool versions (Node, npm)
 - `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, `links.list`, `hostname`, and `defaults-lib.sh` (comparison helpers)
+- `bootstrap.sh` — guided full setup: runs install/shell/hostname/macos/dock in order (idempotent)
 - `install.sh` — bootstraps a new machine (symlinks, Brewfile, mise)
 - `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
 - `dock.sh` — pins the Dock apps in order (idempotent; needs dockutil)
@@ -30,14 +31,20 @@ brew install gh
 gh auth login
 ```
 
-Clone and bootstrap:
+Clone the repo:
 
 ```bash
 git clone https://github.com/pkdone/.dotfiles-mac.git ~/.dotfiles-mac
-~/.dotfiles-mac/install.sh
 ```
 
-This runs a quick preflight, creates symlinks from `~/.config` into this repo (backing up any real file already in the way rather than clobbering it), installs everything in the Brewfile, and trusts the `mise` config. It's safe to re-run.
+Then run the guided bootstrap. It walks through every step in order (`install.sh` -> `shell.sh` -> `hostname.sh` -> `macos.sh` -> `dock.sh`), prompting before each, and is idempotent so it's safe to re-run:
+
+```bash
+~/.dotfiles-mac/bootstrap.sh --dry-run   # preview every step, change nothing
+~/.dotfiles-mac/bootstrap.sh             # run it (prompts before each; --yes skips prompts)
+```
+
+To do only the dotfiles + Brewfile part, run `install.sh` on its own — it runs a quick preflight, creates symlinks from `~/.config` into this repo (backing up any real file already in the way rather than clobbering it), installs everything in the Brewfile, and trusts the `mise` config. The individual steps below can also each be run separately.
 
 ### Apps not in the Brewfile
 
@@ -205,6 +212,7 @@ To enable Clipboard History:
 
 | Script | What it does, and when to run it |
 |------|------|
+| `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | Full bootstrap on a fresh machine: preflight, symlinks, Brewfile, `mise` trust. Safe to re-run — repoints symlinks, backs up any real file in the way. |
 | `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
 | `macos.sh` | Apply the managed macOS `defaults`. Run after bootstrap and whenever you edit `lib/macos-defaults.list`. `--dry-run` previews, `--list` prints the table. Idempotent. |
