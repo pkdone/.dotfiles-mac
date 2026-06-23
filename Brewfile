@@ -24,6 +24,7 @@ brew "dockutil"
 # Build/dev basics
 brew "pkgconf"
 brew "shellcheck"
+brew "just"
 brew "openssl"
 brew "python"
 brew "go"

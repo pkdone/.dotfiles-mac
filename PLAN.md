@@ -104,7 +104,7 @@ optionally run the tests.)
 Goal: make the repo's everyday commands discoverable and keep the README focused
 on setup rather than reference.
 
-- [ ] **B3 — Task runner (`Justfile`)**
+- [x] **B3 — Task runner (`Justfile`)**
   - Files: new `Justfile`; `Brewfile` (add `brew "just"`); `README.md` (Usage)
   - Approach: wrap the scripts in self-documenting targets — e.g. `bootstrap`,
     `install`, `check`, `apply` (macos), `dock`, `shell`, `hostname`, `push`,
@@ -112,7 +112,7 @@ on setup rather than reference.
     existing scripts; no logic moves into the Justfile.
   - Done when: `just --list` shows the targets and `just check` runs `check.sh`.
 
-- [ ] **E3 — Split the keyboard-shortcut cheat-sheet into `SHORTCUTS.md`**
+- [x] **E3 — Split the keyboard-shortcut cheat-sheet into `SHORTCUTS.md`**
   - Files: new `SHORTCUTS.md`; `README.md`
   - Approach: move the "macOS Shortcuts", "Terminal and Shell Differences", and
     "Ghostty" reference tables out of the README into `SHORTCUTS.md`; leave a short
