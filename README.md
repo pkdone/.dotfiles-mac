@@ -48,15 +48,6 @@ Then run the guided bootstrap. It walks through every step in order (`install.sh
 ~/.dotfiles-mac/bootstrap.sh             # run it (prompts before each; --yes skips prompts)
 ```
 
-`install.sh` is the first step `bootstrap.sh` runs, and you can also run it on its own to set up just the dotfiles layer:
-
-- **Preflight** — confirms you're on macOS, warns if `gh` is unauthenticated, and notes the App Store sign-in the `mas` app needs.
-- **Symlinks** — links the configs in this repo into `~/.config` (and `~/.gitconfig`), moving any real file already in the way into `backups/pre-symlink-<timestamp>/` rather than clobbering it.
-- **Brewfile + mise** — installs everything in the Brewfile (tolerating a partial failure, e.g. the App Store app when you're not signed in), then trusts the `mise` config.
-- **Pre-push hook** — points `core.hooksPath` at `hooks/` so the local lint/test gate is active.
-
-It does **not** set your login shell, hostname, macOS defaults or Dock — those are the separate scripts documented below, which `bootstrap.sh` runs in turn. Each can also be run on its own.
-
 ### Apps not in the Brewfile
 
 > _Manual — no script installs these; do them by hand._
@@ -66,11 +57,11 @@ Two apps can't be installed by `brew bundle`, so set them up by hand after boots
 - **Cursor Nightly** — download and install it manually from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. It's deliberately kept out of the Brewfile (which installs only the stable Cursor), so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
 
-Do both before running `dock.sh`, or it'll skip them.
+Do both before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` / `just dock` afterwards).
 
 ### Set login shell
 
-> _Run by `bootstrap.sh`; the commands below run only this step (not part of `install.sh`)._
+> _Run by `bootstrap.sh`; the commands below run only this step._
 
 Make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/etc/shells` and runs `chsh` for you — idempotent, and it prompts for your password (sudo) only if a change is actually needed:
 
@@ -81,7 +72,7 @@ Make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/
 
 ### Set Hostname
 
-> _Run by `bootstrap.sh`; the commands below run only this step (not part of `install.sh`)._
+> _Run by `bootstrap.sh`; the commands below run only this step._
 
 `hostname.sh` sets HostName, LocalHostName and ComputerName (idempotent; uses sudo only when a name actually differs, and flushes the DNS cache only if something changed):
 
@@ -103,7 +94,7 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 
 ### macOS defaults
 
-> _Run by `bootstrap.sh`; the commands below run only this step (not part of `install.sh`)._
+> _Run by `bootstrap.sh`; the commands below run only this step._
 
 A curated set of macOS `defaults` is applied by `macos.sh`:
 

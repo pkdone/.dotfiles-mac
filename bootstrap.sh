@@ -54,6 +54,32 @@ confirm() {  # prompt -> 0 to proceed, 1 to skip
   case "$reply" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 
+# Before the Dock step, flag any app in lib/dock-apps.list that isn't installed yet
+# (e.g. the manual installs under README "Apps not in the Brewfile"). dock.sh already
+# skips a missing app, so this just surfaces it before the confirm below — install them
+# first and answer N, or proceed and re-run dock.sh later. Mirrors dock.sh's own parsing.
+precheck_dock() {
+  local list="$DOTDIR/lib/dock-apps.list" name path apps
+  local missing=()
+  [ -r "$list" ] || return 0
+  apps="$(<"$list")"
+  while IFS='|' read -r name path; do
+    case "$name" in ''|'#'*) continue ;; esac
+    path="${path/@HOME@/$HOME}"
+    # Expand the one globbed path (WhatsApp) the same way dock.sh does.
+    # shellcheck disable=SC2086  # intentional: unquoted $path lets the glob expand
+    case "$path" in *'*'*) set -- $path; path="$1" ;; esac
+    [ -e "$path" ] || missing+=("$name")
+  done <<< "$apps"
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "  ⚠️  Not installed yet — dock.sh will skip these:"
+    for name in "${missing[@]}"; do echo "        - $name"; done
+    echo '      Install them first (README → "Apps not in the Brewfile"), then answer N below'
+    echo "      and re-run dock.sh / just dock afterwards (or proceed now and re-run later)."
+  fi
+  return 0
+}
+
 # ---- preflight: the scripts we orchestrate must be present & executable --
 for s in install.sh shell.sh hostname.sh macos.sh dock.sh; do
   [ -x "$DOTDIR/$s" ] || { echo "Error: $DOTDIR/$s missing or not executable." >&2; exit 1; }
@@ -64,8 +90,9 @@ done
 #   PREVIEW_FLAG is the script's own preview option (--dry-run, --list), or "" for a
 #   script with no preview mode (install.sh) — that one is described, not run, in --dry-run.
 step() {
-  local num="$1" label="$2" script="$3" preview="$4"
+  local num="$1" label="$2" script="$3" preview="$4" precheck="${5:-}"
   banner "$num/5  $label"
+  if [ -n "$precheck" ]; then "$precheck"; fi
   if [ "$DRYRUN" = 1 ]; then
     if [ -n "$preview" ]; then
       "$DOTDIR/$script" "$preview"
@@ -87,7 +114,7 @@ step 1 "install.sh — symlinks, Brewfile, mise trust"  install.sh  ""
 step 2 "shell.sh — make fish the login shell"         shell.sh    --dry-run
 step 3 "hostname.sh — set host names"                 hostname.sh --dry-run
 step 4 "macos.sh — apply managed macOS defaults"      macos.sh    --dry-run
-step 5 "dock.sh — pin the Dock apps in order"         dock.sh     --list
+step 5 "dock.sh — pin the Dock apps in order"         dock.sh     --list      precheck_dock
 
 banner "Done"
 if [ "$DRYRUN" = 1 ]; then
