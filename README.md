@@ -47,6 +47,16 @@ Then run the guided bootstrap. It walks through every step in order (`install.sh
 ~/.dotfiles-mac/bootstrap.sh             # run it (prompts before each; --yes skips prompts)
 ```
 
+### Dotfiles & packages
+
+> _Run first by `bootstrap.sh`; the command below runs only this step._
+
+`install.sh` symlinks the configs into `~/.config` (and `~/.gitconfig`), installs the Brewfile, trusts the `mise` config, and enables the pre-push hook. Idempotent and safe to re-run — it backs up any real file already in the way of a symlink rather than clobbering it. There's no `--dry-run`; it applies changes directly.
+
+```bash
+~/.dotfiles-mac/install.sh
+```
+
 ### Apps not in the Brewfile
 
 > _Manual — no script installs these; do them by hand._
