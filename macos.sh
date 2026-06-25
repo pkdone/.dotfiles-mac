@@ -117,8 +117,8 @@ write_default() {  # domain key type value
   defaults write "$1" "$2" "$flag" "$4"
 }
 
-apply_setting() {  # domain key type desired restart
-  local domain="$1" key="$2" etype="$3" desired="$4" restart="$5"
+apply_setting() {  # domain key type desired restart tol
+  local domain="$1" key="$2" etype="$3" desired="$4" restart="$5" tol="${6:-}"
   CONSIDERED=$((CONSIDERED + 1))
   desired="${desired//@HOME@/$HOME}"
   local cur curtype want_token
@@ -132,7 +132,13 @@ apply_setting() {  # domain key type desired restart
       WARNINGS=$((WARNINGS + 1))
       return 0
     fi
-    if values_equal "$etype" "$cur" "$desired"; then
+    if values_match "$etype" "$cur" "$desired" "$tol"; then
+      if [ -n "$tol" ] && [ "$tol" != 0 ] && ! values_equal "$etype" "$cur" "$desired"; then
+        # within the allowed ±tol but not the exact ideal — accept the in-range value as-is
+        say_ok "$domain $key — ok (within ±$tol of $desired): $cur"
+        REASSERTED=$((REASSERTED + 1))
+        return 0
+      fi
       if [ "$DRY_RUN" = 1 ]; then
         say_ok "$domain $key — would re-assert (already set: $cur)"
       else
@@ -176,7 +182,7 @@ BACKUP_DOMAINS="$(awk -F'|' '$1 !~ /^#/ && NF {print $1}' <<< "$SETTINGS" | sort
 list_settings() {
   printf '| Area | Setting | `defaults` key | Value |\n'
   printf '|------|------|------|------|\n'
-  while IFS='|' read -r domain key etype desired restart area label disp; do
+  while IFS='|' read -r domain key etype desired restart area label disp tol; do
     case "$domain" in ''|'#'*) continue ;; esac
     printf '| %s | %s | `%s %s` | %s |\n' "$area" "$label" "$domain" "$key" "$disp"
   done <<< "$SETTINGS"
@@ -187,9 +193,9 @@ list_settings() {
 echo "macos.sh — $([ "$DRY_RUN" = 1 ] && echo 'DRY RUN (no writes)' || echo 'applying')"
 echo
 
-while IFS='|' read -r domain key etype desired restart area label disp; do
+while IFS='|' read -r domain key etype desired restart area label disp tol; do
   case "$domain" in ''|'#'*) continue ;; esac
-  apply_setting "$domain" "$key" "$etype" "$desired" "$restart"
+  apply_setting "$domain" "$key" "$etype" "$desired" "$restart" "$tol"
 done <<< "$SETTINGS"
 
 echo

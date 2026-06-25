@@ -1,11 +1,12 @@
 # Managed macOS `defaults`, one per line. Loaded by macos.sh (and read by check.sh).
-# Format (pipe-delimited): domain | key | type | desired | restart | area | label | display-value
+# Format (pipe-delimited): domain | key | type | desired | restart | area | label | display-value | tol
 #   type:    string | int | float | bool
+#   tol:     optional ± tolerance for int/float (e.g. 1 => desired ±1 all pass); blank/omitted = exact
 #   restart: process to killall after a change (Dock / Finder / SystemUIServer), or "logout", or empty
 #   display: uses literal Markdown backticks for `macos.sh --list`; @HOME@ -> $HOME at runtime
 # Blank lines and lines beginning with # are ignored.
 NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout|Appearance|Theme|`Dark`
-com.apple.dock|tilesize|float|46|Dock|Dock|Icon size|`46`
+com.apple.dock|tilesize|float|46|Dock|Dock|Icon size|`46` (±1, accepts 45-47)|1
 com.apple.dock|show-recents|bool|false|Dock|Dock|Show recent apps|`false` (Off)
 com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Off)
 com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)

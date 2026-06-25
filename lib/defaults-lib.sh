@@ -21,6 +21,22 @@ values_equal() {  # type a b
   esac
 }
 
+# Like values_equal, but for int/float a non-empty, non-zero tol lets the actual value
+# sit within +/-tol of desired (e.g. a Dock tilesize of 46-48 all match a desired 47 with
+# tol 1). Non-numeric types and a blank/zero tol fall straight through to exact equality.
+values_match() {  # type actual desired [tol]
+  local tol="${4:-}"
+  case "$1" in
+    int|float)
+      if [ -n "$tol" ] && [ "$tol" != 0 ]; then
+        awk -v a="$2" -v d="$3" -v t="$tol" 'BEGIN{ x=a-d; if(x<0)x=-x; exit !(x<=t) }'
+        return
+      fi
+      ;;
+  esac
+  values_equal "$1" "$2" "$3"
+}
+
 type_token() {  # our type -> `defaults read-type` word
   case "$1" in
     string) echo string ;;

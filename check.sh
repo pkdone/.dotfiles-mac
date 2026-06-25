@@ -127,7 +127,7 @@ fi
 
 # ---- 3. macOS defaults --------------------------------------------------
 hdr "macOS defaults"
-while IFS='|' read -r domain key etype desired _restart _area _label _disp; do
+while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; do
   case "$domain" in ''|'#'*) continue ;; esac
   CHECKED=$((CHECKED + 1))
   desired="${desired//@HOME@/$HOME}"
@@ -137,8 +137,12 @@ while IFS='|' read -r domain key etype desired _restart _area _label _disp; do
     curtype="${curtype##* }"
     if [ "$curtype" != "$want_token" ]; then
       bad "$domain $key — type mismatch (expected $want_token, found ${curtype:-none})"
-    elif values_equal "$etype" "$cur" "$desired"; then
-      pass "$domain $key = $cur"
+    elif values_match "$etype" "$cur" "$desired" "$tol"; then
+      if [ -n "$tol" ] && [ "$tol" != 0 ] && ! values_equal "$etype" "$cur" "$desired"; then
+        pass "$domain $key = $cur (within ±$tol of $desired)"
+      else
+        pass "$domain $key = $cur"
+      fi
     else
       bad "$domain $key = $cur (expected $desired)"
     fi

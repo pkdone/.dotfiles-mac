@@ -62,6 +62,21 @@ yes "string exact match"        values_equal string PfHm PfHm
 no  "string is case-sensitive"  values_equal string PfHm pfhm
 no  "string no numeric coercion" values_equal string 1 1.0
 
+# ---- values_match: int/float honour ±tol, else exact; non-numeric ignores tol ----
+yes "match exact, no tol"            values_match int 47 47
+no  "no-match, no tol"               values_match int 46 47
+yes "within +tol"                    values_match int 48 47 1
+yes "within -tol"                    values_match int 46 47 1
+yes "exact with tol set"             values_match int 47 47 1
+no  "just outside +tol"              values_match int 49 47 1
+no  "just outside -tol"              values_match int 45 47 1
+yes "float within tol"               values_match float 46.5 47 1
+yes "blank tol falls back to equal"  values_match int 47 47 ""
+no  "blank tol, unequal"             values_match int 46 47 ""
+yes "zero tol acts exact (equal)"    values_match int 47 47 0
+no  "zero tol acts exact (unequal)"  values_match int 46 47 0
+no  "tol ignored for strings"        values_match string PfHm pfhm 5
+
 # ---- type_token: our type -> defaults read-type word ----
 eq "type_token string" string  "$(type_token string)"
 eq "type_token float"  float   "$(type_token float)"
