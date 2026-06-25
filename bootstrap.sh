@@ -75,7 +75,7 @@ precheck_dock() {
     echo "  ⚠️  Not installed yet — dock.sh will skip these:"
     for name in "${missing[@]}"; do echo "        - $name"; done
     echo '      Install them first (README → "Apps not in the Brewfile"), then answer N below'
-    echo "      and re-run dock.sh / just dock afterwards (or proceed now and re-run later)."
+    echo "      and re-run dock.sh afterwards (or proceed now and re-run later)."
   fi
   return 0
 }

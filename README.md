@@ -20,7 +20,6 @@ Personal macOS dotfiles and bootstrap setup.
 - `defaults-diff.sh` — discover which `defaults` key backs a System Settings toggle
 - `tests/` — plain-bash unit tests for the shared `lib/` helpers
 - `hooks/` — git hooks (pre-push lint/test gate), enabled via `core.hooksPath`
-- `Justfile` — task runner wrapping the scripts (`just --list`)
 - `SHORTCUTS.md` — keyboard-shortcut & macOS reference cheat-sheets
 
 ## Setup
@@ -57,7 +56,7 @@ Two apps can't be installed by `brew bundle`, so set them up by hand after boots
 - **Cursor Nightly** — download and install it manually from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. It's deliberately kept out of the Brewfile (which installs only the stable Cursor), so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
 
-Do both before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` / `just dock` afterwards).
+Do both before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
 
 ### Set login shell
 
@@ -238,11 +237,6 @@ To enable Clipboard History:
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
 
 All scripts accept `-h`/`--help`.
-
-### Task runner
-
-If you'd rather not remember script names, `just` wraps them. `just --list` shows every
-recipe; e.g. `just check`, `just apply`, `just sync`, `just lint`, `just test`, `just push "msg"`.
 
 ### Pre-push checks
 
