@@ -48,9 +48,18 @@ Then run the guided bootstrap. It walks through every step in order (`install.sh
 ~/.dotfiles-mac/bootstrap.sh             # run it (prompts before each; --yes skips prompts)
 ```
 
-To do only the dotfiles + Brewfile part, run `install.sh` on its own — it runs a quick preflight, creates symlinks from `~/.config` into this repo (backing up any real file already in the way rather than clobbering it), installs everything in the Brewfile, and trusts the `mise` config. The individual steps below can also each be run separately.
+`install.sh` is the first step `bootstrap.sh` runs, and you can also run it on its own to set up just the dotfiles layer:
+
+- **Preflight** — confirms you're on macOS, warns if `gh` is unauthenticated, and notes the App Store sign-in the `mas` app needs.
+- **Symlinks** — links the configs in this repo into `~/.config` (and `~/.gitconfig`), moving any real file already in the way into `backups/pre-symlink-<timestamp>/` rather than clobbering it.
+- **Brewfile + mise** — installs everything in the Brewfile (tolerating a partial failure, e.g. the App Store app when you're not signed in), then trusts the `mise` config.
+- **Pre-push hook** — points `core.hooksPath` at `hooks/` so the local lint/test gate is active.
+
+It does **not** set your login shell, hostname, macOS defaults or Dock — those are the separate scripts documented below, which `bootstrap.sh` runs in turn. Each can also be run on its own.
 
 ### Apps not in the Brewfile
+
+> _Manual — no script installs these; do them by hand._
 
 Two apps can't be installed by `brew bundle`, so set them up by hand after bootstrapping:
 
@@ -61,6 +70,8 @@ Do both before running `dock.sh`, or it'll skip them.
 
 ### Set login shell
 
+> _Run by `bootstrap.sh`; the commands below run only this step (not part of `install.sh`)._
+
 Make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/etc/shells` and runs `chsh` for you — idempotent, and it prompts for your password (sudo) only if a change is actually needed:
 
 ```bash
@@ -69,6 +80,8 @@ Make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/
 ```
 
 ### Set Hostname
+
+> _Run by `bootstrap.sh`; the commands below run only this step (not part of `install.sh`)._
 
 `hostname.sh` sets HostName, LocalHostName and ComputerName (idempotent; uses sudo only when a name actually differs, and flushes the DNS cache only if something changed):
 
@@ -79,6 +92,8 @@ Make Fish (installed by the Brewfile) your login shell. `shell.sh` adds it to `/
 
 ### Dock
 
+> _Run by `bootstrap.sh` (after the manual apps above); the commands below run only this step._
+
 Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile):
 
 ```bash
@@ -87,6 +102,8 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 ```
 
 ### macOS defaults
+
+> _Run by `bootstrap.sh`; the commands below run only this step (not part of `install.sh`)._
 
 A curated set of macOS `defaults` is applied by `macos.sh`:
 
@@ -101,6 +118,8 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 ### Verifying the setup
 
+> _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
+
 `check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, and hostname. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
 
 ```bash
@@ -108,6 +127,8 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 ```
 
 ### Discovering new defaults
+
+> _Standalone dev workflow — not part of setup._
 
 To find which `defaults` key backs a System Settings toggle (so you can add it to `lib/macos-defaults.list`), use `defaults-diff.sh`. It compares a before/after pair, so you must actually change the setting in System Settings between the two snapshots — otherwise the snapshots are identical and `diff` reports nothing:
 
@@ -217,7 +238,7 @@ To enable Clipboard History:
 | Script | What it does, and when to run it |
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
-| `install.sh` | Full bootstrap on a fresh machine: preflight, symlinks, Brewfile, `mise` trust. Safe to re-run — repoints symlinks, backs up any real file in the way. |
+| `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
 | `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
 | `macos.sh` | Apply the managed macOS `defaults`. Run after bootstrap and whenever you edit `lib/macos-defaults.list`. `--dry-run` previews, `--list` prints the table. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
