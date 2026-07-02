@@ -61,6 +61,7 @@ cask "granola"
 cask "slack"
 cask "acorn"
 cask "docker-desktop"
+cask "cog-app"
 
 # Mac App Store (via mas; requires being signed in to the App Store)
 mas "WhatsApp", id: 310633997
