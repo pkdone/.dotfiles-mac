@@ -29,11 +29,16 @@ brew "python"
 brew "go"
 brew "rustup"
 brew "mongosh"
+brew "pnpm"
 
 # Cluster tools
 brew "awscli"
 brew "kubernetes-cli"
 brew "helm"
+
+# Secrets (SOPS + age)
+brew "sops"
+brew "age"
 
 # GNU-ish tools; do not force them to shadow macOS defaults
 brew "coreutils"
