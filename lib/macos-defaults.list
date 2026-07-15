@@ -12,6 +12,7 @@ com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Of
 com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)
 com.apple.finder|ShowHardDrivesOnDesktop|bool|false|Finder|Finder|Hard drives on Desktop|`false` (Off)
 com.apple.finder|NewWindowTarget|string|PfHm|Finder|Finder|New window target|`PfHm` (Home)
+com.apple.finder|_FXShowPosixPathInTitle|bool|true|Finder|Finder|Full POSIX path in title|`true` (On)
 com.apple.screencapture|location|string|@HOME@/Pictures|SystemUIServer|Screenshots|Save location|`~/Pictures`
 com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer|Control Center|Clock — Show AM/PM|`true` (On)
 com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|Clock — Show day of week|`true` (On)
