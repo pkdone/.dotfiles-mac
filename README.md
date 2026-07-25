@@ -8,7 +8,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
 - `gitconfig` — Git user and behaviour settings
-- `mise/` — pinned default tool versions (Node, npm)
+- `mise/` — pinned default tool version (Node)
 - `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, `links.list`, `hostname`, and `defaults-lib.sh` (comparison helpers)
 - `bootstrap.sh` — guided full setup: runs install/shell/hostname/macos/dock in order (idempotent)
 - `install.sh` — bootstraps a new machine (symlinks, Brewfile, mise)
