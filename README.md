@@ -190,14 +190,6 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Mode | General - Font | Monospaced |
 | Appearance | Default theme | Anura (Dark) |
 
-#### AltTab
-
-| Area | Setting | Value |
-|------|------|------|
-| Controls | Show windows from Spaces | Visible Spaces |
-| Controls | Show apps with no open window | Hide |
-| Exceptions | Slack | Hide windows |
-
 #### Logi Options+
 
 | Area | Setting | Value |
