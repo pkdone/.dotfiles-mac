@@ -59,7 +59,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Force Quit Applications window | Option + Command + Escape |
 | Lock Screen | Control + Command + Q OR TouchID press |
 | App Switcher | Command + Tab |
-| Mission Control / Desktop Overview | Control + Up Arrow OR 3-Finger Swipe Up |
+| Mission Control / Desktop Overview | Control + Up Arrow OR 3-Finger Swipe Up OR F3 (Mission Control key) |
 | Show Desktop | Fn + F11 OR Click desktop space |
 | Move Item to Trash | Command + Backspace (in Finder/Desktop) |
 | Paste file as a move (cut & paste) | Option + Command + V (in Finder, after Command + C) |
