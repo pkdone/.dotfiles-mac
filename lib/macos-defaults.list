@@ -18,3 +18,6 @@ com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer|Control Center|Clock
 com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|Clock — Show day of week|`true` (On)
 com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock — Show date|`1` (On)
 NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)
+com.apple.Spotlight|NSStatusItem VisibleCC Item-0|bool|false|ControlCenter|Menu Bar|Spotlight icon|`false` (Off)
+com.apple.controlcenter|NSStatusItem Visible FocusModes|bool|false|ControlCenter|Menu Bar|Focus icon|`false` (Off)
+com.apple.controlcenter|NSStatusItem Visible NowPlaying|bool|false|ControlCenter|Menu Bar|Now Playing icon|`false` (Off)
