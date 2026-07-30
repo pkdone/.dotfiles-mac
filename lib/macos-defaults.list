@@ -20,4 +20,3 @@ com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock —
 NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)
 com.apple.Spotlight|NSStatusItem VisibleCC Item-0|bool|false|ControlCenter|Menu Bar|Spotlight icon|`false` (Off)
 com.apple.controlcenter|NSStatusItem Visible FocusModes|bool|false|ControlCenter|Menu Bar|Focus icon|`false` (Off)
-com.apple.controlcenter|NSStatusItem Visible NowPlaying|bool|false|ControlCenter|Menu Bar|Now Playing icon|`false` (Off)
