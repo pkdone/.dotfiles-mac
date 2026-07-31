@@ -65,6 +65,7 @@ cask "granola"
 cask "slack"
 cask "acorn"
 cask "docker-desktop"
+cask "multipass"
 cask "cog-app"
 cask "kid3"
 
