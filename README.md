@@ -9,12 +9,13 @@ Personal macOS dotfiles and bootstrap setup.
 - `ghostty/` — Ghostty terminal config
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned default tool version (Node)
-- `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `links.list`, `hostname`, and `defaults-lib.sh` (comparison helpers)
-- `bootstrap.sh` — guided full setup: runs install/shell/hostname/macos/dock/handlers in order (idempotent)
+- `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, and `defaults-lib.sh` (comparison helpers)
+- `bootstrap.sh` — guided full setup: runs install/shell/hostname/macos/dock/handlers/prune-apps in order (idempotent)
 - `install.sh` — bootstraps a new machine (symlinks, Brewfile, mise)
 - `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
 - `dock.sh` — pins the Dock apps in order (idempotent; needs dockutil)
 - `handlers.sh` — sets URL-scheme default apps from `lib/url-handlers.list` (idempotent; needs duti)
+- `prune-apps.sh` — removes apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo / mas)
 - `shell.sh` — makes fish the login shell (idempotent)
 - `hostname.sh` — sets the host names (idempotent)
 - `check.sh` — read-only check that the machine still matches the repo (drift detector)
@@ -41,7 +42,7 @@ Clone the repo:
 git clone https://github.com/pkdone/.dotfiles-mac.git ~/.dotfiles-mac
 ```
 
-Then run the guided bootstrap. It walks through every step in order (`install.sh` -> `shell.sh` -> `hostname.sh` -> `macos.sh` -> `dock.sh` -> `handlers.sh`), prompting before each, and is idempotent so it's safe to re-run:
+Then run the guided bootstrap. It walks through every step in order (`install.sh` -> `shell.sh` -> `hostname.sh` -> `macos.sh` -> `dock.sh` -> `handlers.sh` -> `prune-apps.sh`), prompting before each, and is idempotent so it's safe to re-run:
 
 ```bash
 ~/.dotfiles-mac/bootstrap.sh --dry-run   # preview every step, change nothing
@@ -103,13 +104,22 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 ~/.dotfiles-mac/dock.sh          # apply
 ```
 
-### URL handlers (mailto → Chrome)
+### URL handlers (Chrome, not Apple apps)
 
-`handlers.sh` sets default apps for URL schemes listed in `lib/url-handlers.list` via `duti` (idempotent). Today that means `mailto:` opens Chrome instead of Apple Mail — Chrome can then hand mail off to Gmail (or whatever you set as the handler inside Chrome):
+`handlers.sh` sets default apps for URL schemes listed in `lib/url-handlers.list` via `duti` (idempotent). That covers `mailto:` plus Music / News / Books / Podcasts / Games schemes so those Apple apps don't claim the links — Chrome handles them instead:
 
 ```bash
 ~/.dotfiles-mac/handlers.sh --dry-run   # preview
 ~/.dotfiles-mac/handlers.sh             # apply
+```
+
+### Unwanted apps (GarageBand, iMovie)
+
+`prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; these optional ones can. `check.sh` drifts if they reappear:
+
+```bash
+~/.dotfiles-mac/prune-apps.sh --dry-run   # preview
+~/.dotfiles-mac/prune-apps.sh             # remove
 ```
 
 ### macOS defaults
@@ -131,7 +141,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, hostname, and URL handlers. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
+`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, hostname, URL handlers, and unwanted apps. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -241,12 +251,13 @@ To enable Clipboard History:
 
 | Script | What it does, and when to run it |
 |------|------|
-| `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
+| `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, URL handlers). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
+| `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, URL handlers, unwanted apps). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
 | `macos.sh` | Apply the managed macOS `defaults`. Run after bootstrap and whenever you edit `lib/macos-defaults.list`. `--dry-run` previews, `--list` prints the table. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |
+| `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
 | `shell.sh` | Make fish the login shell. Run once on a fresh machine (see "Set login shell"). Idempotent; sudo/`chsh` only if needed. |
 | `hostname.sh` | Set HostName/LocalHostName/ComputerName. Run once on a fresh machine (see "Set Hostname"). Idempotent; sudo only if a name differs. |
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
@@ -272,6 +283,7 @@ dotpush "your message"
 - **Managed macOS settings:** edit `lib/macos-defaults.list`, then run `macos.sh` (use `defaults-diff.sh` to find the key first).
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
+- **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.
 - After any change, run `check.sh` to confirm the machine still matches the repo.
 
 ### Fish functions

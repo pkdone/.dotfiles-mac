@@ -1,0 +1,6 @@
+# Apps that must not be present. prune-apps.sh removes them; check.sh drifts if found.
+# Format (pipe-delimited): display-name | app-path | mas-id
+# mas-id is the Mac App Store id (used by `mas uninstall`); use 0 if unknown.
+# Blank lines and lines beginning with # are ignored.
+GarageBand|/Applications/GarageBand.app|682658836
+iMovie|/Applications/iMovie.app|408981434

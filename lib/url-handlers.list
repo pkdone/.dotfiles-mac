@@ -1,4 +1,22 @@
 # URL scheme handlers applied by handlers.sh and verified by check.sh.
 # Format (pipe-delimited): scheme | bundle-id
 # Blank lines and lines beginning with # are ignored.
+#
+# Keep Apple Mail / Music / News / Books / Podcasts / Games from owning these.
+# GarageBand / iMovie have no URL schemes; Photos/FaceTime deep-links are left alone.
 mailto|com.google.Chrome
+applenews|com.google.Chrome
+applenewss|com.google.Chrome
+ibooks|com.google.Chrome
+itms-books|com.google.Chrome
+itms-bookss|com.google.Chrome
+podcast|com.google.Chrome
+pcast|com.google.Chrome
+podcasts|com.google.Chrome
+itms-podcasts|com.google.Chrome
+games|com.google.Chrome
+music|com.google.Chrome
+musics|com.google.Chrome
+itms|com.google.Chrome
+itmss|com.google.Chrome
+itunes|com.google.Chrome

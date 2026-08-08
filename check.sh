@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers.
+# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps.
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -242,6 +242,26 @@ else
       bad "$scheme -> ${cur:-unset} (expected $bundle)"
     fi
   done < "$HANDLERS_LIST"
+fi
+
+# ---- 8. unwanted apps ---------------------------------------------------
+hdr "Unwanted apps"
+UNWANTED_LIST="$DOTDIR/lib/unwanted-apps.list"
+if [ ! -r "$UNWANTED_LIST" ]; then
+  warn "lib/unwanted-apps.list missing — skipping unwanted apps check"
+else
+  while IFS="|" read -r name path _mas_id; do
+    case "$name" in ""|"#"*) continue ;; esac
+    name="$(printf "%s" "$name" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//")"
+    path="$(printf "%s" "$path" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//")"
+    [ -n "$name" ] && [ -n "$path" ] || continue
+    CHECKED=$((CHECKED + 1))
+    if [ -e "$path" ]; then
+      bad "$name still installed at $path (run prune-apps.sh)"
+    else
+      pass "$name absent"
+    fi
+  done < "$UNWANTED_LIST"
 fi
 
 # ---- summary ------------------------------------------------------------
