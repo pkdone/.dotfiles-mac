@@ -66,7 +66,7 @@ These apps can't be installed by `brew bundle`, so set them up by hand after boo
 
 - **Cursor Nightly** — download and install it manually from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. It's deliberately kept out of the Brewfile (which installs only the stable Cursor), so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
-- **Sand** — sourced privately; install manually (no Homebrew cask).
+- **Grok Bot** (formerly Sand) — sourced privately; install manually (no Homebrew cask).
 
 Do these before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
 
