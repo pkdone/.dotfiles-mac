@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname.
+# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers.
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -220,6 +220,29 @@ for which in HostName LocalHostName ComputerName; do
     bad "$which = ${cur:-unset} (expected $EXPECTED_HOST)"
   fi
 done
+
+# ---- 7. URL handlers ----------------------------------------------------
+hdr "URL handlers"
+HANDLERS_LIST="$DOTDIR/lib/url-handlers.list"
+if [ ! -r "$HANDLERS_LIST" ]; then
+  warn "lib/url-handlers.list missing — skipping URL handlers check"
+elif ! command -v duti >/dev/null 2>&1; then
+  warn "duti not installed — skipping URL handlers check"
+else
+  while IFS='|' read -r scheme bundle; do
+    case "$scheme" in ''|'#'*) continue ;; esac
+    scheme="$(printf '%s' "$scheme" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    bundle="$(printf '%s' "$bundle" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    [ -n "$scheme" ] && [ -n "$bundle" ] || continue
+    CHECKED=$((CHECKED + 1))
+    cur="$(duti -d "$scheme" 2>/dev/null || true)"
+    if [ "$cur" = "$bundle" ]; then
+      pass "$scheme -> $bundle"
+    else
+      bad "$scheme -> ${cur:-unset} (expected $bundle)"
+    fi
+  done < "$HANDLERS_LIST"
+fi
 
 # ---- summary ------------------------------------------------------------
 printf '\n%sSummary:%s %d checked, %d ok, %d drift, %d warning(s).\n' \

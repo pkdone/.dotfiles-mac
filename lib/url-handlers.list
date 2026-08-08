@@ -1,0 +1,4 @@
+# URL scheme handlers applied by handlers.sh and verified by check.sh.
+# Format (pipe-delimited): scheme | bundle-id
+# Blank lines and lines beginning with # are ignored.
+mailto|com.google.Chrome

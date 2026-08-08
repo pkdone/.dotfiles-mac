@@ -6,3 +6,6 @@ backups/
 
 # defaults discovery snapshots taken by defaults-diff.sh (machine-local)
 discovery/
+
+# agent scratch logs
+.agent-logs/

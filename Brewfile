@@ -20,6 +20,7 @@ brew "tmux"
 brew "htop"
 brew "mas"
 brew "dockutil"
+brew "duti"
 
 # Build/dev basics
 brew "pkgconf"

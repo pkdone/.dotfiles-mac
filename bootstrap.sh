@@ -8,6 +8,7 @@
 #   3. hostname.sh  set HostName / LocalHostName / ComputerName
 #   4. macos.sh     apply the managed macOS defaults
 #   5. dock.sh      pin the Dock apps in order
+#   6. handlers.sh  set URL-scheme default apps (mailto → Chrome)
 #
 # Every underlying script is idempotent, so bootstrap.sh is safe to re-run — an
 # already-configured machine is a no-op. The scripts can still be run individually;
@@ -32,7 +33,7 @@ for arg in "$@"; do
       cat <<'USAGE'
 Usage: bootstrap.sh [--dry-run] [--yes]
   Run the full machine setup in order: install.sh, shell.sh, hostname.sh,
-  macos.sh, dock.sh — each behind a confirmation prompt. Idempotent and safe
+  macos.sh, dock.sh, handlers.sh — each behind a confirmation prompt. Idempotent and safe
   to re-run.
   --dry-run    Preview every step (each script's own preview mode); change nothing.
   --yes, -y    Don't prompt before each step (sub-scripts may still prompt for sudo).
@@ -81,7 +82,7 @@ precheck_dock() {
 }
 
 # ---- preflight: the scripts we orchestrate must be present & executable --
-for s in install.sh shell.sh hostname.sh macos.sh dock.sh; do
+for s in install.sh shell.sh hostname.sh macos.sh dock.sh handlers.sh; do
   [ -x "$DOTDIR/$s" ] || { echo "Error: $DOTDIR/$s missing or not executable." >&2; exit 1; }
 done
 
@@ -91,7 +92,7 @@ done
 #   script with no preview mode (install.sh) — that one is described, not run, in --dry-run.
 step() {
   local num="$1" label="$2" script="$3" preview="$4" precheck="${5:-}"
-  banner "$num/5  $label"
+  banner "$num/6  $label"
   if [ -n "$precheck" ]; then "$precheck"; fi
   if [ "$DRYRUN" = 1 ]; then
     if [ -n "$preview" ]; then
@@ -115,6 +116,7 @@ step 2 "shell.sh — make fish the login shell"         shell.sh    --dry-run
 step 3 "hostname.sh — set host names"                 hostname.sh --dry-run
 step 4 "macos.sh — apply managed macOS defaults"      macos.sh    --dry-run
 step 5 "dock.sh — pin the Dock apps in order"         dock.sh     --list      precheck_dock
+step 6 "handlers.sh — URL-scheme handlers (mailto)"   handlers.sh --dry-run
 
 banner "Done"
 if [ "$DRYRUN" = 1 ]; then
