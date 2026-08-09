@@ -122,6 +122,22 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 ~/.dotfiles-mac/prune-apps.sh             # remove
 ```
 
+### Quiet Apple apps (containment)
+
+System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contains them where scripting is reliable:
+
+- **URL handlers** → Chrome (`handlers.sh` / `lib/url-handlers.list`)
+- **GarageBand / iMovie** removed (`prune-apps.sh`)
+- **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
+
+Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
+
+1. **iCloud** — Settings → Apple ID → iCloud → turn Off Photos, iCloud Drive, and any other sync you don't use. Leave Keychain / Find My On unless you intentionally want them Off.
+2. **Notifications** — Off for Books, FaceTime, Games, Music, News, Photos, Podcasts (plus the other apps already listed in the table below).
+3. **Login Items** — Settings → General → Login Items → remove obvious Apple media helpers only.
+
+`https://music.apple.com` / similar Universal Links may still open Apple apps; open those in Chrome when it matters.
+
 ### macOS defaults
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
@@ -175,6 +191,8 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Area | Setting | Value | Reason not automated |
 |------|------|------|------|
 | Apple Account | ID | `<myuserid>@icloud.com` | Interactive Apple ID sign-in; not a `defaults` key |
+| Apple Account → iCloud | Photos, iCloud Drive (and any other sync you do not use) | Off | Apple Account UI; no supported durable CLI — do by hand. Leave Keychain / Find My alone unless you explicitly want them Off |
+| General → Login Items | Apple media helpers (Music, Photos, etc.) if present | Removed | Mix of SMAppService / legacy items; safe to detect, unsafe to auto-remove unknowns |
 | Displays | Built-in Display | More Space | Display scaling is hardware-specific; not reliably scriptable |
 | Desktop & Dock | Widgets on desktop | None (all removed) | Widget placement isn't exposed via `defaults`; removed per-widget in the UI |
 | Keyboard | Text input sources | British | Input sources are a complex array blob; error-prone to script |
@@ -194,7 +212,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Accessibility | Display — Pointer — Pointer size | One notch above Normal | Accessibility settings are TCC-protected; not writable via `defaults` |
 | User & Groups | Main user's icon | Dog | Account picture is set via Directory Services, not `defaults` |
 | Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
-| Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
+| Notifications | App notifications turned Off: Books, Calendar, Cursor Nightly, FaceTime, Game Center, Games, Home, Mail, Microsoft Teams, Music, News, Photos, Podcasts, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 | Menu Bar | Now Playing | Off | Menu-bar visibility key is unstable on macOS 26 (clears itself); left manual rather than managed via `defaults` |
 
