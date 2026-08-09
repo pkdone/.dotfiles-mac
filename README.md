@@ -132,7 +132,9 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 
 Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
 
-1. **iCloud** — open **System Settings → Apple ID** (your name at the top) → **iCloud** → turn Off Photos, iCloud Drive, and any other sync you don't use. Leave Keychain / Find My On unless you intentionally want them Off.
+1. **iCloud** — open **System Settings → Apple ID** (your name at the top) → **iCloud** (Saved to iCloud / **See All**):
+   - **Off:** Photos (Sync this Mac), iCloud Drive, Messages, and any other sync you don't use (Notes/Mail already fine Off).
+   - **Leave On:** Passwords (iCloud Keychain) and Find My, unless you explicitly want those Off.
 2. **Notifications** — **System Settings → Notifications** → Off for Books, FaceTime, Games, Music, News, Photos, Podcasts (plus the other apps already listed in the table below).
 3. **Login Items** — **System Settings → General → Login Items** → remove obvious Apple media helpers only.
 
@@ -191,7 +193,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Area | Setting | Value | Reason not automated |
 |------|------|------|------|
 | Apple Account | ID | `<myuserid>@icloud.com` | Interactive Apple ID sign-in; not a `defaults` key |
-| System Settings → Apple ID → iCloud | Photos, iCloud Drive (and any other sync you do not use) | Off | Apple Account UI; no supported durable CLI — do by hand. Leave Keychain / Find My alone unless you explicitly want them Off |
+| System Settings → Apple ID → iCloud | Photos, iCloud Drive, Messages (and other unused sync) Off; Passwords + Find My On | As listed | Apple Account UI; no supported durable CLI — do by hand. Passwords = iCloud Keychain — do not turn Off casually |
 | General → Login Items | Apple media helpers (Music, Photos, etc.) if present | Removed | Mix of SMAppService / legacy items; safe to detect, unsafe to auto-remove unknowns |
 | Displays | Built-in Display | More Space | Display scaling is hardware-specific; not reliably scriptable |
 | Desktop & Dock | Widgets on desktop | None (all removed) | Widget placement isn't exposed via `defaults`; removed per-widget in the UI |
