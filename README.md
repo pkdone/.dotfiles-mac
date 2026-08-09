@@ -135,8 +135,9 @@ Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
 1. **iCloud** — open **System Settings → Apple ID** (your name at the top) → **iCloud** (Saved to iCloud / **See All**):
    - **Off:** Photos (Sync this Mac), iCloud Drive, Messages, and any other sync you don't use (Notes/Mail already fine Off).
    - **Leave On:** Passwords (iCloud Keychain) and Find My, unless you explicitly want those Off.
-2. **Notifications** — **System Settings → Notifications** → Off for Books, FaceTime, Games, Music, News, Photos, Podcasts (plus the other apps already listed in the table below).
-3. **Login Items** — **System Settings → General → Login Items** → remove obvious Apple media helpers only.
+2. **Login Items** — **System Settings → General → Login Items** → remove obvious Apple media helpers only.
+
+Stock apps (Books, Music, News, Photos, Podcasts, Games) often **do not appear** under **System Settings → Notifications** until they have requested permission. If they are absent, there is nothing to turn Off — skip. FaceTime / Game Center only if listed.
 
 `https://music.apple.com` / similar Universal Links may still open Apple apps; open those in Chrome when it matters.
 
@@ -214,7 +215,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Accessibility | Display — Pointer — Pointer size | One notch above Normal | Accessibility settings are TCC-protected; not writable via `defaults` |
 | User & Groups | Main user's icon | Dog | Account picture is set via Directory Services, not `defaults` |
 | Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
-| Notifications | App notifications turned Off: Books, Calendar, Cursor Nightly, FaceTime, Game Center, Games, Home, Mail, Microsoft Teams, Music, News, Photos, Podcasts, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
+| Notifications | App notifications turned Off where listed (e.g. Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet). Stock apps like Books/Music/News/Photos/Podcasts/Games often do not appear until they request permission — ignore if absent | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 | Menu Bar | Now Playing | Off | Menu-bar visibility key is unstable on macOS 26 (clears itself); left manual rather than managed via `defaults` |
 
