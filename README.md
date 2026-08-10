@@ -130,7 +130,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **GarageBand / iMovie** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 
-**Menu bar (Tahoe):** Spotlight + Now Playing are managed as ByHost ints (`@host/com.apple.controlcenter` `Spotlight`/`NowPlaying` = `8` = Don't Show) via `macos.sh` / `check.sh`. Manual equivalent: **System Settings → Menu Bar** → uncheck them.
+**Menu bar (Tahoe):** Spotlight, Focus, and Now Playing are managed as ByHost ints (`@host/com.apple.controlcenter` `Spotlight`/`FocusModes`/`NowPlaying` = `8` = Don't Show) via `macos.sh` / `check.sh`. Manual equivalent: **System Settings → Menu Bar** → uncheck them.
 
 Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
 

@@ -20,6 +20,6 @@ com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|
 com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock — Show date|`1` (On)
 NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)
 @host/com.apple.controlcenter|Spotlight|int|8|ControlCenter|Menu Bar|Spotlight|`8` (Don't Show)
-com.apple.controlcenter|NSStatusItem Visible FocusModes|bool|false|ControlCenter|Menu Bar|Focus icon|`false` (Off)
+@host/com.apple.controlcenter|FocusModes|int|8|ControlCenter|Menu Bar|Focus|`8` (Don't Show)
 com.apple.ImageCapture|disableHotPlug|bool|true||Photos|Open Photos for devices|`true` (Off — do not auto-open)
 @host/com.apple.controlcenter|NowPlaying|int|8|ControlCenter|Menu Bar|Now Playing|`8` (Don't Show)
