@@ -21,3 +21,4 @@ NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback
 com.apple.Spotlight|NSStatusItem VisibleCC Item-0|bool|false|ControlCenter|Menu Bar|Spotlight icon|`false` (Off)
 com.apple.controlcenter|NSStatusItem Visible FocusModes|bool|false|ControlCenter|Menu Bar|Focus icon|`false` (Off)
 com.apple.ImageCapture|disableHotPlug|bool|true||Photos|Open Photos for devices|`true` (Off — do not auto-open)
+com.apple.controlcenter|NSStatusItem VisibleCC NowPlaying|bool|false|ControlCenter|Menu Bar|Now Playing icon|`false` (Off)
