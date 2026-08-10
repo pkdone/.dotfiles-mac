@@ -127,6 +127,20 @@ else
   fi
 fi
 
+# Domains may be prefixed with @host/ to use `defaults -currentHost` (ByHost plists).
+defaults_read() {  # domain key
+  case "$1" in
+    @host/*) defaults -currentHost read "${1#@host/}" "$2" ;;
+    *)       defaults read "$1" "$2" ;;
+  esac
+}
+defaults_read_type() {  # domain key
+  case "$1" in
+    @host/*) defaults -currentHost read-type "${1#@host/}" "$2" ;;
+    *)       defaults read-type "$1" "$2" ;;
+  esac
+}
+
 # ---- 3. macOS defaults --------------------------------------------------
 hdr "macOS defaults"
 while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; do
@@ -134,8 +148,8 @@ while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; 
   CHECKED=$((CHECKED + 1))
   desired="${desired//@HOME@/$HOME}"
   want_token="$(type_token "$etype")"
-  if cur="$(defaults read "$domain" "$key" 2>/dev/null)"; then
-    curtype="$(defaults read-type "$domain" "$key" 2>/dev/null || true)"
+  if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
+    curtype="$(defaults_read_type "$domain" "$key" 2>/dev/null || true)"
     curtype="${curtype##* }"
     if [ "$curtype" != "$want_token" ]; then
       bad "$domain $key — type mismatch (expected $want_token, found ${curtype:-none})"

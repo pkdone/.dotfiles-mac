@@ -130,7 +130,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **GarageBand / iMovie** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 
-**Menu bar (Tahoe):** Spotlight + Now Playing are **not** reliably controlled by the legacy `defaults` keys in `macos-defaults.list` (those can read Off while icons still show). Hide them via **System Settings → Menu Bar** (Spotlight) and **Control Center → Edit Controls** (Now Playing → Never Show), or ⌘-drag the icon off the menu bar. See Manual macOS tweaks.
+**Menu bar (Tahoe):** Spotlight + Now Playing are managed as ByHost ints (`@host/com.apple.controlcenter` `Spotlight`/`NowPlaying` = `8` = Don't Show) via `macos.sh` / `check.sh`. Manual equivalent: **System Settings → Menu Bar** → uncheck them.
 
 Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
 
@@ -213,8 +213,6 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Accessibility | Display — Pointer — Pointer size | One notch above Normal | Accessibility settings are TCC-protected; not writable via `defaults` |
 | User & Groups | Main user's icon | Dog | Account picture is set via Directory Services, not `defaults` |
 | Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
-| Menu Bar | Spotlight | Off (unchecked) | Tahoe: System Settings → Menu Bar. Legacy `com.apple.Spotlight` VisibleCC key does not hide the icon |
-| Menu Bar / Control Center | Now Playing | Don’t Show / Never Show | Tahoe: Control Center → Edit Controls, or ⌘-drag off menu bar. Legacy VisibleCC NowPlaying key does not reliably hide it |
 | Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 

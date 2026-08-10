@@ -101,20 +101,47 @@ ensure_backup() {  # export pre-change state once, before the first real write
   dir="$DOTDIR/backups/defaults-$(date +%Y%m%d-%H%M%S)"
   mkdir -p "$dir"
   for d in $BACKUP_DOMAINS; do
-    defaults export "$d" "$dir/$d.plist" 2>/dev/null || say_warn "could not back up $d"
+    defaults_export "$d" "$dir/$(defaults_domain "$d").plist" 2>/dev/null || say_warn "could not back up $d"
   done
   printf '  backups -> %s\n' "$dir"
 }
 
+# Domains may be prefixed with @host/ to use `defaults -currentHost` (ByHost plists).
+defaults_domain() {  # domain -> prints bare domain
+  case "$1" in @host/*) printf '%s' "${1#@host/}" ;; *) printf '%s' "$1" ;; esac
+}
+defaults_read() {  # domain key
+  case "$1" in
+    @host/*) defaults -currentHost read "${1#@host/}" "$2" ;;
+    *)       defaults read "$1" "$2" ;;
+  esac
+}
+defaults_read_type() {  # domain key
+  case "$1" in
+    @host/*) defaults -currentHost read-type "${1#@host/}" "$2" ;;
+    *)       defaults read-type "$1" "$2" ;;
+  esac
+}
+defaults_export() {  # domain outfile
+  case "$1" in
+    @host/*) defaults -currentHost export "${1#@host/}" "$2" ;;
+    *)       defaults export "$1" "$2" ;;
+  esac
+}
+
 write_default() {  # domain key type value
-  local flag
+  local flag bare
   case "$3" in
     string) flag=-string ;;
     float)  flag=-float ;;
     int)    flag=-int ;;
     bool)   flag=-bool ;;
   esac
-  defaults write "$1" "$2" "$flag" "$4"
+  bare="$(defaults_domain "$1")"
+  case "$1" in
+    @host/*) defaults -currentHost write "$bare" "$2" "$flag" "$4" ;;
+    *)       defaults write "$bare" "$2" "$flag" "$4" ;;
+  esac
 }
 
 apply_setting() {  # domain key type desired restart tol
@@ -124,8 +151,8 @@ apply_setting() {  # domain key type desired restart tol
   local cur curtype want_token
   want_token="$(type_token "$etype")"
 
-  if cur="$(defaults read "$domain" "$key" 2>/dev/null)"; then
-    curtype="$(defaults read-type "$domain" "$key" 2>/dev/null || true)"
+  if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
+    curtype="$(defaults_read_type "$domain" "$key" 2>/dev/null || true)"
     curtype="${curtype##* }"   # "Type is boolean" -> "boolean"
     if [ "$curtype" != "$want_token" ]; then
       say_warn "$domain $key — type mismatch (expected $want_token, found ${curtype:-none}); skipping"
