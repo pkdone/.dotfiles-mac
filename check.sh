@@ -315,11 +315,12 @@ kj="$HOME/.config/karabiner/karabiner.json"
 if [ ! -r "$kj" ]; then
   bad "$HOME/.config/karabiner/karabiner.json missing/unreadable"
 else
-  if rg -q 'Never start Dictation/Siri from bare Fn/Globe' "$kj" \
-    && rg -q '"key_code": "fn"' "$kj" \
-    && rg -q '"lazy": true' "$kj" \
+  if rg -q 'Never start Dictation/Siri from Fn/Globe' "$kj" \
+    && rg -q 'pdone_fn' "$kj" \
+    && rg -q '"set_variable"' "$kj" \
+    && ! rg -q '"lazy": true' "$kj" \
     && rg -q '"consumer_key_code": "dictation"' "$kj"; then
-    pass "karabiner.json has Fn-kill rule (lazy fn + swallow dictation)"
+    pass "karabiner.json has Fn-kill rule (variable layer; no real fn to macOS)"
   else
     bad "karabiner.json missing expected Fn-kill rule (restore from repo karabiner/karabiner.json)"
   fi

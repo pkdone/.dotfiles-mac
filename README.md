@@ -134,7 +134,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 
 **Keyboard / Dictation / Fn mic:**
 - **Scripted + checked:** Fn/Globe → **Do Nothing** (`AppleFnUsageType` = `0`); Dictation **Off**; Dictation shortcut = **Right Command twice** (symbolic hotkey 164 — never Press 🎙️). `macos.sh` / `check.sh` cover those.
-- **Karabiner (scripted config, checked symlink + rule):** Brewfile cask `karabiner-elements`; `karabiner/karabiner.json` → `~/.config/karabiner/karabiner.json`. Bare Fn/Globe is lazy (still a modifier for brightness/volume); F5 dictation/mic consumer key is swallowed. `check.sh` drifts if the symlink or the Fn-kill rule is missing.
+- **Karabiner (scripted config, checked symlink + rule):** Brewfile cask `karabiner-elements`; `karabiner/karabiner.json` → `~/.config/karabiner/karabiner.json`. Fn/Globe only sets a Karabiner variable (never sent to macOS — that was leaking mic on Fn+letter); Fn+Delete / arrows still map to forward-delete / Home/End/PgUp/PgDn; F5 dictation/mic consumer key is swallowed. Top-row brightness/volume work without Fn. `check.sh` drifts if the symlink or the Fn-kill rule is missing.
 - **Manual once (TCC / DriverKit — not scriptable):** after first install, in System Settings:
   1. **General → Login Items & Extensions → Driver Extensions** — enable **Karabiner DriverKit VirtualHIDDevice** (pqrs.org).
   2. **Privacy & Security → Accessibility** — enable **Karabiner-Elements** and **Karabiner-Core-Service** (add via **+** → Cmd-Shift-G → `/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app` if missing).

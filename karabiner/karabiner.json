@@ -27,7 +27,7 @@
             "complex_modifications": {
                 "rules": [
                     {
-                        "description": "Never start Dictation/Siri from bare Fn/Globe (keep Fn as modifier for brightness/volume)",
+                        "description": "Never start Dictation/Siri from Fn/Globe (variable layer; no real fn to macOS)",
                         "manipulators": [
                             {
                                 "type": "basic",
@@ -41,13 +41,18 @@
                                 },
                                 "to": [
                                     {
-                                        "key_code": "fn",
-                                        "lazy": true
+                                        "set_variable": {
+                                            "name": "pdone_fn",
+                                            "value": 1
+                                        }
                                     }
                                 ],
-                                "to_if_alone": [
+                                "to_after_key_up": [
                                     {
-                                        "key_code": "vk_none"
+                                        "set_variable": {
+                                            "name": "pdone_fn",
+                                            "value": 0
+                                        }
                                     }
                                 ]
                             },
@@ -63,13 +68,133 @@
                                 },
                                 "to": [
                                     {
-                                        "key_code": "fn",
-                                        "lazy": true
+                                        "set_variable": {
+                                            "name": "pdone_fn",
+                                            "value": 1
+                                        }
                                     }
                                 ],
-                                "to_if_alone": [
+                                "to_after_key_up": [
                                     {
-                                        "key_code": "vk_none"
+                                        "set_variable": {
+                                            "name": "pdone_fn",
+                                            "value": 0
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "key_code": "delete_or_backspace",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "delete_forward"
+                                    }
+                                ],
+                                "conditions": [
+                                    {
+                                        "type": "variable_if",
+                                        "name": "pdone_fn",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "key_code": "left_arrow",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "home"
+                                    }
+                                ],
+                                "conditions": [
+                                    {
+                                        "type": "variable_if",
+                                        "name": "pdone_fn",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "key_code": "right_arrow",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "end"
+                                    }
+                                ],
+                                "conditions": [
+                                    {
+                                        "type": "variable_if",
+                                        "name": "pdone_fn",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "key_code": "up_arrow",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "page_up"
+                                    }
+                                ],
+                                "conditions": [
+                                    {
+                                        "type": "variable_if",
+                                        "name": "pdone_fn",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "key_code": "down_arrow",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "page_down"
+                                    }
+                                ],
+                                "conditions": [
+                                    {
+                                        "type": "variable_if",
+                                        "name": "pdone_fn",
+                                        "value": 1
                                     }
                                 ]
                             },
