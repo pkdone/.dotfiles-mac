@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps.
+# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut.
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -276,6 +276,33 @@ else
       pass "$name absent"
     fi
   done < "$UNWANTED_LIST"
+fi
+
+# ---- 9. dictation shortcut -----------------------------------------------
+# Symbolic hotkey 164 is "Start Dictation". On this MacBook the default
+# "Press microphone" binding uses Fn/Globe and will start the mic on hold.
+# Desired: enabled, type=modifier, first parameter = 1048592 (Right Command twice)
+# — an unused combo so Fn never owns dictation. Nested plist, not a macos-defaults row.
+hdr "Dictation shortcut"
+CHECKED=$((CHECKED + 1))
+hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
+if [ -z "$hk" ]; then
+  bad "symbolichotkeys not readable"
+else
+  # Extract the 164 = { ... }; block (enabled + type + first parameter).
+  blk="$(printf '%s\n' "$hk" | awk '
+    $0 ~ /^[[:space:]]*164 =/ {grab=1}
+    grab {print}
+    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
+  ')"
+  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
+  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
+  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  if [ "$enabled" = "1" ] && [ "$ptype" = "modifier" ] && [ "$p1" = "1048592" ]; then
+    pass "dictation hotkey 164 = Right Command twice (not Fn/mic)"
+  else
+    bad "dictation hotkey 164 enabled=$enabled type=${ptype:-?} p1=${p1:-?} (expected enabled=1 type=modifier p1=1048592 Right Command twice)"
+  fi
 fi
 
 # ---- summary ------------------------------------------------------------
