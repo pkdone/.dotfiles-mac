@@ -132,7 +132,14 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 
 **Menu bar (Tahoe):** Spotlight, Focus, and Now Playing are managed as ByHost ints (`@host/com.apple.controlcenter` `Spotlight`/`FocusModes`/`NowPlaying` = `8` = Don't Show) via `macos.sh` / `check.sh`. Manual equivalent: **System Settings → Menu Bar** → uncheck them.
 
-**Keyboard / Dictation:** Fn/Globe must **Do Nothing** (`AppleFnUsageType` = `0`); Dictation stays **Off**. Shortcut is **Right Command twice** (symbolic hotkey 164) so the Fn/mic key never starts listening — `check.sh` drifts if that binding returns to Press 🎙️.
+**Keyboard / Dictation / Fn mic:**
+- **Scripted + checked:** Fn/Globe → **Do Nothing** (`AppleFnUsageType` = `0`); Dictation **Off**; Dictation shortcut = **Right Command twice** (symbolic hotkey 164 — never Press 🎙️). `macos.sh` / `check.sh` cover those.
+- **Karabiner (scripted config, checked symlink + rule):** Brewfile cask `karabiner-elements`; `karabiner/karabiner.json` → `~/.config/karabiner/karabiner.json`. Bare Fn/Globe is lazy (still a modifier for brightness/volume); F5 dictation/mic consumer key is swallowed. `check.sh` drifts if the symlink or the Fn-kill rule is missing.
+- **Manual once (TCC / DriverKit — not scriptable):** after first install, in System Settings:
+  1. **General → Login Items & Extensions → Driver Extensions** — enable **Karabiner DriverKit VirtualHIDDevice** (pqrs.org).
+  2. **Privacy & Security → Accessibility** — enable **Karabiner-Elements** and **Karabiner-Core-Service** (add via **+** → Cmd-Shift-G → `/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app` if missing).
+  3. **General → Login Items** — keep Karabiner background items allowed.
+  (Karabiner 16+ does **not** need Input Monitoring; Accessibility covers it. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.)
 Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
 
 1. **iCloud** — open **System Settings → Apple ID** (your name at the top) → **iCloud** (Saved to iCloud / **See All**):
@@ -160,7 +167,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, hostname, URL handlers, and unwanted apps. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
+`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, hostname, URL handlers, unwanted apps, the Dictation shortcut, and the Karabiner Fn-kill rule. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -216,6 +223,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
+| Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable; config itself is in `karabiner/karabiner.json` |
 
 #### Finder
 
@@ -272,7 +280,7 @@ To enable Clipboard History:
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, URL handlers, unwanted apps). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
+| `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, URL handlers, unwanted apps, Dictation shortcut, Karabiner Fn-kill rule / DriverKit). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
 | `macos.sh` | Apply the managed macOS `defaults`. Run after bootstrap and whenever you edit `lib/macos-defaults.list`. `--dry-run` previews, `--list` prints the table. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |

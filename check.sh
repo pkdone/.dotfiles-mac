@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut.
+# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill.
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -303,6 +303,38 @@ else
   else
     bad "dictation hotkey 164 enabled=$enabled type=${ptype:-?} p1=${p1:-?} (expected enabled=1 type=modifier p1=1048592 Right Command twice)"
   fi
+fi
+
+# ---- 10. Karabiner Fn-kill ----------------------------------------------
+# Config is symlinked via links.list (section 1). Here we also verify the
+# managed rule is still present in that JSON (UI edits can strip it), and
+# soft-warn if the DriverKit extension is not activated+enabled.
+hdr "Karabiner Fn-kill"
+CHECKED=$((CHECKED + 1))
+kj="$HOME/.config/karabiner/karabiner.json"
+if [ ! -r "$kj" ]; then
+  bad "~/.config/karabiner/karabiner.json missing/unreadable"
+else
+  if rg -q 'Never start Dictation/Siri from bare Fn/Globe' "$kj" \
+    && rg -q '"key_code": "fn"' "$kj" \
+    && rg -q '"lazy": true' "$kj" \
+    && rg -q '"consumer_key_code": "dictation"' "$kj"; then
+    pass "karabiner.json has Fn-kill rule (lazy fn + swallow dictation)"
+  else
+    bad "karabiner.json missing expected Fn-kill rule (restore from repo karabiner/karabiner.json)"
+  fi
+fi
+# DriverKit / Accessibility are TCC — warn only (can't fix from check.sh).
+CHECKED=$((CHECKED + 1))
+if command -v systemextensionsctl >/dev/null 2>&1; then
+  se="$(systemextensionsctl list 2>/dev/null || true)"
+  if printf '%s\n' "$se" | rg -q 'org\.pqrs\.Karabiner-DriverKit-VirtualHIDDevice.*\[activated enabled\]'; then
+    pass "Karabiner DriverKit extension activated+enabled"
+  else
+    warn "Karabiner DriverKit not activated+enabled — System Settings → General → Login Items & Extensions → Driver Extensions (manual; see README)"
+  fi
+else
+  warn "systemextensionsctl unavailable — skip DriverKit check"
 fi
 
 # ---- summary ------------------------------------------------------------
