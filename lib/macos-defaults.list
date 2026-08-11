@@ -23,3 +23,6 @@ NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback
 @host/com.apple.controlcenter|FocusModes|int|8|ControlCenter|Menu Bar|Focus|`8` (Don't Show)
 com.apple.ImageCapture|disableHotPlug|bool|true||Photos|Open Photos for devices|`true` (Off — do not auto-open)
 @host/com.apple.controlcenter|NowPlaying|int|8|ControlCenter|Menu Bar|Now Playing|`8` (Don't Show)
+com.apple.HIToolbox|AppleFnUsageType|int|0||Keyboard|Press fn/Globe key to|`0` (Do Nothing)
+com.apple.assistant.support|Dictation Enabled|bool|false||Keyboard|Dictation|`false` (Off)
+com.apple.HIToolbox|AppleDictationAutoEnable|int|0||Keyboard|Dictation auto-enable|`0` (Off)

@@ -132,6 +132,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 
 **Menu bar (Tahoe):** Spotlight, Focus, and Now Playing are managed as ByHost ints (`@host/com.apple.controlcenter` `Spotlight`/`FocusModes`/`NowPlaying` = `8` = Don't Show) via `macos.sh` / `check.sh`. Manual equivalent: **System Settings → Menu Bar** → uncheck them.
 
+**Keyboard / Dictation:** Fn/Globe must **Do Nothing** (`AppleFnUsageType` = `0`); Dictation stays **Off**. Never re-enable — `check.sh` drifts if it comes back.
 Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
 
 1. **iCloud** — open **System Settings → Apple ID** (your name at the top) → **iCloud** (Saved to iCloud / **See All**):
