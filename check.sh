@@ -313,7 +313,7 @@ hdr "Karabiner Fn-kill"
 CHECKED=$((CHECKED + 1))
 kj="$HOME/.config/karabiner/karabiner.json"
 if [ ! -r "$kj" ]; then
-  bad "~/.config/karabiner/karabiner.json missing/unreadable"
+  bad "$HOME/.config/karabiner/karabiner.json missing/unreadable"
 else
   if rg -q 'Never start Dictation/Siri from bare Fn/Globe' "$kj" \
     && rg -q '"key_code": "fn"' "$kj" \
