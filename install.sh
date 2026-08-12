@@ -45,12 +45,15 @@ ensure_backup_dir() {
 link() {  # src dst
   local src="$1" dst="$2"
   mkdir -p "$(dirname "$dst")"
-  if [ ! -L "$dst" ] && [ -e "$dst" ]; then
+  # If dst is a symlink, replace it. If dst is a real file/dir, back it up first.
+  if [ -L "$dst" ]; then
+    rm -f "$dst"
+  elif [ -e "$dst" ]; then
     ensure_backup_dir
     mv "$dst" "$BACKUP_DIR/"
     echo "  backed up existing $dst -> $BACKUP_DIR/"
   fi
-  ln -sf "$src" "$dst"
+  ln -sfn "$src" "$dst"
   echo "  linked $dst"
 }
 

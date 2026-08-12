@@ -7,4 +7,5 @@ ghostty/config|@HOME@/.config/ghostty/config
 fish/config.fish|@HOME@/.config/fish/config.fish
 mise/config.toml|@HOME@/.config/mise/config.toml
 gitconfig|@HOME@/.gitconfig
-karabiner/karabiner.json|@HOME@/.config/karabiner/karabiner.json
+# Directory symlink (Karabiner cannot watch a symlinked karabiner.json file — must link the dir)
+karabiner|@HOME@/.config/karabiner

@@ -27,8 +27,36 @@
             "complex_modifications": {
                 "rules": [
                     {
-                        "description": "Never start Dictation/Siri from Fn/Globe (variable layer; no real fn to macOS)",
+                        "description": "Never start Dictation/Siri from Fn/Globe (variable layer; Fn+F = fullscreen)",
+                        "enabled": true,
                         "manipulators": [
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "apple_vendor_top_case_key_code": "keyboard_fn",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "set_variable": {
+                                            "name": "pdone_fn",
+                                            "value": 1
+                                        }
+                                    }
+                                ],
+                                "to_after_key_up": [
+                                    {
+                                        "set_variable": {
+                                            "name": "pdone_fn",
+                                            "value": 0
+                                        }
+                                    }
+                                ]
+                            },
                             {
                                 "type": "basic",
                                 "from": {
@@ -59,7 +87,7 @@
                             {
                                 "type": "basic",
                                 "from": {
-                                    "apple_vendor_top_case_key_code": "keyboard_fn",
+                                    "key_code": "f",
                                     "modifiers": {
                                         "optional": [
                                             "any"
@@ -68,18 +96,18 @@
                                 },
                                 "to": [
                                     {
-                                        "set_variable": {
-                                            "name": "pdone_fn",
-                                            "value": 1
-                                        }
+                                        "key_code": "f",
+                                        "modifiers": [
+                                            "left_control",
+                                            "left_command"
+                                        ]
                                     }
                                 ],
-                                "to_after_key_up": [
+                                "conditions": [
                                     {
-                                        "set_variable": {
-                                            "name": "pdone_fn",
-                                            "value": 0
-                                        }
+                                        "type": "variable_if",
+                                        "name": "pdone_fn",
+                                        "value": 1
                                     }
                                 ]
                             },
