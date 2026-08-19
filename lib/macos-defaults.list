@@ -7,7 +7,7 @@
 #   display: uses literal Markdown backticks for `macos.sh --list`; @HOME@ -> $HOME at runtime
 # Blank lines and lines beginning with # are ignored.
 NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout|Appearance|Theme|`Dark`
-com.apple.dock|tilesize|float|39|Dock|Dock|Icon size|`39` (±1, accepts 38-40)|1
+com.apple.dock|tilesize|float|33|Dock|Dock|Icon size|`33` (±1, accepts 32-34)|1
 com.apple.dock|show-recents|bool|false|Dock|Dock|Show recent apps|`false` (Off)
 com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Off)
 com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)
