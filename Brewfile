@@ -21,6 +21,7 @@ brew "htop"
 brew "mas"
 brew "dockutil"
 brew "duti"
+brew "ykman"
 
 # Build/dev basics
 brew "pkgconf"
