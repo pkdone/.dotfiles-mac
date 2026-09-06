@@ -22,6 +22,7 @@ brew "mas"
 brew "dockutil"
 brew "duti"
 brew "ykman"
+brew "ffmpeg"
 
 # Build/dev basics
 brew "pkgconf"
