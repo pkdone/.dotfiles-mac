@@ -106,7 +106,9 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 
 ### Unwanted apps (GarageBand, iMovie, Pages)
 
-`prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `check.sh` drifts if they reappear:
+`prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `check.sh` drifts if they reappear.
+
+Wanted Mac App Store apps (WhatsApp, Okta Verify / Extension, 1Password for Safari, Keynote, Numbers) are declared in the `Brewfile` via `mas` so `brew bundle` / `check.sh` keep that set closed.
 
 ```bash
 ~/.dotfiles-mac/prune-apps.sh --dry-run   # preview
@@ -163,7 +165,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Login Items/Recents/CotEditor/`*.app.back`, …). Exits non-zero on drift — run after macOS updates:
+`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Login Items/Recents/CotEditor/`*.app.back`, FileVault / pending updates, …). Exits non-zero on drift — run after macOS updates:
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -263,7 +265,7 @@ To enable Clipboard History:
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only drift check vs the repo. Run any time (especially after a macOS update). Exits non-zero on drift. |
+| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates). Run any time (especially after a macOS update). Exits non-zero on drift. |
 | `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |
@@ -289,7 +291,7 @@ Edit configs normally — changes go directly into the repo via symlinks. Then p
 dotpush "your message"
 ```
 
-- **New packages:** add to `Brewfile`, run `brewsync`.
+- **New packages:** add to `Brewfile`, run `brewsync`. `check.sh` warns on brew/cask/MAS installs that aren’t declared (does not auto-remove them).
 - **Managed macOS settings:** edit `lib/macos-defaults.list`, then run `macos.sh` (use `defaults-diff.sh` to find the key first).
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.

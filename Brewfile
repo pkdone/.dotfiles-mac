@@ -73,6 +73,13 @@ cask "multipass"
 cask "cog-app"
 cask "kid3"
 
-# Mac App Store (via mas; requires being signed in to the App Store)
+# Mac App Store (via mas; requires being signed in to the App Store).
+# Wanted apps live here; unwanted ones (GarageBand/iMovie/Pages) are in lib/unwanted-apps.list.
 mas "WhatsApp", id: 310633997
+mas "Okta Verify", id: 490179405
+mas "Okta Extension App", id: 1439967473
+mas "1Password for Safari", id: 1569813296
+# Apple iWork kept installed (not pruned); declare so brew bundle cleanup stays clean.
+mas "Keynote", id: 409183694
+mas "Numbers", id: 409203825
 

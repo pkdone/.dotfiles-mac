@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, leftover *.app.back.
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, leftover *.app.back, security hygiene (FileVault / softwareupdate).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -116,14 +116,21 @@ else
       pass "Brewfile satisfied (all installed and current)"
     fi
   fi
-  # Extra top-level packages installed but NOT in the Brewfile. Soft warning only: the
-  # Brewfile is additive and deliberate manual installs are allowed (auto-pruning is
-  # theme C, out of scope). The two manual apps (Cursor Nightly, YouTube Music) aren't
-  # brew-managed, so they never appear here.
-  installed="$( { brew leaves 2>/dev/null || true; brew list --cask 2>/dev/null || true; } | sed -E 's#.*/##' | sort -u)"
-  extra="$(comm -23 <(printf '%s\n' "$installed") <(printf '%s\n' "$bf_names") || true)"
-  if [ -n "$extra" ]; then
-    warn "installed but not in Brewfile (manual; add it or ignore): $(printf '%s' "$extra" | tr '\n' ' ')"
+  # Closed-set extras: anything brew bundle cleanup would remove (formulae, casks, MAS)
+  # that isn't in the Brewfile. Soft warning only — never auto-zap from check.sh.
+  # Manual non-brew apps (Cursor Nightly, YouTube Music) never appear here.
+  CHECKED=$((CHECKED + 1))
+  cleanup="$(brew bundle cleanup --file "$DOTDIR/Brewfile" 2>/dev/null || true)"
+  if printf '%s\n' "$cleanup" | rg -q 'Would (uninstall|remove)'; then
+    # Compact the "Would …" sections into one warn line.
+    extras="$(printf '%s\n' "$cleanup" | awk '
+      /^Would / {grab=1; next}
+      /^Run / {grab=0}
+      grab && NF {gsub(/^[[:space:]]+/,""); print}
+    ' | tr '\n' ',' | sed 's/,$//; s/,/, /g')"
+    warn "Brewfile extras (add to Brewfile or uninstall): ${extras:-see brew bundle cleanup}"
+  else
+    pass "no undeclared brew/cask/mas extras"
   fi
 fi
 
@@ -441,6 +448,31 @@ else
   for f in "${backs[@]}"; do
     warn "leftover $f (safe to trash; leftover from an in-place app update)"
   done
+fi
+
+
+# ---- 15. Security hygiene (soft — warn only) ----------------------------
+hdr "Security hygiene"
+CHECKED=$((CHECKED + 1))
+fv="$(fdesetup status 2>/dev/null || true)"
+if printf '%s\n' "$fv" | rg -qi 'FileVault is On'; then
+  pass "FileVault On"
+elif [ -z "$fv" ]; then
+  warn "FileVault status unknown (fdesetup failed)"
+else
+  warn "FileVault not On — $fv"
+fi
+
+CHECKED=$((CHECKED + 1))
+# softwareupdate -l talks to Apple; keep it soft and tolerant of transient failures.
+su_out="$(softwareupdate -l 2>&1)" || true
+if printf '%s\n' "$su_out" | rg -qi 'No new software available'; then
+  pass "no pending software updates"
+elif printf '%s\n' "$su_out" | rg -q 'Label:'; then
+  titles="$(printf '%s\n' "$su_out" | awk -F'Title: ' '/Title:/{print $2}' | sed 's/, Version:.*//; s/[[:space:]]*$//' | paste -sd '; ' -)"
+  warn "pending software updates: ${titles:-see softwareupdate -l}"
+else
+  warn "could not list software updates (softwareupdate -l failed or unexpected output)"
 fi
 
 # ---- summary ------------------------------------------------------------
