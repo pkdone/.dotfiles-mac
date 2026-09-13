@@ -9,3 +9,7 @@ discovery/
 
 # agent scratch logs
 .agent-logs/
+
+# Python helper bytecode
+__pycache__/
+*.py[cod]
