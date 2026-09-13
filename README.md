@@ -4,25 +4,16 @@ Personal macOS dotfiles and bootstrap setup.
 
 ## Contents
 
-- `Brewfile` — all Homebrew packages and casks
+- `Brewfile` — Homebrew packages and casks
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
+- `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
 - `gitconfig` — Git user and behaviour settings
-- `mise/` — pinned default tool version (Node)
-- `lib/` — shared data the scripts read: `macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, and `defaults-lib.sh` (comparison helpers)
-- `bootstrap.sh` — guided full setup: runs install/shell/hostname/macos/dock/handlers/prune-apps in order (idempotent)
-- `install.sh` — bootstraps a new machine (symlinks, Brewfile, mise)
-- `macos.sh` — applies a curated set of macOS `defaults` (idempotent)
-- `dock.sh` — pins the Dock apps in order (idempotent; needs dockutil)
-- `handlers.sh` — sets URL-scheme default apps from `lib/url-handlers.list` (idempotent; needs duti)
-- `prune-apps.sh` — removes apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo / mas)
-- `shell.sh` — makes fish the login shell (idempotent)
-- `hostname.sh` — sets the host names (idempotent)
-- `check.sh` — read-only check that the machine still matches the repo (drift detector)
-- `defaults-diff.sh` — discover which `defaults` key backs a System Settings toggle
-- `tests/` — plain-bash unit tests for the shared `lib/` helpers
-- `hooks/` — git hooks (pre-push lint/test gate), enabled via `core.hooksPath`
-- `SHORTCUTS.md` — keyboard-shortcut & macOS reference cheat-sheets
+- `mise/` — pinned tool versions (Node 22)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `defaults-lib.sh`)
+- Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
+- `tests/`, `hooks/` — unit tests and pre-push lint/test gate
+- `SHORTCUTS.md` — keyboard-shortcut cheat-sheets
 
 ## Setup
 
@@ -129,25 +120,29 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **URL handlers** → Chrome (`handlers.sh` / `lib/url-handlers.list`)
 - **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
+- **Menu bar (Tahoe):** Spotlight, Focus, Now Playing hidden (`@host/com.apple.controlcenter` = `8`) via `macos.sh` / `check.sh`
+- **Finder sidebar Recents** Off and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `check.sh`
+- **Login Items:** `check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
 
-**Menu bar (Tahoe):** Spotlight, Focus, and Now Playing are managed as ByHost ints (`@host/com.apple.controlcenter` `Spotlight`/`FocusModes`/`NowPlaying` = `8` = Don't Show) via `macos.sh` / `check.sh`. Manual equivalent: **System Settings → Menu Bar** → uncheck them.
+Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
 
-**Keyboard / Dictation / Fn mic:**
-- **Scripted + checked:** Fn/Globe → **Do Nothing** (`AppleFnUsageType` = `0`); Dictation **Off**; Dictation shortcut = **Right Command twice** (symbolic hotkey 164 — never Press 🎙️). `macos.sh` writes hotkey 164; `check.sh` drifts if it changes.
-- **Karabiner (scripted config, checked symlink + rules):** Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` (**directory** symlink — Karabiner cannot watch a file symlink). Fn/Globe only sets an internal variable (never sent to macOS, so hold-Fn cannot start the mic); Fn+F → ⌃⌘F (Toggle Full Screen); Fn+F11 → Show Desktop; Fn+Delete / arrows → forward-delete / Home/End/PgUp/PgDn; F5 dictation/mic consumer key swallowed; in Finder, Forward Delete → Move to Trash. Top-row brightness/volume work without Fn. `check.sh` drifts if the dir symlink, Fn-kill rule, or Finder Trash rule is missing.
+### Keyboard / Dictation / Fn
 
-- **Manual once (TCC / DriverKit — not scriptable):** after first install, in System Settings:
-  1. **General → Login Items & Extensions → Driver Extensions** — enable **Karabiner DriverKit VirtualHIDDevice** (pqrs.org).
-  2. **Privacy & Security → Accessibility** — enable **Karabiner-Elements** and **Karabiner-Core-Service** (add via **+** → Cmd-Shift-G → `/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app` if missing).
-  3. **General → Login Items** — keep Karabiner background items allowed.
-  (Karabiner 16+ does **not** need Input Monitoring; Accessibility covers it. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.)
-Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
+**Goal:** hold-Fn/Globe must never start the mic (Dictation / Apple Intelligence).
 
-1. **iCloud** — open **System Settings → Apple ID** (your name at the top) → **iCloud** (Saved to iCloud / **See All**):
-   - **Off:** Photos (Sync this Mac), iCloud Drive, Messages, and any other sync you don't use (Notes/Mail already fine Off).
-   - **Leave On:** Passwords (iCloud Keychain) and Find My, unless you explicitly want those Off.
+**Scripted + checked** (`macos.sh` / `check.sh`):
+- Fn/Globe → **Do Nothing** (`AppleFnUsageType` = `0`)
+- Dictation **Off**
+- Symbolic hotkey 164 ("Start Dictation") pinned to **Right Command twice** — a *dummy* unused combo so Press 🎙️ / Fn never owns it. Do **not** use Right Command twice yourself; it would fire dictation if Dictation were on.
 
-`https://music.apple.com` / similar Universal Links may still open Apple apps; open those in Chrome when it matters.
+**Karabiner** (Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` as a **directory** symlink — Karabiner won't watch a file symlink):
+- Fn/Globe only sets internal variable `pdone_fn` (never sent to macOS)
+- While held: Fn+F → ⌃⌘F (fullscreen); Fn+F11 → Show Desktop; Fn+Delete → forward-delete; Fn+arrows → Home/End/PgUp/PgDn
+- Dictation/microphone consumer keys swallowed; Finder Forward Delete → Move to Trash
+- Top-row brightness/volume still work without Fn
+- `check.sh` drifts if the dir symlink, Fn-kill rule, or Finder Trash rule is missing
+
+**Manual once (TCC / DriverKit):** see the Karabiner-Elements row under [Manual macOS tweaks](#manual-macos-tweaks) (Driver Extensions + Accessibility + Login Items). Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
 
 ### macOS defaults
 
@@ -168,7 +163,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, hostname, URL handlers, unwanted apps, the Dictation shortcut, Karabiner Fn-kill + Finder Trash rules, Login Items (ChatGPT/Gemini must stay Off), Finder sidebar Recents, CotEditor theme/font, and leftover `/Applications/*.app.back`. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
+`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Login Items/Recents/CotEditor/`*.app.back`, …). Exits non-zero on drift — run after macOS updates:
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -224,9 +219,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
-| Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable; config itself is in `karabiner/karabiner.json` |
-
-Finder sidebar **Show Recents** Off and CotEditor (**Anura (Dark)** + monospaced font) are applied by `macos.sh` and checked by `check.sh`.
+| Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable (`karabiner/karabiner.json` is managed). After install: enable DriverKit VirtualHIDDevice; Accessibility for Karabiner-Elements + Karabiner-Core-Service (`/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app`); allow Login Items background |
 
 #### Logi Options+
 
@@ -236,9 +229,7 @@ Finder sidebar **Show Recents** Off and CotEditor (**Anura (Dark)** + monospaced
 
 #### Gemini
 
-`check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled under **System Settings → General → Login Items** (turn them Off; apps may stay installed).
-
-The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
+Default Gemini shortcuts (`Option + Space` / `Option + Shift + Space`) clash with ChatGPT. Set via Gemini Settings → Shortcuts:
 
 | Action | Shortcut |
 |------|------|
@@ -247,7 +238,7 @@ The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift
 
 #### Raycast
 
-On first launch, Raycast auto-binds itself to `Option + Space`, which clashes with the ChatGPT app. Change it via Raycast Settings → General → Raycast Hotkey to `Shift + Control + Command + R`.
+Move Raycast off `Option + Space` (clashes with ChatGPT): Settings → General → Raycast Hotkey → `Shift + Control + Command + R`.
 
 To bind a global hotkey for activating Finder from anywhere:
 1. Open Raycast (`Shift + Control + Command + R`)
@@ -272,8 +263,8 @@ To enable Clipboard History:
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, URL handlers, unwanted apps, Dictation shortcut, Karabiner Fn-kill + Finder Trash, Login Items guard, Finder Recents, CotEditor, `*.app.back`, DriverKit). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
-| `macos.sh` | Apply the managed macOS `defaults`. Run after bootstrap and whenever you edit `lib/macos-defaults.list`. `--dry-run` previews, `--list` prints the table. Idempotent. |
+| `check.sh` | Read-only drift check vs the repo. Run any time (especially after a macOS update). Exits non-zero on drift. |
+| `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |
 | `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie, Pages). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
@@ -315,5 +306,4 @@ dotpush "your message"
 
 ### Keyboard shortcuts & reference
 
-The macOS, terminal, and Ghostty keyboard-shortcut cheat-sheets now live in
-[SHORTCUTS.md](SHORTCUTS.md).
+See [SHORTCUTS.md](SHORTCUTS.md).

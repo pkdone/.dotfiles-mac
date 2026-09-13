@@ -1,11 +1,10 @@
 # Keyboard shortcuts & macOS reference
 
-Moved out of the README to keep that setup-focused. Cheat-sheets for macOS,
-the terminal, and Ghostty.
+Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md](README.md).
 
 ### macOS Shortcuts
 
-Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line navigation, and Option (⌥) for semantic movements and word navigation. The Control (^) key is reserved for system functions (Lock Screen, Mission Control), screenshot-to-clipboard actions, and Linux/Emacs-style navigation in Terminal (e.g., Control + A). These patterns apply to most native macOS applications and text fields (such as Slack or browser bars).
+⌘ = system / line; ⌥ = word/semantic; ⌃ = system (Lock Screen, Mission Control) and Emacs-style in Terminal. Applies in most native text fields.
 
 #### Text Navigation and Editing
 
@@ -36,6 +35,8 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Select to end of document | Shift + Command + Down Arrow |
 | Page Up | Fn + Up Arrow |
 | Page Down | Fn + Down Arrow |
+| Home | Fn + Left Arrow |
+| End | Fn + Right Arrow |
 
 #### Screenshot Actions
 
@@ -59,18 +60,22 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Force Quit Applications window | Option + Command + Escape |
 | Lock Screen | Control + Command + Q OR TouchID press |
 | App Switcher | Command + Tab |
+| Toggle Full Screen | Fn + F (system-wide; Ghostty also uses Command + Enter) |
 | Mission Control / Desktop Overview | Control + Up Arrow OR 3-Finger Swipe Up OR F3 (Mission Control key) |
 | Show Desktop | Fn + F11 OR Click desktop space |
-| Tile window left/right (drag) | Drag title bar to left/right screen edge, then **pause briefly** until the half-screen highlight appears, then release (unlike Linux flick-to-snap) |
-| Tile window left/right (menu/keys) | Hold green traffic-light → Tile Window to Left/Right; or Control + Option + Left/Right Arrow |
+| Tile window left/right (drag) | Drag title bar to left/right screen edge, **pause** until the half-screen highlight appears, then release |
+| Tile window left/right (menu) | Hold green traffic-light → Tile Window to Left/Right |
+| Tile window left/right (keys) | System Settings → Keyboard → Keyboard Shortcuts → Windows (often ⌃⌥←/→ on Tahoe — confirm there) |
 | Move Item to Trash | Command + Backspace (in Finder/Desktop) |
+| Forward Delete → Trash | Forward Delete (in Finder; mapped to Move to Trash) |
 | Paste file as a move (cut & paste) | Option + Command + V (in Finder, after Command + C) |
 | Show/hide hidden files in Finder | Command + Shift + . |
 | Ghostty Quick Launcher | Command + ` |
 | Claude Browser | Command + E (in Chrome) |
-| Claude Chat | Option, Option (i.e., double-tap) |
-| ChatGPT | Option + Space |
-| Gemini | Control + Option + G |
+| Claude Chat | Option, Option (double-tap) |
+| ChatGPT | Option + Space (Raycast was moved off this — see README) |
+| Gemini mini chat | Control + Option + G |
+| Gemini full chat | Control + Option + Shift + G |
 
 #### Terminal and Shell Differences
 
