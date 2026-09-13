@@ -27,6 +27,15 @@
 set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Prefer Apple python for system plists (see check.sh).
+if [ -x /usr/bin/python3 ]; then
+  DOT_PYTHON=/usr/bin/python3
+elif command -v python3 >/dev/null 2>&1; then
+  DOT_PYTHON="$(command -v python3)"
+else
+  DOT_PYTHON=
+fi
 DRY_RUN=0
 NO_COLOR_OPT=0
 LIST=0
@@ -329,7 +338,13 @@ apply_finder_recents() {
     say_warn "finder-sidebar-recents.py missing — skip Finder Recents"
     return 0
   fi
-  out="$(python3 "$helper" 2>&1)"; rc=$?
+  if [ -z "$DOT_PYTHON" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "python3 not found — skip Finder Recents"
+    return 0
+  fi
+  # Guard exit status: with set -e, a failing $(...) aborts before rc= is set.
+  out="$("$DOT_PYTHON" "$helper" 2>&1)" && rc=0 || rc=$?
   if [ "$rc" = 0 ]; then
     if [ "$DRY_RUN" = 1 ]; then
       say_ok "Finder sidebar Recents hidden (dry-run)"
@@ -344,7 +359,7 @@ apply_finder_recents() {
     say_chg "Finder sidebar Recents -> hide ($out) (dry-run)"
     return 0
   fi
-  if python3 "$helper" --apply >/dev/null; then
+  if "$DOT_PYTHON" "$helper" --apply >/dev/null; then
     CHANGED=$((CHANGED + 1))
     say_chg "Finder sidebar Recents -> hidden"
     queue_restart Finder

@@ -60,6 +60,17 @@ hdr()  { printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
 . "$DOTDIR/lib/defaults-lib.sh"
 
+# Prefer Apple python for system plists. mise/brew shims can be absent or broken
+# in some Ghostty/PATH setups; a failed helper then looks like "unreadable" and
+# `set -e` can abort mid-section if the exit status is not guarded.
+if [ -x /usr/bin/python3 ]; then
+  DOT_PYTHON=/usr/bin/python3
+elif command -v python3 >/dev/null 2>&1; then
+  DOT_PYTHON="$(command -v python3)"
+else
+  DOT_PYTHON=
+fi
+
 # ---- 1. symlinks --------------------------------------------------------
 hdr "Symlinks"
 check_link() {  # target  expected-source
@@ -367,20 +378,29 @@ BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
 BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
 if [ ! -r "$BTM_HELPER" ]; then
   warn "lib/btm-login-items.py missing — skip SMAppService login-item check"
+elif [ -z "$DOT_PYTHON" ]; then
+  warn "python3 not found — skip SMAppService login-item check"
 else
   # shellcheck disable=SC2206  # intentional split of space-separated bundle ids
   btm_bundles=($BANNED_BUNDLES)
-  btm_status="$(python3 "$BTM_HELPER" "${btm_bundles[@]}" 2>/dev/null)" || btm_status=""
-  for bundle in "${btm_bundles[@]}"; do
-    CHECKED=$((CHECKED + 1))
-    st="$(printf '%s\n' "$btm_status" | awk -F= -v b="$bundle" '$1==b {print $2; exit}')"
-    case "$st" in
-      missing)  pass "$bundle not in Background Task Management (ok)" ;;
-      disabled) pass "$bundle login item disabled" ;;
-      enabled)  bad "$bundle is enabled at login — System Settings → General → Login Items → Off" ;;
-      *)        warn "$bundle BTM status unknown (${st:-unreadable}) — check Login Items manually" ;;
-    esac
-  done
+  btm_raw="$("$DOT_PYTHON" "$BTM_HELPER" "${btm_bundles[@]}" 2>&1)" && btm_rc=0 || btm_rc=$?
+  # stdout lines are bundle=status; anything else is treated as an error detail
+  btm_status="$(printf '%s\n' "$btm_raw" | awk -F= 'NF==2 && $2 ~ /^(missing|disabled|enabled|unknown)$/ {print}')"
+  btm_err="$(printf '%s\n' "$btm_raw" | awk -F= '!(NF==2 && $2 ~ /^(missing|disabled|enabled|unknown)$/) {print}' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+  if [ "$btm_rc" -ne 0 ] || [ -z "$btm_status" ]; then
+    warn "BTM helper failed (rc=$btm_rc${btm_err:+; $btm_err}) via $DOT_PYTHON — check Login Items manually"
+  else
+    for bundle in "${btm_bundles[@]}"; do
+      CHECKED=$((CHECKED + 1))
+      st="$(printf '%s\n' "$btm_status" | awk -F= -v b="$bundle" '$1==b {print $2; exit}')"
+      case "$st" in
+        missing)  pass "$bundle not in Background Task Management (ok)" ;;
+        disabled) pass "$bundle login item disabled" ;;
+        enabled)  bad "$bundle is enabled at login — System Settings → General → Login Items → Off" ;;
+        *)        warn "$bundle BTM status unknown (${st:-empty}) — check Login Items manually" ;;
+      esac
+    done
+  fi
 fi
 # Classic login items (System Events) — rare for these apps but cheap to check.
 classic="$(osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null || true)"
@@ -399,8 +419,11 @@ CHECKED=$((CHECKED + 1))
 helper="$DOTDIR/lib/finder-sidebar-recents.py"
 if [ ! -r "$helper" ]; then
   warn "lib/finder-sidebar-recents.py missing — skip"
+elif [ -z "$DOT_PYTHON" ]; then
+  warn "python3 not found — skip Finder Recents"
 else
-  out="$(python3 "$helper" 2>&1)"; rc=$?
+  # Guard exit status: with set -e, a failing $(...) aborts before rc= is set.
+  out="$("$DOT_PYTHON" "$helper" 2>&1)" && rc=0 || rc=$?
   if [ "$rc" = 0 ]; then
     pass "Finder sidebar Recents hidden"
   else
