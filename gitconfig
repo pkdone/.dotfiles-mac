@@ -12,3 +12,9 @@
 [credential]
 	helper =
 	helper = osxkeychain
+[credential "https://origin.cursor.com/git"]
+	helper = 
+	helper = !/Users/pdone/.local/bin/origin credential-helper
+[credential "https://origin.cursor.com"]
+	helper = 
+	helper = !/Users/pdone/.local/bin/origin credential-helper
