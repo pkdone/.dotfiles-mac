@@ -368,8 +368,10 @@ BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
 if [ ! -r "$BTM_HELPER" ]; then
   warn "lib/btm-login-items.py missing — skip SMAppService login-item check"
 else
-  btm_status="$(python3 "$BTM_HELPER" $BANNED_BUNDLES 2>/dev/null)" || btm_status=""
-  for bundle in $BANNED_BUNDLES; do
+  # shellcheck disable=SC2206  # intentional split of space-separated bundle ids
+  btm_bundles=($BANNED_BUNDLES)
+  btm_status="$(python3 "$BTM_HELPER" "${btm_bundles[@]}" 2>/dev/null)" || btm_status=""
+  for bundle in "${btm_bundles[@]}"; do
     CHECKED=$((CHECKED + 1))
     st="$(printf '%s\n' "$btm_status" | awk -F= -v b="$bundle" '$1==b {print $2; exit}')"
     case "$st" in
