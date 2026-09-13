@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill.
+# Sections: symlinks, Homebrew (Brewfile), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, leftover *.app.back.
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -325,6 +325,15 @@ else
   else
     bad "karabiner.json missing expected Fn-kill rule (restore from repo karabiner/karabiner.json)"
   fi
+  CHECKED=$((CHECKED + 1))
+  if rg -q 'Finder: Forward Delete' "$kj" \
+    && rg -q 'delete_forward' "$kj" \
+    && rg -q 'frontmost_application_if' "$kj" \
+    && rg -q 'com\\\\.apple\\\\.finder' "$kj"; then
+    pass "karabiner.json has Finder Forward Delete → Trash rule"
+  else
+    bad "karabiner.json missing Finder Forward Delete → Trash rule"
+  fi
 fi
 # DriverKit / Accessibility are TCC — warn only (can't fix from check.sh).
 CHECKED=$((CHECKED + 1))
@@ -337,6 +346,100 @@ if command -v systemextensionsctl >/dev/null 2>&1; then
   fi
 else
   warn "systemextensionsctl unavailable — skip DriverKit check"
+fi
+
+
+# ---- 11. Login Items guard (ChatGPT / Gemini / launcher must stay Off) ----
+# SMAppService login items aren't safely disable-able from CLI; check only.
+hdr "Login Items (banned open-at-login)"
+BANNED_BUNDLES="com.openai.codex com.google.GeminiMacOS com.google.GeminiMacOS.launcher"
+BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
+btm="$(sfltool dumpbtm 2>/dev/null || true)"
+for bundle in $BANNED_BUNDLES; do
+  CHECKED=$((CHECKED + 1))
+  # dumpbtm lists Disposition before Bundle Identifier; split on entry headers.
+  blk="$(printf '%s\n' "$btm" | awk -v b="$bundle" '
+    /^ #/ {
+      if (buf ~ ("Bundle Identifier:[[:space:]]*" b "([^a-zA-Z0-9.]|$)")) {
+        print buf
+        found=1
+      }
+      buf=$0 "\n"
+      next
+    }
+    { buf=buf $0 "\n" }
+    END {
+      if (!found && buf ~ ("Bundle Identifier:[[:space:]]*" b "([^a-zA-Z0-9.]|$)")) print buf
+    }
+  ')"
+  if [ -z "$blk" ]; then
+    pass "$bundle not in Background Task Management (ok)"
+    continue
+  fi
+  # Prefer Type: app entries; if multiple, any enabled app is drift.
+  disp="$(printf '%s\n' "$blk" | awk '
+    /Type:[[:space:]]*app/ {app=1}
+    /Disposition:/ && app {print; exit}
+    /Disposition:/ {fallback=$0}
+    END { if (!app && fallback != "") print fallback }
+  ')"
+  if printf '%s\n' "$disp" | rg -q 'disabled'; then
+    pass "$bundle login item disabled"
+  elif printf '%s\n' "$disp" | rg -q 'enabled'; then
+    bad "$bundle is enabled at login — System Settings → General → Login Items → Off"
+  else
+    pass "$bundle present but no enabled disposition (${disp:-none})"
+  fi
+done
+# Classic login items (System Events) — rare for these apps but cheap to check.
+classic="$(osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null || true)"
+for name in $BANNED_NAMES; do
+  CHECKED=$((CHECKED + 1))
+  if printf '%s\n' "$classic" | rg -q "(^|, )${name}(,|$)"; then
+    bad "classic login item '$name' present — remove in System Settings → Login Items"
+  else
+    pass "classic login item '$name' absent"
+  fi
+done
+
+# ---- 12. Finder sidebar Recents ----
+hdr "Finder sidebar Recents"
+CHECKED=$((CHECKED + 1))
+helper="$DOTDIR/lib/finder-sidebar-recents.py"
+if [ ! -r "$helper" ]; then
+  warn "lib/finder-sidebar-recents.py missing — skip"
+else
+  out="$(python3 "$helper" 2>&1)"; rc=$?
+  if [ "$rc" = 0 ]; then
+    pass "Finder sidebar Recents hidden"
+  else
+    bad "Finder sidebar Recents not hidden ($out) — run macos.sh"
+  fi
+fi
+
+# ---- 13. CotEditor theme + font ----
+hdr "CotEditor"
+CHECKED=$((CHECKED + 1))
+cot_theme="$(defaults read com.coteditor.CotEditor defaultTheme 2>/dev/null || true)"
+cot_font="$(defaults export com.coteditor.CotEditor - 2>/dev/null | plutil -extract modes.general.fontType raw - 2>/dev/null || true)"
+if [ "$cot_theme" = "Anura (Dark)" ] && [ "$cot_font" = "monospaced" ]; then
+  pass "CotEditor theme=Anura (Dark) fontType=monospaced"
+else
+  bad "CotEditor theme=${cot_theme:-unset} fontType=${cot_font:-unset} (expected Anura (Dark) / monospaced)"
+fi
+
+# ---- 14. Leftover *.app.back in /Applications ----
+hdr "Leftover app backups"
+CHECKED=$((CHECKED + 1))
+shopt -s nullglob
+backs=(/Applications/*.app.back)
+shopt -u nullglob
+if [ ${#backs[@]} -eq 0 ]; then
+  pass "no /Applications/*.app.back leftovers"
+else
+  for f in "${backs[@]}"; do
+    warn "leftover $f (safe to trash; leftover from an in-place app update)"
+  done
 fi
 
 # ---- summary ------------------------------------------------------------

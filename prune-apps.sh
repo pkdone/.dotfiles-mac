@@ -39,18 +39,17 @@ done
 
 trim() { printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'; }
 
-# Run a shell command as root: sudo if possible, else macOS admin dialog.
+# Run a shell command as root: passwordless sudo, interactive sudo, or macOS admin dialog.
 run_as_root() {
-  local cmd="$1"
+  local cmd="$1" escaped
   if sudo -n true 2>/dev/null; then
     sudo /bin/bash -lc "$cmd"
   elif [ -t 0 ] && [ -t 1 ]; then
     sudo /bin/bash -lc "$cmd"
   else
-    # Non-interactive shells (e.g. agent ExternalShell) can't prompt for a password.
-    echo "Error: need an interactive terminal for sudo." >&2
-    echo "       Re-run: ~/.dotfiles-mac/prune-apps.sh" >&2
-    return 1
+    # Agent / non-TTY: show the standard macOS administrator password dialog.
+    escaped=$(printf '%s' "$cmd" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    osascript -e "do shell script \"$escaped\" with administrator privileges"
   fi
 }
 
@@ -87,7 +86,11 @@ while IFS='|' read -r name path mas_id; do
     continue
   fi
 
-  if [ -n "$mas_id" ] && [ "$mas_id" != "0" ] && command -v mas >/dev/null 2>&1; then
+  # Prefer `mas uninstall` when we can use real sudo (mas itself calls sudo).
+  # For the osascript admin-dialog path, `mas uninstall` fails ("Failed to get sudo uid"),
+  # so fall back to rm -rf of the app path (App Store restore still works).
+  if [ -n "$mas_id" ] && [ "$mas_id" != "0" ] && command -v mas >/dev/null 2>&1 \
+    && { sudo -n true 2>/dev/null || { [ -t 0 ] && [ -t 1 ]; }; }; then
     mas_bin="$(command -v mas)"
     echo "remove  $name via mas uninstall $mas_id (admin)"
     run_as_root "$mas_bin uninstall $mas_id"

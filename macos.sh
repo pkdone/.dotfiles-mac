@@ -225,6 +225,136 @@ while IFS='|' read -r domain key etype desired restart area label disp tol; do
   apply_setting "$domain" "$key" "$etype" "$desired" "$restart" "$tol"
 done <<< "$SETTINGS"
 
+# ---- dictation hotkey 164 (nested symbolichotkeys; not a macos-defaults row) ----
+# Pin "Start Dictation" to Right Command twice so hold-Fn never owns the mic.
+apply_dictation_hotkey() {
+  local desired_enabled=1 desired_type=modifier desired_p1=1048592
+  local hk blk enabled ptype p1
+  CONSIDERED=$((CONSIDERED + 1))
+  hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
+  blk="$(printf '%s\n' "$hk" | awk '
+    $0 ~ /^[[:space:]]*164 =/ {grab=1}
+    grab {print}
+    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
+  ')"
+  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
+  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
+  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  if [ "$enabled" = "$desired_enabled" ] && [ "$ptype" = "$desired_type" ] && [ "$p1" = "$desired_p1" ]; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "dictation hotkey 164 already Right Command twice (dry-run)"
+    else
+      # Re-assert like other settings
+      defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 \
+        '{enabled = 1; value = { parameters = (1048592, 54, 0); type = modifier; }; }' >/dev/null
+      REASSERTED=$((REASSERTED + 1))
+      say_ok "dictation hotkey 164 already Right Command twice (re-asserted)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "dictation hotkey 164 enabled=${enabled:-?} type=${ptype:-?} p1=${p1:-?} -> Right Command twice (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.symbolichotkeys"
+  ensure_backup
+  defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 \
+    '{enabled = 1; value = { parameters = (1048592, 54, 0); type = modifier; }; }'
+  if [ -x /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings ]; then
+    /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u 2>/dev/null || true
+  fi
+  CHANGED=$((CHANGED + 1))
+  say_chg "dictation hotkey 164 enabled=${enabled:-?} type=${ptype:-?} p1=${p1:-?} -> Right Command twice"
+  queue_restart logout "Dictation shortcut (symbolic hotkey 164)"
+}
+apply_dictation_hotkey
+
+# ---- CotEditor theme + monospaced font (nested prefs via export/import) ----
+apply_coteditor() {
+  local domain=com.coteditor.CotEditor
+  local theme="Anura (Dark)"
+  local cur_theme cur_font tmp
+  CONSIDERED=$((CONSIDERED + 1))
+  cur_theme="$(defaults read "$domain" defaultTheme 2>/dev/null || true)"
+  cur_font="$(defaults export "$domain" - 2>/dev/null | plutil -extract modes.general.fontType raw - 2>/dev/null || true)"
+  if [ "$cur_theme" = "$theme" ] && [ "$cur_font" = "monospaced" ]; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "CotEditor theme=$theme fontType=monospaced (dry-run)"
+    else
+      defaults write "$domain" defaultTheme -string "$theme"
+      REASSERTED=$((REASSERTED + 1))
+      say_ok "CotEditor theme=$theme fontType=monospaced (re-asserted)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "CotEditor theme=${cur_theme:-unset} fontType=${cur_font:-unset} -> theme=$theme fontType=monospaced (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.coteditor.CotEditor"
+  ensure_backup
+  defaults write "$domain" defaultTheme -string "$theme"
+  tmp="$(mktemp -t coteditor-prefs)"
+  defaults export "$domain" "$tmp"
+  if /usr/libexec/PlistBuddy -c 'Print :modes' "$tmp" >/dev/null 2>&1; then
+    :
+  else
+    /usr/libexec/PlistBuddy -c 'Add :modes dict' "$tmp"
+  fi
+  if /usr/libexec/PlistBuddy -c 'Print :modes:general' "$tmp" >/dev/null 2>&1; then
+    :
+  else
+    /usr/libexec/PlistBuddy -c 'Add :modes:general dict' "$tmp"
+  fi
+  if /usr/libexec/PlistBuddy -c 'Print :modes:general:fontType' "$tmp" >/dev/null 2>&1; then
+    /usr/libexec/PlistBuddy -c 'Set :modes:general:fontType monospaced' "$tmp"
+  else
+    /usr/libexec/PlistBuddy -c 'Add :modes:general:fontType string monospaced' "$tmp"
+  fi
+  defaults import "$domain" "$tmp"
+  rm -f "$tmp"
+  CHANGED=$((CHANGED + 1))
+  say_chg "CotEditor theme=${cur_theme:-unset} fontType=${cur_font:-unset} -> theme=$theme fontType=monospaced"
+}
+apply_coteditor
+
+# ---- Finder sidebar Recents hidden (TopSidebarSection SFL) ----
+apply_finder_recents() {
+  local helper="$DOTDIR/lib/finder-sidebar-recents.py" out rc
+  CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -r "$helper" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "finder-sidebar-recents.py missing — skip Finder Recents"
+    return 0
+  fi
+  out="$(python3 "$helper" 2>&1)"; rc=$?
+  if [ "$rc" = 0 ]; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Finder sidebar Recents hidden (dry-run)"
+    else
+      REASSERTED=$((REASSERTED + 1))
+      say_ok "Finder sidebar Recents already hidden"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Finder sidebar Recents -> hide ($out) (dry-run)"
+    return 0
+  fi
+  if python3 "$helper" --apply >/dev/null; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Finder sidebar Recents -> hidden"
+    queue_restart Finder
+  else
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "Finder sidebar Recents apply failed ($out)"
+  fi
+}
+apply_finder_recents
+
 echo
 echo "Summary: $CONSIDERED setting(s) checked, $CHANGED changed, $REASSERTED re-asserted, $WARNINGS warning(s)."
 
@@ -258,6 +388,5 @@ Still manual (not scriptable / out of scope) — see README:
   - Displays "More Space"; Keyboard British input source
   - Mouse + Trackpad speeds / natural scrolling (managed via Logi Options+)
   - Accessibility grants (TCC); Notifications; Spotlight result categories
-  - Finder sidebar "Show Recents"
   - Set Hostname (requires sudo)
 MANUAL

@@ -113,9 +113,9 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 ~/.dotfiles-mac/handlers.sh             # apply
 ```
 
-### Unwanted apps (GarageBand, iMovie)
+### Unwanted apps (GarageBand, iMovie, Pages)
 
-`prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; these optional ones can. `check.sh` drifts if they reappear:
+`prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `check.sh` drifts if they reappear:
 
 ```bash
 ~/.dotfiles-mac/prune-apps.sh --dry-run   # preview
@@ -127,14 +127,14 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contains them where scripting is reliable:
 
 - **URL handlers** → Chrome (`handlers.sh` / `lib/url-handlers.list`)
-- **GarageBand / iMovie** removed (`prune-apps.sh`)
+- **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 
 **Menu bar (Tahoe):** Spotlight, Focus, and Now Playing are managed as ByHost ints (`@host/com.apple.controlcenter` `Spotlight`/`FocusModes`/`NowPlaying` = `8` = Don't Show) via `macos.sh` / `check.sh`. Manual equivalent: **System Settings → Menu Bar** → uncheck them.
 
 **Keyboard / Dictation / Fn mic:**
-- **Scripted + checked:** Fn/Globe → **Do Nothing** (`AppleFnUsageType` = `0`); Dictation **Off**; Dictation shortcut = **Right Command twice** (symbolic hotkey 164 — never Press 🎙️). `macos.sh` / `check.sh` cover those.
-- **Karabiner (scripted config, checked symlink + rule):** Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` (**directory** symlink — Karabiner cannot watch a file symlink). Fn/Globe only sets an internal variable (never sent to macOS, so hold-Fn cannot start the mic); Fn+F → ⌃⌘F (Toggle Full Screen); Fn+Delete / arrows → forward-delete / Home/End/PgUp/PgDn; F5 dictation/mic consumer key swallowed. Top-row brightness/volume work without Fn. `check.sh` drifts if the dir symlink or Fn-kill rule is missing.
+- **Scripted + checked:** Fn/Globe → **Do Nothing** (`AppleFnUsageType` = `0`); Dictation **Off**; Dictation shortcut = **Right Command twice** (symbolic hotkey 164 — never Press 🎙️). `macos.sh` writes hotkey 164; `check.sh` drifts if it changes.
+- **Karabiner (scripted config, checked symlink + rules):** Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` (**directory** symlink — Karabiner cannot watch a file symlink). Fn/Globe only sets an internal variable (never sent to macOS, so hold-Fn cannot start the mic); Fn+F → ⌃⌘F (Toggle Full Screen); Fn+Delete / arrows → forward-delete / Home/End/PgUp/PgDn; F5 dictation/mic consumer key swallowed; in Finder, Forward Delete → Move to Trash. Top-row brightness/volume work without Fn. `check.sh` drifts if the dir symlink, Fn-kill rule, or Finder Trash rule is missing.
 
 - **Manual once (TCC / DriverKit — not scriptable):** after first install, in System Settings:
   1. **General → Login Items & Extensions → Driver Extensions** — enable **Karabiner DriverKit VirtualHIDDevice** (pqrs.org).
@@ -153,7 +153,7 @@ Still **manual** (see [Manual macOS tweaks](#manual-macos-tweaks)):
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
 
-A curated set of macOS `defaults` is applied by `macos.sh`:
+A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents):
 
 ```bash
 ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothing
@@ -168,7 +168,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, hostname, URL handlers, unwanted apps, the Dictation shortcut, and the Karabiner Fn-kill rule. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
+`check.sh` is a read-only check that this machine still matches the repo — symlinks, Brewfile, every managed `defaults` key, the Dock, login shell, hostname, URL handlers, unwanted apps, the Dictation shortcut, Karabiner Fn-kill + Finder Trash rules, Login Items (ChatGPT/Gemini must stay Off), Finder sidebar Recents, CotEditor theme/font, and leftover `/Applications/*.app.back`. It changes nothing and exits non-zero if it finds drift (handy after a macOS update silently resets something):
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -226,18 +226,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 | Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable; config itself is in `karabiner/karabiner.json` |
 
-#### Finder
-
-| Area | Setting | Value |
-|------|------|------|
-| Sidebar | Show Recents | Off |
-
-#### CotEditor
-
-| Area | Setting | Value |
-|------|------|------|
-| Mode | General - Font | Monospaced |
-| Appearance | Default theme | Anura (Dark) |
+Finder sidebar **Show Recents** Off and CotEditor (**Anura (Dark)** + monospaced font) are applied by `macos.sh` and checked by `check.sh`.
 
 #### Logi Options+
 
@@ -246,6 +235,8 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Pointer & Scrolling | Smooth scrolling | On |
 
 #### Gemini
+
+`check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled under **System Settings → General → Login Items** (turn them Off; apps may stay installed).
 
 The Gemini desktop app's default shortcuts (`Option + Space` and `Option + Shift + Space`) clash with the ChatGPT app. Change them via Gemini Settings → Shortcuts:
 
@@ -281,11 +272,11 @@ To enable Clipboard History:
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, URL handlers, unwanted apps, Dictation shortcut, Karabiner Fn-kill rule / DriverKit). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
+| `check.sh` | Read-only check that the machine still matches the repo (symlinks, Brewfile, defaults, Dock, shell, hostname, URL handlers, unwanted apps, Dictation shortcut, Karabiner Fn-kill + Finder Trash, Login Items guard, Finder Recents, CotEditor, `*.app.back`, DriverKit). Run any time, especially after a macOS update. Changes nothing; exits non-zero on drift. |
 | `macos.sh` | Apply the managed macOS `defaults`. Run after bootstrap and whenever you edit `lib/macos-defaults.list`. `--dry-run` previews, `--list` prints the table. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |
-| `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
+| `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie, Pages). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
 | `shell.sh` | Make fish the login shell. Run once on a fresh machine (see "Set login shell"). Idempotent; sudo/`chsh` only if needed. |
 | `hostname.sh` | Set HostName/LocalHostName/ComputerName. Run once on a fresh machine (see "Set Hostname"). Idempotent; sudo only if a name differs. |
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
