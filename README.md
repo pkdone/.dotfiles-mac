@@ -10,7 +10,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `defaults-lib.sh`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `tests/`, `hooks/` — unit tests and pre-push lint/test gate
 - `SHORTCUTS.md` — keyboard-shortcut cheat-sheets
@@ -59,6 +59,7 @@ These apps can't be installed by `brew bundle`, so set them up by hand after boo
 - **Cursor Nightly** — download and install it manually from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. It's deliberately kept out of the Brewfile (which installs only the stable Cursor), so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
 - **Grok Bot** (formerly Sand) — sourced privately; install manually (no Homebrew cask).
+- **Okta Verify** — company MDM (Kandji). Listed in `lib/mdm-apps.list`, not the Brewfile: `mas` cannot upgrade the `root:wheel` App Store copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`. Updates come from MDM / the App Store UI.
 
 Do these before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
 
@@ -108,7 +109,7 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 
 `prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `check.sh` drifts if they reappear.
 
-Wanted Mac App Store apps (WhatsApp, Okta Verify / Extension, 1Password for Safari, Keynote, Numbers) are declared in the `Brewfile` via `mas` so `brew bundle` / `check.sh` keep that set closed.
+Wanted Mac App Store apps (WhatsApp, Okta Extension, 1Password for Safari, Keynote, Numbers) are declared in the `Brewfile` via `mas` so `brew bundle` / `check.sh` keep that set closed. Okta Verify is MDM-managed (`lib/mdm-apps.list`), not Brewfile-managed.
 
 ```bash
 ~/.dotfiles-mac/prune-apps.sh --dry-run   # preview

@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, leftover *.app.back, security hygiene (FileVault / softwareupdate).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -120,19 +120,48 @@ else
   # Closed-set extras: anything brew bundle cleanup would remove (formulae, casks, MAS)
   # that isn't in the Brewfile. Soft warning only — never auto-zap from check.sh.
   # Manual non-brew apps (Cursor Nightly, YouTube Music) never appear here.
+  # MDM apps in lib/mdm-apps.list are expected leftovers — filter them out.
   CHECKED=$((CHECKED + 1))
   cleanup="$(brew bundle cleanup --file "$DOTDIR/Brewfile" 2>/dev/null || true)"
+  mdm_names=""
+  if [ -r "$DOTDIR/lib/mdm-apps.list" ]; then
+    mdm_names="$(awk -F'|' '$1 !~ /^#/ && NF {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1); print $1}' "$DOTDIR/lib/mdm-apps.list")"
+  fi
   if printf '%s\n' "$cleanup" | rg -q 'Would (uninstall|remove)'; then
-    # Compact the "Would …" sections into one warn line.
-    extras="$(printf '%s\n' "$cleanup" | awk '
+    extras="$(printf '%s\n' "$cleanup" | awk -v mdm="$mdm_names" '
+      BEGIN { n=split(mdm, a, "\n"); for (i=1;i<=n;i++) if (a[i]!="") skip[a[i]]=1 }
       /^Would / {grab=1; next}
       /^Run / {grab=0}
-      grab && NF {gsub(/^[[:space:]]+/,""); print}
+      grab && NF {
+        line=$0; gsub(/^[[:space:]]+/, "", line)
+        name=line; sub(/ \(.*/, "", name)
+        if (!(name in skip)) print line
+      }
     ' | tr '\n' ',' | sed 's/,$//; s/,/, /g')"
-    warn "Brewfile extras (add to Brewfile or uninstall): ${extras:-see brew bundle cleanup}"
+    if [ -n "$extras" ]; then
+      warn "Brewfile extras (add to Brewfile or uninstall): $extras"
+    else
+      pass "no undeclared brew/cask/mas extras (MDM apps ignored)"
+    fi
   else
     pass "no undeclared brew/cask/mas extras"
   fi
+fi
+
+# ---- 2b. MDM / company apps (present, not Brewfile-managed) ----
+if [ -r "$DOTDIR/lib/mdm-apps.list" ]; then
+  hdr "MDM / company apps"
+  while IFS='|' read -r name path _mas_id; do
+    name="$(printf '%s' "$name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    path="$(printf '%s' "$path" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    case "$name" in ''|\#*) continue ;; esac
+    CHECKED=$((CHECKED + 1))
+    if [ -d "$path" ]; then
+      pass "$name present (MDM-managed; not in Brewfile)"
+    else
+      warn "$name missing at $path — install via company MDM / App Store"
+    fi
+  done < "$DOTDIR/lib/mdm-apps.list"
 fi
 
 # Domains may be prefixed with @host/ to use `defaults -currentHost` (ByHost plists).

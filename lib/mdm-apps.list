@@ -1,0 +1,7 @@
+# Company / MDM-managed apps (e.g. Kandji). Installed outside Homebrew; do not
+# declare them in the Brewfile — mas can't upgrade root:wheel App Store copies
+# ("No downloads initiated for ADAM ID …"), and brew bundle would then fail.
+#
+# Format: Name | /Applications/….app | optional-mas-id
+# Blank lines and # comments ignored.
+Okta Verify|/Applications/Okta Verify.app|490179405
