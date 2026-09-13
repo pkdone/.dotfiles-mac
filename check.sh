@@ -320,8 +320,9 @@ else
     && rg -q '"set_variable"' "$kj" \
     && rg -q '"consumer_key_code": "dictation"' "$kj" \
     && rg -q '"key_code": "f"' "$kj" \
+    && rg -q '"key_code": "f11"' "$kj" \
     && rg -q 'left_command' "$kj"; then
-    pass "karabiner.json has Fn-kill rule (variable layer; Fn+F fullscreen)"
+    pass "karabiner.json has Fn-kill rule (variable layer; Fn+F fullscreen; Fn+F11 Show Desktop)"
   else
     bad "karabiner.json missing expected Fn-kill rule (restore from repo karabiner/karabiner.json)"
   fi

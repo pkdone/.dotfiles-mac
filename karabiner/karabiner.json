@@ -27,7 +27,7 @@
             "complex_modifications": {
                 "rules": [
                     {
-                        "description": "Never start Dictation/Siri from Fn/Globe (variable layer; Fn+F = fullscreen)",
+                        "description": "Never start Dictation/Siri from Fn/Globe (variable layer; Fn+F = fullscreen; Fn+F11 = Show Desktop)",
                         "enabled": true,
                         "manipulators": [
                             {
@@ -100,6 +100,32 @@
                                         "modifiers": [
                                             "left_control",
                                             "left_command"
+                                        ]
+                                    }
+                                ],
+                                "conditions": [
+                                    {
+                                        "type": "variable_if",
+                                        "name": "pdone_fn",
+                                        "value": 1
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "basic",
+                                "from": {
+                                    "key_code": "f11",
+                                    "modifiers": {
+                                        "optional": [
+                                            "any"
+                                        ]
+                                    }
+                                },
+                                "to": [
+                                    {
+                                        "key_code": "f11",
+                                        "modifiers": [
+                                            "fn"
                                         ]
                                     }
                                 ],
