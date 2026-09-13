@@ -60,7 +60,7 @@ Standard macOS shortcuts rely on Command (⌘) for system-wide actions and line 
 | Lock Screen | Control + Command + Q OR TouchID press |
 | App Switcher | Command + Tab |
 | Mission Control / Desktop Overview | Control + Up Arrow OR 3-Finger Swipe Up OR F3 (Mission Control key) |
-| Show Desktop | Fn + F11 (Karabiner Fn layer → system Show Desktop) OR Click desktop space |
+| Show Desktop | Fn + F11 OR Click desktop space |
 | Tile window left/right (drag) | Drag title bar to left/right screen edge, then **pause briefly** until the half-screen highlight appears, then release (unlike Linux flick-to-snap) |
 | Tile window left/right (menu/keys) | Hold green traffic-light → Tile Window to Left/Right; or Control + Option + Left/Right Arrow |
 | Move Item to Trash | Command + Backspace (in Finder/Desktop) |
