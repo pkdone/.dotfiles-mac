@@ -27,15 +27,6 @@
 set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Prefer Apple python for system plists (see check.sh).
-if [ -x /usr/bin/python3 ]; then
-  DOT_PYTHON=/usr/bin/python3
-elif command -v python3 >/dev/null 2>&1; then
-  DOT_PYTHON="$(command -v python3)"
-else
-  DOT_PYTHON=
-fi
 DRY_RUN=0
 NO_COLOR_OPT=0
 LIST=0
@@ -87,6 +78,7 @@ for f in defaults-lib.sh macos-defaults.list; do require_file "$DOTDIR/lib/$f"; 
 # lib so check.sh can reuse the exact same match semantics.
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
 . "$DOTDIR/lib/defaults-lib.sh"
+DOT_PYTHON="$(dot_python || true)"
 
 queue_restart() {  # restart-token  [descriptor]
   [ -z "$1" ] && return 0
@@ -345,6 +337,11 @@ apply_finder_recents() {
   fi
   # Guard exit status: with set -e, a failing $(...) aborts before rc= is set.
   out="$("$DOT_PYTHON" "$helper" 2>&1)" && rc=0 || rc=$?
+  if [ "$rc" = 3 ] || printf '%s\n' "$out" | rg -q 'tcc=denied|Operation not permitted|PermissionError'; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "Finder Recents unreadable (Full Disk Access) — enable this terminal in System Settings → Privacy & Security → Full Disk Access"
+    return 0
+  fi
   if [ "$rc" = 0 ]; then
     if [ "$DRY_RUN" = 1 ]; then
       say_ok "Finder sidebar Recents hidden (dry-run)"

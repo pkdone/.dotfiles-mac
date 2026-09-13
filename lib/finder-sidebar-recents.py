@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import errno
 import os
 import re
 import sys
@@ -143,15 +144,25 @@ def favorite_has_recents() -> bool:
     return False
 
 
+def _tcc_denied(exc: OSError) -> int:
+    print(f"tcc=denied path={exc.filename or SFL}", file=sys.stderr)
+    return 3
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
     args = ap.parse_args()
-    if not os.path.isfile(SFL):
-        print("missing TopSidebarSection.sfl4", file=sys.stderr)
-        return 2
-    with open(SFL, "rb") as f:
-        pl = load(f)
+    try:
+        if not os.path.isfile(SFL):
+            print("missing TopSidebarSection.sfl4", file=sys.stderr)
+            return 2
+        with open(SFL, "rb") as f:
+            pl = load(f)
+    except OSError as e:
+        if e.errno in (errno.EPERM, errno.EACCES):
+            return _tcc_denied(e)
+        raise
     objects = pl["$objects"]
     iref = find_recents_item(objects)
     fav = favorite_has_recents()
@@ -173,8 +184,13 @@ def main() -> int:
     if args.apply:
         if status in ("visible", "unknown") and iref is not None:
             if set_hidden(objects, iref, True):
-                with open(SFL, "wb") as f:
-                    f.write(dumps(pl, fmt=FMT_BINARY))
+                try:
+                    with open(SFL, "wb") as f:
+                        f.write(dumps(pl, fmt=FMT_BINARY))
+                except OSError as e:
+                    if e.errno in (errno.EPERM, errno.EACCES):
+                        return _tcc_denied(e)
+                    raise
                 print("applied=hidden")
             else:
                 print("applied=failed", file=sys.stderr)

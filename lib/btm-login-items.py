@@ -11,6 +11,7 @@ Usage:
 """
 from __future__ import annotations
 
+import errno
 import sys
 from pathlib import Path
 from plistlib import UID, load
@@ -21,9 +22,24 @@ TYPE_APP = 2
 
 
 def btm_path() -> Path | None:
-    if not BTM_DIR.is_dir():
+    try:
+        entries = list(BTM_DIR.iterdir())
+    except FileNotFoundError:
         return None
-    cands = sorted(BTM_DIR.glob("BackgroundItems-v*.btm"), reverse=True)
+    except NotADirectoryError:
+        return None
+    except OSError as e:
+        if e.errno in (errno.EPERM, errno.EACCES):
+            raise PermissionError(e.errno, e.strerror, str(BTM_DIR)) from e
+        raise
+    cands = sorted(
+        (
+            e
+            for e in entries
+            if e.name.startswith("BackgroundItems-v") and e.suffix == ".btm"
+        ),
+        reverse=True,
+    )
     return cands[0] if cands else None
 
 
@@ -80,33 +96,39 @@ def iter_app_items(objects):
 
 
 def main() -> int:
-    path = btm_path()
-    if path is None:
-        print("btm=missing", file=sys.stderr)
-        return 2
-    with path.open("rb") as f:
-        pl = load(f)
-    objects = pl["$objects"]
-    items = list(iter_app_items(objects))
-    wanted = sys.argv[1:]
-    if not wanted:
-        for it in items:
-            print(
-                f"{it['bundle']}|{it['disposition']}|{it['enabled']}|{it['name']}"
-            )
+    try:
+        path = btm_path()
+        if path is None:
+            print("btm=missing", file=sys.stderr)
+            return 2
+        with path.open("rb") as f:
+            pl = load(f)
+        objects = pl["$objects"]
+        items = list(iter_app_items(objects))
+        wanted = sys.argv[1:]
+        if not wanted:
+            for it in items:
+                print(
+                    f"{it['bundle']}|{it['disposition']}|{it['enabled']}|{it['name']}"
+                )
+            return 0
+        by_bundle = {it["bundle"]: it for it in items}
+        for b in wanted:
+            it = by_bundle.get(b)
+            if it is None:
+                print(f"{b}=missing")
+            elif it["enabled"] is True:
+                print(f"{b}=enabled")
+            elif it["enabled"] is False:
+                print(f"{b}=disabled")
+            else:
+                print(f"{b}=unknown")
         return 0
-    by_bundle = {it["bundle"]: it for it in items}
-    for b in wanted:
-        it = by_bundle.get(b)
-        if it is None:
-            print(f"{b}=missing")
-        elif it["enabled"] is True:
-            print(f"{b}=enabled")
-        elif it["enabled"] is False:
-            print(f"{b}=disabled")
-        else:
-            print(f"{b}=unknown")
-    return 0
+    except OSError as e:
+        if e.errno in (errno.EPERM, errno.EACCES):
+            print(f"tcc=denied path={e.filename or BTM_DIR}", file=sys.stderr)
+            return 3
+        raise
 
 
 if __name__ == "__main__":

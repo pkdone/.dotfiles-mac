@@ -221,6 +221,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
+| Privacy & Security | Full Disk Access — Ghostty | On | Needed for interactive `./check.sh` Login Items + Finder Recents (sharedfilelist / BTM). Grok Bot already has this for unattended runs. |
 | Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable (`karabiner/karabiner.json` is managed). After install: enable DriverKit VirtualHIDDevice; Accessibility for Karabiner-Elements + Karabiner-Core-Service (`/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app`); allow Login Items background |
 
 #### Logi Options+
@@ -265,7 +266,7 @@ To enable Clipboard History:
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates). Run any time (especially after a macOS update). Exits non-zero on drift. |
+| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates). Run any time (especially after a macOS update). Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
 | `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |

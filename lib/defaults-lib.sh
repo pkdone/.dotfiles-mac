@@ -45,3 +45,27 @@ type_token() {  # our type -> `defaults read-type` word
     bool)   echo boolean ;;
   esac
 }
+
+# Interpreter for helpers that read TCC-gated files (BTM db, Finder sidebar SFL).
+# Prefer Homebrew/mise python so TCC follows the terminal (Ghostty). Apple's
+# /usr/bin/python3 is an xcode-select shim onto com.apple.python3, which has its
+# own TCC identity and gets EPERM unless that binary has Full Disk Access.
+dot_python() {
+  local cand="" p
+  if command -v python3 >/dev/null 2>&1; then
+    cand="$(command -v python3)"
+  fi
+  for p in "$cand" /opt/homebrew/bin/python3; do
+    [ -n "$p" ] && [ -x "$p" ] || continue
+    case "$p" in
+      /usr/bin/python3) continue ;;
+    esac
+    printf '%s\n' "$p"
+    return 0
+  done
+  if [ -x /usr/bin/python3 ]; then
+    printf '%s\n' /usr/bin/python3
+    return 0
+  fi
+  return 1
+}

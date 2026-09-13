@@ -59,17 +59,7 @@ hdr()  { printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
 # Value-comparison helpers shared with macos.sh (same semantics, single source).
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
 . "$DOTDIR/lib/defaults-lib.sh"
-
-# Prefer Apple python for system plists. mise/brew shims can be absent or broken
-# in some Ghostty/PATH setups; a failed helper then looks like "unreadable" and
-# `set -e` can abort mid-section if the exit status is not guarded.
-if [ -x /usr/bin/python3 ]; then
-  DOT_PYTHON=/usr/bin/python3
-elif command -v python3 >/dev/null 2>&1; then
-  DOT_PYTHON="$(command -v python3)"
-else
-  DOT_PYTHON=
-fi
+DOT_PYTHON="$(dot_python || true)"
 
 # ---- 1. symlinks --------------------------------------------------------
 hdr "Symlinks"
@@ -384,10 +374,12 @@ else
   # shellcheck disable=SC2206  # intentional split of space-separated bundle ids
   btm_bundles=($BANNED_BUNDLES)
   btm_raw="$("$DOT_PYTHON" "$BTM_HELPER" "${btm_bundles[@]}" 2>&1)" && btm_rc=0 || btm_rc=$?
-  # stdout lines are bundle=status; anything else is treated as an error detail
-  btm_status="$(printf '%s\n' "$btm_raw" | awk -F= 'NF==2 && $2 ~ /^(missing|disabled|enabled|unknown)$/ {print}')"
-  btm_err="$(printf '%s\n' "$btm_raw" | awk -F= '!(NF==2 && $2 ~ /^(missing|disabled|enabled|unknown)$/) {print}' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
-  if [ "$btm_rc" -ne 0 ] || [ -z "$btm_status" ]; then
+  # bundle ids contain a dot; ignore helper keys like btm= / tcc=
+  btm_status="$(printf '%s\n' "$btm_raw" | awk -F= 'NF==2 && $1 ~ /\./ && $2 ~ /^(missing|disabled|enabled|unknown)$/ {print}')"
+  btm_err="$(printf '%s\n' "$btm_raw" | awk -F= '!(NF==2 && $1 ~ /\./ && $2 ~ /^(missing|disabled|enabled|unknown)$/) {print}' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+  if [ "$btm_rc" = 3 ] || printf '%s\n' "$btm_raw" | rg -q 'tcc=denied|Operation not permitted'; then
+    warn "BTM unreadable (Full Disk Access) via $DOT_PYTHON — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
+  elif [ "$btm_rc" -ne 0 ] || [ -z "$btm_status" ]; then
     warn "BTM helper failed (rc=$btm_rc${btm_err:+; $btm_err}) via $DOT_PYTHON — check Login Items manually"
   else
     for bundle in "${btm_bundles[@]}"; do
@@ -424,7 +416,9 @@ elif [ -z "$DOT_PYTHON" ]; then
 else
   # Guard exit status: with set -e, a failing $(...) aborts before rc= is set.
   out="$("$DOT_PYTHON" "$helper" 2>&1)" && rc=0 || rc=$?
-  if [ "$rc" = 0 ]; then
+  if [ "$rc" = 3 ] || printf '%s\n' "$out" | rg -q 'tcc=denied|Operation not permitted|PermissionError'; then
+    warn "Finder Recents unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
+  elif [ "$rc" = 0 ]; then
     pass "Finder sidebar Recents hidden"
   else
     bad "Finder sidebar Recents not hidden ($out) — run macos.sh"
