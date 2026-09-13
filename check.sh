@@ -362,43 +362,24 @@ fi
 hdr "Login Items (banned open-at-login)"
 BANNED_BUNDLES="com.openai.codex com.google.GeminiMacOS com.google.GeminiMacOS.launcher"
 BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
-btm="$(sfltool dumpbtm 2>/dev/null || true)"
-for bundle in $BANNED_BUNDLES; do
-  CHECKED=$((CHECKED + 1))
-  # dumpbtm lists Disposition before Bundle Identifier; split on entry headers.
-  blk="$(printf '%s\n' "$btm" | awk -v b="$bundle" '
-    /^ #/ {
-      if (buf ~ ("Bundle Identifier:[[:space:]]*" b "([^a-zA-Z0-9.]|$)")) {
-        print buf
-        found=1
-      }
-      buf=$0 "\n"
-      next
-    }
-    { buf=buf $0 "\n" }
-    END {
-      if (!found && buf ~ ("Bundle Identifier:[[:space:]]*" b "([^a-zA-Z0-9.]|$)")) print buf
-    }
-  ')"
-  if [ -z "$blk" ]; then
-    pass "$bundle not in Background Task Management (ok)"
-    continue
-  fi
-  # Prefer Type: app entries; if multiple, any enabled app is drift.
-  disp="$(printf '%s\n' "$blk" | awk '
-    /Type:[[:space:]]*app/ {app=1}
-    /Disposition:/ && app {print; exit}
-    /Disposition:/ {fallback=$0}
-    END { if (!app && fallback != "") print fallback }
-  ')"
-  if printf '%s\n' "$disp" | rg -q 'disabled'; then
-    pass "$bundle login item disabled"
-  elif printf '%s\n' "$disp" | rg -q 'enabled'; then
-    bad "$bundle is enabled at login — System Settings → General → Login Items → Off"
-  else
-    pass "$bundle present but no enabled disposition (${disp:-none})"
-  fi
-done
+# Prefer parsing the world-readable BTM db — `sfltool dumpbtm` pops an admin
+# password dialog on Tahoe and must never run from check.sh.
+BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
+if [ ! -r "$BTM_HELPER" ]; then
+  warn "lib/btm-login-items.py missing — skip SMAppService login-item check"
+else
+  btm_status="$(python3 "$BTM_HELPER" $BANNED_BUNDLES 2>/dev/null)" || btm_status=""
+  for bundle in $BANNED_BUNDLES; do
+    CHECKED=$((CHECKED + 1))
+    st="$(printf '%s\n' "$btm_status" | awk -F= -v b="$bundle" '$1==b {print $2; exit}')"
+    case "$st" in
+      missing)  pass "$bundle not in Background Task Management (ok)" ;;
+      disabled) pass "$bundle login item disabled" ;;
+      enabled)  bad "$bundle is enabled at login — System Settings → General → Login Items → Off" ;;
+      *)        warn "$bundle BTM status unknown (${st:-unreadable}) — check Login Items manually" ;;
+    esac
+  done
+fi
 # Classic login items (System Events) — rare for these apps but cheap to check.
 classic="$(osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null || true)"
 for name in $BANNED_NAMES; do
