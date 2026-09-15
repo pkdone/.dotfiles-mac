@@ -229,9 +229,15 @@ done <<< "$SETTINGS"
 # ---- dictation hotkey 164 (nested symbolichotkeys; not a macos-defaults row) ----
 # Pin "Start Dictation" to Right Command twice so hold-Fn never owns the mic.
 apply_dictation_hotkey() {
+  local pin="$DOTDIR/scripts/pin-dictation-hotkey-164.sh"
   local desired_enabled=1 desired_type=modifier desired_p1=1048592
   local hk blk enabled ptype p1
   CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -x "$pin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "scripts/pin-dictation-hotkey-164.sh missing — skip dictation hotkey"
+    return 0
+  fi
   hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
   blk="$(printf '%s\n' "$hk" | awk '
     $0 ~ /^[[:space:]]*164 =/ {grab=1}
@@ -245,13 +251,7 @@ apply_dictation_hotkey() {
     if [ "$DRY_RUN" = 1 ]; then
       say_ok "dictation hotkey 164 already Right Command twice (dry-run)"
     else
-      # Re-assert like other settings
-      defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 \
-        '{enabled = 1; value = { parameters = (1048592, 54, 0); type = modifier; }; }' >/dev/null
-      defaults read com.apple.symbolichotkeys >/dev/null 2>&1 || true
-      if [ -x /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings ]; then
-        /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u 2>/dev/null || true
-      fi
+      "$pin" >/dev/null
       REASSERTED=$((REASSERTED + 1))
       say_ok "dictation hotkey 164 already Right Command twice (re-asserted)"
     fi
@@ -264,13 +264,7 @@ apply_dictation_hotkey() {
   fi
   BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.symbolichotkeys"
   ensure_backup
-  defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 \
-    '{enabled = 1; value = { parameters = (1048592, 54, 0); type = modifier; }; }'
-  # Refresh in-memory cache then apply (Apple often ignores a bare write until this).
-  defaults read com.apple.symbolichotkeys >/dev/null 2>&1 || true
-  if [ -x /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings ]; then
-    /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u 2>/dev/null || true
-  fi
+  "$pin" >/dev/null
   CHANGED=$((CHANGED + 1))
   say_chg "dictation hotkey 164 enabled=${enabled:-?} type=${ptype:-?} p1=${p1:-?} -> Right Command twice"
   queue_restart logout "Dictation shortcut (symbolic hotkey 164)"

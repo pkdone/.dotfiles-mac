@@ -76,6 +76,21 @@ if [ -n "$BACKUP_DIR" ]; then
 fi
 
 echo ""
+echo "🚀 Loading login LaunchAgent (dictation hotkey 164)..."
+LA_LABEL=com.pdone.pin-dictation-hotkey-164
+LA_PLIST="$HOME/Library/LaunchAgents/${LA_LABEL}.plist"
+uid="$(id -u)"
+if [ -f "$LA_PLIST" ]; then
+  launchctl bootout "gui/$uid/$LA_LABEL" 2>/dev/null || true
+  launchctl bootstrap "gui/$uid" "$LA_PLIST" 2>/dev/null \
+    || launchctl load -w "$LA_PLIST" 2>/dev/null \
+    || echo "  ⚠️  could not bootstrap $LA_LABEL — run: launchctl bootstrap gui/$(id -u) $LA_PLIST"
+  echo "  loaded $LA_LABEL"
+else
+  echo "  ⚠️  $LA_PLIST missing after symlink step"
+fi
+
+echo ""
 echo "🍺 Installing from Brewfile..."
 if ! command -v brew >/dev/null 2>&1; then
   echo "Homebrew not found — installing..."

@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -340,6 +340,19 @@ else
   else
     bad "dictation hotkey 164 enabled=$enabled type=${ptype:-?} p1=${p1:-?} (expected enabled=1 type=modifier p1=1048592 Right Command twice)"
   fi
+fi
+CHECKED=$((CHECKED + 1))
+if [ -x "$DOTDIR/scripts/pin-dictation-hotkey-164.sh" ]; then
+  pass "scripts/pin-dictation-hotkey-164.sh present"
+else
+  bad "scripts/pin-dictation-hotkey-164.sh missing"
+fi
+CHECKED=$((CHECKED + 1))
+LA_LABEL=com.pdone.pin-dictation-hotkey-164
+if launchctl print "gui/$(id -u)/$LA_LABEL" >/dev/null 2>&1; then
+  pass "LaunchAgent $LA_LABEL loaded (re-pins 164 at login)"
+else
+  bad "LaunchAgent $LA_LABEL not loaded — re-run install.sh"
 fi
 
 # ---- 10. Karabiner Fn-kill ----------------------------------------------

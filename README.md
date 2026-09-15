@@ -11,6 +11,8 @@ Personal macOS dotfiles and bootstrap setup.
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
 - `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `defaults-lib.sh`)
+- `scripts/` — helpers (e.g. `pin-dictation-hotkey-164.sh` for the login LaunchAgent)
+- `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `tests/`, `hooks/` — unit tests and pre-push lint/test gate
 - `SHORTCUTS.md` — keyboard-shortcut cheat-sheets
@@ -138,7 +140,7 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 - Dictation **Off**
 - Symbolic hotkey 164 ("Start Dictation") pinned to **Right Command twice** — a *dummy* unused combo so Press 🎙️ / Fn never owns it. Do **not** use Right Command twice yourself; it would fire dictation if Dictation were on.
 
-**After a macOS Software Update:** Apple often rewrites `com.apple.symbolichotkeys` and resets hotkey 164 to the unbound default (`enabled=0`, `type=standard`, `parameters=(65535,65535,0)`). That is what happened after Tahoe **26.7** (2026-09-14). Re-run `macos.sh` (or let the weekday drift check re-pin it). Other managed `defaults` usually survive; this nested hotkey map does not.
+**After a macOS Software Update:** Apple often rewrites `com.apple.symbolichotkeys` and resets hotkey 164 to the unbound default (`enabled=0`, `type=standard`, `parameters=(65535,65535,0)`). That is what happened after Tahoe **26.7** / **27.0**. A login LaunchAgent (`com.pdone.pin-dictation-hotkey-164`, installed by `install.sh`) re-runs `scripts/pin-dictation-hotkey-164.sh` at every login so the pin returns after the reboot. The weekday drift check and `macos.sh` remain backups. Other managed `defaults` usually survive; this nested hotkey map does not.
 
 **Karabiner** (Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` as a **directory** symlink — Karabiner won't watch a file symlink):
 - Fn/Globe only sets internal variable `pdone_fn` (never sent to macOS)

@@ -9,3 +9,5 @@ mise/config.toml|@HOME@/.config/mise/config.toml
 gitconfig|@HOME@/.gitconfig
 # Directory symlink (Karabiner cannot watch a symlinked karabiner.json file — must link the dir)
 karabiner|@HOME@/.config/karabiner
+# Login LaunchAgent: re-pin dictation hotkey 164 after OS updates reset it
+launchagents/com.pdone.pin-dictation-hotkey-164.plist|@HOME@/Library/LaunchAgents/com.pdone.pin-dictation-hotkey-164.plist
