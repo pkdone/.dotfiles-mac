@@ -248,6 +248,10 @@ apply_dictation_hotkey() {
       # Re-assert like other settings
       defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 \
         '{enabled = 1; value = { parameters = (1048592, 54, 0); type = modifier; }; }' >/dev/null
+      defaults read com.apple.symbolichotkeys >/dev/null 2>&1 || true
+      if [ -x /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings ]; then
+        /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u 2>/dev/null || true
+      fi
       REASSERTED=$((REASSERTED + 1))
       say_ok "dictation hotkey 164 already Right Command twice (re-asserted)"
     fi
@@ -262,6 +266,8 @@ apply_dictation_hotkey() {
   ensure_backup
   defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 \
     '{enabled = 1; value = { parameters = (1048592, 54, 0); type = modifier; }; }'
+  # Refresh in-memory cache then apply (Apple often ignores a bare write until this).
+  defaults read com.apple.symbolichotkeys >/dev/null 2>&1 || true
   if [ -x /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings ]; then
     /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u 2>/dev/null || true
   fi

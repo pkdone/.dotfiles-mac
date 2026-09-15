@@ -138,6 +138,8 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 - Dictation **Off**
 - Symbolic hotkey 164 ("Start Dictation") pinned to **Right Command twice** — a *dummy* unused combo so Press 🎙️ / Fn never owns it. Do **not** use Right Command twice yourself; it would fire dictation if Dictation were on.
 
+**After a macOS Software Update:** Apple often rewrites `com.apple.symbolichotkeys` and resets hotkey 164 to the unbound default (`enabled=0`, `type=standard`, `parameters=(65535,65535,0)`). That is what happened after Tahoe **26.7** (2026-09-14). Re-run `macos.sh` (or let the weekday drift check re-pin it). Other managed `defaults` usually survive; this nested hotkey map does not.
+
 **Karabiner** (Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` as a **directory** symlink — Karabiner won't watch a file symlink):
 - Fn/Globe only sets internal variable `pdone_fn` (never sent to macOS)
 - While held: Fn+F → ⌃⌘F (fullscreen); Fn+F11 → Show Desktop; Fn+Delete → forward-delete; Fn+arrows → Home/End/PgUp/PgDn
