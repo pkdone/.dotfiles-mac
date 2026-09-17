@@ -229,6 +229,18 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Privacy & Security | Full Disk Access — Ghostty | On | Needed for interactive `./check.sh` Login Items + Finder Recents (sharedfilelist / BTM). Grok Bot already has this for unattended runs. |
 | Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable (`karabiner/karabiner.json` is managed). After install: enable DriverKit VirtualHIDDevice; Accessibility for Karabiner-Elements + Karabiner-Core-Service (`/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app`); allow Login Items background |
 
+#### Finder
+
+Per-window View Options and chrome (kept manual so folder views stay intentional):
+
+1. Open any Finder window → **View → Show View Options** (`Command + J`)
+2. Set **Icon size** to **72×72**
+3. Set **Text size** to **13**
+4. Optionally tick **Use as Defaults** if you want new icon-view windows to inherit these sizes
+5. **View → Show Status Bar** — shows selection count (“X of Y selected”) and free space
+
+Re-check after a major macOS upgrade; View Options can reset per folder.
+
 #### Logi Options+
 
 | Area | Setting | Value |
