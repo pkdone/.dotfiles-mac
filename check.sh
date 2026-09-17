@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -353,6 +353,18 @@ if launchctl print "gui/$(id -u)/$LA_LABEL" >/dev/null 2>&1; then
   pass "LaunchAgent $LA_LABEL loaded (re-pins 164 at login)"
 else
   bad "LaunchAgent $LA_LABEL not loaded — re-run install.sh"
+fi
+
+# ---- 9b. Finder icon-view defaults (72 / 13) ------------------------------
+hdr "Finder icon view defaults"
+CHECKED=$((CHECKED + 1))
+pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
+if [ ! -x "$pin" ]; then
+  bad "scripts/pin-finder-icon-view.sh missing"
+elif "$pin" --check >/dev/null 2>&1; then
+  pass "Finder icon view defaults iconSize=72 textSize=13"
+else
+  bad "Finder icon view defaults drifted ($("$pin" --check 2>&1 || true)) — run macos.sh"
 fi
 
 # ---- 10. Karabiner Fn-kill ----------------------------------------------

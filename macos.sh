@@ -367,6 +367,40 @@ apply_finder_recents() {
 }
 apply_finder_recents
 
+# ---- Finder icon-view defaults (iconSize=72, textSize=13) ----
+apply_finder_icon_view() {
+  local pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
+  CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -x "$pin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "scripts/pin-finder-icon-view.sh missing — skip Finder icon view defaults"
+    return 0
+  fi
+  if "$pin" --check >/dev/null 2>&1; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Finder icon view defaults iconSize=72 textSize=13 (dry-run)"
+    else
+      "$pin" >/dev/null
+      REASSERTED=$((REASSERTED + 1))
+      say_ok "Finder icon view defaults already iconSize=72 textSize=13 (re-asserted)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Finder icon view defaults -> iconSize=72 textSize=13 (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.finder"
+  ensure_backup
+  "$pin" >/dev/null
+  CHANGED=$((CHANGED + 1))
+  say_chg "Finder icon view defaults -> iconSize=72 textSize=13"
+  queue_restart Finder
+}
+apply_finder_icon_view
+
+
 echo
 echo "Summary: $CONSIDERED setting(s) checked, $CHANGED changed, $REASSERTED re-asserted, $WARNINGS warning(s)."
 

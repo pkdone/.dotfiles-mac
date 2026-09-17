@@ -11,7 +11,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
 - `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `defaults-lib.sh`)
-- `scripts/` — helpers (e.g. `pin-dictation-hotkey-164.sh` for the login LaunchAgent)
+- `scripts/` — helpers (e.g. `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `tests/`, `hooks/` — unit tests and pre-push lint/test gate
@@ -126,7 +126,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 - **Menu bar (Tahoe):** Spotlight, Focus, Now Playing hidden (`@host/com.apple.controlcenter` = `8`) via `macos.sh` / `check.sh`
-- **Finder sidebar Recents** Off, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `check.sh`
+- **Finder sidebar Recents** Off, **icon view 72/13**, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `check.sh`
 - **Login Items:** `check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
 
 Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
