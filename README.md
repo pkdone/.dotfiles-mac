@@ -126,7 +126,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 - **Menu bar (Tahoe):** Spotlight, Focus, Now Playing hidden (`@host/com.apple.controlcenter` = `8`) via `macos.sh` / `check.sh`
-- **Finder sidebar Recents** Off, **show all filename extensions** On, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `check.sh`
+- **Finder sidebar Recents** Off, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `check.sh`
 - **Login Items:** `check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
 
 Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
@@ -206,7 +206,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Apple Account | ID | `<myuserid>@icloud.com` | Interactive Apple ID sign-in; not a `defaults` key |
 | System Settings → Apple ID → iCloud | Photos, iCloud Drive, Messages (and other unused sync) Off; Passwords + Find My On | As listed | Apple Account UI; no supported durable CLI — do by hand. Passwords = iCloud Keychain — do not turn Off casually |
 | Displays | Built-in Display | More Space | Display scaling is hardware-specific; not reliably scriptable |
-| Appearance | Sidebar icon size | Large | Appearance chrome; left manual so it stays intentional |
+| Appearance | Sidebar icon size | Large | Now in `lib/macos-defaults.list` (`NSTableViewDefaultSizeMode` = `3`); `macos.sh` / `check.sh` |
 | Desktop & Dock | Widgets on desktop | None (all removed) | Widget placement isn't exposed via `defaults`; removed per-widget in the UI |
 | Keyboard | Text input sources | British | Input sources are a complex array blob; error-prone to script |
 | Mouse | Tracking speed | faster | Device-specific pointer scaling; left manual to preserve feel |
@@ -238,7 +238,7 @@ Per-window View Options and chrome (kept manual so folder views stay intentional
 2. Set **Icon size** to **72×72**
 3. Set **Text size** to **13**
 4. Optionally tick **Use as Defaults** if you want new icon-view windows to inherit these sizes
-5. **View → Show Status Bar** — shows selection count (“X of Y selected”) and free space
+5. **Show Status Bar** — managed by `macos.sh` / `check.sh` (`com.apple.finder ShowStatusBar`); UI path: **View → Show Status Bar**
 6. **Show all filename extensions** — managed by `macos.sh` / `check.sh` (`NSGlobalDomain AppleShowAllExtensions`); UI path: **Finder → Settings… → Advanced**
 
 Re-check after a major macOS upgrade; View Options can reset per folder.
