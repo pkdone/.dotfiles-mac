@@ -126,7 +126,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 - **Menu bar (Tahoe):** Spotlight, Focus, Now Playing hidden (`@host/com.apple.controlcenter` = `8`) via `macos.sh` / `check.sh`
-- **Finder sidebar Recents** Off and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `check.sh`
+- **Finder sidebar Recents** Off, **show all filename extensions** On, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `check.sh`
 - **Login Items:** `check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
 
 Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
@@ -239,6 +239,7 @@ Per-window View Options and chrome (kept manual so folder views stay intentional
 3. Set **Text size** to **13**
 4. Optionally tick **Use as Defaults** if you want new icon-view windows to inherit these sizes
 5. **View → Show Status Bar** — shows selection count (“X of Y selected”) and free space
+6. **Show all filename extensions** — managed by `macos.sh` / `check.sh` (`NSGlobalDomain AppleShowAllExtensions`); UI path: **Finder → Settings… → Advanced**
 
 Re-check after a major macOS upgrade; View Options can reset per folder.
 
