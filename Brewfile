@@ -55,6 +55,7 @@ brew "grep"
 cask "ghostty"
 cask "visual-studio-code"
 cask "cursor"
+cask "cursor-cli"     # Cursor CLI → cursor-agent (not bare agent)
 cask "coteditor"
 cask "karabiner-elements"
 cask "microsoft-teams"
