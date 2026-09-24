@@ -60,6 +60,7 @@ cask "coteditor"
 cask "karabiner-elements"
 cask "microsoft-teams"
 cask "raycast"
+cask "1password"      # 1Password desktop (Business via work SSO)
 cask "logi-options+"
 cask "chatgpt"
 cask "claude"
