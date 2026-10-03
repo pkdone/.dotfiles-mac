@@ -60,7 +60,7 @@ cask "coteditor"
 cask "karabiner-elements"
 cask "microsoft-teams"
 cask "raycast"
-cask "1password"      # 1Password desktop (Business via work SSO)
+# 1Password desktop is Kandji/MDM (see lib/mdm-apps.list); the CLI stays here.
 cask "1password-cli"  # 1Password CLI (op)
 cask "logi-options+"
 cask "chatgpt"

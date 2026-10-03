@@ -5,3 +5,4 @@
 # Format: Name | /Applications/….app | optional-mas-id
 # Blank lines and # comments ignored.
 Okta Verify|/Applications/Okta Verify.app|490179405
+1Password|/Applications/1Password.app|
