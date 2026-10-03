@@ -301,7 +301,8 @@ else
     case "$scheme" in ''|'#'*) continue ;; esac
     scheme="$(printf '%s' "$scheme" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
     bundle="$(printf '%s' "$bundle" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-    [ -n "$scheme" ] && [ -n "$bundle" ] || continue
+    [ -n "$scheme" ] || continue
+    [ -n "$bundle" ] || continue
     CHECKED=$((CHECKED + 1))
     cur="$(duti -d "$scheme" 2>/dev/null || true)"
     if [ "$cur" = "$bundle" ]; then
@@ -322,7 +323,8 @@ else
     case "$name" in ""|"#"*) continue ;; esac
     name="$(printf "%s" "$name" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//")"
     path="$(printf "%s" "$path" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//")"
-    [ -n "$name" ] && [ -n "$path" ] || continue
+    [ -n "$name" ] || continue
+    [ -n "$path" ] || continue
     CHECKED=$((CHECKED + 1))
     if [ -e "$path" ]; then
       bad "$name still installed at $path (run prune-apps.sh)"

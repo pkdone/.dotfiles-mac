@@ -56,7 +56,8 @@ dot_python() {
     cand="$(command -v python3)"
   fi
   for p in "$cand" /opt/homebrew/bin/python3; do
-    [ -n "$p" ] && [ -x "$p" ] || continue
+    [ -n "$p" ] || continue
+    [ -x "$p" ] || continue
     case "$p" in
       /usr/bin/python3) continue ;;
     esac

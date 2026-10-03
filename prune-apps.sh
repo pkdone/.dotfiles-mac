@@ -70,7 +70,8 @@ removed=0
 while IFS='|' read -r name path mas_id; do
   case "$name" in ''|'#'*) continue ;; esac
   name="$(trim "$name")"; path="$(trim "$path")"; mas_id="$(trim "${mas_id:-0}")"
-  [ -n "$name" ] && [ -n "$path" ] || continue
+  [ -n "$name" ] || continue
+  [ -n "$path" ] || continue
 
   if [ ! -e "$path" ]; then
     echo "ok      $name already absent ($path)"
