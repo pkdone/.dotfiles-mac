@@ -70,6 +70,7 @@ cask "grok-bot"       # Grok Bot desktop (AI teammates)
 cask "grok-build"     # Grok Build terminal coding agent (grok / agent)
 cask "google-chrome"
 cask "spotify"
+cask "sonos"          # Sonos S2 desktop controller
 cask "granola"
 cask "slack"
 cask "acorn"
