@@ -128,8 +128,8 @@ else
     mdm_names="$(awk -F'|' '$1 !~ /^#/ && NF {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1); print $1}' "$DOTDIR/lib/mdm-apps.list")"
   fi
   if printf '%s\n' "$cleanup" | rg -q 'Would (uninstall|remove)'; then
-    extras="$(printf '%s\n' "$cleanup" | awk -v mdm="$mdm_names" '
-      BEGIN { n=split(mdm, a, "\n"); for (i=1;i<=n;i++) if (a[i]!="") skip[a[i]]=1 }
+    extras="$(printf '%s\n' "$cleanup" | MDM_NAMES="$mdm_names" awk '
+      BEGIN { mdm=ENVIRON["MDM_NAMES"]; n=split(mdm, a, "\n"); for (i=1;i<=n;i++) if (a[i]!="") skip[a[i]]=1 }
       /^Would / {grab=1; next}
       /^Run / {grab=0}
       grab && NF {
