@@ -4,8 +4,8 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
-# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/hostname and lib/defaults-lib.sh
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
+# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
 #
@@ -247,6 +247,23 @@ else
   if [ "$mism" -eq 0 ]; then
     pass "Dock matches lib/dock-apps.list (${#expected_paths[@]} apps, in order)"
   fi
+fi
+
+# ---- 4b. Dock "Assign To" desktop pins ----------------------------------
+hdr "Desktop assignments (Dock → Options → Assign To)"
+if PY="$(dot_python)"; then
+  while IFS='|' read -r status msg; do
+    [ -z "$status" ] && continue
+    CHECKED=$((CHECKED + 1))
+    case "$status" in
+      ok)  pass "$msg" ;;
+      bad) bad "$msg" ;;
+      *)   warn "$msg" ;;
+    esac
+  done < <("$PY" "$DOTDIR/lib/desktop-bindings.py" "$DOTDIR/lib/desktop-bindings.list")
+else
+  CHECKED=$((CHECKED + 1))
+  warn "no python3 — skipping desktop assignment check"
 fi
 
 # ---- 5. login shell -----------------------------------------------------

@@ -10,7 +10,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `defaults-lib.sh`)
 - `scripts/` — helpers (e.g. `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
@@ -313,6 +313,7 @@ dotpush "your message"
 - **New packages:** add to `Brewfile`, run `brewsync`. `check.sh` warns on brew/cask/MAS installs that aren’t declared (does not auto-remove them).
 - **Managed macOS settings:** edit `lib/macos-defaults.list`, then run `macos.sh` (use `defaults-diff.sh` to find the key first).
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
+- **Desktop assignments:** set each app via its Dock icon → Options → Assign To (macOS has no reliable way to script this), then record it in `lib/desktop-bindings.list` so `check.sh` flags it if macOS drops or moves the pin. Desktop numbers are for the main display.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
 - **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.
 - After any change, run `check.sh` to confirm the machine still matches the repo.
