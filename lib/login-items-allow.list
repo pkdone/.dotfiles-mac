@@ -23,7 +23,8 @@ bundle|com.mitchellh.ghostty|Ghostty opens at login
 bundle|com.granola.app|Granola opens at login
 bundle|com.tinyspeck.slackmacgap|Slack opens at login
 bundle|net.whatsapp.WhatsApp|WhatsApp opens at login
-bundle|com.anysphere.sand|Grok Bot opens at login
+bundle|com.anysphere.sand|Grok Bot opens at login (/Applications/Grok Bot.app; replaced the stale 'Sand' entry)
+bundle|com.spotify.client.startuphelper|Spotify StartUpHelper: opens Spotify at login (kept on purpose)
 label-prefix|com.microsoft.teams2|Microsoft Teams agent (cask microsoft-teams)
 team|X4QN7LTP59|Multipass daemon (cask multipass)
 label|com.pdone.pin-dictation-hotkey-164|this repo's LaunchAgent (launchagents/)

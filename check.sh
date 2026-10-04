@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -448,11 +448,14 @@ fi
 # Never launches or changes anything.
 hdr "Hammerspoon"
 CHECKED=$((CHECKED + 1))
+H_HS_RUNNING=no   # reused by the Mac health JSON (background jobs)
 if [ ! -d /Applications/Hammerspoon.app ]; then
+  H_HS_RUNNING=not_installed
   warn "Hammerspoon.app not installed — brew bundle (cask \"hammerspoon\")"
 elif ! pgrep -xq Hammerspoon; then
   warn "Hammerspoon not running — open -a Hammerspoon (then it starts at login)"
 else
+  H_HS_RUNNING=yes
   pass "Hammerspoon running"
 fi
 
@@ -575,13 +578,41 @@ fi
 
 # ---- 15b. Mac health (soft — warn only, never drift) ---------------------
 # Read-only and timeout-guarded. Values are also kept in H_* for --health-json.
+# Anything that can't be read without sudo / Full Disk Access is an info (by-hand) line.
 hdr "Mac health"
+
+# Thresholds: the one place to tune the health warnings.
+HEALTH_BATTERY_MIN_PCT=80        # battery maximum capacity
+HEALTH_DISK_MIN_GB=50            # free space on the Data volume …
+HEALTH_DISK_MIN_PCT=15           # … warn when below either
+HEALTH_UPTIME_MAX_DAYS=14
+HEALTH_SWAP_MAX_GB=8             # swap in use
+HEALTH_CRASH_DAYS=7              # look-back window for panics / crashes
+HEALTH_CRASH_SAME_APP=3          # warn at this many crashes of one app in the window
+HEALTH_CACHES_MAX_GB=20          # ~/Library/Caches
+HEALTH_DOCKER_MAX_GB=60          # Docker Desktop disk image (allocated size)
+HEALTH_BREW_CACHE_MAX_GB=5       # brew --cache
+HEALTH_DERIVED_DATA_MAX_GB=20    # Xcode DerivedData
+
 H_BAT_STATUS=none; H_BAT_COND=""; H_BAT_MAX=""; H_BAT_CYCLES=""
 H_DISK_STATUS=unknown; H_DISK_FREE_GB=""; H_DISK_FREE_PCT=""; H_DISK_TOTAL_GB=""
 H_UP_STATUS=unknown; H_UP_DAYS=""
+H_MEM_STATUS=unknown; H_MEM_SWAP_GB=""; H_MEM_PRESSURE=unknown; H_MEM_FREE_PCT=""
+H_STO_STATUS=ok; H_STO_CACHES=""; H_STO_DOCKER=""; H_STO_BREW=""; H_STO_DERIVED=""
+H_SEC_STATUS=ok; H_SEC_FIREWALL=unknown; H_SEC_GATEKEEPER=unknown; H_SEC_SIP=unknown
+H_SEC_SSH=unknown; H_SEC_SCREENSHARING=unknown; H_SEC_FILESHARING=unknown; H_SEC_SCREENLOCK=unknown
+H_MDM_STATUS=unknown; H_MDM_ENROLLED=unknown; H_MDM_AGENT=unknown
+H_CR_STATUS=unknown; H_CR_PANICS=""; H_CR_CRASHES=""; H_CR_FAULTS=""; H_CR_APPS=(); H_CR_PANIC_FILES=()
+H_JOBS_STATUS=ok; H_JOBS=()
+H_GIT_STATUS=unknown; H_GIT_DIRTY=""; H_GIT_AHEAD=""; H_GIT_BEHIND=""; H_GIT_FETCHED=""
 H_LI_STATUS=unknown; H_LI_ENABLED=0; H_LI_ALLOW=0; H_LI_MDM=0; H_LI_UNKNOWN=(); H_LI_STALE=()
 
-# Battery: condition, maximum capacity (warn < 80%) and cycle count.
+kb_to_gb() { awk -v k="$1" 'BEGIN { printf "%.1f", k / 1048576 }'; }   # KiB -> GiB, 1 dp
+gb_over() { awk -v v="$1" -v m="$2" 'BEGIN { exit !(v > m) }'; }       # gb_over VALUE MAX
+# du_kb PATH... — allocated KiB (sparse Docker.raw counts real use), empty if unreadable.
+du_kb() { with_timeout 60 du -sk "$@" 2>/dev/null | awk '{ s += $1 } END { if (NR) print s }'; }
+
+# Battery: condition, maximum capacity and cycle count.
 CHECKED=$((CHECKED + 1))
 sp_power="$(with_timeout 20 system_profiler SPPowerDataType 2>/dev/null || true)"
 H_BAT_COND="$(printf '%s\n' "$sp_power" | awk -F': ' '/^ *Condition:/ {print $2; exit}')"
@@ -609,15 +640,15 @@ if [ -z "$H_BAT_COND$H_BAT_MAX$H_BAT_CYCLES" ]; then
 elif [ -n "$H_BAT_COND" ] && [ "$H_BAT_COND" != Normal ]; then
   H_BAT_STATUS=warn
   warn "battery condition ${H_BAT_COND} (max capacity ${H_BAT_MAX:-?}%, ${H_BAT_CYCLES:-?} cycles) — System Settings → Battery → Battery Health"
-elif [ -n "$H_BAT_MAX" ] && [ "$H_BAT_MAX" -lt 80 ]; then
+elif [ -n "$H_BAT_MAX" ] && [ "$H_BAT_MAX" -lt "$HEALTH_BATTERY_MIN_PCT" ]; then
   H_BAT_STATUS=warn
-  warn "battery max capacity ${H_BAT_MAX}% (< 80%; ${H_BAT_CYCLES:-?} cycles) — consider a service"
+  warn "battery max capacity ${H_BAT_MAX}% (< ${HEALTH_BATTERY_MIN_PCT}%; ${H_BAT_CYCLES:-?} cycles) — consider a service"
 else
   H_BAT_STATUS=ok
   pass "battery ${H_BAT_COND:-condition unknown}, max capacity ${H_BAT_MAX:-?}%, ${H_BAT_CYCLES:-?} cycles"
 fi
 
-# Disk: free space on the Data volume; warn below 15% or 50 GB, whichever bites first.
+# Disk: free space on the Data volume; warn below either threshold.
 CHECKED=$((CHECKED + 1))
 disk_vol=/System/Volumes/Data
 [ -d "$disk_vol" ] || disk_vol=/
@@ -626,9 +657,9 @@ if [ -n "${disk_total_k:-}" ] && [ -n "${disk_avail_k:-}" ] && [ "$disk_total_k"
   H_DISK_FREE_GB=$(( disk_avail_k * 1024 / 1000000000 ))
   H_DISK_TOTAL_GB=$(( disk_total_k * 1024 / 1000000000 ))
   H_DISK_FREE_PCT=$(( disk_avail_k * 100 / disk_total_k ))
-  if [ "$H_DISK_FREE_PCT" -lt 15 ] || [ "$H_DISK_FREE_GB" -lt 50 ]; then
+  if [ "$H_DISK_FREE_PCT" -lt "$HEALTH_DISK_MIN_PCT" ] || [ "$H_DISK_FREE_GB" -lt "$HEALTH_DISK_MIN_GB" ]; then
     H_DISK_STATUS=warn
-    warn "disk: only ${H_DISK_FREE_GB} GB free (${H_DISK_FREE_PCT}%) on $disk_vol — want ≥ 50 GB and ≥ 15%"
+    warn "disk: only ${H_DISK_FREE_GB} GB free (${H_DISK_FREE_PCT}%) on $disk_vol — want ≥ ${HEALTH_DISK_MIN_GB} GB and ≥ ${HEALTH_DISK_MIN_PCT}%"
   else
     H_DISK_STATUS=ok
     pass "disk: ${H_DISK_FREE_GB} GB free of ${H_DISK_TOTAL_GB} GB (${H_DISK_FREE_PCT}%)"
@@ -642,15 +673,232 @@ CHECKED=$((CHECKED + 1))
 boot_sec="$(sysctl -n kern.boottime 2>/dev/null | sed -nE 's/.*[{] sec = ([0-9]+),.*/\1/p')"
 if [ -n "$boot_sec" ]; then
   H_UP_DAYS=$(( ($(date +%s) - boot_sec) / 86400 ))
-  if [ "$H_UP_DAYS" -gt 14 ]; then
+  if [ "$H_UP_DAYS" -gt "$HEALTH_UPTIME_MAX_DAYS" ]; then
     H_UP_STATUS=warn
-    warn "uptime ${H_UP_DAYS} days (> 14) — restart when convenient"
+    warn "uptime ${H_UP_DAYS} days (> ${HEALTH_UPTIME_MAX_DAYS}) — restart when convenient"
   else
     H_UP_STATUS=ok
     pass "uptime ${H_UP_DAYS} day(s)"
   fi
 else
   warn "uptime unknown (sysctl kern.boottime failed)"
+fi
+
+# Memory: swap in use and the kernel's memory-pressure level (1 normal, 2 warn, 4 critical).
+CHECKED=$((CHECKED + 1))
+swap_mb="$(sysctl -n vm.swapusage 2>/dev/null | sed -nE 's/.*used = ([0-9.]+)M.*/\1/p')"
+[ -n "$swap_mb" ] && H_MEM_SWAP_GB="$(awk -v m="$swap_mb" 'BEGIN { printf "%.1f", m / 1024 }')"
+case "$(sysctl -n kern.memorystatus_vm_pressure_level 2>/dev/null)" in
+  1) H_MEM_PRESSURE=normal ;; 2) H_MEM_PRESSURE=warn ;; 4) H_MEM_PRESSURE=critical ;; *) H_MEM_PRESSURE=unknown ;;
+esac
+H_MEM_FREE_PCT="$(with_timeout 10 memory_pressure -Q 2>/dev/null | sed -nE 's/.*free percentage: ([0-9]+)%.*/\1/p')"
+if [ -z "$H_MEM_SWAP_GB" ] && [ "$H_MEM_PRESSURE" = unknown ]; then
+  warn "memory: couldn't read swap or memory pressure"
+elif [ "$H_MEM_PRESSURE" = critical ] || { [ -n "$H_MEM_SWAP_GB" ] && gb_over "$H_MEM_SWAP_GB" "$HEALTH_SWAP_MAX_GB"; }; then
+  H_MEM_STATUS=warn
+  warn "memory: pressure $H_MEM_PRESSURE, swap ${H_MEM_SWAP_GB:-?} GB used (> ${HEALTH_SWAP_MAX_GB} GB or critical) — quit heavy apps (Activity Monitor → Memory) or restart"
+else
+  H_MEM_STATUS=ok
+  pass "memory: pressure $H_MEM_PRESSURE, ${H_MEM_FREE_PCT:-?}% free, swap ${H_MEM_SWAP_GB:-?} GB used"
+fi
+
+# Storage hogs: allocated sizes, each against its own threshold, with the usual fix.
+sto_check() {  # label KiB max_gb fix -> sets sto_gb
+  sto_gb=""
+  [ -n "$2" ] || return 0
+  CHECKED=$((CHECKED + 1))
+  sto_gb="$(kb_to_gb "$2")"
+  if gb_over "$sto_gb" "$3"; then
+    H_STO_STATUS=warn
+    warn "$1: ${sto_gb} GB (> $3 GB) — $4"
+  else
+    pass "$1: ${sto_gb} GB"
+  fi
+}
+sto_check "User caches (~/Library/Caches)" "$(du_kb "$HOME/Library/Caches")" "$HEALTH_CACHES_MAX_GB" \
+  "see du -sh ~/Library/Caches/* | sort -h and clear the biggest app caches (quit the app first)"
+H_STO_CACHES="$sto_gb"
+shopt -s nullglob
+docker_raw=("$HOME"/Library/Containers/com.docker.docker/Data/vms/*/data/Docker.raw)
+shopt -u nullglob
+if [ "${#docker_raw[@]}" -gt 0 ]; then
+  sto_check "Docker disk image" "$(du_kb "${docker_raw[@]}")" "$HEALTH_DOCKER_MAX_GB" \
+    "docker system prune -a (or Docker Desktop → Troubleshoot → Clean / Purge data)"
+  H_STO_DOCKER="$sto_gb"
+fi
+brew_cache="$(with_timeout 10 brew --cache 2>/dev/null || true)"
+if [ -n "$brew_cache" ] && [ -d "$brew_cache" ]; then
+  sto_check "Homebrew cache" "$(du_kb "$brew_cache")" "$HEALTH_BREW_CACHE_MAX_GB" "brew cleanup --prune=all"
+  H_STO_BREW="$sto_gb"
+fi
+if [ -d "$HOME/Library/Developer/Xcode/DerivedData" ]; then
+  sto_check "Xcode DerivedData" "$(du_kb "$HOME/Library/Developer/Xcode/DerivedData")" "$HEALTH_DERIVED_DATA_MAX_GB" \
+    "delete ~/Library/Developer/Xcode/DerivedData (Xcode rebuilds it)"
+  H_STO_DERIVED="$sto_gb"
+fi
+
+# Security basics. MDM may manage some of these; unreadable ones are by-hand info lines.
+sec_on() {  # label value(on|off|unknown) want(on|off) fix-hint -> echoes nothing
+  case "$2" in
+    unknown) info "$1: couldn't read — check by hand ($4)" ;;
+    "$3")    CHECKED=$((CHECKED + 1)); pass "$1 $2" ;;
+    *)       CHECKED=$((CHECKED + 1)); H_SEC_STATUS=warn; warn "$1 $2 (want $3) — $4" ;;
+  esac
+}
+fw="$(with_timeout 5 /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate </dev/null 2>/dev/null || true)"
+case "$fw" in
+  *"State = 1"*|*"State = 2"*) H_SEC_FIREWALL=on ;;
+  *"State = 0"*) H_SEC_FIREWALL=off ;;
+esac
+sec_on "Application Firewall" "$H_SEC_FIREWALL" on "System Settings → Network → Firewall (may be MDM-managed)"
+case "$(with_timeout 5 spctl --status </dev/null 2>&1 || true)" in
+  *"assessments enabled"*)  H_SEC_GATEKEEPER=on ;;
+  *"assessments disabled"*) H_SEC_GATEKEEPER=off ;;
+esac
+sec_on "Gatekeeper" "$H_SEC_GATEKEEPER" on "sudo spctl --global-enable"
+case "$(with_timeout 5 csrutil status </dev/null 2>&1 || true)" in
+  *"status: enabled"*)  H_SEC_SIP=on ;;
+  *"status: disabled"*) H_SEC_SIP=off ;;
+esac
+sec_on "System Integrity Protection" "$H_SEC_SIP" on "re-enable from Recovery: csrutil enable"
+# Sharing services, without sudo: a launchd job that's loaded, or a listening port.
+listen_ports="$(with_timeout 5 netstat -anp tcp 2>/dev/null | awk '$6 == "LISTEN" {print $4}' || true)"
+svc_state() {  # launchd-label port -> on|off
+  if with_timeout 5 launchctl print "system/$1" </dev/null >/dev/null 2>&1; then echo on; return; fi
+  if printf '%s\n' "$listen_ports" | grep -Eq "[.:]$2\$"; then echo on; return; fi
+  echo off
+}
+H_SEC_SSH="$(svc_state com.openssh.sshd 22)"
+sec_on "Remote Login (SSH)" "$H_SEC_SSH" off "System Settings → General → Sharing → Remote Login"
+H_SEC_SCREENSHARING="$(svc_state com.apple.screensharing 5900)"
+sec_on "Screen Sharing" "$H_SEC_SCREENSHARING" off "System Settings → General → Sharing → Screen Sharing"
+H_SEC_FILESHARING="$(svc_state com.apple.smbd 445)"
+sec_on "File Sharing" "$H_SEC_FILESHARING" off "System Settings → General → Sharing → File Sharing"
+# Password after sleep/screen saver (often MDM-managed). sysadminctl reports on stderr.
+sl="$(with_timeout 5 sysadminctl -screenLock status </dev/null 2>&1 || true)"
+case "$sl" in
+  *"delay is immediate"*) H_SEC_SCREENLOCK=immediate ;;
+  *"screenLock is off"*)  H_SEC_SCREENLOCK=off ;;
+  *"delay is "*)          H_SEC_SCREENLOCK="$(printf '%s\n' "$sl" | sed -nE 's/.*delay is (.*)$/\1/p' | head -1)" ;;
+esac
+case "$H_SEC_SCREENLOCK" in
+  immediate) CHECKED=$((CHECKED + 1)); pass "password required immediately after sleep / screen saver" ;;
+  unknown)   info "screen lock: couldn't read — check by hand (System Settings → Lock Screen; may be MDM-managed)" ;;
+  *)         CHECKED=$((CHECKED + 1)); H_SEC_STATUS=warn
+             warn "screen lock: password required after '$H_SEC_SCREENLOCK' (want immediately) — System Settings → Lock Screen (may be MDM-managed)" ;;
+esac
+
+# MDM: enrolment (non-sudo `profiles status`) and the Kandji / Iru agent daemons.
+prof="$(with_timeout 10 profiles status -type enrollment </dev/null 2>&1 || true)"
+case "$prof" in
+  *"MDM enrollment: Yes"*) H_MDM_ENROLLED=yes ;;
+  *"MDM enrollment: No"*)  H_MDM_ENROLLED=no ;;
+esac
+mdm_down=""
+for mdm_label in io.kandji.kandji-daemon io.kandji.kandji-agent; do
+  if ! with_timeout 5 launchctl print "system/$mdm_label" </dev/null 2>/dev/null | grep -q 'state = running'; then
+    mdm_down="$mdm_down $mdm_label"
+  fi
+done
+if [ -z "$mdm_down" ]; then H_MDM_AGENT=yes; else H_MDM_AGENT=no; fi
+if [ "$H_MDM_ENROLLED" = unknown ]; then
+  info "MDM enrolment: couldn't read (profiles status) — check by hand"
+  H_MDM_STATUS=unknown
+fi
+CHECKED=$((CHECKED + 1))
+if [ "$H_MDM_ENROLLED" = no ] || [ "$H_MDM_AGENT" = no ]; then
+  H_MDM_STATUS=warn
+  warn "MDM: enrolled=$H_MDM_ENROLLED, Iru (Kandji) agent not running:${mdm_down:- none} — open Iru Self Service or contact IT"
+else
+  [ "$H_MDM_ENROLLED" = yes ] && H_MDM_STATUS=ok
+  pass "MDM: enrolled=${H_MDM_ENROLLED}, Iru (Kandji) daemon + agent running"
+fi
+
+# Crashes: kernel panics and app crash reports in the window (lib/crash-reports.py).
+CRASH_HELPER="$DOTDIR/lib/crash-reports.py"
+if [ -z "$DOT_PYTHON" ] || [ ! -r "$CRASH_HELPER" ]; then
+  info "crash reports: needs python3 and lib/crash-reports.py — check by hand (Console → Crash Reports)"
+else
+  CHECKED=$((CHECKED + 1))
+  cr_raw="$(with_timeout 20 "$DOT_PYTHON" "$CRASH_HELPER" "$HEALTH_CRASH_DAYS" 2>/dev/null || true)"
+  cr_many=""
+  while IFS='|' read -r cr_kind cr_a cr_b cr_c _cr_d; do
+    case "$cr_kind" in
+      panic)  H_CR_PANIC_FILES+=("$cr_a") ;;
+      crash)  H_CR_APPS+=("$cr_a|$cr_b")
+              if [ "$cr_b" -ge "$HEALTH_CRASH_SAME_APP" ]; then cr_many="$cr_many, $cr_a ×$cr_b"; fi ;;
+      totals) H_CR_PANICS="$cr_a"; H_CR_CRASHES="$cr_b"; H_CR_FAULTS="$cr_c" ;;
+    esac
+  done <<< "$cr_raw"
+  cr_list=""
+  for x in ${H_CR_APPS[@]+"${H_CR_APPS[@]}"}; do cr_list="$cr_list, ${x%%|*} ×${x##*|}"; done
+  if [ -z "$H_CR_PANICS" ]; then
+    H_CR_STATUS=unknown
+    warn "crash reports: helper failed — check Console → Crash Reports by hand"
+  elif [ "$H_CR_PANICS" -gt 0 ] || [ -n "$cr_many" ]; then
+    H_CR_STATUS=warn
+    if [ "$H_CR_PANICS" -gt 0 ]; then
+      warn "$H_CR_PANICS kernel panic(s) in the last $HEALTH_CRASH_DAYS days: ${H_CR_PANIC_FILES[*]} — see /Library/Logs/DiagnosticReports"
+    fi
+    if [ -n "$cr_many" ]; then
+      warn "apps crashing repeatedly (≥ $HEALTH_CRASH_SAME_APP in $HEALTH_CRASH_DAYS days): ${cr_many#, } — update or reinstall them"
+    fi
+  else
+    H_CR_STATUS=ok
+    pass "no kernel panics; $H_CR_CRASHES app crash(es) in $HEALTH_CRASH_DAYS days${cr_list:+ (${cr_list#, })}"
+  fi
+fi
+
+# Background jobs: every LaunchAgent this repo installs (lib/links.list) is loaded and its
+# last run exited 0. The dictation agent's "loaded" state is drift-checked in its own
+# section above, so here it only gets the exit-status check. Hammerspoon "running" is the
+# Hammerspoon section's result (H_HS_RUNNING), reused for --health-json.
+while IFS='|' read -r _la_src la_tgt; do
+  case "$la_tgt" in */Library/LaunchAgents/*.plist) ;; *) continue ;; esac
+  la_label="$(basename "$la_tgt" .plist)"
+  CHECKED=$((CHECKED + 1))
+  if ! la_out="$(with_timeout 5 launchctl print "gui/$(id -u)/$la_label" </dev/null 2>/dev/null)"; then
+    H_JOBS+=("$la_label|no|")
+    if [ "$la_label" = "$LA_LABEL" ]; then
+      CHECKED=$((CHECKED - 1))   # already reported as drift in the Dictation section
+    else
+      H_JOBS_STATUS=warn; warn "LaunchAgent $la_label not loaded — re-run install.sh"
+    fi
+    continue
+  fi
+  la_exit="$(printf '%s\n' "$la_out" | sed -nE 's/^[[:space:]]*last exit code = (.*)$/\1/p' | head -1)"
+  case "$la_exit" in
+    0)                 H_JOBS+=("$la_label|yes|0"); pass "LaunchAgent $la_label loaded, last exit 0" ;;
+    ''|*never*)        H_JOBS+=("$la_label|yes|"); pass "LaunchAgent $la_label loaded (hasn't run yet)" ;;
+    *)                 H_JOBS+=("$la_label|yes|$la_exit"); H_JOBS_STATUS=warn
+                       warn "LaunchAgent $la_label last exit code $la_exit — check: launchctl print gui/$(id -u)/$la_label" ;;
+  esac
+done < "$DOTDIR/lib/links.list"
+
+# Dotfiles in sync: no uncommitted/untracked changes (gitignored .agent-logs etc. don't
+# count) and HEAD level with origin/main AS OF THE LAST FETCH/PUSH — no network here, so
+# check.sh stays offline and read-only (--no-optional-locks: don't even refresh the index).
+CHECKED=$((CHECKED + 1))
+if ! git -C "$DOTDIR" rev-parse --git-dir >/dev/null 2>&1; then
+  warn "dotfiles: $DOTDIR isn't a git repo"
+else
+  H_GIT_DIRTY="$(with_timeout 10 git --no-optional-locks -C "$DOTDIR" status --porcelain -- . ':(exclude).agent-logs' 2>/dev/null | grep -c . || true)"
+  read -r H_GIT_AHEAD H_GIT_BEHIND < <(with_timeout 10 git -C "$DOTDIR" rev-list --left-right --count HEAD...origin/main 2>/dev/null) || true
+  fetch_head="$(git -C "$DOTDIR" rev-parse --git-path FETCH_HEAD 2>/dev/null)"
+  case "$fetch_head" in /*) ;; *) fetch_head="$DOTDIR/$fetch_head" ;; esac
+  [ -f "$fetch_head" ] && H_GIT_FETCHED="$(date -r "$fetch_head" '+%Y-%m-%d %H:%M %Z')"
+  git_issues=""
+  [ "${H_GIT_DIRTY:-0}" -gt 0 ] && git_issues="$git_issues; $H_GIT_DIRTY uncommitted/untracked change(s) (dotpush)"
+  [ "${H_GIT_AHEAD:-0}" -gt 0 ] && git_issues="$git_issues; $H_GIT_AHEAD commit(s) not pushed (git push)"
+  [ "${H_GIT_BEHIND:-0}" -gt 0 ] && git_issues="$git_issues; $H_GIT_BEHIND commit(s) behind origin/main (git pull)"
+  if [ -z "${H_GIT_AHEAD:-}" ]; then
+    H_GIT_STATUS=warn; warn "dotfiles: no origin/main to compare with${git_issues:+$git_issues}"
+  elif [ -n "$git_issues" ]; then
+    H_GIT_STATUS=warn; warn "dotfiles out of sync: ${git_issues#; }"
+  else
+    H_GIT_STATUS=ok
+    pass "dotfiles clean and level with origin/main (as of last fetch/push${H_GIT_FETCHED:+; last fetch $H_GIT_FETCHED})"
+  fi
 fi
 
 # Login / background items: every ENABLED item must be on lib/login-items-allow.list or
@@ -726,6 +974,30 @@ if [ "$HEALTH_JSON" = 1 ]; then
   }
   json_num() { case "$1" in ''|*[!0-9]*) printf 'null' ;; *) printf '%s' "$1" ;; esac; }
   json_opt() { if [ -n "$1" ]; then json_str "$1"; else printf 'null'; fi; }
+  json_dec() { if printf '%s' "$1" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then printf '%s' "$1"; else printf 'null'; fi; }
+  json_crash_apps() {  # "app|count"... -> {"app": count, ...}
+    local first=1 x
+    printf '{'
+    for x in "$@"; do
+      [ "$first" = 1 ] || printf ', '
+      first=0; printf '%s: %s' "$(json_str "${x%|*}")" "$(json_num "${x##*|}")"
+    done
+    printf '}'
+  }
+  json_jobs() {  # "label|loaded(yes/no)|last_exit"... -> [{...}, ...]
+    local first=1 x label rest loaded ex jb
+    printf '['
+    for x in "$@"; do
+      label="${x%%|*}"; rest="${x#*|}"; loaded="${rest%%|*}"; ex="${rest#*|}"
+      [ "$first" = 1 ] || printf ', '
+      first=0
+      jb=false
+      if [ "$loaded" = yes ]; then jb=true; fi
+      printf '{"label": %s, "loaded": %s, "last_exit": %s}' "$(json_str "$label")" \
+        "$jb" "$(json_num "$ex")"
+    done
+    printf ']'
+  }
   json_arr() {  # json_arr item... -> ["a","b"]
     local first=1 x
     printf '['
@@ -746,6 +1018,22 @@ if [ "$HEALTH_JSON" = 1 ]; then
     printf '  "disk": {"status": %s, "free_gb": %s, "free_pct": %s, "total_gb": %s},\n' \
       "$(json_str "$H_DISK_STATUS")" "$(json_num "$H_DISK_FREE_GB")" "$(json_num "$H_DISK_FREE_PCT")" "$(json_num "$H_DISK_TOTAL_GB")"
     printf '  "uptime": {"status": %s, "days": %s},\n' "$(json_str "$H_UP_STATUS")" "$(json_num "$H_UP_DAYS")"
+    printf '  "memory": {"status": %s, "pressure": %s, "free_pct": %s, "swap_used_gb": %s},\n' \
+      "$(json_str "$H_MEM_STATUS")" "$(json_str "$H_MEM_PRESSURE")" "$(json_num "$H_MEM_FREE_PCT")" "$(json_dec "$H_MEM_SWAP_GB")"
+    printf '  "storage": {"status": %s, "caches_gb": %s, "docker_gb": %s, "brew_cache_gb": %s, "derived_data_gb": %s},\n' \
+      "$(json_str "$H_STO_STATUS")" "$(json_dec "$H_STO_CACHES")" "$(json_dec "$H_STO_DOCKER")" "$(json_dec "$H_STO_BREW")" "$(json_dec "$H_STO_DERIVED")"
+    printf '  "security": {"status": %s, "firewall": %s, "gatekeeper": %s, "sip": %s, "remote_login": %s, "screen_sharing": %s, "file_sharing": %s, "screen_lock": %s},\n' \
+      "$(json_str "$H_SEC_STATUS")" "$(json_str "$H_SEC_FIREWALL")" "$(json_str "$H_SEC_GATEKEEPER")" "$(json_str "$H_SEC_SIP")" \
+      "$(json_str "$H_SEC_SSH")" "$(json_str "$H_SEC_SCREENSHARING")" "$(json_str "$H_SEC_FILESHARING")" "$(json_str "$H_SEC_SCREENLOCK")"
+    printf '  "mdm": {"status": %s, "enrolled": %s, "agent_running": %s},\n' \
+      "$(json_str "$H_MDM_STATUS")" "$(json_str "$H_MDM_ENROLLED")" "$(json_str "$H_MDM_AGENT")"
+    printf '  "crashes": {"status": %s, "days": %s, "kernel_panics": %s, "app_crashes": %s, "user_faults": %s, "by_app": %s, "panic_files": %s},\n' \
+      "$(json_str "$H_CR_STATUS")" "$(json_num "$HEALTH_CRASH_DAYS")" "$(json_num "$H_CR_PANICS")" "$(json_num "$H_CR_CRASHES")" "$(json_num "$H_CR_FAULTS")" \
+      "$(json_crash_apps ${H_CR_APPS[@]+"${H_CR_APPS[@]}"})" "$(json_arr ${H_CR_PANIC_FILES[@]+"${H_CR_PANIC_FILES[@]}"})"
+    printf '  "background_jobs": {"status": %s, "hammerspoon_running": %s, "launch_agents": %s},\n' \
+      "$(json_str "$H_JOBS_STATUS")" "$(json_str "$H_HS_RUNNING")" "$(json_jobs ${H_JOBS[@]+"${H_JOBS[@]}"})"
+    printf '  "dotfiles": {"status": %s, "uncommitted": %s, "ahead": %s, "behind": %s, "last_fetch": %s},\n' \
+      "$(json_str "$H_GIT_STATUS")" "$(json_num "$H_GIT_DIRTY")" "$(json_num "$H_GIT_AHEAD")" "$(json_num "$H_GIT_BEHIND")" "$(json_opt "$H_GIT_FETCHED")"
     printf '  "login_items": {"status": %s, "enabled": %d, "allow_listed": %d, "mdm_approved": %d, "unknown": %s, "stale": %s},\n' \
       "$(json_str "$H_LI_STATUS")" "$H_LI_ENABLED" "$H_LI_ALLOW" "$H_LI_MDM" \
       "$(json_arr ${H_LI_UNKNOWN[@]+"${H_LI_UNKNOWN[@]}"})" "$(json_arr ${H_LI_STALE[@]+"${H_LI_STALE[@]}"})"

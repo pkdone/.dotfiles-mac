@@ -11,7 +11,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `mdm-apps.list`, `manual-steps.list`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `defaults-lib.sh`)
 - `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
@@ -194,18 +194,25 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 #### Mac health
 
-`check.sh`'s **Mac health** section adds a few read-only, timeout-guarded signals. Problems are warnings, never drift:
+`check.sh`'s **Mac health** section adds read-only, timeout-guarded signals. Problems are warnings, never drift; anything that can't be read without sudo or Full Disk Access becomes an `info` (check by hand) line. Thresholds live in one block (`HEALTH_*`) at the top of that section in `check.sh`:
 
 | Signal | Source | Warns when |
 |------|------|------|
 | Battery | `system_profiler SPPowerDataType` (fallback `ioreg -rn AppleSmartBattery`) | condition isn't Normal, or maximum capacity < 80% (ok line shows capacity and cycle count) |
 | Disk | `df -k /System/Volumes/Data` | free space < 50 GB or < 15% |
 | Uptime | `sysctl kern.boottime` | > 14 days since the last restart |
+| Memory | `sysctl vm.swapusage`, `kern.memorystatus_vm_pressure_level`, `memory_pressure -Q` | swap in use > 8 GB, or memory pressure critical |
+| Storage hogs | `du -sk` of `~/Library/Caches`, Docker Desktop's `Docker.raw` (allocated size), `brew --cache`, Xcode DerivedData (if present) | Caches > 20 GB, Docker > 60 GB, brew cache > 5 GB (`brew cleanup --prune=all`), DerivedData > 20 GB; each warning names the fix |
+| Security basics | `socketfilterfw --getglobalstate`, `spctl --status`, `csrutil status`, launchd jobs `com.openssh.sshd` / `com.apple.screensharing` / `com.apple.smbd` or a listener on 22 / 5900 / 445 (no sudo), `sysadminctl -screenLock status` | Firewall, Gatekeeper or SIP off; Remote Login, Screen Sharing or File Sharing on; password not required immediately after sleep / screen saver. Firewall and screen lock may be MDM-managed |
+| MDM | `profiles status -type enrollment`, launchd `io.kandji.kandji-daemon` + `io.kandji.kandji-agent` (Iru Daemon / Iru Agent) | not enrolled, or the Iru (Kandji) daemon or agent isn't running |
+| Crashes | `lib/crash-reports.py` over `/Library/Logs/DiagnosticReports` and `~/Library/Logs/DiagnosticReports` (+ `Retired/`), last 7 days | any kernel panic (`*.panic` / bug_type 210), or ≥ 3 crashes (bug_type 309) of one app, named. Non-fatal `ExcUserFault_*` reports are counted as faults, not crashes |
+| Background jobs | `launchctl print gui/<uid>/<label>` for every LaunchAgent in `lib/links.list`; Hammerspoon running (Hammerspoon section) | an agent isn't loaded or its last exit code isn't 0 (the dictation agent's "loaded" state stays a drift check in its own section) |
+| Dotfiles in sync | `git status --porcelain` (gitignored `.agent-logs/` doesn't count) and `git rev-list HEAD...origin/main` | uncommitted / untracked changes, or ahead of / behind `origin/main`. **No network:** it compares with `origin/main` as of the last fetch or push (shown in the ok line), so `check.sh` stays offline and read-only; run `git fetch` first if you need it fresh |
 | Login / background items | `lib/btm-login-items.py --audit lib/login-items-allow.list` | an enabled item is neither on `lib/login-items-allow.list` nor approved by an MDM Service Management rule (Kandji pushes these; the helper reads them from the BTM store), or a stale item points to an app that no longer exists |
 
 FileVault and pending software updates are covered under **Security hygiene**. To accept a new login item, add a `team|`, `bundle|`, `label|` or `label-prefix|` row to `lib/login-items-allow.list` (format in its header). To see every enabled item and how it's classified: `python3 lib/btm-login-items.py --audit lib/login-items-allow.list`. Reading the BTM store needs Full Disk Access for the terminal (Ghostty) or agent running `check.sh`.
 
-**Machine-readable summary:** `./check.sh --health-json` runs the same checks but prints only JSON on stdout (same exit status): `generated`, `host`, `summary` (`checked`, `ok`, `drift`, `warnings`, `by_hand`), `battery` (`condition`, `max_capacity_pct`, `cycle_count`), `disk` (`free_gb`, `free_pct`, `total_gb`), `uptime` (`days`), `login_items` (`enabled`, `allow_listed`, `mdm_approved`, `unknown[]`, `stale[]`), plus `drift_messages[]` and `warning_messages[]`. Each section also has a `status`. The weekly health note is built from this.
+**Machine-readable summary:** `./check.sh --health-json` runs the same checks but prints only JSON on stdout (same exit status): `generated`, `host`, `summary` (`checked`, `ok`, `drift`, `warnings`, `by_hand`), `battery` (`condition`, `max_capacity_pct`, `cycle_count`), `disk` (`free_gb`, `free_pct`, `total_gb`), `uptime` (`days`), `memory` (`pressure`, `free_pct`, `swap_used_gb`), `storage` (`caches_gb`, `docker_gb`, `brew_cache_gb`, `derived_data_gb`), `security` (`firewall`, `gatekeeper`, `sip`, `remote_login`, `screen_sharing`, `file_sharing`, `screen_lock`), `mdm` (`enrolled`, `agent_running`), `crashes` (`days`, `kernel_panics`, `app_crashes`, `user_faults`, `by_app{}`, `panic_files[]`), `background_jobs` (`hammerspoon_running`, `launch_agents[]` with `label` / `loaded` / `last_exit`), `dotfiles` (`uncommitted`, `ahead`, `behind`, `last_fetch`), `login_items` (`enabled`, `allow_listed`, `mdm_approved`, `unknown[]`, `stale[]`), plus `drift_messages[]` and `warning_messages[]`. Each section also has a `status`. The weekly health note is built from this.
 
 ### Discovering new defaults
 
