@@ -3,7 +3,8 @@
 -- Sidecar starts (an iPad display appears):
 --   Slack's main window -> Sidecar screen -> full screen -> Cmd - (zoom out one step).
 -- Sidecar stops (the display goes away):
---   exit full screen -> back on the built-in/main screen -> Cmd = (zoom back in).
+--   exit full screen -> back on the built-in/main screen -> restore the window's
+--   pre-Sidecar size/position (or fill the screen) -> Cmd = (zoom back in).
 --
 -- Acts only on transitions (absent -> present, present -> absent), debounced because
 -- hs.screen.watcher can fire several times per change. Cmd = is only sent if this
@@ -34,6 +35,7 @@ local ALERT_SECS      = 1.5
 local KEY_ZOOMED  = 'sidecar_slack.zoomedOut'   -- true once we've sent Cmd -
 local KEY_APPLIED = 'sidecar_slack.applied'     -- true while Slack is "on Sidecar"
 local KEY_NAMES   = 'sidecar_slack.screenNames' -- optional override list
+local KEY_FRAME   = 'sidecar_slack.savedFrame'  -- Slack's window frame before the move
 
 local HOTKEY_MODS = { 'shift', 'ctrl', 'alt', 'cmd' }
 local HOTKEY_KEY  = 's'
@@ -149,6 +151,10 @@ local function apply(reason)
 
     local function moveAndFullScreen()
       if gen ~= generation then return end
+      -- Remember the normal (non-full-screen) frame so revert can put it back.
+      local f = win:frame()
+      hs.settings.set(KEY_FRAME, { x = f.x, y = f.y, w = f.w, h = f.h })
+      log.i(string.format('saved Slack frame %d,%d %dx%d', f.x, f.y, f.w, f.h))
       win:moveToScreen(screen, false, true, 0)
       after(MOVE_SECS, function()
         if gen ~= generation then return end
@@ -200,6 +206,22 @@ local function revert(reason)
         if home and (not cur or cur:id() ~= home:id()) then
           win:moveToScreen(home, false, true, 0)
         end
+        -- Restore the size/position Slack had before it went to Sidecar, if it
+        -- still fits on the home screen; otherwise fill the screen (like
+        -- double-clicking the title bar).
+        local saved = hs.settings.get(KEY_FRAME)
+        local hf = home and home:frame()
+        local fits = type(saved) == 'table' and hf and saved.w and saved.h
+          and saved.x >= hf.x - 1 and saved.y >= hf.y - 1
+          and saved.x + saved.w <= hf.x + hf.w + 1 and saved.y + saved.h <= hf.y + hf.h + 1
+        if fits then
+          win:setFrame(hs.geometry.rect(saved.x, saved.y, saved.w, saved.h), 0)
+          log.i('restored saved Slack frame')
+        else
+          win:maximize(0)
+          log.i('no usable saved frame; maximized Slack on home screen')
+        end
+        hs.settings.clear(KEY_FRAME)
         win:focus()
       end
       after(0.3, function()
