@@ -75,10 +75,10 @@ spotlight-results|Notifications & Spotlight|Spotlight: turn Off results from Boo
 
 # ---- Login Items & Finder ----
 login-items-off|Login Items & Finder|Keep ChatGPT, Gemini and GeminiAppLauncher Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@check.sh
-finder-view-options|Login Items & Finder|Finder View Options: icon size 72, text size 13 (Use as Defaults)|Finder → View → Show View Options (Command+J)|app:Finder|@check.sh
 
 # ---- App settings ----
 gemini-shortcuts|App settings|Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT)|Gemini → Settings → Shortcuts|app:Gemini|
-raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|Raycast → Settings → General → Raycast Hotkey|app:Raycast|
+raycast-import|App settings|Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings)|Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup)|app:Raycast|
+raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|Raycast → Settings → General → Raycast Hotkey|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15
 raycast-finder-hotkey|App settings|Raycast: Finder hotkey Shift+Control+Command+F|Raycast → type Finder → Command+K → Configure Application… → Record Hotkey|app:Raycast|
 raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|Raycast → Settings → Extensions → Clipboard History|app:Raycast|

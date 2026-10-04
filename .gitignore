@@ -10,6 +10,10 @@ discovery/
 # agent scratch logs
 .agent-logs/
 
+# Raycast exports (.rayconfig): encrypted, but they hold clipboard history, AI chats and
+# extension settings / tokens — never commit them (see README "App settings as code")
+*.rayconfig
+
 # Python helper bytecode
 __pycache__/
 *.py[cod]
