@@ -10,7 +10,6 @@ never by serial number.
 
 Output, one line per result:  status|id|message
   ok | drift | warn   one per checked id (severity from the expected-values file)
-  note                extra information, not a result
   error               the app data is missing or its format is unreadable
 Exit status: 0 all ok, 1 some drift / warn, 2 unreadable (format, bad --only id),
 3 settings.db not found.
@@ -59,7 +58,7 @@ def load_expected(path):
 
 
 def read_copy(db):
-    """Return (settings dict, snapshot count) read from a temp copy of db."""
+    """Return the settings dict read from a temp copy of db."""
     tmp = tempfile.mkdtemp(prefix="logi-settings.")
     try:
         os.chmod(tmp, 0o700)
@@ -73,10 +72,6 @@ def read_copy(db):
             con = sqlite3.connect(copy, timeout=5)   # the copy, never the real file
         try:
             row = con.execute("SELECT file FROM data LIMIT 1").fetchone()
-            try:
-                snaps = con.execute("SELECT count(*) FROM snapshots").fetchone()[0]
-            except sqlite3.Error:
-                snaps = None
         finally:
             con.close()
     finally:
@@ -89,7 +84,7 @@ def read_copy(db):
     data = json.loads(blob)
     if not isinstance(data, dict):
         raise ValueError("settings JSON is not an object")
-    return data, snaps
+    return data
 
 
 def dig(obj, path):
@@ -188,7 +183,7 @@ def main(argv):
         out("error", "", "settings.db not found (%s) — open Logi Options+ once" % db.replace(os.path.expanduser("~"), "~"))
         return 3
     try:
-        data, snaps = read_copy(db)
+        data = read_copy(db)
     except (OSError, sqlite3.Error, ValueError, UnicodeDecodeError) as e:
         out("error", "", "settings.db unreadable (format changed?): %s" % e)
         return 2
@@ -217,8 +212,6 @@ def main(argv):
             want = r["expected"] + (" ±%s" % r["tol"] if r["tol"] else "")
             out(r["severity"], r["id"], "%s — expected %s, found %s" % (r["label"], want, show(actual)))
             rc = max(rc, 1)
-        if r["id"] == "backup" and snaps is not None:
-            out("note", r["id"], "%d settings snapshot(s) stored locally" % snaps)
     return rc
 
 

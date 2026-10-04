@@ -649,7 +649,7 @@ fi
 # lib/logi-settings.py reads a temporary copy of Logi Options+'s settings.db (deleted
 # afterwards) and compares it with lib/logi-expected.list; the device is found by model,
 # not serial. Never writes the database: any drift is restored by hand in the app.
-# Cloud backup is reported by the manual-steps section (step logi-cloud-backup).
+# Cloud backup can't be read locally, so it's the by-hand manual step logi-cloud-backup.
 hdr "Logi Options+"
 LOGI_APP=/Applications/logioptionsplus.app
 LOGI_HELPER="$DOTDIR/lib/logi-settings.py"
@@ -660,7 +660,7 @@ elif [ -z "$DOT_PYTHON" ] || [ ! -r "$LOGI_HELPER" ]; then
   fixid tooling; warn "can't check Logi Options+ settings (python3 or lib/logi-settings.py missing)"
 else
   logi_ids="$(grep -Ev '^[[:space:]]*(#|$|model\|)' "$DOTDIR/lib/logi-expected.list" 2>/dev/null \
-    | cut -d'|' -f1 | grep -vx backup | tr '\n' ',' | sed 's/,$//')"
+    | cut -d'|' -f1 | tr '\n' ',' | sed 's/,$//')"
   if logi_out="$(with_timeout 20 "$DOT_PYTHON" "$LOGI_HELPER" --only "$logi_ids" </dev/null 2>&1)"; then logi_rc=0; else logi_rc=$?; fi
   logi_n=0
   while IFS='|' read -r l_st _ l_msg; do

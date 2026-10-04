@@ -2,6 +2,10 @@
 # Read by lib/logi-settings.py from a temporary copy of
 # ~/Library/Application Support/LogiOptionsPlus/settings.db; nothing is ever written
 # back (restore is by hand in the app, or from Logi's cloud backup).
+# Cloud backup itself is NOT checked: the "Automatically backup all devices" toggle and
+# the last-backup time aren't stored in any readable local file (the per-device
+# settings_backup_state_v2.knownDevices flags stay false with backup on), so manual
+# step logi-cloud-backup is by hand.
 #
 # The device is found by model id, never by serial number:
 #   model | <deviceModel> | <display name>
@@ -26,4 +30,3 @@ thumb-horizontal|slot|thumb_wheel_adapter|card.name|str|ASSIGNMENT_NAME_HORIZONT
 thumb-smooth|slot|mouse_thumb_wheel_settings|card.mouseThumbWheelSettings.isSmooth|bool|true||drift|Thumb wheel: Smooth scrolling On
 gesture-window-nav|slot|c195|card.selectedNestedCard|str|window_navigation||drift|Gesture button: Window navigation
 pointer-speed|slot|mouse_settings|card.mouseSettings.pointerSpeed.active.value|num|0.12|0.02|drift|Pointer speed 0.12
-backup|global||settings_backup_state_v2.knownDevices.{model}|bool|true||warn|MX Master 3S cloud backup flag (settings_backup_state_v2)

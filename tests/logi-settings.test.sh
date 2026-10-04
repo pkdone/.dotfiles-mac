@@ -45,7 +45,8 @@ d = {
       slot("c195", {"selectedNestedCard": "window_navigation"}),
       slot("mouse_settings", {"mouseSettings": {"pointerSpeed": {"active": {"value": 0.13}}}}),
   ]},
-  "settings_backup_state_v2": {"knownDevices": {"2b034": False}},
+  "settings_backup_state_v2": {"knownDevices": {"2b034": False}},   # not a backup signal
+  "top": {"level": "x"},
 }
 exec(tweak)
 con = sqlite3.connect(path)
@@ -61,10 +62,10 @@ run() { "$PY" "$HELPER" "$@" 2>&1; }
 make_db "$tmp/good.db"
 sum_before="$(cksum < "$tmp/good.db")"
 out="$(run --db "$tmp/good.db")"; rc=$?
-eq "only the backup flag is off -> rc 1" 1 "$rc"
+eq "all expected values ok -> rc 0" 0 "$rc"
 eq "seven settings ok" 7 "$(printf '%s\n' "$out" | grep -c '^ok|')"
-has "backup off is a warning" "warn|backup|" "$out"
-has "snapshot count noted" "note|backup|0 settings snapshot(s)" "$out"
+eq "nothing but ok lines" "" "$(printf '%s\n' "$out" | grep -v '^ok|')"
+eq "cloud backup not checked (no readable signal)" "" "$(printf '%s\n' "$out" | grep -i backup)"
 eq "source db unchanged (read from a copy)" "$sum_before" "$(cksum < "$tmp/good.db")"
 mkdir "$tmp/t"; TMPDIR="$tmp/t" run --db "$tmp/good.db" >/dev/null
 set -- "$tmp"/t/*
@@ -79,14 +80,26 @@ out="$(run --db "$tmp/noserial.db" --only wheel-natural)"; rc=$?
 eq "slotId fallback by model" "0 ok|wheel-natural" "$rc $(printf '%s' "$out" | cut -d'|' -f1,2)"
 
 # ---- drift ----
-make_db "$tmp/drift.db" 'd["profile-1"]["assignments"][0]["card"]["mouseScrollWheelSettings"]["dir"] = "STANDARD"; d["profile-1"]["assignments"][4]["card"]["mouseSettings"]["pointerSpeed"]["active"]["value"] = 0.5; d["settings_backup_state_v2"]["knownDevices"]["2b034"] = True'
+make_db "$tmp/drift.db" 'd["profile-1"]["assignments"][0]["card"]["mouseScrollWheelSettings"]["dir"] = "STANDARD"; d["profile-1"]["assignments"][4]["card"]["mouseSettings"]["pointerSpeed"]["active"]["value"] = 0.5'
 out="$(run --db "$tmp/drift.db")"; rc=$?
 eq "drift -> rc 1" 1 "$rc"
 has "direction drift" "drift|wheel-natural|Main wheel: scroll direction Natural — expected NATURAL, found STANDARD" "$out"
 has "pointer outside tolerance" "drift|pointer-speed|Pointer speed 0.12 — expected 0.12 ±0.02, found 0.5" "$out"
-has "backup on" "ok|backup|" "$out"
 make_db "$tmp/gone.db" 'd["profile-1"]["assignments"] = d["profile-1"]["assignments"][:3]'
 has "missing slot is drift" "drift|gesture-window-nav|" "$(run --db "$tmp/gone.db")"
+
+# ---- global scope + warn severity (custom expected-values file) ----
+cat > "$tmp/exp.list" <<'LIST'
+model|2b034|Test mouse
+top-ok|global||top.level|str|x||drift|Top-level value
+top-warn|global||settings_backup_state_v2.knownDevices.{model}|bool|true||warn|Per-model flag
+LIST
+out="$(run --db "$tmp/good.db" --expected "$tmp/exp.list")"; rc=$?
+eq "global scope: ok + warn -> rc 1" "1 ok|top-ok warn|top-warn " "$rc $(printf '%s\n' "$out" | cut -d'|' -f1,2 | tr '\n' ' ')"
+printf 'model|2b034|x\nbad|row\n' > "$tmp/badexp.list"
+out="$(run --db "$tmp/good.db" --expected "$tmp/badexp.list")"; rc=$?
+eq "malformed expected file -> rc 2" 2 "$rc"
+has "malformed expected file message" "error|-|expected-values file unreadable" "$out"
 
 # ---- missing / unreadable: error lines, never a traceback ----
 out="$(run --db "$tmp/nope.db")"; rc=$?
@@ -106,7 +119,7 @@ eq "no traceback anywhere" 0 "$({ run --db "$tmp/junk.db"; run --db "$tmp/badjso
 
 # ---- the expected-values file itself ----
 eq "expected-values file parses" "" "$(run --db "$tmp/good.db" | grep '^error')"
-eq "every check.sh-required id listed" "backup gesture-window-nav pointer-speed smartshift thumb-horizontal thumb-smooth wheel-natural wheel-smooth " \
+eq "every check.sh-required id listed" "gesture-window-nav pointer-speed smartshift thumb-horizontal thumb-smooth wheel-natural wheel-smooth " \
   "$(grep -Ev '^[[:space:]]*(#|$|model\|)' "$DIR/lib/logi-expected.list" | cut -d'|' -f1 | sort | tr '\n' ' ')"
 
 rm -rf "$DIR/lib/__pycache__"

@@ -64,7 +64,7 @@ trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Withou
 pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
 mouse-settings|Trackpad, mouse & pointer|Mouse (System Settings): tracking, double-click and scrolling speed faster; secondary click on right side (the wheel's direction, Natural, is set in Logi Options+ and checked by check.sh)|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|
 logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling On (main wheel and thumb wheel)|Logi Options+ → MX Master 3S → Point & Scroll|app:logioptionsplus|logi:wheel-smooth,thumb-smooth
-logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically create backups of settings for all devices)|Logi Options+ → sign in → MX Master 3S → More → Backups|app:logioptionsplus|logi:backup
+logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup|Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices|app:logioptionsplus|
 
 # ---- Display, keyboard & desktop ----
 display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|
