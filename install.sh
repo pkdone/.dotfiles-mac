@@ -118,5 +118,7 @@ else
   echo "    (commonly the App Store 'mas' app when not signed in). Fix the cause and"
   echo "    re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
 fi
+echo "   Hammerspoon (Sidecar → Slack) needs Accessibility once: System Settings →"
+echo "   Privacy & Security → Accessibility → enable Hammerspoon (see README)."
 echo "   Remaining setup (login shell, hostname, Dock, defaults) is in the README,"
 echo "   or run ./bootstrap.sh to do the whole sequence."

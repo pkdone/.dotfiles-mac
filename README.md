@@ -8,6 +8,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
+- `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
 - `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `defaults-lib.sh`)
@@ -46,7 +47,7 @@ Then run the guided bootstrap. It walks through every step in order (`install.sh
 
 > _Run first by `bootstrap.sh`; the command below runs only this step._
 
-`install.sh` symlinks the configs into `~/.config` (and `~/.gitconfig`), installs the Brewfile, trusts the `mise` config, and enables the pre-push hook. Idempotent and safe to re-run — it backs up any real file already in the way of a symlink rather than clobbering it. There's no `--dry-run`; it applies changes directly.
+`install.sh` symlinks the configs into `~/.config` (and `~/.gitconfig`, `~/.hammerspoon`), installs the Brewfile, trusts the `mise` config, and enables the pre-push hook. Idempotent and safe to re-run — it backs up any real file already in the way of a symlink rather than clobbering it. There's no `--dry-run`; it applies changes directly.
 
 ```bash
 ~/.dotfiles-mac/install.sh
@@ -151,6 +152,20 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 
 **Manual once (TCC / DriverKit):** see the Karabiner-Elements row under [Manual macOS tweaks](#manual-macos-tweaks) (Driver Extensions + Accessibility + Login Items). Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
 
+### Hammerspoon (Sidecar → Slack)
+
+[Hammerspoon](https://www.hammerspoon.org/) (Brewfile cask `hammerspoon`) runs small Lua automations. `hammerspoon/` → `~/.hammerspoon/` as a **directory** symlink (`lib/links.list`), so `init.lua` and its sibling modules load straight from the repo. `init.lua` just loads the modules listed in `MODULES`; add new automations as their own `*.lua` file there. It also sets: start at login, menu-bar icon only (no Dock icon), no crash-report upload, and loads `hs.ipc` so the `hs` CLI works.
+
+**`sidecar_slack.lua`** replaces the by-hand Sidecar routine:
+- **Sidecar starts** (a screen whose name contains "Sidecar" or "iPad" appears): Slack's window moves to the iPad, goes full screen, and gets one `Cmd -` (zoom out).
+- **Sidecar stops:** Slack leaves full screen, returns to the built-in display, and gets one `Cmd =` — only if the module zoomed it out earlier, so the zoom always stays balanced.
+- Does nothing if Slack isn't running. Screen changes are debounced and only real Sidecar on/off transitions act.
+- **Manual toggle / test:** `Shift + Control + Option + Command + S`.
+- Screen names are logged to the Hammerspoon Console (menu-bar icon → Console). Status from a terminal: `hs -c 'loaded.sidecar_slack.status()'`. If your iPad shows up under another name: `hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad', '<name>'}); hs.reload()"`.
+- `check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, and warns if Hammerspoon isn't running or lacks Accessibility. `macos.sh` / `check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
+
+**Manual once (TCC):** System Settings → Privacy & Security → **Accessibility** → enable **Hammerspoon** (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off.
+
 ### macOS defaults
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
@@ -170,7 +185,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Login Items/Recents/CotEditor/`*.app.back`, FileVault / pending updates, …). Exits non-zero on drift — run after macOS updates:
+`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/`*.app.back`, FileVault / pending updates, …). Exits non-zero on drift — run after macOS updates:
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -229,6 +244,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 | Privacy & Security | Full Disk Access — Ghostty | On | Needed for interactive `./check.sh` Login Items + Finder Recents (sharedfilelist / BTM). Grok Bot already has this for unattended runs. |
 | Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable (`karabiner/karabiner.json` is managed). After install: enable DriverKit VirtualHIDDevice; Accessibility for Karabiner-Elements + Karabiner-Core-Service (`/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app`); allow Login Items background |
+| Hammerspoon | Privacy & Security → Accessibility — Hammerspoon | On | TCC — not scriptable. Needed to move/full-screen Slack and send zoom keys (see [Hammerspoon](#hammerspoon-sidecar--slack)) |
 
 #### Finder
 

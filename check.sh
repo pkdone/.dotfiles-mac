@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running + Accessibility), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -428,6 +428,33 @@ if command -v systemextensionsctl >/dev/null 2>&1; then
   fi
 else
   warn "systemextensionsctl unavailable — skip DriverKit check"
+fi
+
+# ---- 10b. Hammerspoon (Sidecar -> Slack automation) ----------------------
+# The ~/.hammerspoon dir symlink is checked in section 1 (links.list) and the cask in
+# section 2 (Brewfile). Here: soft-warn if the app isn't running or lacks Accessibility
+# (TCC — can't be granted from a script). Never launches or changes anything.
+hdr "Hammerspoon"
+CHECKED=$((CHECKED + 1))
+if [ ! -d /Applications/Hammerspoon.app ]; then
+  warn "Hammerspoon.app not installed — brew bundle (cask \"hammerspoon\")"
+elif ! pgrep -xq Hammerspoon; then
+  warn "Hammerspoon not running — open -a Hammerspoon (then it starts at login)"
+else
+  pass "Hammerspoon running"
+  CHECKED=$((CHECKED + 1))
+  if ! command -v hs >/dev/null 2>&1; then
+    warn "hs CLI not found — check Accessibility by hand"
+  else
+    # -q: result only; -t: send/receive timeout. </dev/null matters: hs also reads
+    # stdin when it's a pipe (launchd/agent runs), and would otherwise wait forever.
+    ax="$(hs -q -t 3 -c 'hs.accessibilityState()' </dev/null 2>/dev/null || true)"
+    case "$ax" in
+      true)  pass "Hammerspoon has Accessibility" ;;
+      false) warn "Hammerspoon lacks Accessibility — System Settings → Privacy & Security → Accessibility → enable Hammerspoon" ;;
+      *)     warn "could not query Hammerspoon via hs CLI (hs.ipc not loaded?) — check Accessibility by hand" ;;
+    esac
+  fi
 fi
 
 
