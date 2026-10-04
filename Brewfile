@@ -58,6 +58,7 @@ cask "cursor"
 cask "cursor-cli"     # Cursor CLI → cursor-agent (not bare agent)
 cask "coteditor"
 cask "karabiner-elements"
+cask "hammerspoon"   # Lua automation (hammerspoon/ → ~/.hammerspoon; Sidecar → Slack)
 cask "microsoft-teams"
 cask "raycast"
 # 1Password desktop is Kandji/MDM (see lib/mdm-apps.list); the CLI stays here.

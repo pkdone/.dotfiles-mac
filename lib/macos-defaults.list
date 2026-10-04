@@ -29,3 +29,5 @@ com.apple.ImageCapture|disableHotPlug|bool|true||Photos|Open Photos for devices|
 @host/com.apple.controlcenter|NowPlaying|int|8|ControlCenter|Menu Bar|Now Playing|`8` (Don't Show)
 com.apple.HIToolbox|AppleFnUsageType|int|0||Keyboard|Press fn/Globe key to|`0` (Do Nothing)
 com.apple.assistant.support|Dictation Enabled|bool|false||Keyboard|Dictation|`false` (Off)
+org.hammerspoon.Hammerspoon|MJShowDockIconKey|bool|false||Hammerspoon|Dock icon|`false` (Off — menu-bar icon only)
+org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload crash data|`false` (Off)
