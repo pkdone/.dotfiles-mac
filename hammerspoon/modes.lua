@@ -85,7 +85,6 @@ return {
       hide    = { apps.slack, apps.finder, apps.grokBot },  -- Finder = its windows
       focus   = 'WebConf',
       front   = apps.granola,              -- brought to the front last
-      hideDesktopIcons  = true,            -- a wallpaper overlay above the icons (no Finder restart)
       keepDisplayAwake  = true,            -- hs.caffeinate.set('displayIdle', true) while on
       chromeTabs        = true,            -- the chrome rules above
       -- Menu-bar notification badges: macOS has no API to switch them off, so the

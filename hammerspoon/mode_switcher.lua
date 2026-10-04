@@ -25,11 +25,11 @@ local M = {}
 
 local MODE_KEYS = {
   label = 'string', icon = 'table', quit = 'list', hide = 'list', focus = 'string',
-  front = 'string', hideDesktopIcons = 'boolean', keepDisplayAwake = 'boolean',
+  front = 'string', keepDisplayAwake = 'boolean',
   chromeTabs = 'boolean', timerMinutes = 'number', breakMinutes = 'number',
   meetingAlerts = 'boolean',
 }
-local ACTION_KEYS = { 'quit', 'hide', 'focus', 'front', 'hideDesktopIcons', 'keepDisplayAwake',
+local ACTION_KEYS = { 'quit', 'hide', 'focus', 'front', 'keepDisplayAwake',
                       'chromeTabs', 'timerMinutes', 'breakMinutes', 'meetingAlerts' }
 local CHROME_KEYS = {
   bundle = 'string', personalDomains = 'list', personalProfiles = 'list',
@@ -271,7 +271,6 @@ local function restoreLines(cfg, changes, snap, out, indent)
     local f = cfg.focus and cfg.focus[changes.focus]
     out[#out + 1] = indent .. string.format("Focus %s off: Shortcut '%s'", changes.focus, f and f.off or '?')
   end
-  if changes.desktopIcons then any = true; out[#out + 1] = indent .. 'show desktop icons again (remove the overlay)' end
   if changes.displayAwake then any = true; out[#out + 1] = indent .. 'allow display sleep again (displayIdle off)' end
   if changes.timer then any = true; out[#out + 1] = indent .. 'stop the DeepWork timer and meeting checks' end
   if changes.chromeClosed and changes.chromeClosed > 0 then
@@ -330,7 +329,6 @@ function M.plan(cfg, name, snap)
     end
     out[#out + 1] = line
   end
-  if m.hideDesktopIcons then out[#out + 1] = '  hide desktop icons (wallpaper overlay above them; no Finder restart)' end
   if m.keepDisplayAwake then out[#out + 1] = '  keep the display awake (displayIdle) until you leave the mode' end
   if m.chromeTabs and cfg.chrome then
     local c = cfg.chrome
@@ -389,7 +387,6 @@ local cfg                    -- modes.lua
 local state                  -- decoded state.json
 local menu                   -- hs.menubar
 local icons = {}             -- mode name -> hs.image
-local overlays = {}          -- desktop-icon overlay canvases
 local timers = {}            -- name -> hs.timer (strong refs)
 local tasks = {}             -- running hs.task objects (strong refs)
 local shortcutsKnown         -- set of Shortcut names, nil until listed
@@ -609,29 +606,6 @@ local function runShortcut(name, what)
 end
 
 -- ---- transient effects (re-applied after a reload) ---------------------------
-
-local function showDesktopOverlay()
-  for _, c in ipairs(overlays) do c:delete() end
-  overlays = {}
-  for _, scr in ipairs(hs.screen.allScreens()) do
-    local fr = scr:fullFrame()
-    local c = hs.canvas.new(fr)
-    c[1] = { type = 'rectangle', action = 'fill', fillColor = { white = 0.12, alpha = 1 } }
-    local url = scr:desktopImageURL()
-    local path = url and url:gsub('^file://', ''):gsub('%%(%x%x)', function(h) return string.char(tonumber(h, 16)) end)
-    local img = path and hs.image.imageFromPath(path)
-    if img then c[2] = { type = 'image', image = img, imageScaling = 'scaleToFit' } end
-    c:level(hs.canvas.windowLevels.desktopIcon + 1)
-    c:behavior({ 'canJoinAllSpaces', 'stationary' })
-    c:show()
-    overlays[#overlays + 1] = c
-  end
-end
-
-local function hideDesktopOverlay()
-  for _, c in ipairs(overlays) do c:delete() end
-  overlays = {}
-end
 
 local function setDisplayAwake(on)
   hs.caffeinate.set('displayIdle', on, true)
@@ -875,7 +849,6 @@ local function restoreChanges(changes)
   if changes.focus and cfg.focus[changes.focus] then
     runShortcut(cfg.focus[changes.focus].off, 'Focus off')
   end
-  if changes.desktopIcons then hideDesktopOverlay() end
   if changes.displayAwake then setDisplayAwake(false) end
   stopTimer('countdown'); stopTimer('meetings'); stopTimer('break')
   timerDone = false
@@ -909,7 +882,6 @@ local function applyMode(name)
     if snap.running[b] and not snap.hidden[b] then changes.hidden[#changes.hidden + 1] = { bundle = b, name = snap.names[b] } end
   end
   if m.focus then changes.focus = m.focus end
-  if m.hideDesktopIcons then changes.desktopIcons = true end
   if m.keepDisplayAwake then changes.displayAwake = true end
   if m.timerMinutes then
     changes.timer = { minutes = m.timerMinutes, endsAt = now() + m.timerMinutes * 60, notified = false }
@@ -934,7 +906,6 @@ local function applyMode(name)
     if a then a:hide() end
   end
   if m.focus then runShortcut(cfg.focus[m.focus].on, 'Focus on') end
-  if m.hideDesktopIcons then showDesktopOverlay() end
   if m.keepDisplayAwake then setDisplayAwake(true) end
   if m.front then
     after('front', 0.8, function() hs.application.launchOrFocusByBundleID(m.front) end)
@@ -1149,7 +1120,6 @@ function M.start()
   -- After a reload / reboot: put back what lives only in memory, keep the rest as recorded.
   local ch = state.changes
   if state.mode ~= 'Normal' and state.phase ~= 'restoring' then
-    if ch.desktopIcons then showDesktopOverlay() end
     if ch.displayAwake then setDisplayAwake(true) end
     if ch.timer then startTimer() end
     startMeetingChecks()
@@ -1162,7 +1132,6 @@ end
 
 function M.stop()
   for k in pairs(timers) do stopTimer(k) end
-  hideDesktopOverlay()
   if menu then menu:delete(); menu = nil end
 end
 

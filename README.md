@@ -172,15 +172,15 @@ A Hammerspoon menu-bar dropdown switches between three modes. Switching is **man
 
 | Mode | Icon | What it does |
 |------|------|------|
-| **Normal** | ○ circle | Undoes whatever the last mode recorded: reopens apps it quit (in the background, not hidden), unhides apps it hid, turns its Focus off, shows desktop icons, lets the display sleep again. Notification badges come back with the Focus. |
-| **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; hides desktop icons (a wallpaper overlay above them, so no Finder restart); keeps the display awake; tidies Chrome (below); brings Granola to the front. Keeps the Dock. |
+| **Normal** | ○ circle | Undoes whatever the last mode recorded: reopens apps it quit (in the background, not hidden), unhides apps it hid, turns its Focus off, lets the display sleep again. Notification badges come back with the Focus. |
+| **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; keeps the display awake; tidies Chrome (below); brings Granola to the front. Keeps the Dock. |
 | **DeepWork** | `brain.head.profile` + time left (e.g. `42m`) | Quits Slack and WhatsApp, hides Granola, DeepWork Focus on, leaves Spotify alone. Counts down 50 min (`timerMinutes`); at the end a notification offers **Take a break** / **Back to Normal** / **Another session** (it never switches by itself). Meeting alerts: every minute it asks Shortcuts for events starting within 5 min and alerts you itself, so the Focus can hold everything else back. |
 
 The dropdown ticks the current mode, shows how long it's been on, notes anything missing (Shortcuts, meeting alerts) or skipped, and has **Dry run** (prints what a mode would do to the Hammerspoon Console, changes nothing) and **Open switch log**. The icon's tooltip names the mode.
 
 **Safety rails**
 
-- `~/Library/Application Support/pdone-modes/state.json` records the mode and what it changed, written **before** anything changes. After a Hammerspoon reload or a reboot the switcher reads it, shows the persisted mode (re-applying the overlay, display-awake and timer), and Normal can still undo everything.
+- `~/Library/Application Support/pdone-modes/state.json` records the mode and what it changed, written **before** anything changes. After a Hammerspoon reload or a reboot the switcher reads it, shows the persisted mode (re-applying display-awake and the timer), and Normal can still undo everything.
 - Switching from one non-Normal mode to another runs Normal's restore first.
 - Apps are quit politely (`hs.application:kill()`, like Command-Q), never forced. An app with unsaved work, or one that doesn't quit, is left running and you're told.
 - Every switch is logged to `~/Library/Logs/pdone-modes.log` (time, mode, how long the previous mode lasted).
