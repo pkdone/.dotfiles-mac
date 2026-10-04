@@ -212,6 +212,19 @@ By default `check.sh` is read-only (see [Read-only vs `--fix`](#read-only-vs---f
 ~/.dotfiles-mac/check.sh --fix           # also repair SAFE drift, re-check, list Fixed / Needs Paul
 ```
 
+It ends with a short summary (coloured on a terminal: zero counts dimmed, drift red and warnings yellow when above zero; plain text with `--no-color` or when piped):
+
+```
+Summary
+  ✔ ok           138 / 139
+  ✖ drift          0
+  ⚠ warnings       1
+  ✋ by hand      20   (scripts/manual-steps.sh list)
+  1 needs attention (1 warning)
+```
+
+The last line is the verdict (`All good` when there's no drift and no warning). If some of the issues are SAFE to repair, a `→ run ./check.sh --fix to repair N safe item(s)` line appears above it. With `--fix` it also shows `↻ fixed` (`↻ would fix` on a dry run) and `☞ needs Paul`, and drift / warnings are the counts left after the fixes (`(was N before --fix)`). The summary is for people: scripts and routines should read `--health-json`, which is unchanged.
+
 #### Read-only vs `--fix` (self-healing drift)
 
 `check.sh` on its own **never changes anything**. `check.sh --fix` runs the same checks, then repairs only the drift that is classed **SAFE**, re-runs the checks to confirm each fix stuck, and ends with two lists: **Fixed** and **Needs Paul**. Anything that didn't stick moves to Needs Paul, with the reason.
@@ -428,7 +441,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `logi-settings.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes

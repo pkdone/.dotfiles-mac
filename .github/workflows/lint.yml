@@ -94,3 +94,7 @@ jobs:
           # The read-only Logi Options+ check against a synthetic settings.db:
           # ok / drift / warn, model lookup, tolerance, missing or unreadable DB.
           ./tests/logi-settings.test.sh
+      - name: Run check.sh summary tests
+        run: |
+          # The multi-line summary block from check.sh, rendered with stub counts.
+          ./tests/check-summary.test.sh

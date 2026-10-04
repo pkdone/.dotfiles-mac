@@ -87,9 +87,9 @@ fi
 
 # ---- logging (colour only on a tty) -------------------------------------
 if [ -t 1 ] && [ "$NO_COLOR_OPT" != 1 ] && [ -z "${NO_COLOR+x}" ]; then
-  C_OK=$'\033[32m'; C_BAD=$'\033[31m'; C_WARN=$'\033[33m'; C_HDR=$'\033[1m'; C_OFF=$'\033[0m'
+  C_OK=$'\033[32m'; C_BAD=$'\033[31m'; C_WARN=$'\033[33m'; C_HDR=$'\033[1m'; C_DIM=$'\033[2m'; C_OFF=$'\033[0m'
 else
-  C_OK=''; C_BAD=''; C_WARN=''; C_HDR=''; C_OFF=''
+  C_OK=''; C_BAD=''; C_WARN=''; C_HDR=''; C_DIM=''; C_OFF=''
 fi
 
 CHECKED=0; OKS=0; DRIFT=0; WARN=0; HAND=0
@@ -1120,10 +1120,6 @@ else
   done <<< "$ms_out"
 fi
 
-# ---- summary ------------------------------------------------------------
-printf '\n%sSummary:%s %d checked, %d ok, %d drift, %d warning(s), %d to check by hand (scripts/manual-steps.sh list).\n' \
-  "$C_HDR" "$C_OFF" "$CHECKED" "$OKS" "$DRIFT" "$WARN" "$HAND"
-
 # ---- --fix: apply the SAFE fixes, re-check, report ------------------------
 # lib/autofix.list is the one place that says what's SAFE (reversible preference writes,
 # done by the existing setters) and what Needs Paul (report only). Nothing here uses sudo,
@@ -1328,13 +1324,73 @@ if [ "$FIX" = 1 ]; then
   if [ "${#LOGOUT_NEEDED[@]}" -gt 0 ]; then
     printf '\n  Log out and back in to finish applying: %s\n' "$(printf '%s; ' "${LOGOUT_NEEDED[@]}" | sed 's/; $//')"
   fi
-  if [ "$HAND" -gt 0 ]; then
-    printf '\n  (%d manual step(s) to check by hand are not listed here: scripts/manual-steps.sh list)\n' "$HAND"
-  fi
   if [ "$DRY_RUN" != 1 ]; then
-    printf '\n%sAfter fixes:%s %d drift, %d warning(s).\n' "$C_HDR" "$C_OFF" "$AFTER_DRIFT" "$AFTER_WARN"
     fix_log "check.sh --fix done: ${#FIXED[@]} fixed, ${#NEEDS_PAUL[@]} need Paul; after: $AFTER_DRIFT drift, $AFTER_WARN warning(s)"
   fi
+fi
+
+# ---- summary ------------------------------------------------------------
+# A few aligned lines, then a one-line verdict. Colour only on a tty (C_* are empty
+# under --no-color / NO_COLOR / when piped). Nothing parses this text: machines use
+# --health-json (unchanged).
+SUM_NW=${#CHECKED}                      # number column width = widest count
+for n in "$DRIFT" "$WARN" "$HAND" "${#FIXED[@]}" "${#NEEDS_PAUL[@]}" "${#WOULD_FIX[@]}"; do
+  if [ "${#n}" -gt "$SUM_NW" ]; then SUM_NW=${#n}; fi
+done
+# sum_row GLYPH GLYPH-CELLS LABEL COUNT COLOUR [SUFFIX] — zero counts are dimmed.
+sum_row() {
+  local col="$5" lw=12
+  if [ "$4" = 0 ]; then col="$C_DIM"; fi
+  lw=$((lw - $2 + 1))                   # a 2-cell (emoji) glyph eats one pad space
+  printf '  %s%s %-*s %*s%s%s\n' "$col" "$1" "$lw" "$3" "$SUM_NW" "$4" "${6:-}" "$C_OFF"
+}
+S_DRIFT="$AFTER_DRIFT"; S_WARN="$AFTER_WARN"; S_DRIFT_NOTE=""; S_WARN_NOTE=""
+if [ "$FIX" = 1 ] && [ "$DRY_RUN" != 1 ]; then   # after --fix: what's left, and what it was
+  if [ "$S_DRIFT" != "$DRIFT" ]; then S_DRIFT_NOTE="   (was $DRIFT before --fix)"; fi
+  if [ "$S_WARN" != "$WARN" ]; then S_WARN_NOTE="   (was $WARN before --fix)"; fi
+fi
+S_OK_COL="$C_OK"; if [ "$OKS" != "$CHECKED" ]; then S_OK_COL=""; fi
+
+printf '\n%sSummary%s\n' "$C_HDR" "$C_OFF"
+sum_row "✔" 1 "ok"       "$OKS"     "$S_OK_COL" " / $CHECKED"
+sum_row "✖" 1 "drift"    "$S_DRIFT" "$C_BAD"    "$S_DRIFT_NOTE"
+sum_row "⚠" 1 "warnings" "$S_WARN"  "$C_WARN"   "$S_WARN_NOTE"
+sum_row "✋" 2 "by hand"  "$HAND"    ""         "   (scripts/manual-steps.sh list)"
+if [ "$FIX" = 1 ]; then
+  if [ "$DRY_RUN" = 1 ]; then
+    sum_row "↻" 1 "would fix" "${#WOULD_FIX[@]}" "$C_OK" "   (dry run: nothing changed)"
+  else
+    sum_row "↻" 1 "fixed"     "${#FIXED[@]}" "$C_OK"
+  fi
+  sum_row "☞" 1 "needs Paul" "${#NEEDS_PAUL[@]}" "$C_WARN"
+else
+  # How many of today's issues `--fix` would repair (SAFE rows of lib/autofix.list).
+  S_SAFE=0
+  if [ "${#FIX_ITEMS[@]}" -gt 0 ] && [ -r "$DOTDIR/lib/autofix-lib.sh" ] && [ -r "$DOTDIR/lib/autofix.list" ]; then
+    # shellcheck source=lib/autofix-lib.sh disable=SC1091
+    . "$DOTDIR/lib/autofix-lib.sh"
+    for it in "${FIX_ITEMS[@]}"; do
+      IFS="$US" read -r _ it_id _ _ <<< "$it"
+      if [ "$(autofix_class "$DOTDIR/lib/autofix.list" "$it_id")" = SAFE ]; then S_SAFE=$((S_SAFE + 1)); fi
+    done
+  fi
+  if [ "$S_SAFE" -gt 0 ]; then
+    printf '  %s→ run ./check.sh --fix to repair %d safe item(s)%s\n' "$C_OK" "$S_SAFE" "$C_OFF"
+  fi
+fi
+S_ATTN=$((S_DRIFT + S_WARN))
+if [ "$S_ATTN" -eq 0 ]; then
+  printf '  %sAll good%s\n' "$C_OK$C_HDR" "$C_OFF"
+else
+  S_VCOL="$C_WARN"; if [ "$S_DRIFT" -gt 0 ]; then S_VCOL="$C_BAD"; fi
+  S_NEED="need"; if [ "$S_ATTN" -eq 1 ]; then S_NEED="needs"; fi
+  S_WHAT=""
+  if [ "$S_DRIFT" -gt 0 ]; then S_WHAT="$S_DRIFT drift"; fi
+  if [ "$S_WARN" -gt 0 ]; then
+    S_W="warnings"; if [ "$S_WARN" -eq 1 ]; then S_W="warning"; fi
+    S_WHAT="${S_WHAT:+$S_WHAT, }$S_WARN $S_W"
+  fi
+  printf '  %s%d %s attention%s (%s)\n' "$S_VCOL$C_HDR" "$S_ATTN" "$S_NEED" "$C_OFF" "$S_WHAT"
 fi
 
 # ---- --issues (internal; used by --fix to re-check) ----------------------
