@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, Time Machine, uptime, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -578,7 +578,6 @@ fi
 hdr "Mac health"
 H_BAT_STATUS=none; H_BAT_COND=""; H_BAT_MAX=""; H_BAT_CYCLES=""
 H_DISK_STATUS=unknown; H_DISK_FREE_GB=""; H_DISK_FREE_PCT=""; H_DISK_TOTAL_GB=""
-H_TM_STATUS=unknown; H_TM_LAST=""; H_TM_AGE=""
 H_UP_STATUS=unknown; H_UP_DAYS=""
 H_LI_STATUS=unknown; H_LI_ENABLED=0; H_LI_ALLOW=0; H_LI_MDM=0; H_LI_UNKNOWN=(); H_LI_STALE=()
 
@@ -636,46 +635,6 @@ if [ -n "${disk_total_k:-}" ] && [ -n "${disk_avail_k:-}" ] && [ "$disk_total_k"
   fi
 else
   warn "disk: couldn't read free space for $disk_vol (df failed)"
-fi
-
-# Time Machine: warn if the last backup is > 7 days old. Not configured is normal on a
-# company Mac (backups may be handled elsewhere), so that's an info line.
-tm_dest="$(with_timeout 10 tmutil destinationinfo </dev/null 2>&1 || true)"
-if printf '%s\n' "$tm_dest" | grep -qi 'No destinations configured'; then
-  H_TM_STATUS=not_configured
-  note "Time Machine not configured (company backups may be handled elsewhere)"
-else
-  CHECKED=$((CHECKED + 1))
-  # tmutil latestbackup prints a path/name ending in YYYY-MM-DD-HHMMSS[.backup].
-  tm_stamp="$(with_timeout 20 tmutil latestbackup </dev/null 2>/dev/null | grep -Eo '[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}' | tail -1 || true)"
-  if [ -n "$tm_stamp" ]; then
-    tm_epoch="$(date -j -f '%Y-%m-%d-%H%M%S' "$tm_stamp" +%s 2>/dev/null || true)"
-  elif [ -n "$DOT_PYTHON" ]; then
-    # Fallback: newest SnapshotDates entry in the TM prefs (may need Full Disk Access).
-    tm_epoch="$(with_timeout 10 "$DOT_PYTHON" -c '
-import plistlib, sys
-try:
-    d = plistlib.load(open("/Library/Preferences/com.apple.TimeMachine.plist", "rb"))
-except Exception:
-    sys.exit(0)
-ts = [t for dest in d.get("Destinations", []) for t in dest.get("SnapshotDates", [])]
-if ts: print(int(max(ts).timestamp()))
-' 2>/dev/null || true)"
-  fi
-  if [ -n "${tm_epoch:-}" ]; then
-    H_TM_LAST="$(date -r "$tm_epoch" '+%Y-%m-%d %H:%M %Z')"
-    H_TM_AGE=$(( ($(date +%s) - tm_epoch) / 86400 ))
-    if [ "$H_TM_AGE" -gt 7 ]; then
-      H_TM_STATUS=warn
-      warn "Time Machine: last backup $H_TM_LAST ($H_TM_AGE days ago, > 7)"
-    else
-      H_TM_STATUS=ok
-      pass "Time Machine: last backup $H_TM_LAST ($H_TM_AGE day(s) ago)"
-    fi
-  else
-    H_TM_STATUS=warn
-    warn "Time Machine configured but no last-backup date found (tmutil latestbackup / prefs unreadable)"
-  fi
 fi
 
 # Uptime: a reboot every couple of weeks lets updates and long-running leaks settle.
@@ -786,8 +745,6 @@ if [ "$HEALTH_JSON" = 1 ]; then
       "$(json_str "$H_BAT_STATUS")" "$(json_opt "$H_BAT_COND")" "$(json_num "$H_BAT_MAX")" "$(json_num "$H_BAT_CYCLES")"
     printf '  "disk": {"status": %s, "free_gb": %s, "free_pct": %s, "total_gb": %s},\n' \
       "$(json_str "$H_DISK_STATUS")" "$(json_num "$H_DISK_FREE_GB")" "$(json_num "$H_DISK_FREE_PCT")" "$(json_num "$H_DISK_TOTAL_GB")"
-    printf '  "time_machine": {"status": %s, "last_backup": %s, "age_days": %s},\n' \
-      "$(json_str "$H_TM_STATUS")" "$(json_opt "$H_TM_LAST")" "$(json_num "$H_TM_AGE")"
     printf '  "uptime": {"status": %s, "days": %s},\n' "$(json_str "$H_UP_STATUS")" "$(json_num "$H_UP_DAYS")"
     printf '  "login_items": {"status": %s, "enabled": %d, "allow_listed": %d, "mdm_approved": %d, "unknown": %s, "stale": %s},\n' \
       "$(json_str "$H_LI_STATUS")" "$H_LI_ENABLED" "$H_LI_ALLOW" "$H_LI_MDM" \

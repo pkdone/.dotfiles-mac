@@ -200,13 +200,12 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 |------|------|------|
 | Battery | `system_profiler SPPowerDataType` (fallback `ioreg -rn AppleSmartBattery`) | condition isn't Normal, or maximum capacity < 80% (ok line shows capacity and cycle count) |
 | Disk | `df -k /System/Volumes/Data` | free space < 50 GB or < 15% |
-| Time Machine | `tmutil destinationinfo` / `tmutil latestbackup` (fallback: TM prefs plist) | last backup > 7 days old. Not configured is only an `info` line (company backups may be handled elsewhere) |
 | Uptime | `sysctl kern.boottime` | > 14 days since the last restart |
 | Login / background items | `lib/btm-login-items.py --audit lib/login-items-allow.list` | an enabled item is neither on `lib/login-items-allow.list` nor approved by an MDM Service Management rule (Kandji pushes these; the helper reads them from the BTM store), or a stale item points to an app that no longer exists |
 
 FileVault and pending software updates are covered under **Security hygiene**. To accept a new login item, add a `team|`, `bundle|`, `label|` or `label-prefix|` row to `lib/login-items-allow.list` (format in its header). To see every enabled item and how it's classified: `python3 lib/btm-login-items.py --audit lib/login-items-allow.list`. Reading the BTM store needs Full Disk Access for the terminal (Ghostty) or agent running `check.sh`.
 
-**Machine-readable summary:** `./check.sh --health-json` runs the same checks but prints only JSON on stdout (same exit status): `generated`, `host`, `summary` (`checked`, `ok`, `drift`, `warnings`, `by_hand`), `battery` (`condition`, `max_capacity_pct`, `cycle_count`), `disk` (`free_gb`, `free_pct`, `total_gb`), `time_machine` (`status`: `ok` / `warn` / `not_configured`, `last_backup`, `age_days`), `uptime` (`days`), `login_items` (`enabled`, `allow_listed`, `mdm_approved`, `unknown[]`, `stale[]`), plus `drift_messages[]` and `warning_messages[]`. Each section also has a `status`. The weekly health note is built from this.
+**Machine-readable summary:** `./check.sh --health-json` runs the same checks but prints only JSON on stdout (same exit status): `generated`, `host`, `summary` (`checked`, `ok`, `drift`, `warnings`, `by_hand`), `battery` (`condition`, `max_capacity_pct`, `cycle_count`), `disk` (`free_gb`, `free_pct`, `total_gb`), `uptime` (`days`), `login_items` (`enabled`, `allow_listed`, `mdm_approved`, `unknown[]`, `stale[]`), plus `drift_messages[]` and `warning_messages[]`. Each section also has a `status`. The weekly health note is built from this.
 
 ### Discovering new defaults
 
