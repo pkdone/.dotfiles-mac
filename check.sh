@@ -4,7 +4,7 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running + Accessibility), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -50,10 +50,11 @@ else
   C_OK=''; C_BAD=''; C_WARN=''; C_HDR=''; C_OFF=''
 fi
 
-CHECKED=0; OKS=0; DRIFT=0; WARN=0
+CHECKED=0; OKS=0; DRIFT=0; WARN=0; HAND=0
 pass() { OKS=$((OKS + 1));    printf '  %sok%s    %s\n'  "$C_OK"   "$C_OFF" "$1"; }
 bad()  { DRIFT=$((DRIFT + 1)); printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
 warn() { WARN=$((WARN + 1));   printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
+info() { HAND=$((HAND + 1));   printf '  info  %s\n' "$1"; }   # check-by-hand item: not drift, not a warning
 hdr()  { printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
 
 # Value-comparison helpers shared with macos.sh (same semantics, single source).
@@ -388,8 +389,9 @@ fi
 
 # ---- 10. Karabiner Fn-kill ----------------------------------------------
 # Config is symlinked via links.list (section 1). Here we also verify the
-# managed rule is still present in that JSON (UI edits can strip it), and
-# soft-warn if the DriverKit extension is not activated+enabled.
+# managed rule is still present in that JSON (UI edits can strip it). The DriverKit
+# extension and Accessibility grants are manual steps, checked in the "Manual steps"
+# section (scripts/manual-steps.sh ids karabiner-driver / karabiner-ax).
 hdr "Karabiner Fn-kill"
 CHECKED=$((CHECKED + 1))
 kj="$HOME/.config/karabiner/karabiner.json"
@@ -417,23 +419,12 @@ else
     bad "karabiner.json missing Finder Forward Delete → Trash rule"
   fi
 fi
-# DriverKit / Accessibility are TCC — warn only (can't fix from check.sh).
-CHECKED=$((CHECKED + 1))
-if command -v systemextensionsctl >/dev/null 2>&1; then
-  se="$(systemextensionsctl list 2>/dev/null || true)"
-  if printf '%s\n' "$se" | rg -q 'org\.pqrs\.Karabiner-DriverKit-VirtualHIDDevice.*\[activated enabled\]'; then
-    pass "Karabiner DriverKit extension activated+enabled"
-  else
-    warn "Karabiner DriverKit not activated+enabled — System Settings → General → Login Items & Extensions → Driver Extensions (manual; see README)"
-  fi
-else
-  warn "systemextensionsctl unavailable — skip DriverKit check"
-fi
 
 # ---- 10b. Hammerspoon (Sidecar -> Slack automation) ----------------------
 # The ~/.hammerspoon dir symlink is checked in section 1 (links.list) and the cask in
-# section 2 (Brewfile). Here: soft-warn if the app isn't running or lacks Accessibility
-# (TCC — can't be granted from a script). Never launches or changes anything.
+# section 2 (Brewfile). Here: soft-warn if the app isn't running. Its Accessibility
+# grant is a manual step, checked in the "Manual steps" section (id hammerspoon-ax).
+# Never launches or changes anything.
 hdr "Hammerspoon"
 CHECKED=$((CHECKED + 1))
 if [ ! -d /Applications/Hammerspoon.app ]; then
@@ -442,21 +433,7 @@ elif ! pgrep -xq Hammerspoon; then
   warn "Hammerspoon not running — open -a Hammerspoon (then it starts at login)"
 else
   pass "Hammerspoon running"
-  CHECKED=$((CHECKED + 1))
-  if ! command -v hs >/dev/null 2>&1; then
-    warn "hs CLI not found — check Accessibility by hand"
-  else
-    # -q: result only; -t: send/receive timeout. </dev/null matters: hs also reads
-    # stdin when it's a pipe (launchd/agent runs), and would otherwise wait forever.
-    ax="$(hs -q -t 3 -c 'hs.accessibilityState()' </dev/null 2>/dev/null || true)"
-    case "$ax" in
-      true)  pass "Hammerspoon has Accessibility" ;;
-      false) warn "Hammerspoon lacks Accessibility — System Settings → Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) → enable Hammerspoon" ;;
-      *)     warn "could not query Hammerspoon via hs CLI (hs.ipc not loaded?) — check Accessibility by hand" ;;
-    esac
-  fi
 fi
-
 
 # ---- 11. Login Items guard (ChatGPT / Gemini / launcher must stay Off) ----
 # SMAppService login items aren't safely disable-able from CLI; check only.
@@ -575,9 +552,32 @@ else
   warn "could not list software updates (softwareupdate -l failed or unexpected output)"
 fi
 
+# ---- 16. Manual steps (permissions, sign-ins, by-hand settings) -----------
+# lib/manual-steps.list is the single source of truth; scripts/manual-steps.sh runs the
+# read-only checks. A failed check is a soft warning (a manual step, not repo drift);
+# steps with no reliable check are info lines; steps marked @check.sh are verified by
+# their own section above, so they're not repeated here.
+hdr "Manual steps (lib/manual-steps.list)"
+MANUAL_STEPS="$DOTDIR/scripts/manual-steps.sh"
+if [ ! -x "$MANUAL_STEPS" ]; then
+  CHECKED=$((CHECKED + 1))
+  warn "scripts/manual-steps.sh missing or not executable — skipping manual steps"
+else
+  ms_out="$(NO_COLOR=1 "$MANUAL_STEPS" check --porcelain 2>&1)" || true
+  while IFS='|' read -r ms_status ms_num _ms_id ms_title ms_detail; do
+    case "$ms_status" in
+      ok)      CHECKED=$((CHECKED + 1)); pass "$ms_num. $ms_title${ms_detail:+ — $ms_detail}" ;;
+      warn)    CHECKED=$((CHECKED + 1)); warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)" ;;
+      hand)    info "$ms_num. $ms_title — check by hand${ms_detail:+ ($ms_detail)}" ;;
+      covered|'') : ;;
+      *)       CHECKED=$((CHECKED + 1)); warn "manual-steps.sh: $ms_status${ms_num:+|$ms_num}" ;;
+    esac
+  done <<< "$ms_out"
+fi
+
 # ---- summary ------------------------------------------------------------
-printf '\n%sSummary:%s %d checked, %d ok, %d drift, %d warning(s).\n' \
-  "$C_HDR" "$C_OFF" "$CHECKED" "$OKS" "$DRIFT" "$WARN"
+printf '\n%sSummary:%s %d checked, %d ok, %d drift, %d warning(s), %d to check by hand (scripts/manual-steps.sh list).\n' \
+  "$C_HDR" "$C_OFF" "$CHECKED" "$OKS" "$DRIFT" "$WARN" "$HAND"
 
 if [ "$DRIFT" -gt 0 ]; then exit 1; fi
 exit 0

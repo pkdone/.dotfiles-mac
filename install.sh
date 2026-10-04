@@ -2,7 +2,9 @@
 #
 # install.sh — bootstrap this machine: symlink configs into ~/.config, install the
 # Brewfile, and trust the mise config. Login shell, hostname, macOS defaults and the
-# Dock are separate scripts; bootstrap.sh runs the whole sequence in order.
+# Dock are separate scripts; bootstrap.sh runs the whole sequence in order. Ends by
+# printing the manual steps (lib/manual-steps.list) and, on a terminal, offering to
+# walk through them.
 #
 # Safe to re-run. Existing correct symlinks are repointed harmlessly; if a *real*
 # file is ever in the way of a symlink, it's moved into backups/pre-symlink-<ts>/
@@ -118,7 +120,25 @@ else
   echo "    (commonly the App Store 'mas' app when not signed in). Fix the cause and"
   echo "    re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
 fi
-echo "   Hammerspoon (Sidecar → Slack) needs Accessibility once: System Settings →"
-echo "   Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) → enable Hammerspoon (see README)."
-echo "   Remaining setup (login shell, hostname, Dock, defaults) is in the README,"
-echo "   or run ./bootstrap.sh to do the whole sequence."
+
+# ---- manual steps -------------------------------------------------------
+# Permissions, sign-ins and settings no script can do, from lib/manual-steps.list.
+# Under bootstrap.sh (DOTFILES_BOOTSTRAP=1) they're shown once at the very end instead.
+MANUAL_STEPS="$DOTFILES/scripts/manual-steps.sh"
+if [ "${DOTFILES_BOOTSTRAP:-0}" = 1 ]; then
+  echo "   Manual steps (permissions, sign-ins) are listed when bootstrap.sh finishes."
+else
+  echo "   Remaining setup (login shell, hostname, Dock, defaults) is in the README,"
+  echo "   or run ./bootstrap.sh to do the whole sequence."
+  echo ""
+  "$MANUAL_STEPS" list || true
+  if [ -t 0 ] && [ -t 1 ]; then
+    echo ""
+    printf 'Walk through the manual steps now, opening each settings page? [y/N] '
+    read -r reply || reply=''
+    case "$reply" in
+      y|Y|yes|YES) "$MANUAL_STEPS" open || true ;;
+      *) echo "Later: $MANUAL_STEPS open" ;;
+    esac
+  fi
+fi

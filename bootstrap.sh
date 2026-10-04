@@ -11,6 +11,9 @@
 #   6. handlers.sh  set URL-scheme default apps (mailto → Chrome)
 #   7. prune-apps.sh remove unwanted App Store apps (GarageBand, iMovie)
 #
+# It ends by printing the manual steps (lib/manual-steps.list: permissions, sign-ins,
+# by-hand settings) and, on a terminal, offering scripts/manual-steps.sh open.
+#
 # Every underlying script is idempotent, so bootstrap.sh is safe to re-run — an
 # already-configured machine is a no-op. The scripts can still be run individually;
 # this is just the guided "do everything" entrypoint.
@@ -35,7 +38,7 @@ for arg in "$@"; do
 Usage: bootstrap.sh [--dry-run] [--yes]
   Run the full machine setup in order: install.sh, shell.sh, hostname.sh,
   macos.sh, dock.sh, handlers.sh, prune-apps.sh — each behind a confirmation prompt. Idempotent and safe
-  to re-run.
+  to re-run. Ends with the checklist of manual steps (scripts/manual-steps.sh).
   --dry-run    Preview every step (each script's own preview mode); change nothing.
   --yes, -y    Don't prompt before each step (sub-scripts may still prompt for sudo).
   -h, --help   Show this help.
@@ -112,6 +115,9 @@ step() {
 
 echo "bootstrap.sh — $([ "$DRYRUN" = 1 ] && echo 'DRY RUN (previewing every step)' || echo 'guided setup')"
 
+# install.sh would otherwise print the manual-steps checklist mid-run; show it once at the end.
+export DOTFILES_BOOTSTRAP=1
+
 step 1 "install.sh — symlinks, Brewfile, mise trust"  install.sh  ""
 step 2 "shell.sh — make fish the login shell"         shell.sh    --dry-run
 step 3 "hostname.sh — set host names"                 hostname.sh --dry-run
@@ -126,4 +132,19 @@ if [ "$DRYRUN" = 1 ]; then
 else
   echo "Setup complete. Run ./check.sh to verify the machine matches the repo."
 fi
-echo "Manual tweaks that can't be scripted are listed in the README."
+
+# Manual steps (permissions, sign-ins, by-hand settings) from lib/manual-steps.list.
+MANUAL_STEPS="$DOTDIR/scripts/manual-steps.sh"
+echo ""
+"$MANUAL_STEPS" list || true
+# The walk-through is interactive by nature: offer it only on a real run, on a terminal,
+# and not under --yes.
+if [ "$DRYRUN" = 0 ] && [ "$ASSUME_YES" = 0 ] && [ -t 0 ] && [ -t 1 ]; then
+  echo ""
+  printf 'Walk through the manual steps now, opening each settings page? [y/N] '
+  read -r reply || reply=''
+  case "$reply" in
+    y|Y|yes|YES) "$MANUAL_STEPS" open || true ;;
+    *) echo "Later: $MANUAL_STEPS open" ;;
+  esac
+fi
