@@ -4,14 +4,16 @@
 # desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, Time Machine, uptime, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
 #
 # Flags:
-#   --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
-#   -h, --help   Show usage.
+#   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
+#   --health-json  Print only a JSON summary (Mac health values, drift/warning counts and
+#                  messages) on stdout, for the weekly health note. Same checks, same exit.
+#   -h, --help     Show usage.
 #
 set -euo pipefail
 
@@ -26,22 +28,32 @@ done
 # Hostname is defined once in lib/hostname (shared with hostname.sh).
 EXPECTED_HOST="$(awk '$1 !~ /^#/ && NF {print $1; exit}' "$DOTDIR/lib/hostname")"
 NO_COLOR_OPT=0
+HEALTH_JSON=0
 
 for arg in "$@"; do
   case "$arg" in
     --no-color) NO_COLOR_OPT=1 ;;
+    --health-json) HEALTH_JSON=1 ;;
     -h|--help)
       cat <<'USAGE'
-Usage: check.sh [--no-color]
+Usage: check.sh [--no-color] [--health-json]
   Read-only. Reports drift between this machine and the repo; writes nothing.
   Exit status: 0 = everything matches, 1 = drift found.
-  --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
-  -h, --help   Show this help.
+  --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
+  --health-json  Print only a JSON summary on stdout (Mac health values, drift and
+                 warning counts and messages) for the weekly health note.
+  -h, --help     Show this help.
 USAGE
       exit 0 ;;
     *) echo "Unknown argument: $arg (try --help)" >&2; exit 2 ;;
   esac
 done
+
+# --health-json: keep the JSON alone on stdout (fd 3); the human report goes nowhere.
+if [ "$HEALTH_JSON" = 1 ]; then
+  exec 3>&1 1>/dev/null
+  NO_COLOR_OPT=1
+fi
 
 # ---- logging (colour only on a tty) -------------------------------------
 if [ -t 1 ] && [ "$NO_COLOR_OPT" != 1 ] && [ -z "${NO_COLOR+x}" ]; then
@@ -51,10 +63,19 @@ else
 fi
 
 CHECKED=0; OKS=0; DRIFT=0; WARN=0; HAND=0
+DRIFT_MSGS=(); WARN_MSGS=()   # kept for --health-json
 pass() { OKS=$((OKS + 1));    printf '  %sok%s    %s\n'  "$C_OK"   "$C_OFF" "$1"; }
-bad()  { DRIFT=$((DRIFT + 1)); printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
-warn() { WARN=$((WARN + 1));   printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
+bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
+warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
 info() { HAND=$((HAND + 1));   printf '  info  %s\n' "$1"; }   # check-by-hand item: not drift, not a warning
+note() { printf '  info  %s\n' "$1"; }                         # FYI line: not counted anywhere
+
+# with_timeout SECS CMD... — macOS has no timeout(1) by default; perl's alarm survives
+# exec, so CMD is killed (status 142) if it runs longer than SECS.
+with_timeout() {
+  local secs="$1"; shift
+  perl -e '$t = shift @ARGV; alarm $t; exec { $ARGV[0] } @ARGV or exit 127' "$secs" "$@"
+}
 hdr()  { printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
 
 # Value-comparison helpers shared with macos.sh (same semantics, single source).
@@ -552,6 +573,163 @@ else
   warn "could not list software updates (softwareupdate -l failed or unexpected output)"
 fi
 
+# ---- 15b. Mac health (soft — warn only, never drift) ---------------------
+# Read-only and timeout-guarded. Values are also kept in H_* for --health-json.
+hdr "Mac health"
+H_BAT_STATUS=none; H_BAT_COND=""; H_BAT_MAX=""; H_BAT_CYCLES=""
+H_DISK_STATUS=unknown; H_DISK_FREE_GB=""; H_DISK_FREE_PCT=""; H_DISK_TOTAL_GB=""
+H_TM_STATUS=unknown; H_TM_LAST=""; H_TM_AGE=""
+H_UP_STATUS=unknown; H_UP_DAYS=""
+H_LI_STATUS=unknown; H_LI_ENABLED=0; H_LI_ALLOW=0; H_LI_MDM=0; H_LI_UNKNOWN=(); H_LI_STALE=()
+
+# Battery: condition, maximum capacity (warn < 80%) and cycle count.
+CHECKED=$((CHECKED + 1))
+sp_power="$(with_timeout 20 system_profiler SPPowerDataType 2>/dev/null || true)"
+H_BAT_COND="$(printf '%s\n' "$sp_power" | awk -F': ' '/^ *Condition:/ {print $2; exit}')"
+H_BAT_MAX="$(printf '%s\n' "$sp_power" | awk -F': ' '/^ *Maximum Capacity:/ {gsub(/%/, "", $2); print $2; exit}')"
+H_BAT_CYCLES="$(printf '%s\n' "$sp_power" | awk -F': ' '/^ *Cycle Count:/ {print $2; exit}')"
+if [ -z "$H_BAT_MAX" ] || [ -z "$H_BAT_CYCLES" ]; then
+  # Fallback: raw battery registry (NominalChargeCapacity / DesignCapacity).
+  bat_io="$(with_timeout 10 ioreg -rn AppleSmartBattery 2>/dev/null || true)"
+  if [ -z "$H_BAT_CYCLES" ]; then
+    H_BAT_CYCLES="$(printf '%s\n' "$bat_io" | sed -nE 's/^ *"CycleCount" = ([0-9]+).*/\1/p' | head -1)"
+  fi
+  if [ -z "$H_BAT_MAX" ]; then
+    bat_nom="$(printf '%s\n' "$bat_io" | sed -nE 's/.*"NominalChargeCapacity"=([0-9]+).*/\1/p' | head -1)"
+    bat_des="$(printf '%s\n' "$bat_io" | sed -nE 's/.*"DesignCapacity"=([0-9]+).*/\1/p' | head -1)"
+    if [ -n "$bat_nom" ] && [ -n "$bat_des" ] && [ "$bat_des" -gt 0 ]; then
+      H_BAT_MAX=$(( (bat_nom * 100 + bat_des / 2) / bat_des ))
+    fi
+  fi
+fi
+case "$H_BAT_MAX" in *[!0-9]*) H_BAT_MAX="" ;; esac
+case "$H_BAT_CYCLES" in *[!0-9]*) H_BAT_CYCLES="" ;; esac
+if [ -z "$H_BAT_COND$H_BAT_MAX$H_BAT_CYCLES" ]; then
+  note "battery: none found (desktop Mac?) — skipped"
+  CHECKED=$((CHECKED - 1))
+elif [ -n "$H_BAT_COND" ] && [ "$H_BAT_COND" != Normal ]; then
+  H_BAT_STATUS=warn
+  warn "battery condition ${H_BAT_COND} (max capacity ${H_BAT_MAX:-?}%, ${H_BAT_CYCLES:-?} cycles) — System Settings → Battery → Battery Health"
+elif [ -n "$H_BAT_MAX" ] && [ "$H_BAT_MAX" -lt 80 ]; then
+  H_BAT_STATUS=warn
+  warn "battery max capacity ${H_BAT_MAX}% (< 80%; ${H_BAT_CYCLES:-?} cycles) — consider a service"
+else
+  H_BAT_STATUS=ok
+  pass "battery ${H_BAT_COND:-condition unknown}, max capacity ${H_BAT_MAX:-?}%, ${H_BAT_CYCLES:-?} cycles"
+fi
+
+# Disk: free space on the Data volume; warn below 15% or 50 GB, whichever bites first.
+CHECKED=$((CHECKED + 1))
+disk_vol=/System/Volumes/Data
+[ -d "$disk_vol" ] || disk_vol=/
+read -r disk_total_k disk_avail_k < <(with_timeout 10 df -k "$disk_vol" 2>/dev/null | awk 'NR==2 {print $2, $4}') || true
+if [ -n "${disk_total_k:-}" ] && [ -n "${disk_avail_k:-}" ] && [ "$disk_total_k" -gt 0 ]; then
+  H_DISK_FREE_GB=$(( disk_avail_k * 1024 / 1000000000 ))
+  H_DISK_TOTAL_GB=$(( disk_total_k * 1024 / 1000000000 ))
+  H_DISK_FREE_PCT=$(( disk_avail_k * 100 / disk_total_k ))
+  if [ "$H_DISK_FREE_PCT" -lt 15 ] || [ "$H_DISK_FREE_GB" -lt 50 ]; then
+    H_DISK_STATUS=warn
+    warn "disk: only ${H_DISK_FREE_GB} GB free (${H_DISK_FREE_PCT}%) on $disk_vol — want ≥ 50 GB and ≥ 15%"
+  else
+    H_DISK_STATUS=ok
+    pass "disk: ${H_DISK_FREE_GB} GB free of ${H_DISK_TOTAL_GB} GB (${H_DISK_FREE_PCT}%)"
+  fi
+else
+  warn "disk: couldn't read free space for $disk_vol (df failed)"
+fi
+
+# Time Machine: warn if the last backup is > 7 days old. Not configured is normal on a
+# company Mac (backups may be handled elsewhere), so that's an info line.
+tm_dest="$(with_timeout 10 tmutil destinationinfo </dev/null 2>&1 || true)"
+if printf '%s\n' "$tm_dest" | grep -qi 'No destinations configured'; then
+  H_TM_STATUS=not_configured
+  note "Time Machine not configured (company backups may be handled elsewhere)"
+else
+  CHECKED=$((CHECKED + 1))
+  # tmutil latestbackup prints a path/name ending in YYYY-MM-DD-HHMMSS[.backup].
+  tm_stamp="$(with_timeout 20 tmutil latestbackup </dev/null 2>/dev/null | grep -Eo '[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}' | tail -1 || true)"
+  if [ -n "$tm_stamp" ]; then
+    tm_epoch="$(date -j -f '%Y-%m-%d-%H%M%S' "$tm_stamp" +%s 2>/dev/null || true)"
+  elif [ -n "$DOT_PYTHON" ]; then
+    # Fallback: newest SnapshotDates entry in the TM prefs (may need Full Disk Access).
+    tm_epoch="$(with_timeout 10 "$DOT_PYTHON" -c '
+import plistlib, sys
+try:
+    d = plistlib.load(open("/Library/Preferences/com.apple.TimeMachine.plist", "rb"))
+except Exception:
+    sys.exit(0)
+ts = [t for dest in d.get("Destinations", []) for t in dest.get("SnapshotDates", [])]
+if ts: print(int(max(ts).timestamp()))
+' 2>/dev/null || true)"
+  fi
+  if [ -n "${tm_epoch:-}" ]; then
+    H_TM_LAST="$(date -r "$tm_epoch" '+%Y-%m-%d %H:%M %Z')"
+    H_TM_AGE=$(( ($(date +%s) - tm_epoch) / 86400 ))
+    if [ "$H_TM_AGE" -gt 7 ]; then
+      H_TM_STATUS=warn
+      warn "Time Machine: last backup $H_TM_LAST ($H_TM_AGE days ago, > 7)"
+    else
+      H_TM_STATUS=ok
+      pass "Time Machine: last backup $H_TM_LAST ($H_TM_AGE day(s) ago)"
+    fi
+  else
+    H_TM_STATUS=warn
+    warn "Time Machine configured but no last-backup date found (tmutil latestbackup / prefs unreadable)"
+  fi
+fi
+
+# Uptime: a reboot every couple of weeks lets updates and long-running leaks settle.
+CHECKED=$((CHECKED + 1))
+boot_sec="$(sysctl -n kern.boottime 2>/dev/null | sed -nE 's/.*[{] sec = ([0-9]+),.*/\1/p')"
+if [ -n "$boot_sec" ]; then
+  H_UP_DAYS=$(( ($(date +%s) - boot_sec) / 86400 ))
+  if [ "$H_UP_DAYS" -gt 14 ]; then
+    H_UP_STATUS=warn
+    warn "uptime ${H_UP_DAYS} days (> 14) — restart when convenient"
+  else
+    H_UP_STATUS=ok
+    pass "uptime ${H_UP_DAYS} day(s)"
+  fi
+else
+  warn "uptime unknown (sysctl kern.boottime failed)"
+fi
+
+# Login / background items: every ENABLED item must be on lib/login-items-allow.list or
+# approved by an MDM Service Management rule; stale items (app gone) are flagged too.
+# Reuses lib/btm-login-items.py (same BTM store as the banned-item guard above).
+CHECKED=$((CHECKED + 1))
+ALLOW_LIST="$DOTDIR/lib/login-items-allow.list"
+if [ ! -r "$BTM_HELPER" ] || [ ! -r "$ALLOW_LIST" ] || [ -z "$DOT_PYTHON" ]; then
+  warn "login-item audit skipped (needs python3, lib/btm-login-items.py and lib/login-items-allow.list)"
+else
+  if li_raw="$(with_timeout 20 "$DOT_PYTHON" "$BTM_HELPER" --audit "$ALLOW_LIST" 2>&1)"; then li_rc=0; else li_rc=$?; fi
+  if [ "$li_rc" = 3 ] || printf '%s\n' "$li_raw" | grep -q 'tcc=denied'; then
+    warn "login-item audit: BTM unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
+  elif [ "$li_rc" -ne 0 ]; then
+    warn "login-item audit failed (rc=$li_rc) — check Login Items by hand"
+  else
+    while IFS='|' read -r li_class li_kind li_name li_dev li_team li_id li_detail; do
+      case "$li_class" in
+        allow)   H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_ALLOW=$((H_LI_ALLOW + 1)) ;;
+        mdm)     H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_MDM=$((H_LI_MDM + 1)) ;;
+        unknown)
+          H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_UNKNOWN+=("$li_name ($li_kind, $li_id)")
+          warn "unexpected login item: $li_name ($li_kind; ${li_dev:-unknown developer}${li_team:+, team $li_team}; $li_id) — turn it Off in System Settings → General → Login Items & Extensions, or add it to lib/login-items-allow.list" ;;
+        stale)
+          H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_STALE+=("$li_name ($li_id): $li_detail")
+          warn "stale login item: $li_name ($li_id) $li_detail — remove it in System Settings → General → Login Items & Extensions (re-add the app if you still want it at login)" ;;
+        allowlist:*) warn "lib/login-items-allow.list: ${li_class#allowlist: }" ;;
+      esac
+    done <<< "$li_raw"
+    if [ "${#H_LI_UNKNOWN[@]}" -eq 0 ] && [ "${#H_LI_STALE[@]}" -eq 0 ]; then
+      H_LI_STATUS=ok
+      pass "login items: all $H_LI_ENABLED enabled items expected ($H_LI_ALLOW allow-listed, $H_LI_MDM MDM-approved)"
+    else
+      H_LI_STATUS=warn
+    fi
+  fi
+fi
+
 # ---- 16. Manual steps (permissions, sign-ins, by-hand settings) -----------
 # lib/manual-steps.list is the single source of truth; scripts/manual-steps.sh runs the
 # read-only checks. A failed check is a soft warning (a manual step, not repo drift);
@@ -578,6 +756,47 @@ fi
 # ---- summary ------------------------------------------------------------
 printf '\n%sSummary:%s %d checked, %d ok, %d drift, %d warning(s), %d to check by hand (scripts/manual-steps.sh list).\n' \
   "$C_HDR" "$C_OFF" "$CHECKED" "$OKS" "$DRIFT" "$WARN" "$HAND"
+
+# ---- --health-json -------------------------------------------------------
+if [ "$HEALTH_JSON" = 1 ]; then
+  json_str() {  # JSON string literal (escapes \ " and control characters)
+    local v="$1"
+    v="${v//\\/\\\\}"; v="${v//\"/\\\"}"
+    v="${v//$'\n'/\\n}"; v="${v//$'\t'/\\t}"; v="${v//$'\r'/\\r}"
+    printf '"%s"' "$v"
+  }
+  json_num() { case "$1" in ''|*[!0-9]*) printf 'null' ;; *) printf '%s' "$1" ;; esac; }
+  json_opt() { if [ -n "$1" ]; then json_str "$1"; else printf 'null'; fi; }
+  json_arr() {  # json_arr item... -> ["a","b"]
+    local first=1 x
+    printf '['
+    for x in "$@"; do
+      [ "$first" = 1 ] || printf ','
+      first=0; json_str "$x"
+    done
+    printf ']'
+  }
+  {
+    printf '{\n'
+    printf '  "generated": %s,\n' "$(json_str "$(date '+%Y-%m-%dT%H:%M:%S%z')")"
+    printf '  "host": %s,\n' "$(json_str "$(scutil --get ComputerName 2>/dev/null || hostname)")"
+    printf '  "summary": {"checked": %d, "ok": %d, "drift": %d, "warnings": %d, "by_hand": %d},\n' \
+      "$CHECKED" "$OKS" "$DRIFT" "$WARN" "$HAND"
+    printf '  "battery": {"status": %s, "condition": %s, "max_capacity_pct": %s, "cycle_count": %s},\n' \
+      "$(json_str "$H_BAT_STATUS")" "$(json_opt "$H_BAT_COND")" "$(json_num "$H_BAT_MAX")" "$(json_num "$H_BAT_CYCLES")"
+    printf '  "disk": {"status": %s, "free_gb": %s, "free_pct": %s, "total_gb": %s},\n' \
+      "$(json_str "$H_DISK_STATUS")" "$(json_num "$H_DISK_FREE_GB")" "$(json_num "$H_DISK_FREE_PCT")" "$(json_num "$H_DISK_TOTAL_GB")"
+    printf '  "time_machine": {"status": %s, "last_backup": %s, "age_days": %s},\n' \
+      "$(json_str "$H_TM_STATUS")" "$(json_opt "$H_TM_LAST")" "$(json_num "$H_TM_AGE")"
+    printf '  "uptime": {"status": %s, "days": %s},\n' "$(json_str "$H_UP_STATUS")" "$(json_num "$H_UP_DAYS")"
+    printf '  "login_items": {"status": %s, "enabled": %d, "allow_listed": %d, "mdm_approved": %d, "unknown": %s, "stale": %s},\n' \
+      "$(json_str "$H_LI_STATUS")" "$H_LI_ENABLED" "$H_LI_ALLOW" "$H_LI_MDM" \
+      "$(json_arr ${H_LI_UNKNOWN[@]+"${H_LI_UNKNOWN[@]}"})" "$(json_arr ${H_LI_STALE[@]+"${H_LI_STALE[@]}"})"
+    printf '  "drift_messages": %s,\n' "$(json_arr ${DRIFT_MSGS[@]+"${DRIFT_MSGS[@]}"})"
+    printf '  "warning_messages": %s\n' "$(json_arr ${WARN_MSGS[@]+"${WARN_MSGS[@]}"})"
+    printf '}\n'
+  } >&3
+fi
 
 if [ "$DRIFT" -gt 0 ]; then exit 1; fi
 exit 0

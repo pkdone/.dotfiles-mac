@@ -11,7 +11,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `manual-steps.list`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `mdm-apps.list`, `manual-steps.list`, `defaults-lib.sh`)
 - `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
@@ -189,7 +189,24 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 ```bash
 ~/.dotfiles-mac/check.sh
+~/.dotfiles-mac/check.sh --health-json   # same checks, JSON summary only (for the weekly health note)
 ```
+
+#### Mac health
+
+`check.sh`'s **Mac health** section adds a few read-only, timeout-guarded signals. Problems are warnings, never drift:
+
+| Signal | Source | Warns when |
+|------|------|------|
+| Battery | `system_profiler SPPowerDataType` (fallback `ioreg -rn AppleSmartBattery`) | condition isn't Normal, or maximum capacity < 80% (ok line shows capacity and cycle count) |
+| Disk | `df -k /System/Volumes/Data` | free space < 50 GB or < 15% |
+| Time Machine | `tmutil destinationinfo` / `tmutil latestbackup` (fallback: TM prefs plist) | last backup > 7 days old. Not configured is only an `info` line (company backups may be handled elsewhere) |
+| Uptime | `sysctl kern.boottime` | > 14 days since the last restart |
+| Login / background items | `lib/btm-login-items.py --audit lib/login-items-allow.list` | an enabled item is neither on `lib/login-items-allow.list` nor approved by an MDM Service Management rule (Kandji pushes these; the helper reads them from the BTM store), or a stale item points to an app that no longer exists |
+
+FileVault and pending software updates are covered under **Security hygiene**. To accept a new login item, add a `team|`, `bundle|`, `label|` or `label-prefix|` row to `lib/login-items-allow.list` (format in its header). To see every enabled item and how it's classified: `python3 lib/btm-login-items.py --audit lib/login-items-allow.list`. Reading the BTM store needs Full Disk Access for the terminal (Ghostty) or agent running `check.sh`.
+
+**Machine-readable summary:** `./check.sh --health-json` runs the same checks but prints only JSON on stdout (same exit status): `generated`, `host`, `summary` (`checked`, `ok`, `drift`, `warnings`, `by_hand`), `battery` (`condition`, `max_capacity_pct`, `cycle_count`), `disk` (`free_gb`, `free_pct`, `total_gb`), `time_machine` (`status`: `ok` / `warn` / `not_configured`, `last_backup`, `age_days`), `uptime` (`days`), `login_items` (`enabled`, `allow_listed`, `mdm_approved`, `unknown[]`, `stale[]`), plus `drift_messages[]` and `warning_messages[]`. Each section also has a `status`. The weekly health note is built from this.
 
 ### Discovering new defaults
 
@@ -323,7 +340,7 @@ To enable Clipboard History:
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, and the manual-steps checks). Run any time (especially after a macOS update). Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
+| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. Run any time (especially after a macOS update). Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
 | `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |
