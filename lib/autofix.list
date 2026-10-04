@@ -1,0 +1,49 @@
+# What `check.sh --fix` may repair on its own. One row per issue id; check.sh tags every
+# drift / warning with one of these ids (`fixid <id>` in check.sh). The single place the
+# safe / needs-Paul split lives — tests/autofix.test.sh keeps it in sync with check.sh.
+# Format (pipe-delimited): id | class | fixer | what it covers / why
+#   class:  SAFE = reversible preference write, applied automatically by --fix
+#           PAUL = report only, never automated (listed under "Needs Paul")
+#   fixer:  SAFE rows only — the check.sh fix routine that reuses an existing setter:
+#             macos        macos.sh --only … (backs up the domain first; restarts Dock /
+#                          Finder / SystemUIServer only if a value changed; "logout" rows
+#                          are reported as needing a logout)
+#             launchagent  scripts/load-launchagent.sh (bootstrap only if not loaded)
+#             symlink      ln -sfn to the repo source, ONLY if the target is a symlink or
+#                          missing — a real file is never overwritten
+#             hammerspoon  open -g -a Hammerspoon (only if installed and not running)
+# An id that isn't listed here is treated as PAUL ("not classified").
+# Blank lines and lines beginning with # are ignored.
+
+# ---- SAFE: applied automatically by --fix ----
+defaults|SAFE|macos|macOS default from lib/macos-defaults.list (Dock, Finder, Spaces, menu bar, …)
+dictation-164|SAFE|macos|dictation hotkey 164 re-pinned by scripts/pin-dictation-hotkey-164.sh
+finder-icon-view|SAFE|macos|Finder icon view 72/13 re-pinned by scripts/pin-finder-icon-view.sh
+finder-recents|SAFE|macos|Finder sidebar Recents hidden by lib/finder-sidebar-recents.py
+coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
+launchagent|SAFE|launchagent|repo LaunchAgent loaded with launchctl bootstrap
+symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
+hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon)
+
+# ---- PAUL: report only, never automated ----
+brew|PAUL||installing / uninstalling / updating apps — brewsync (the routine runs it separately)
+app-install|PAUL||an app is missing — install it (Brewfile / brewsync, App Store or Self Service)
+unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
+dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
+desktop-assign|PAUL||desktop assignments can't be scripted — Dock icon → Options → Assign To
+login-shell|PAUL||login shell change needs sudo / chsh — shell.sh
+hostname|PAUL||hostname change needs sudo — hostname.sh
+url-handler|PAUL||default-app changes can raise a macOS confirmation dialog — handlers.sh
+karabiner-rules|PAUL||karabiner.json is a repo file — restore it from git (dotfiles git state)
+repo-file|PAUL||a repo script is missing — restore it from git (dotfiles git state)
+login-items|PAUL||login items — System Settings → General → Login Items & Extensions
+tcc|PAUL||privacy permission (TCC) — System Settings → Privacy & Security
+manual-step|PAUL||manual step (permission / sign-in) — scripts/manual-steps.sh open
+mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
+security|PAUL||security setting — never changed automatically
+software-update|PAUL||software updates — System Settings → General → Software Update
+delete-files|PAUL||deleting files is never automated
+dotfiles-git|PAUL||dotfiles git state — no automatic commits / pushes / pulls (dotpush)
+launchagent-exit|PAUL||a LaunchAgent's last run failed — read its log
+health|PAUL||Mac health signal (battery, disk, memory, storage, crashes, uptime) — report only
+tooling|PAUL||a tool check.sh needs is missing or failed — install / fix it by hand

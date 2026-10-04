@@ -11,8 +11,8 @@ Personal macOS dotfiles and bootstrap setup.
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `defaults-lib.sh`)
-- `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `autofix-lib.sh`, `defaults-lib.sh`)
+- `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `tests/`, `hooks/` — unit tests and pre-push lint/test gate
@@ -185,12 +185,48 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/`*.app.back`, FileVault / pending updates, …) and ends with the [manual steps](#manual-steps): failed automated checks are warnings (not drift), and steps with no reliable check show as `info` lines, counted as "to check by hand" in the summary. Exits non-zero on drift — run after macOS updates:
+By default `check.sh` is read-only (see [Read-only vs `--fix`](#read-only-vs---fix-self-healing-drift) for the opt-in self-healing mode): it reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/`*.app.back`, FileVault / pending updates, …) and ends with the [manual steps](#manual-steps): failed automated checks are warnings (not drift), and steps with no reliable check show as `info` lines, counted as "to check by hand" in the summary. Exits non-zero on drift — run after macOS updates:
 
 ```bash
 ~/.dotfiles-mac/check.sh
 ~/.dotfiles-mac/check.sh --health-json   # same checks, JSON summary only (for the weekly health note)
+~/.dotfiles-mac/check.sh --fix           # also repair SAFE drift, re-check, list Fixed / Needs Paul
 ```
+
+#### Read-only vs `--fix` (self-healing drift)
+
+`check.sh` on its own **never changes anything**. `check.sh --fix` runs the same checks, then repairs only the drift that is classed **SAFE**, re-runs the checks to confirm each fix stuck, and ends with two lists: **Fixed** and **Needs Paul**. Anything that didn't stick moves to Needs Paul, with the reason.
+
+```bash
+~/.dotfiles-mac/check.sh --fix --dry-run   # show what would be fixed; change nothing
+~/.dotfiles-mac/check.sh --fix             # apply the SAFE fixes, re-check, report
+~/.dotfiles-mac/check.sh --fix --health-json   # JSON, plus fixed[] / needs_paul[] (would_fix[] on a dry run)
+```
+
+The split lives in one place, `lib/autofix.list`. Every drift or warning in `check.sh` carries an issue id from that list (`fixid <id>`), and `tests/autofix.test.sh` keeps the two in sync. A SAFE fix reuses the existing setter rather than duplicating it. Every fix is idempotent and logged to `~/Library/Logs/com.pdone.check-fix.log`. With `--fix` the exit status reflects the drift left **after** the fixes.
+
+**SAFE: applied automatically (reversible preference writes)**
+
+| Issue | How it's fixed |
+|------|------|
+| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, menu bar, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings as "log out to finish" |
+| Finder icon view 72/13, Finder sidebar Recents, CotEditor theme / font | `macos.sh --only @finder-icon-view` / `@finder-recents` / `@coteditor` (the existing `scripts/pin-finder-icon-view.sh` and `lib/finder-sidebar-recents.py`) |
+| Dictation hotkey 164 | `macos.sh --only @dictation-164`, which runs `scripts/pin-dictation-hotkey-164.sh` |
+| Repo LaunchAgent not loaded | `scripts/load-launchagent.sh` (bootstraps it only if it isn't loaded; `install.sh` uses the same script with `--reload`) |
+| Repo-managed symlink missing or pointing elsewhere | `ln -sfn` to the repo file, **only** when the target is a symlink or missing. A real file in the way is never overwritten; that becomes Needs Paul |
+| Hammerspoon not running | `open -g -a Hammerspoon` |
+
+**Needs Paul: reported, never automated**
+
+- Installing, uninstalling or updating apps (Brewfile / `brewsync`, which the routine runs separately; `prune-apps.sh`), and the Dock app layout (`dock.sh` rebuilds the whole Dock)
+- Login items, desktop assignments (macOS can't script them) and URL handlers (macOS may ask to confirm)
+- TCC permissions and the [manual steps](#manual-steps)
+- MDM, security settings, software updates, and Mac health signals
+- Hostname and login shell (they need sudo), and anything else that needs sudo or deletes files
+- Dotfiles git state (no automatic commits, pushes or pulls), including repo files such as `karabiner.json` or a missing script
+- Any issue whose id isn't in `lib/autofix.list` (unclassified means report only)
+
+To make a new check self-healing, tag it with `fixid <id>` in `check.sh` and add a `SAFE` row with a fixer to `lib/autofix.list`. The test fails if the two disagree.
 
 #### Mac health
 
@@ -346,8 +382,8 @@ To enable Clipboard History:
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. Run any time (especially after a macOS update). Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
-| `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. Idempotent. |
+| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. `--fix` (optionally with `--dry-run`) also applies the SAFE fixes from `lib/autofix.list`, re-checks, and lists Fixed / Needs Paul. Run any time (especially after a macOS update). Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
+| `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `check.sh --fix` uses. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |
 | `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie, Pages). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
@@ -362,7 +398,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes

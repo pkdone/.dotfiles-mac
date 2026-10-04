@@ -84,3 +84,8 @@ jobs:
           # Validates lib/manual-steps.list and the parser's error reporting
           # (list/validate only; the macOS checks never run on Linux).
           ./tests/manual-steps.test.sh
+      - name: Run lib/autofix.list classification tests
+        run: |
+          # The safe / needs-Paul split for check.sh --fix: list format, the
+          # required classes, and agreement with check.sh's fixid tags.
+          ./tests/autofix.test.sh

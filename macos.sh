@@ -15,6 +15,12 @@
 #   --dry-run   Show every decision, write nothing, take no backups.
 #   --no-color  Disable ANSI colour (also honours the NO_COLOR env var).
 #   --list      Print the managed settings as a Markdown table and exit.
+#   --only ID   Apply only this item (repeatable): a "domain|key" row from
+#               lib/macos-defaults.list, or @dictation-164 / @coteditor /
+#               @finder-recents / @finder-icon-view. Values that already match are
+#               left alone (no re-assert write). Used by `check.sh --fix`.
+#   --yes       Run the deferred UI restarts without prompting (still only if
+#               something changed). Used by `check.sh --fix`.
 #   -h|--help   Show usage.
 #
 # Safety:
@@ -30,24 +36,48 @@ DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=0
 NO_COLOR_OPT=0
 LIST=0
+YES=0
+NL=$'\n'
+ONLY_IDS=''      # newline-separated --only ids; empty = apply everything
+ONLY_MATCHED=''
 
-for arg in "$@"; do
-  case "$arg" in
+while [ $# -gt 0 ]; do
+  case "$1" in
     --dry-run)  DRY_RUN=1 ;;
     --no-color) NO_COLOR_OPT=1 ;;
     --list)     LIST=1 ;;
+    --yes)      YES=1 ;;
+    --only)
+      if [ $# -lt 2 ]; then echo "--only needs an id (try --help)" >&2; exit 2; fi
+      shift; ONLY_IDS="${ONLY_IDS}${ONLY_IDS:+$NL}$1" ;;
+    --only=*)   ONLY_IDS="${ONLY_IDS}${ONLY_IDS:+$NL}${1#--only=}" ;;
     -h|--help)
       cat <<'USAGE'
-Usage: macos.sh [--dry-run] [--no-color] [--list]
+Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --dry-run    Show every decision, write nothing, take no backups.
   --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
   --list       Print the managed settings as a Markdown table and exit.
+  --only ID    Apply only this item (repeatable): "domain|key" from
+               lib/macos-defaults.list, or @dictation-164, @coteditor,
+               @finder-recents, @finder-icon-view. Matching values are left alone.
+  --yes        Restart Dock/Finder/SystemUIServer without prompting (only if
+               something changed).
   -h, --help   Show this help.
 USAGE
       exit 0 ;;
-    *) echo "Unknown argument: $arg (try --help)" >&2; exit 2 ;;
+    *) echo "Unknown argument: $1 (try --help)" >&2; exit 2 ;;
   esac
+  shift
 done
+
+# selected ID — true if ID should be applied (no --only given, or ID was named).
+selected() {
+  if [ -z "$ONLY_IDS" ]; then return 0; fi
+  case "$NL$ONLY_IDS$NL" in
+    *"$NL$1$NL"*) ONLY_MATCHED="${ONLY_MATCHED}${ONLY_MATCHED:+$NL}$1"; return 0 ;;
+  esac
+  return 1
+}
 
 # ---- logging (colour only on a tty) -------------------------------------
 if [ -t 1 ] && [ "$NO_COLOR_OPT" != 1 ] && [ -z "${NO_COLOR+x}" ]; then
@@ -66,7 +96,6 @@ WARNINGS=0
 RESTARTS=''
 NEEDS_LOGOUT=0
 LOGOUT_ITEMS=''
-NL=$'\n'
 BACKED_UP=0
 
 # ---- helpers ------------------------------------------------------------
@@ -169,6 +198,8 @@ apply_setting() {  # domain key type desired restart tol
       fi
       if [ "$DRY_RUN" = 1 ]; then
         say_ok "$domain $key — would re-assert (already set: $cur)"
+      elif [ -n "$ONLY_IDS" ]; then
+        say_ok "$domain $key — already set: $cur (left alone)"
       else
         write_default "$domain" "$key" "$etype" "$desired"
         say_ok "$domain $key — re-asserted (already set: $cur)"
@@ -218,11 +249,14 @@ list_settings() {
 
 [ "$LIST" = 1 ] && { list_settings; exit 0; }
 
-echo "macos.sh — $([ "$DRY_RUN" = 1 ] && echo 'DRY RUN (no writes)' || echo 'applying')"
+if [ "$DRY_RUN" = 1 ]; then MODE='DRY RUN (no writes)'; else MODE='applying'; fi
+if [ -n "$ONLY_IDS" ]; then MODE="$MODE — only: $(printf '%s' "$ONLY_IDS" | tr '\n' ',' | sed 's/,/, /g')"; fi
+echo "macos.sh — $MODE"
 echo
 
 while IFS='|' read -r domain key etype desired restart area label disp tol; do
   case "$domain" in ''|'#'*) continue ;; esac
+  selected "$domain|$key" || continue
   apply_setting "$domain" "$key" "$etype" "$desired" "$restart" "$tol"
 done <<< "$SETTINGS"
 
@@ -250,6 +284,8 @@ apply_dictation_hotkey() {
   if [ "$enabled" = "$desired_enabled" ] && [ "$ptype" = "$desired_type" ] && [ "$p1" = "$desired_p1" ]; then
     if [ "$DRY_RUN" = 1 ]; then
       say_ok "dictation hotkey 164 already Right Command twice (dry-run)"
+    elif [ -n "$ONLY_IDS" ]; then
+      say_ok "dictation hotkey 164 already Right Command twice (left alone)"
     else
       "$pin" >/dev/null
       REASSERTED=$((REASSERTED + 1))
@@ -269,7 +305,7 @@ apply_dictation_hotkey() {
   say_chg "dictation hotkey 164 enabled=${enabled:-?} type=${ptype:-?} p1=${p1:-?} -> Right Command twice"
   queue_restart logout "Dictation shortcut (symbolic hotkey 164)"
 }
-apply_dictation_hotkey
+if selected @dictation-164; then apply_dictation_hotkey; fi
 
 # ---- CotEditor theme + monospaced font (nested prefs via export/import) ----
 apply_coteditor() {
@@ -282,6 +318,8 @@ apply_coteditor() {
   if [ "$cur_theme" = "$theme" ] && [ "$cur_font" = "monospaced" ]; then
     if [ "$DRY_RUN" = 1 ]; then
       say_ok "CotEditor theme=$theme fontType=monospaced (dry-run)"
+    elif [ -n "$ONLY_IDS" ]; then
+      say_ok "CotEditor theme=$theme fontType=monospaced (left alone)"
     else
       defaults write "$domain" defaultTheme -string "$theme"
       REASSERTED=$((REASSERTED + 1))
@@ -319,7 +357,7 @@ apply_coteditor() {
   CHANGED=$((CHANGED + 1))
   say_chg "CotEditor theme=${cur_theme:-unset} fontType=${cur_font:-unset} -> theme=$theme fontType=monospaced"
 }
-apply_coteditor
+if selected @coteditor; then apply_coteditor; fi
 
 # ---- Finder sidebar Recents hidden (TopSidebarSection SFL) ----
 apply_finder_recents() {
@@ -365,7 +403,7 @@ apply_finder_recents() {
     say_warn "Finder sidebar Recents apply failed ($out)"
   fi
 }
-apply_finder_recents
+if selected @finder-recents; then apply_finder_recents; fi
 
 # ---- Finder icon-view defaults (iconSize=72, textSize=13) ----
 apply_finder_icon_view() {
@@ -379,6 +417,8 @@ apply_finder_icon_view() {
   if "$pin" --check >/dev/null 2>&1; then
     if [ "$DRY_RUN" = 1 ]; then
       say_ok "Finder icon view defaults iconSize=72 textSize=13 (dry-run)"
+    elif [ -n "$ONLY_IDS" ]; then
+      say_ok "Finder icon view defaults already iconSize=72 textSize=13 (left alone)"
     else
       "$pin" >/dev/null
       REASSERTED=$((REASSERTED + 1))
@@ -398,8 +438,18 @@ apply_finder_icon_view() {
   say_chg "Finder icon view defaults -> iconSize=72 textSize=13"
   queue_restart Finder
 }
-apply_finder_icon_view
+if selected @finder-icon-view; then apply_finder_icon_view; fi
 
+# --only ids that matched nothing (typo, or a row removed from the list).
+if [ -n "$ONLY_IDS" ]; then
+  while IFS= read -r oid; do
+    [ -n "$oid" ] || continue
+    case "$NL$ONLY_MATCHED$NL" in
+      *"$NL$oid$NL"*) : ;;
+      *) WARNINGS=$((WARNINGS + 1)); say_warn "--only $oid matched nothing in lib/macos-defaults.list or the @ items" ;;
+    esac
+  done <<< "$ONLY_IDS"
+fi
 
 echo
 echo "Summary: $CONSIDERED setting(s) checked, $CHANGED changed, $REASSERTED re-asserted, $WARNINGS warning(s)."
@@ -407,13 +457,18 @@ echo "Summary: $CONSIDERED setting(s) checked, $CHANGED changed, $REASSERTED re-
 # ---- deferred UI restarts (only if something changed) -------------------
 if [ "$DRY_RUN" != 1 ] && [ "$CHANGED" -gt 0 ] && [ -n "${RESTARTS// /}" ]; then
   echo
-  printf 'Restart now to apply:%s ? [y/N] ' "$RESTARTS"
-  read -r reply || reply=''
+  if [ "$YES" = 1 ]; then
+    reply=y
+    printf 'Restarting to apply:%s\n' "$RESTARTS"
+  else
+    printf 'Restart now to apply:%s ? [y/N] ' "$RESTARTS"
+    read -r reply || reply=''
+  fi
   case "$reply" in
     y|Y|yes|YES)
       # shellcheck disable=SC2086  # intentional: $RESTARTS is a space-separated list we want word-split
       for p in $RESTARTS; do
-        killall "$p" 2>/dev/null && echo "  restarted $p" || echo "  $p not running"
+        if killall "$p" 2>/dev/null; then echo "  restarted $p"; else echo "  $p not running"; fi
       done ;;
     *) echo '  skipped — changes apply at next login.' ;;
   esac
@@ -426,6 +481,8 @@ if [ "$NEEDS_LOGOUT" = 1 ] && [ "$CHANGED" -gt 0 ]; then
     [ -n "$item" ] && printf '  - %s\n' "$item"
   done <<< "$LOGOUT_ITEMS"
 fi
+
+if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (check.sh --fix): skip the manual-steps footer
 
 cat <<'MANUAL'
 

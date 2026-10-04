@@ -81,13 +81,13 @@ echo ""
 echo "🚀 Loading login LaunchAgent (dictation hotkey 164)..."
 LA_LABEL=com.pdone.pin-dictation-hotkey-164
 LA_PLIST="$HOME/Library/LaunchAgents/${LA_LABEL}.plist"
-uid="$(id -u)"
 if [ -f "$LA_PLIST" ]; then
-  launchctl bootout "gui/$uid/$LA_LABEL" 2>/dev/null || true
-  launchctl bootstrap "gui/$uid" "$LA_PLIST" 2>/dev/null \
-    || launchctl load -w "$LA_PLIST" 2>/dev/null \
-    || echo "  ⚠️  could not bootstrap $LA_LABEL — run: launchctl bootstrap gui/$(id -u) $LA_PLIST"
-  echo "  loaded $LA_LABEL"
+  # Shared with `check.sh --fix`; --reload picks up plist changes on a re-run.
+  if "$DOTFILES/scripts/load-launchagent.sh" --reload "$LA_PLIST" >/dev/null; then
+    echo "  loaded $LA_LABEL"
+  else
+    echo "  ⚠️  could not bootstrap $LA_LABEL — run: launchctl bootstrap gui/$(id -u) $LA_PLIST"
+  fi
 else
   echo "  ⚠️  $LA_PLIST missing after symlink step"
 fi

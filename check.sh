@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 #
-# check.sh — read-only verifier. Reports drift between this machine and the repo's
-# desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
-# it's usable in a pre-push hook or CI later.
+# check.sh — verifier. By default read-only: reports drift between this machine and the
+# repo's desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
+# it's usable in a pre-push hook or CI later. With --fix it also applies the SAFE fixes
+# from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
+# and prints a "Fixed" and a "Needs Paul" list.
 #
 # Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
@@ -13,6 +15,14 @@
 #   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
 #   --health-json  Print only a JSON summary (Mac health values, drift/warning counts and
 #                  messages) on stdout, for the weekly health note. Same checks, same exit.
+#                  With --fix it also has fixed[] / needs_paul[] (and would_fix[] on a dry run).
+#   --fix          After the checks, apply the SAFE fixes (lib/autofix.list) for any drift or
+#                  warning found, re-run the checks, and report Fixed / Needs Paul. Every fix
+#                  is idempotent and logged to ~/Library/Logs/com.pdone.check-fix.log.
+#                  Exit status then reflects the drift left AFTER the fixes.
+#   --dry-run      With --fix: show what would be fixed; change nothing.
+#   --issues       Internal (used by --fix to re-check): print one line per drift/warning
+#                  (kind, id, arg, message; separated by \x1f) on stdout and nothing else.
 #   -h, --help     Show usage.
 #
 set -euo pipefail
@@ -29,28 +39,48 @@ done
 EXPECTED_HOST="$(awk '$1 !~ /^#/ && NF {print $1; exit}' "$DOTDIR/lib/hostname")"
 NO_COLOR_OPT=0
 HEALTH_JSON=0
+FIX=0
+DRY_RUN=0
+ISSUES=0
 
 for arg in "$@"; do
   case "$arg" in
     --no-color) NO_COLOR_OPT=1 ;;
     --health-json) HEALTH_JSON=1 ;;
+    --fix) FIX=1 ;;
+    --dry-run) DRY_RUN=1 ;;
+    --issues) ISSUES=1 ;;
     -h|--help)
       cat <<'USAGE'
-Usage: check.sh [--no-color] [--health-json]
-  Read-only. Reports drift between this machine and the repo; writes nothing.
+Usage: check.sh [--no-color] [--health-json] [--fix [--dry-run]]
+  Default: read-only. Reports drift between this machine and the repo; writes nothing.
   Exit status: 0 = everything matches, 1 = drift found.
   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
   --health-json  Print only a JSON summary on stdout (Mac health values, drift and
-                 warning counts and messages) for the weekly health note.
+                 warning counts and messages) for the weekly health note. With --fix it
+                 also carries fixed[] and needs_paul[] (would_fix[] on a dry run).
+  --fix          Apply the SAFE fixes from lib/autofix.list for the drift found (reversible
+                 preference writes only), re-check, and print Fixed / Needs Paul lists.
+                 Exit status reflects the drift left after the fixes.
+  --dry-run      With --fix: show what would be fixed; change nothing.
   -h, --help     Show this help.
 USAGE
       exit 0 ;;
     *) echo "Unknown argument: $arg (try --help)" >&2; exit 2 ;;
   esac
 done
+if [ "$DRY_RUN" = 1 ] && [ "$FIX" != 1 ]; then
+  echo "--dry-run only applies to --fix (check.sh is read-only without --fix)" >&2; exit 2
+fi
+if [ "$ISSUES" = 1 ]; then
+  if [ "$FIX" = 1 ] || [ "$HEALTH_JSON" = 1 ]; then
+    echo "--issues is internal and can't be combined with --fix or --health-json" >&2; exit 2
+  fi
+fi
 
-# --health-json: keep the JSON alone on stdout (fd 3); the human report goes nowhere.
-if [ "$HEALTH_JSON" = 1 ]; then
+# --health-json / --issues: keep the machine output alone on stdout (fd 3); the human
+# report goes nowhere.
+if [ "$HEALTH_JSON" = 1 ] || [ "$ISSUES" = 1 ]; then
   exec 3>&1 1>/dev/null
   NO_COLOR_OPT=1
 fi
@@ -64,9 +94,16 @@ fi
 
 CHECKED=0; OKS=0; DRIFT=0; WARN=0; HAND=0
 DRIFT_MSGS=(); WARN_MSGS=()   # kept for --health-json
+# Every drift / warning is tagged with an issue id from lib/autofix.list (set by `fixid`
+# before the check; `hdr` resets it) so --fix knows which ones are SAFE to repair.
+US=$'\037'                    # field separator for FIX_ITEMS / --issues
+FIX_ID=unclassified; FIX_ARG=''
+FIX_ITEMS=()                  # "kind US id US arg US message" per drift / warning
+fixid() { FIX_ID="$1"; FIX_ARG="${2:-}"; }   # fixid ID [ARG] — tag the following lines
+record() { FIX_ITEMS+=("$1$US$FIX_ID$US$FIX_ARG$US${2//$US/ }"); }
 pass() { OKS=$((OKS + 1));    printf '  %sok%s    %s\n'  "$C_OK"   "$C_OFF" "$1"; }
-bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
-warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
+bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); record drift "$1"; printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
+warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  record warn "$1";  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
 info() { HAND=$((HAND + 1));   printf '  info  %s\n' "$1"; }   # check-by-hand item: not drift, not a warning
 note() { printf '  info  %s\n' "$1"; }                         # FYI line: not counted anywhere
 
@@ -76,7 +113,7 @@ with_timeout() {
   local secs="$1"; shift
   perl -e '$t = shift @ARGV; alarm $t; exec { $ARGV[0] } @ARGV or exit 127' "$secs" "$@"
 }
-hdr()  { printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
+hdr()  { fixid unclassified; printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
 
 # Value-comparison helpers shared with macos.sh (same semantics, single source).
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
@@ -88,6 +125,7 @@ hdr "Symlinks"
 check_link() {  # target  expected-source
   local target="$1" expected="$2"
   CHECKED=$((CHECKED + 1))
+  fixid symlink "$target|$expected"
   if [ ! -L "$target" ]; then
     if [ -e "$target" ]; then
       bad "${target/#$HOME/~} — exists but is not a symlink"
@@ -118,6 +156,7 @@ done
 
 # ---- 2. Homebrew --------------------------------------------------------
 hdr "Homebrew (Brewfile)"
+fixid brew
 CHECKED=$((CHECKED + 1))
 if ! command -v brew >/dev/null 2>&1; then
   warn "brew not installed — skipping Brewfile check"
@@ -173,6 +212,7 @@ fi
 # ---- 2b. MDM / company apps (present, not Brewfile-managed) ----
 if [ -r "$DOTDIR/lib/mdm-apps.list" ]; then
   hdr "MDM / company apps"
+  fixid mdm
   while IFS='|' read -r name path _mas_id; do
     name="$(printf '%s' "$name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
     path="$(printf '%s' "$path" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
@@ -205,6 +245,7 @@ hdr "macOS defaults"
 while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; do
   case "$domain" in ''|'#'*) continue ;; esac
   CHECKED=$((CHECKED + 1))
+  fixid defaults "$domain|$key"
   desired="${desired//@HOME@/$HOME}"
   want_token="$(type_token "$etype")"
   if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
@@ -228,7 +269,9 @@ done < "$DOTDIR/lib/macos-defaults.list"
 
 # ---- 4. Dock ------------------------------------------------------------
 hdr "Dock"
+fixid dock-apps
 if ! command -v dockutil >/dev/null 2>&1; then
+  fixid tooling
   warn "dockutil not installed — skipping Dock check"
 else
   # dockutil --list is tab-separated: label \t file://URL \t section \t plist \t bundle-id
@@ -273,6 +316,7 @@ fi
 
 # ---- 4b. Dock "Assign To" desktop pins ----------------------------------
 hdr "Desktop assignments (Dock → Options → Assign To)"
+fixid desktop-assign
 if PY="$(dot_python)"; then
   while IFS='|' read -r status msg; do
     [ -z "$status" ] && continue
@@ -285,11 +329,12 @@ if PY="$(dot_python)"; then
   done < <("$PY" "$DOTDIR/lib/desktop-bindings.py" "$DOTDIR/lib/desktop-bindings.list")
 else
   CHECKED=$((CHECKED + 1))
-  warn "no python3 — skipping desktop assignment check"
+  fixid tooling; warn "no python3 — skipping desktop assignment check"
 fi
 
 # ---- 5. login shell -----------------------------------------------------
 hdr "Login shell"
+fixid login-shell
 CHECKED=$((CHECKED + 1))
 FISH="$(brew --prefix 2>/dev/null)/bin/fish"
 cur_shell="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
@@ -301,6 +346,7 @@ fi
 
 # ---- 6. hostname --------------------------------------------------------
 hdr "Hostname"
+fixid hostname
 for which in HostName LocalHostName ComputerName; do
   CHECKED=$((CHECKED + 1))
   cur="$(scutil --get "$which" 2>/dev/null || true)"
@@ -313,11 +359,12 @@ done
 
 # ---- 7. URL handlers ----------------------------------------------------
 hdr "URL handlers"
+fixid url-handler
 HANDLERS_LIST="$DOTDIR/lib/url-handlers.list"
 if [ ! -r "$HANDLERS_LIST" ]; then
-  warn "lib/url-handlers.list missing — skipping URL handlers check"
+  fixid repo-file; warn "lib/url-handlers.list missing — skipping URL handlers check"
 elif ! command -v duti >/dev/null 2>&1; then
-  warn "duti not installed — skipping URL handlers check"
+  fixid tooling; warn "duti not installed — skipping URL handlers check"
 else
   while IFS='|' read -r scheme bundle; do
     case "$scheme" in ''|'#'*) continue ;; esac
@@ -337,9 +384,10 @@ fi
 
 # ---- 8. unwanted apps ---------------------------------------------------
 hdr "Unwanted apps"
+fixid unwanted-app
 UNWANTED_LIST="$DOTDIR/lib/unwanted-apps.list"
 if [ ! -r "$UNWANTED_LIST" ]; then
-  warn "lib/unwanted-apps.list missing — skipping unwanted apps check"
+  fixid repo-file; warn "lib/unwanted-apps.list missing — skipping unwanted apps check"
 else
   while IFS="|" read -r name path _mas_id; do
     case "$name" in ""|"#"*) continue ;; esac
@@ -362,6 +410,7 @@ fi
 # Desired: enabled, type=modifier, first parameter = 1048592 (Right Command twice)
 # — an unused combo so Fn never owns dictation. Nested plist, not a macos-defaults row.
 hdr "Dictation shortcut"
+fixid dictation-164
 CHECKED=$((CHECKED + 1))
 hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
 if [ -z "$hk" ]; then
@@ -383,6 +432,7 @@ else
   fi
 fi
 CHECKED=$((CHECKED + 1))
+fixid repo-file
 if [ -x "$DOTDIR/scripts/pin-dictation-hotkey-164.sh" ]; then
   pass "scripts/pin-dictation-hotkey-164.sh present"
 else
@@ -390,6 +440,7 @@ else
 fi
 CHECKED=$((CHECKED + 1))
 LA_LABEL=com.pdone.pin-dictation-hotkey-164
+fixid launchagent "$LA_LABEL|$HOME/Library/LaunchAgents/$LA_LABEL.plist"
 if launchctl print "gui/$(id -u)/$LA_LABEL" >/dev/null 2>&1; then
   pass "LaunchAgent $LA_LABEL loaded (re-pins 164 at login)"
 else
@@ -398,10 +449,11 @@ fi
 
 # ---- 9b. Finder icon-view defaults (72 / 13) ------------------------------
 hdr "Finder icon view defaults"
+fixid finder-icon-view
 CHECKED=$((CHECKED + 1))
 pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
 if [ ! -x "$pin" ]; then
-  bad "scripts/pin-finder-icon-view.sh missing"
+  fixid repo-file; bad "scripts/pin-finder-icon-view.sh missing"
 elif "$pin" --check >/dev/null 2>&1; then
   pass "Finder icon view defaults iconSize=72 textSize=13"
 else
@@ -414,6 +466,7 @@ fi
 # extension and Accessibility grants are manual steps, checked in the "Manual steps"
 # section (scripts/manual-steps.sh ids karabiner-driver / karabiner-ax).
 hdr "Karabiner Fn-kill"
+fixid karabiner-rules
 CHECKED=$((CHECKED + 1))
 kj="$HOME/.config/karabiner/karabiner.json"
 if [ ! -r "$kj" ]; then
@@ -447,10 +500,12 @@ fi
 # grant is a manual step, checked in the "Manual steps" section (id hammerspoon-ax).
 # Never launches or changes anything.
 hdr "Hammerspoon"
+fixid hammerspoon
 CHECKED=$((CHECKED + 1))
 H_HS_RUNNING=no   # reused by the Mac health JSON (background jobs)
 if [ ! -d /Applications/Hammerspoon.app ]; then
   H_HS_RUNNING=not_installed
+  fixid app-install
   warn "Hammerspoon.app not installed — brew bundle (cask \"hammerspoon\")"
 elif ! pgrep -xq Hammerspoon; then
   warn "Hammerspoon not running — open -a Hammerspoon (then it starts at login)"
@@ -462,6 +517,7 @@ fi
 # ---- 11. Login Items guard (ChatGPT / Gemini / launcher must stay Off) ----
 # SMAppService login items aren't safely disable-able from CLI; check only.
 hdr "Login Items (banned open-at-login)"
+fixid tooling   # helper / python problems below; the item checks are login-items
 BANNED_BUNDLES="com.openai.codex com.google.GeminiMacOS com.google.GeminiMacOS.launcher"
 BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
 # Prefer parsing the world-readable BTM db — `sfltool dumpbtm` pops an admin
@@ -479,10 +535,11 @@ else
   btm_status="$(printf '%s\n' "$btm_raw" | awk -F= 'NF==2 && $1 ~ /\./ && $2 ~ /^(missing|disabled|enabled|unknown)$/ {print}')"
   btm_err="$(printf '%s\n' "$btm_raw" | awk -F= '!(NF==2 && $1 ~ /\./ && $2 ~ /^(missing|disabled|enabled|unknown)$/) {print}' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
   if [ "$btm_rc" = 3 ] || printf '%s\n' "$btm_raw" | rg -q 'tcc=denied|Operation not permitted'; then
-    warn "BTM unreadable (Full Disk Access) via $DOT_PYTHON — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
+    fixid tcc; warn "BTM unreadable (Full Disk Access) via $DOT_PYTHON — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
   elif [ "$btm_rc" -ne 0 ] || [ -z "$btm_status" ]; then
     warn "BTM helper failed (rc=$btm_rc${btm_err:+; $btm_err}) via $DOT_PYTHON — check Login Items manually"
   else
+    fixid login-items
     for bundle in "${btm_bundles[@]}"; do
       CHECKED=$((CHECKED + 1))
       st="$(printf '%s\n' "$btm_status" | awk -F= -v b="$bundle" '$1==b {print $2; exit}')"
@@ -496,6 +553,7 @@ else
   fi
 fi
 # Classic login items (System Events) — rare for these apps but cheap to check.
+fixid login-items
 classic="$(osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null || true)"
 for name in $BANNED_NAMES; do
   CHECKED=$((CHECKED + 1))
@@ -508,17 +566,18 @@ done
 
 # ---- 12. Finder sidebar Recents ----
 hdr "Finder sidebar Recents"
+fixid finder-recents
 CHECKED=$((CHECKED + 1))
 helper="$DOTDIR/lib/finder-sidebar-recents.py"
 if [ ! -r "$helper" ]; then
-  warn "lib/finder-sidebar-recents.py missing — skip"
+  fixid tooling; warn "lib/finder-sidebar-recents.py missing — skip"
 elif [ -z "$DOT_PYTHON" ]; then
-  warn "python3 not found — skip Finder Recents"
+  fixid tooling; warn "python3 not found — skip Finder Recents"
 else
   # Guard exit status: with set -e, a failing $(...) aborts before rc= is set.
   out="$("$DOT_PYTHON" "$helper" 2>&1)" && rc=0 || rc=$?
   if [ "$rc" = 3 ] || printf '%s\n' "$out" | rg -q 'tcc=denied|Operation not permitted|PermissionError'; then
-    warn "Finder Recents unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
+    fixid tcc; warn "Finder Recents unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
   elif [ "$rc" = 0 ]; then
     pass "Finder sidebar Recents hidden"
   else
@@ -528,6 +587,7 @@ fi
 
 # ---- 13. CotEditor theme + font ----
 hdr "CotEditor"
+fixid coteditor
 CHECKED=$((CHECKED + 1))
 cot_theme="$(defaults read com.coteditor.CotEditor defaultTheme 2>/dev/null || true)"
 cot_font="$(defaults export com.coteditor.CotEditor - 2>/dev/null | plutil -extract modes.general.fontType raw - 2>/dev/null || true)"
@@ -539,6 +599,7 @@ fi
 
 # ---- 14. Leftover *.app.back in /Applications ----
 hdr "Leftover app backups"
+fixid delete-files
 CHECKED=$((CHECKED + 1))
 shopt -s nullglob
 backs=(/Applications/*.app.back)
@@ -554,6 +615,7 @@ fi
 
 # ---- 15. Security hygiene (soft — warn only) ----------------------------
 hdr "Security hygiene"
+fixid security
 CHECKED=$((CHECKED + 1))
 fv="$(fdesetup status 2>/dev/null || true)"
 if printf '%s\n' "$fv" | rg -qi 'FileVault is On'; then
@@ -565,6 +627,7 @@ else
 fi
 
 CHECKED=$((CHECKED + 1))
+fixid software-update
 # softwareupdate -l talks to Apple; keep it soft and tolerant of transient failures.
 su_out="$(softwareupdate -l 2>&1)" || true
 if printf '%s\n' "$su_out" | rg -qi 'No new software available'; then
@@ -580,6 +643,7 @@ fi
 # Read-only and timeout-guarded. Values are also kept in H_* for --health-json.
 # Anything that can't be read without sudo / Full Disk Access is an info (by-hand) line.
 hdr "Mac health"
+fixid health
 
 # Thresholds: the one place to tune the health warnings.
 HEALTH_BATTERY_MIN_PCT=80        # battery maximum capacity
@@ -737,6 +801,7 @@ if [ -d "$HOME/Library/Developer/Xcode/DerivedData" ]; then
   H_STO_DERIVED="$sto_gb"
 fi
 
+fixid security
 # Security basics. MDM may manage some of these; unreadable ones are by-hand info lines.
 sec_on() {  # label value(on|off|unknown) want(on|off) fix-hint -> echoes nothing
   case "$2" in
@@ -788,6 +853,7 @@ case "$H_SEC_SCREENLOCK" in
              warn "screen lock: password required after '$H_SEC_SCREENLOCK' (want immediately) — System Settings → Lock Screen (may be MDM-managed)" ;;
 esac
 
+fixid mdm
 # MDM: enrolment (non-sudo `profiles status`) and the Kandji / Iru agent daemons.
 prof="$(with_timeout 10 profiles status -type enrollment </dev/null 2>&1 || true)"
 case "$prof" in
@@ -814,6 +880,7 @@ else
   pass "MDM: enrolled=${H_MDM_ENROLLED}, Iru (Kandji) daemon + agent running"
 fi
 
+fixid health
 # Crashes: kernel panics and app crash reports in the window (lib/crash-reports.py).
 CRASH_HELPER="$DOTDIR/lib/crash-reports.py"
 if [ -z "$DOT_PYTHON" ] || [ ! -r "$CRASH_HELPER" ]; then
@@ -857,6 +924,7 @@ while IFS='|' read -r _la_src la_tgt; do
   case "$la_tgt" in */Library/LaunchAgents/*.plist) ;; *) continue ;; esac
   la_label="$(basename "$la_tgt" .plist)"
   CHECKED=$((CHECKED + 1))
+  fixid launchagent "$la_label|${la_tgt//@HOME@/$HOME}"
   if ! la_out="$(with_timeout 5 launchctl print "gui/$(id -u)/$la_label" </dev/null 2>/dev/null)"; then
     H_JOBS+=("$la_label|no|")
     if [ "$la_label" = "$LA_LABEL" ]; then
@@ -870,11 +938,12 @@ while IFS='|' read -r _la_src la_tgt; do
   case "$la_exit" in
     0)                 H_JOBS+=("$la_label|yes|0"); pass "LaunchAgent $la_label loaded, last exit 0" ;;
     ''|*never*)        H_JOBS+=("$la_label|yes|"); pass "LaunchAgent $la_label loaded (hasn't run yet)" ;;
-    *)                 H_JOBS+=("$la_label|yes|$la_exit"); H_JOBS_STATUS=warn
+    *)                 H_JOBS+=("$la_label|yes|$la_exit"); H_JOBS_STATUS=warn; fixid launchagent-exit
                        warn "LaunchAgent $la_label last exit code $la_exit — check: launchctl print gui/$(id -u)/$la_label" ;;
   esac
 done < "$DOTDIR/lib/links.list"
 
+fixid dotfiles-git
 # Dotfiles in sync: no uncommitted/untracked changes (gitignored .agent-logs etc. don't
 # count) and HEAD level with origin/main AS OF THE LAST FETCH/PUSH — no network here, so
 # check.sh stays offline and read-only (--no-optional-locks: don't even refresh the index).
@@ -901,17 +970,18 @@ else
   fi
 fi
 
+fixid login-items
 # Login / background items: every ENABLED item must be on lib/login-items-allow.list or
 # approved by an MDM Service Management rule; stale items (app gone) are flagged too.
 # Reuses lib/btm-login-items.py (same BTM store as the banned-item guard above).
 CHECKED=$((CHECKED + 1))
 ALLOW_LIST="$DOTDIR/lib/login-items-allow.list"
 if [ ! -r "$BTM_HELPER" ] || [ ! -r "$ALLOW_LIST" ] || [ -z "$DOT_PYTHON" ]; then
-  warn "login-item audit skipped (needs python3, lib/btm-login-items.py and lib/login-items-allow.list)"
+  fixid tooling; warn "login-item audit skipped (needs python3, lib/btm-login-items.py and lib/login-items-allow.list)"
 else
   if li_raw="$(with_timeout 20 "$DOT_PYTHON" "$BTM_HELPER" --audit "$ALLOW_LIST" 2>&1)"; then li_rc=0; else li_rc=$?; fi
   if [ "$li_rc" = 3 ] || printf '%s\n' "$li_raw" | grep -q 'tcc=denied'; then
-    warn "login-item audit: BTM unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
+    fixid tcc; warn "login-item audit: BTM unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
   elif [ "$li_rc" -ne 0 ]; then
     warn "login-item audit failed (rc=$li_rc) — check Login Items by hand"
   else
@@ -943,10 +1013,11 @@ fi
 # steps with no reliable check are info lines; steps marked @check.sh are verified by
 # their own section above, so they're not repeated here.
 hdr "Manual steps (lib/manual-steps.list)"
+fixid manual-step
 MANUAL_STEPS="$DOTDIR/scripts/manual-steps.sh"
 if [ ! -x "$MANUAL_STEPS" ]; then
   CHECKED=$((CHECKED + 1))
-  warn "scripts/manual-steps.sh missing or not executable — skipping manual steps"
+  fixid repo-file; warn "scripts/manual-steps.sh missing or not executable — skipping manual steps"
 else
   ms_out="$(NO_COLOR=1 "$MANUAL_STEPS" check --porcelain 2>&1)" || true
   while IFS='|' read -r ms_status ms_num _ms_id ms_title ms_detail; do
@@ -963,6 +1034,224 @@ fi
 # ---- summary ------------------------------------------------------------
 printf '\n%sSummary:%s %d checked, %d ok, %d drift, %d warning(s), %d to check by hand (scripts/manual-steps.sh list).\n' \
   "$C_HDR" "$C_OFF" "$CHECKED" "$OKS" "$DRIFT" "$WARN" "$HAND"
+
+# ---- --fix: apply the SAFE fixes, re-check, report ------------------------
+# lib/autofix.list is the one place that says what's SAFE (reversible preference writes,
+# done by the existing setters) and what Needs Paul (report only). Nothing here uses sudo,
+# deletes files, or touches apps, login items, permissions, MDM or git.
+FIXED=(); NEEDS_PAUL=(); WOULD_FIX=(); LOGOUT_NEEDED=()
+AFTER_DRIFT="$DRIFT"; AFTER_WARN="$WARN"
+if [ "$FIX" = 1 ]; then
+  require_file "$DOTDIR/lib/autofix.list"
+  require_file "$DOTDIR/lib/autofix-lib.sh"
+  # shellcheck source=lib/autofix-lib.sh disable=SC1091
+  . "$DOTDIR/lib/autofix-lib.sh"
+  AUTOFIX_LIST="$DOTDIR/lib/autofix.list"
+  FIX_LOG="$HOME/Library/Logs/com.pdone.check-fix.log"
+  fix_log() {
+    mkdir -p "$(dirname "$FIX_LOG")"
+    printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$FIX_LOG"
+  }
+  if [ "$DRY_RUN" = 1 ]; then
+    hdr "Fix — dry run (nothing is changed)"
+  else
+    hdr "Fix (SAFE fixes from lib/autofix.list)"
+    fix_log "check.sh --fix started ($DRIFT drift, $WARN warning(s))"
+  fi
+
+  # Fixers. Each prints one line saying what it did (or would do) and returns 0 = done /
+  # would do, 1 = tried and failed, 2 = refused as unsafe right now. All idempotent.
+  fix_symlink() {  # "target|repo-source"
+    local target="${1%%|*}" src="${1#*|}"
+    if [ ! -e "$src" ]; then
+      echo "repo source ${src/#$HOME/~} is missing — restore it from git"; return 2
+    fi
+    if [ -e "$target" ] && [ ! -L "$target" ]; then
+      echo "a real file is in the way at ${target/#$HOME/~} — never overwritten; move it aside, then run install.sh (it backs real files up)"; return 2
+    fi
+    if [ "$DRY_RUN" = 1 ]; then echo "would link ${target/#$HOME/~} -> repo"; return 0; fi
+    if mkdir -p "$(dirname "$target")" && ln -sfn "$src" "$target"; then
+      echo "linked ${target/#$HOME/~} -> repo"; return 0
+    fi
+    echo "ln -sfn failed for ${target/#$HOME/~}"; return 1
+  }
+  fix_launchagent() {  # "label|plist"
+    local label="${1%%|*}" plist="${1#*|}" out
+    if [ "$DRY_RUN" = 1 ]; then
+      echo "would load LaunchAgent $label (scripts/load-launchagent.sh)"; return 0
+    fi
+    if out="$("$DOTDIR/scripts/load-launchagent.sh" "$plist" 2>&1)"; then
+      echo "LaunchAgent $out"; return 0
+    fi
+    echo "LaunchAgent $label: ${out:-load failed}"; return 1
+  }
+  fix_hammerspoon() {
+    local i=0
+    if [ ! -d /Applications/Hammerspoon.app ]; then
+      echo "Hammerspoon.app not installed — brew bundle"; return 2
+    fi
+    if pgrep -xq Hammerspoon; then echo "Hammerspoon already running"; return 0; fi
+    if [ "$DRY_RUN" = 1 ]; then echo "would start Hammerspoon (open -g -a Hammerspoon)"; return 0; fi
+    open -g -a Hammerspoon 2>/dev/null || true
+    while [ "$i" -lt 15 ] && ! pgrep -xq Hammerspoon; do sleep 1; i=$((i + 1)); done
+    if pgrep -xq Hammerspoon; then echo "started Hammerspoon"; return 0; fi
+    echo "open -a Hammerspoon didn't start it"; return 1
+  }
+
+  # Classify every drift / warning. SAFE items are de-duplicated on id|arg.
+  SAFE_ITEMS=()                 # "id US arg US message US fixer"
+  MACOS_ARGS=()                 # macos.sh --only … arguments (one batched call)
+  safe_seen="$US"
+  for it in ${FIX_ITEMS[@]+"${FIX_ITEMS[@]}"}; do
+    IFS="$US" read -r _it_kind it_id it_arg it_msg <<< "$it"
+    lookup="$(autofix_lookup "$AUTOFIX_LIST" "$it_id")"
+    it_cls="${lookup%%|*}"; it_rest="${lookup#*|}"; it_fixer="${it_rest%%|*}"; it_why="${it_rest#*|}"
+    if [ "$it_cls" != SAFE ]; then
+      NEEDS_PAUL+=("$it_msg — $it_why")
+      continue
+    fi
+    case "$safe_seen" in *"$US$it_id|$it_arg$US"*) continue ;; esac
+    safe_seen="$safe_seen$it_id|$it_arg$US"
+    SAFE_ITEMS+=("$it_id$US$it_arg$US$it_msg$US$it_fixer")
+    if [ "$it_fixer" = macos ]; then
+      if [ "$it_id" = defaults ]; then MACOS_ARGS+=(--only "$it_arg"); else MACOS_ARGS+=(--only "@$it_id"); fi
+    fi
+  done
+
+  # Run the fixers in dependency order: symlinks (a LaunchAgent plist may be one), then one
+  # batched macos.sh call (one backup, at most one restart per process), then LaunchAgents
+  # and Hammerspoon. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
+  FIX_RESULTS=()
+  MACOS_OUT=""
+  macos_line() {  # id arg — this item's chg / warn / ok line from the macos.sh output
+    local pat=""
+    case "$1" in
+      defaults)         pat="${2%%|*} ${2#*|} —" ;;
+      dictation-164)    pat="dictation hotkey 164" ;;
+      coteditor)        pat="CotEditor" ;;
+      finder-recents)   pat="Finder sidebar Recents" ;;
+      finder-icon-view) pat="Finder icon view defaults" ;;
+    esac
+    printf '%s\n' "$MACOS_OUT" | grep -F -- "$pat" | grep -E '^  (chg|warn|ok) ' | head -1 | sed -E 's/^ +(chg|warn|ok) +//'
+  }
+  run_fix() {  # fixer arg id — dispatch to the fixer; prints its line, returns its status
+    local ml
+    case "$1" in
+      symlink)     fix_symlink "$2" ;;
+      launchagent) fix_launchagent "$2" ;;
+      hammerspoon) fix_hammerspoon ;;
+      macos)
+        ml="$(macos_line "$3" "$2")"
+        if [ -z "$ml" ]; then echo "macos.sh printed nothing for this item"; return 1; fi
+        echo "macos.sh: $ml"
+        if printf '%s\n' "$MACOS_OUT" | grep -F -- "$ml" | grep -q '^  warn '; then return 1; fi ;;
+      *) echo "unknown fixer '$1' in lib/autofix.list"; return 2 ;;
+    esac
+  }
+  fix_pass() {  # fixer... — run the SAFE items whose fixer is one of these
+    local n=0 item f id arg _msg fixer out rc
+    for item in ${SAFE_ITEMS[@]+"${SAFE_ITEMS[@]}"}; do
+      IFS="$US" read -r id arg _msg fixer <<< "$item"
+      for f in "$@"; do
+        if [ "$fixer" = "$f" ]; then
+          if out="$(run_fix "$fixer" "$arg" "$id")"; then rc=0; else rc=$?; fi
+          FIX_RESULTS[n]="$rc$US$out"
+        fi
+      done
+      n=$((n + 1))
+    done
+  }
+  fix_pass symlink
+  if [ "${#MACOS_ARGS[@]}" -gt 0 ]; then
+    if [ "$DRY_RUN" = 1 ]; then
+      MACOS_OUT="$("$DOTDIR/macos.sh" --dry-run --no-color "${MACOS_ARGS[@]}" 2>&1)" || true
+    else
+      MACOS_OUT="$("$DOTDIR/macos.sh" --no-color --yes "${MACOS_ARGS[@]}" 2>&1)" || true
+      while IFS= read -r ml; do
+        if [ -n "$ml" ]; then fix_log "macos.sh: $ml"; fi
+      done <<< "$MACOS_OUT"
+    fi
+    printf '%s\n' "$MACOS_OUT" | sed '/^$/d; s/^/        /'
+    # "logout"-class settings: macos.sh lists them after its Note line.
+    while IFS= read -r ml; do
+      LOGOUT_NEEDED+=("${ml#  - }")
+    done < <(printf '%s\n' "$MACOS_OUT" | awk '/^Note: the following changed/ {grab=1; next} grab && /^  - / {print}')
+  fi
+  fix_pass macos launchagent hammerspoon
+  # Items with a fixer name the dispatcher doesn't know (a typo in lib/autofix.list).
+  n=0
+  for item in ${SAFE_ITEMS[@]+"${SAFE_ITEMS[@]}"}; do
+    if [ -z "${FIX_RESULTS[n]:-}" ]; then
+      IFS="$US" read -r _id _arg _msg fx <<< "$item"
+      FIX_RESULTS[n]="2${US}unknown fixer '$fx' in lib/autofix.list"
+    fi
+    n=$((n + 1))
+  done
+
+  # Report each SAFE item's outcome; on a real run, re-check to see what stuck.
+  RECHECK=""
+  if [ "$DRY_RUN" != 1 ] && [ "${#SAFE_ITEMS[@]}" -gt 0 ]; then
+    RECHECK="$("$DOTDIR/check.sh" --issues 2>/dev/null)" || true
+    AFTER_DRIFT=0; AFTER_WARN=0
+    while IFS="$US" read -r rk _ri _ra _rm; do
+      case "$rk" in drift) AFTER_DRIFT=$((AFTER_DRIFT + 1)) ;; warn) AFTER_WARN=$((AFTER_WARN + 1)) ;; esac
+    done <<< "$RECHECK"
+  fi
+  i=0
+  for item in ${SAFE_ITEMS[@]+"${SAFE_ITEMS[@]}"}; do
+    IFS="$US" read -r it_id it_arg it_msg it_fixer <<< "$item"
+    fr="${FIX_RESULTS[i]}"; fr_rc="${fr%%"$US"*}"; fr_out="${fr#*"$US"}"
+    i=$((i + 1))
+    if [ "$fr_rc" = 2 ]; then
+      NEEDS_PAUL+=("$it_msg — not auto-fixed: $fr_out")
+      [ "$DRY_RUN" = 1 ] || fix_log "refused: $it_msg — $fr_out"
+      continue
+    fi
+    if [ "$DRY_RUN" = 1 ]; then
+      WOULD_FIX+=("$it_msg → $fr_out")
+      continue
+    fi
+    still="$(printf '%s\n' "$RECHECK" | awk -F"$US" -v id="$it_id" -v arg="$it_arg" '$2 == id && $3 == arg {print $4; exit}')"
+    if [ -n "$still" ]; then
+      NEEDS_PAUL+=("$it_msg — fix didn't stick (still: $still; $fr_out)")
+      fix_log "did not stick: $it_msg — still: $still ($fr_out)"
+    elif [ "$fr_rc" = 0 ]; then
+      FIXED+=("$it_msg → $fr_out")
+      fix_log "fixed: $it_msg → $fr_out"
+    else
+      NEEDS_PAUL+=("$it_msg — fix failed: $fr_out")
+      fix_log "failed: $it_msg — $fr_out"
+    fi
+  done
+
+  if [ "$DRY_RUN" = 1 ]; then
+    printf '\n  Would fix (%d):\n' "${#WOULD_FIX[@]}"
+    for x in ${WOULD_FIX[@]+"${WOULD_FIX[@]}"}; do printf '    - %s\n' "$x"; done
+    if [ "${#WOULD_FIX[@]}" -eq 0 ]; then printf '    (nothing — no SAFE drift)\n'; fi
+  else
+    printf '\n  Fixed (%d):\n' "${#FIXED[@]}"
+    for x in ${FIXED[@]+"${FIXED[@]}"}; do printf '    - %s\n' "$x"; done
+    if [ "${#FIXED[@]}" -eq 0 ]; then printf '    (nothing to fix)\n'; fi
+  fi
+  printf '\n  Needs Paul (%d):\n' "${#NEEDS_PAUL[@]}"
+  for x in ${NEEDS_PAUL[@]+"${NEEDS_PAUL[@]}"}; do printf '    - %s\n' "$x"; done
+  if [ "${#NEEDS_PAUL[@]}" -eq 0 ]; then printf '    (nothing)\n'; fi
+  if [ "${#LOGOUT_NEEDED[@]}" -gt 0 ]; then
+    printf '\n  Log out and back in to finish applying: %s\n' "$(printf '%s; ' "${LOGOUT_NEEDED[@]}" | sed 's/; $//')"
+  fi
+  if [ "$HAND" -gt 0 ]; then
+    printf '\n  (%d manual step(s) to check by hand are not listed here: scripts/manual-steps.sh list)\n' "$HAND"
+  fi
+  if [ "$DRY_RUN" != 1 ]; then
+    printf '\n%sAfter fixes:%s %d drift, %d warning(s).\n' "$C_HDR" "$C_OFF" "$AFTER_DRIFT" "$AFTER_WARN"
+    fix_log "check.sh --fix done: ${#FIXED[@]} fixed, ${#NEEDS_PAUL[@]} need Paul; after: $AFTER_DRIFT drift, $AFTER_WARN warning(s)"
+  fi
+fi
+
+# ---- --issues (internal; used by --fix to re-check) ----------------------
+if [ "$ISSUES" = 1 ]; then
+  for it in ${FIX_ITEMS[@]+"${FIX_ITEMS[@]}"}; do printf '%s\n' "$it"; done >&3
+fi
 
 # ---- --health-json -------------------------------------------------------
 if [ "$HEALTH_JSON" = 1 ]; then
@@ -1037,11 +1326,20 @@ if [ "$HEALTH_JSON" = 1 ]; then
     printf '  "login_items": {"status": %s, "enabled": %d, "allow_listed": %d, "mdm_approved": %d, "unknown": %s, "stale": %s},\n' \
       "$(json_str "$H_LI_STATUS")" "$H_LI_ENABLED" "$H_LI_ALLOW" "$H_LI_MDM" \
       "$(json_arr ${H_LI_UNKNOWN[@]+"${H_LI_UNKNOWN[@]}"})" "$(json_arr ${H_LI_STALE[@]+"${H_LI_STALE[@]}"})"
+    if [ "$FIX" = 1 ]; then
+      if [ "$DRY_RUN" = 1 ]; then fix_mode=dry-run; else fix_mode=apply; fi
+      printf '  "fix": {"mode": %s, "after": {"drift": %d, "warnings": %d}},\n' "$(json_str "$fix_mode")" "$AFTER_DRIFT" "$AFTER_WARN"
+      printf '  "fixed": %s,\n' "$(json_arr ${FIXED[@]+"${FIXED[@]}"})"
+      printf '  "would_fix": %s,\n' "$(json_arr ${WOULD_FIX[@]+"${WOULD_FIX[@]}"})"
+      printf '  "needs_paul": %s,\n' "$(json_arr ${NEEDS_PAUL[@]+"${NEEDS_PAUL[@]}"})"
+      printf '  "logout_needed": %s,\n' "$(json_arr ${LOGOUT_NEEDED[@]+"${LOGOUT_NEEDED[@]}"})"
+    fi
     printf '  "drift_messages": %s,\n' "$(json_arr ${DRIFT_MSGS[@]+"${DRIFT_MSGS[@]}"})"
     printf '  "warning_messages": %s\n' "$(json_arr ${WARN_MSGS[@]+"${WARN_MSGS[@]}"})"
     printf '}\n'
   } >&3
 fi
 
-if [ "$DRIFT" -gt 0 ]; then exit 1; fi
+# With --fix (not a dry run) the exit status reflects the drift left after the fixes.
+if [ "$AFTER_DRIFT" -gt 0 ]; then exit 1; fi
 exit 0
