@@ -79,3 +79,8 @@ jobs:
           # Plain-bash assertions for the shared value-comparison helpers
           # (norm_bool, values_equal, type_token). No framework — bash + awk only.
           ./tests/defaults-lib.test.sh
+      - name: Run scripts/manual-steps.sh list-parser tests
+        run: |
+          # Validates lib/manual-steps.list and the parser's error reporting
+          # (list/validate only; the macOS checks never run on Linux).
+          ./tests/manual-steps.test.sh

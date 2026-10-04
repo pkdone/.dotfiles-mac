@@ -43,6 +43,10 @@ if [ -x ./tests/defaults-lib.test.sh ]; then
   echo "  unit tests (lib/defaults-lib.sh)"
   ./tests/defaults-lib.test.sh || status=1
 fi
+if [ -x ./tests/manual-steps.test.sh ]; then
+  echo "  unit tests (scripts/manual-steps.sh list parser)"
+  ./tests/manual-steps.test.sh || status=1
+fi
 
 if [ "$status" -ne 0 ]; then
   echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2
