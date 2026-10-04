@@ -11,7 +11,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `autofix-lib.sh`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `autofix-lib.sh`, `defaults-lib.sh`)
 - `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
@@ -183,6 +183,8 @@ The Finder hotkey (Shift+Control+Command+F) and the Clipboard History settings (
 
 Raycast's supported backup is **Export Settings & Data**, a passphrase-encrypted `.rayconfig` file (Raycast → Settings → Advanced → Export, or Scheduled Backup). Restoring it is a GUI step: Import Settings & Data, then tick **Settings, Aliases & Hotkeys**. The export also holds clipboard history, AI chats, notes, MCP servers and extension settings (which can include tokens), so it is **never stored in this repo**. `*.rayconfig` is gitignored. Keep it in a synced folder via Scheduled Backup instead. Writing the hotkey back with `defaults write` isn't a supported restore (Raycast holds it in memory and in its database), so the step stays manual (`raycast-import` / `raycast-hotkey` in [Manual steps](#manual-steps)).
 
+**Logi Options+: checked, never written.** Logi Options+ keeps its settings as JSON inside a private SQLite database (`~/Library/Application Support/LogiOptionsPlus/settings.db`; the agent caches it and syncs it to the mouse). `lib/logi-settings.py` copies the database (plus its `-wal` / `-shm`) to a temp dir, reads the copy read-only, deletes it, and compares the MX Master 3S values (found by model `2b034`, not serial number) with `lib/logi-expected.list`: main wheel Natural + smooth + SmartShift, thumb wheel horizontal scroll + smooth, gesture button window navigation, pointer speed 0.12. The **Logi Options+** section of `check.sh` reports drift as **Needs Paul** (`logi-settings` in `lib/autofix.list`; `--fix` never touches it), and a missing app, missing database or unreadable format as a warning (`logi-unreadable`), never a failure of the run. Restore is by hand in the app or from Logi's cloud backup (manual step `logi-cloud-backup`, checked via the backup flag in the same database). Manual step `logi-smooth-scrolling` uses the same helper (`logi:<id>` check).
+
 ### macOS defaults
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
@@ -202,7 +204,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-By default `check.sh` is read-only (see [Read-only vs `--fix`](#read-only-vs---fix-self-healing-drift) for the opt-in self-healing mode): it reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/Ghostty config/`*.app.back`, FileVault / pending updates, …) and ends with the [manual steps](#manual-steps): failed automated checks are warnings (not drift), and steps with no reliable check show as `info` lines, counted as "to check by hand" in the summary. Exits non-zero on drift — run after macOS updates:
+By default `check.sh` is read-only (see [Read-only vs `--fix`](#read-only-vs---fix-self-healing-drift) for the opt-in self-healing mode): it reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/Ghostty config/Logi Options+/`*.app.back`, FileVault / pending updates, …) and ends with the [manual steps](#manual-steps): failed automated checks are warnings (not drift), and steps with no reliable check show as `info` lines, counted as "to check by hand" in the summary. Exits non-zero on drift — run after macOS updates:
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -298,7 +300,7 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 ~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand (also the "Manual steps" section of check.sh)
 ```
 
-`check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), trackpad and pointer `defaults`, the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, `gh auth status` and `op whoami`. Steps marked `check.sh` below are verified by their own `check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and refresh this table with `scripts/manual-steps.sh list --markdown`.
+`check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), trackpad and pointer `defaults`, the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, Logi Options+ values (from a temp copy of its settings database), `gh auth status` and `op whoami`. Steps marked `check.sh` below are verified by their own `check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and refresh this table with `scripts/manual-steps.sh list --markdown`.
 
 | # | Step | Where | Checked |
 |---|------|------|------|
@@ -326,23 +328,24 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 | 22 | Trackpad: Three-finger drag Off | System Settings → Trackpad → More Gestures | auto |
 | 23 | Use trackpad for dragging On (Without Drag Lock) | System Settings → Accessibility → Pointer Control → Trackpad Options | auto |
 | 24 | Pointer size one notch above Normal | System Settings → Accessibility → Display → Pointer → Pointer size | auto |
-| 25 | Mouse: tracking, double-click and scrolling speed faster; secondary click on right side; natural scrolling Off (the global switch also flips the trackpad, so use Logi Options+) | System Settings → Mouse | by hand |
-| 26 | Logi Options+: Smooth scrolling On | Logi Options+ → Pointer & Scrolling | by hand |
-| 27 | Built-in display: More Space | System Settings → Displays | by hand |
-| 28 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
-| 29 | Remove all desktop widgets | Desktop: right-click each widget → Remove Widget (System Settings → Desktop & Dock → Widgets) | by hand |
-| 30 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
-| 31 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
-| 32 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | System Settings → Notifications → Application Notifications | by hand |
-| 33 | Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | System Settings → Spotlight → Results from Apps | by hand |
-| 34 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | check.sh |
-| 35 | Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT) | Gemini → Settings → Shortcuts | by hand |
-| 36 | Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings) | Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup) | by hand |
-| 37 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
-| 38 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
-| 39 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
+| 25 | Mouse (System Settings): tracking, double-click and scrolling speed faster; secondary click on right side (the wheel's direction, Natural, is set in Logi Options+ and checked by check.sh) | System Settings → Mouse | by hand |
+| 26 | Logi Options+: Smooth scrolling On (main wheel and thumb wheel) | Logi Options+ → MX Master 3S → Point & Scroll | auto |
+| 27 | Logi Options+: sign in and turn on cloud backup (Automatically create backups of settings for all devices) | Logi Options+ → sign in → MX Master 3S → More → Backups | auto |
+| 28 | Built-in display: More Space | System Settings → Displays | by hand |
+| 29 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
+| 30 | Remove all desktop widgets | Desktop: right-click each widget → Remove Widget (System Settings → Desktop & Dock → Widgets) | by hand |
+| 31 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
+| 32 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
+| 33 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | System Settings → Notifications → Application Notifications | by hand |
+| 34 | Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | System Settings → Spotlight → Results from Apps | by hand |
+| 35 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | check.sh |
+| 36 | Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT) | Gemini → Settings → Shortcuts | by hand |
+| 37 | Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings) | Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup) | by hand |
+| 38 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
+| 39 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
+| 40 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
 
-Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Natural scrolling is left to Logi Options+ because the global switch also flips the trackpad. The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
+Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
 #### Finder
 
@@ -359,9 +362,19 @@ Re-check after a major macOS upgrade; View Options can reset per folder.
 
 #### Logi Options+
 
+MX Master 3S settings, all checked read-only by the **Logi Options+** section of `check.sh` (expected values: `lib/logi-expected.list`):
+
 | Area | Setting | Value |
 |------|------|------|
-| Pointer & Scrolling | Smooth scrolling | On |
+| Point & Scroll → Scroll wheel | Scroll direction | Natural |
+| Point & Scroll → Scroll wheel | Smooth scrolling | On |
+| Point & Scroll → Scroll wheel | SmartShift | On |
+| Point & Scroll → Thumb wheel | Smooth scrolling | On |
+| Buttons → Thumb wheel | Action | Horizontal scroll |
+| Buttons → Gesture button | Action | Window navigation |
+| Point & Scroll → Pointer speed | Speed | 0.12 (±0.02) |
+
+Cloud backup: sign in to a Logi account in the app, then **MX Master 3S → More → Backups** and tick **Automatically create backups of settings for all devices**. Manual step `logi-cloud-backup` checks it (warns until it's on).
 
 #### Gemini
 
@@ -415,7 +428,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `logi-settings.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes

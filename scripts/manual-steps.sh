@@ -102,6 +102,9 @@ check_spec_ok() {
       case "$rest" in *[!A-Za-z0-9._:=,@/-]*) return 1 ;; esac
       return 0 ;;
     app:?*) return 0 ;;
+    logi:?*)
+      case "${spec#logi:}" in *[!a-z0-9,-]*|,*|*,|*,,*) return 1 ;; esac
+      return 0 ;;
   esac
   case "$NAMED_CHECKS" in *" $spec "*) return 0 ;; esac
   return 1
@@ -220,6 +223,29 @@ check_gh_auth() {
   fi
 }
 
+# logi:<id>[,<id>] — lib/logi-settings.py reads a temporary copy of Logi Options+'s
+# settings.db (deleted afterwards; the real database is never opened) and compares the
+# MX Master 3S values with lib/logi-expected.list.
+check_logi() {  # comma-separated ids
+  local ids="$1" py="" p out rc msgs
+  if [ ! -d "${MANUAL_STEPS_LOGI_APP:-/Applications/logioptionsplus.app}" ]; then
+    res warn "Logi Options+ not installed (brew bundle)"; return
+  fi
+  for p in "$(command -v python3 2>/dev/null)" /opt/homebrew/bin/python3 /usr/bin/python3; do
+    if [ -n "$p" ] && [ -x "$p" ]; then py="$p"; break; fi
+  done
+  if [ -z "$py" ]; then res hand "python3 not found; check in Logi Options+"; return; fi
+  if out="$(with_timeout 20 "$py" "$DOTDIR/lib/logi-settings.py" --only "$ids" </dev/null 2>&1)"; then rc=0; else rc=$?; fi
+  case "$rc" in
+    0) res ok "$(printf '%s\n' "$out" | awk -F'|' '$1 == "ok" { sub(/^[^|]*\|[^|]*\|/, ""); printf "%s%s", sep, $0; sep = "; " }')" ;;
+    1) msgs="$(printf '%s\n' "$out" | awk -F'|' '$1 == "drift" || $1 == "warn" { sub(/^[^|]*\|[^|]*\|/, ""); printf "%s%s", sep, $0; sep = "; " }')"
+       res warn "$msgs" ;;
+    3) res warn "Logi Options+ settings not found (open the app once)" ;;
+    *) msgs="$(printf '%s\n' "$out" | awk -F'|' '$1 == "error" { sub(/^[^|]*\|[^|]*\|/, ""); print; exit }')"
+       res hand "can't read Logi Options+ settings (${msgs:-rc=$rc}); check in the app" ;;
+  esac
+}
+
 run_check() {  # spec
   local spec="$1" rest path
   case "$spec" in
@@ -227,6 +253,7 @@ run_check() {  # spec
     '@check.sh') res covered "verified by check.sh" ;;
     tcc:*)       rest="${spec#tcc:}"; check_tcc "${rest%%:*}" "${rest#*:}" ;;
     defaults:*)  rest="${spec#defaults:}"; check_defaults "${rest%%:*}" "${rest#*:}" ;;
+    logi:*)      check_logi "${spec#logi:}" ;;
     app:*)
       path="${spec#app:}"; path="${path//@HOME@/$HOME}"
       if [ -e "$path" ]; then res ok "installed"; else res warn "not found at ${path/#$HOME/~}"; fi ;;

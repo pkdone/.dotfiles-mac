@@ -51,6 +51,10 @@ if [ -x ./tests/autofix.test.sh ]; then
   echo "  unit tests (lib/autofix.list safe / needs-Paul classification)"
   ./tests/autofix.test.sh || status=1
 fi
+if [ -x ./tests/logi-settings.test.sh ]; then
+  echo "  unit tests (lib/logi-settings.py read-only Logi Options+ check)"
+  ./tests/logi-settings.test.sh || status=1
+fi
 
 if [ "$status" -ne 0 ]; then
   echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2

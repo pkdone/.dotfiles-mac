@@ -89,3 +89,8 @@ jobs:
           # The safe / needs-Paul split for check.sh --fix: list format, the
           # required classes, and agreement with check.sh's fixid tags.
           ./tests/autofix.test.sh
+      - name: Run lib/logi-settings.py tests
+        run: |
+          # The read-only Logi Options+ check against a synthetic settings.db:
+          # ok / drift / warn, model lookup, tolerance, missing or unreadable DB.
+          ./tests/logi-settings.test.sh

@@ -58,6 +58,7 @@ no-title|Group A||Where||
 bad-open|Group A|Title|Where|ftp://nope|
 bad-check|Group A|Title|Where||frobnicate
 bad-tcc|Group A|Title|Where||tcc:Accessibility:com.evil';drop
+bad-logi|Group A|Title|Where||logi:wheel-smooth;rm
 split|Group B|Title|Where||
 split-2|Group A|Title|Where||app:Finder
 ROWS
@@ -70,11 +71,12 @@ has "required fields"   "id, group, title and where are required" "$out"
 has "bad open target"   "open 'ftp://nope'" "$out"
 has "unknown check"     "unknown check 'frobnicate'" "$out"
 has "unsafe tcc spec"   "unknown check 'tcc:Accessibility:com.evil';drop'" "$out"
+has "unsafe logi spec"  "unknown check 'logi:wheel-smooth;rm'" "$out"
 has "split group"       "group 'Group A' is split" "$out"
 
 # Bad rows are skipped (with a warning) so list still prints the good ones.
 good="$(MANUAL_STEPS_LIST="$tmp" "$MS" list 2>/dev/null | grep -cE '^ +[0-9]+\. ')"
-eq "list skips rows with missing/extra fields" 9 "$good"
+eq "list skips rows with missing/extra fields" 10 "$good"
 
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -1,0 +1,29 @@
+# Logi Options+ settings that check.sh verifies (read-only) for the MX Master 3S.
+# Read by lib/logi-settings.py from a temporary copy of
+# ~/Library/Application Support/LogiOptionsPlus/settings.db; nothing is ever written
+# back (restore is by hand in the app, or from Logi's cloud backup).
+#
+# The device is found by model id, never by serial number:
+#   model | <deviceModel> | <display name>
+#
+# Checks (pipe-delimited):
+#   id | scope | where | path | type | expected | tolerance | severity | label
+#   scope:     slot   = an assignment of the default profile whose slotId is
+#                       <device slotPrefix>_<where>; path is relative to that assignment
+#              global = a top-level settings key; where is unused; {model} in path is
+#                       replaced by the model id
+#   type:      str | bool | num (num: |actual - expected| <= tolerance)
+#   severity:  drift = a setting that changed (reported as DRIFT)
+#              warn  = not set up yet (reported as a warning)
+# Paths are dot-separated keys. Blank lines and lines beginning with # are ignored.
+
+model|2b034|MX Master 3S
+
+wheel-natural|slot|mouse_scroll_wheel_settings|card.mouseScrollWheelSettings.dir|str|NATURAL||drift|Main wheel: scroll direction Natural
+wheel-smooth|slot|mouse_scroll_wheel_settings|card.mouseScrollWheelSettings.isSmooth|bool|true||drift|Main wheel: Smooth scrolling On
+smartshift|slot|mouse_scroll_wheel_settings|card.mouseScrollWheelSettings.smartshift.isEnabled|bool|true||drift|Main wheel: SmartShift On
+thumb-horizontal|slot|thumb_wheel_adapter|card.name|str|ASSIGNMENT_NAME_HORIZONTAL_SCROLL||drift|Thumb wheel: Horizontal scroll
+thumb-smooth|slot|mouse_thumb_wheel_settings|card.mouseThumbWheelSettings.isSmooth|bool|true||drift|Thumb wheel: Smooth scrolling On
+gesture-window-nav|slot|c195|card.selectedNestedCard|str|window_navigation||drift|Gesture button: Window navigation
+pointer-speed|slot|mouse_settings|card.mouseSettings.pointerSpeed.active.value|num|0.12|0.02|drift|Pointer speed 0.12
+backup|global||settings_backup_state_v2.knownDevices.{model}|bool|true||warn|MX Master 3S cloud backup flag (settings_backup_state_v2)

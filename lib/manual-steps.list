@@ -21,6 +21,9 @@
 #                                           reading it needs Full Disk Access, else check by hand
 #            defaults:<domain>:<k=v>[,k=v]  every key reads back as that value
 #            app:<path>                     path exists (@HOME@ -> $HOME)
+#            logi:<id>[,<id>]               Logi Options+ values match lib/logi-expected.list
+#                                           (read from a temp copy of settings.db by
+#                                           lib/logi-settings.py; never written)
 #            @check.sh                      verified by its own check.sh section (not repeated here)
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
 #                                           named checks implemented in scripts/manual-steps.sh
@@ -59,8 +62,9 @@ trackpad-tracking-speed|Trackpad, mouse & pointer|Trackpad: Tracking speed Slowe
 trackpad-three-finger-drag|Trackpad, mouse & pointer|Trackpad: Three-finger drag Off|System Settings → Trackpad → More Gestures|x-apple.systempreferences:com.apple.Trackpad-Settings.extension|defaults:com.apple.AppleMultitouchTrackpad:TrackpadThreeFingerDrag=0
 trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Without Drag Lock)|System Settings → Accessibility → Pointer Control → Trackpad Options|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0
 pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
-mouse-settings|Trackpad, mouse & pointer|Mouse: tracking, double-click and scrolling speed faster; secondary click on right side; natural scrolling Off (the global switch also flips the trackpad, so use Logi Options+)|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|
-logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling On|Logi Options+ → Pointer & Scrolling|app:logioptionsplus|
+mouse-settings|Trackpad, mouse & pointer|Mouse (System Settings): tracking, double-click and scrolling speed faster; secondary click on right side (the wheel's direction, Natural, is set in Logi Options+ and checked by check.sh)|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|
+logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling On (main wheel and thumb wheel)|Logi Options+ → MX Master 3S → Point & Scroll|app:logioptionsplus|logi:wheel-smooth,thumb-smooth
+logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically create backups of settings for all devices)|Logi Options+ → sign in → MX Master 3S → More → Backups|app:logioptionsplus|logi:backup
 
 # ---- Display, keyboard & desktop ----
 display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|

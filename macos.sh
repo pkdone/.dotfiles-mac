@@ -489,7 +489,8 @@ cat <<'MANUAL'
 Still manual (not scriptable / out of scope) — see README:
   - Apple Account sign-in; User & Groups account picture
   - Displays "More Space"; Keyboard British input source
-  - Mouse + Trackpad speeds / natural scrolling (managed via Logi Options+)
+  - Mouse + Trackpad speeds (System Settings); MX Master 3S wheel (Natural), buttons
+    and cloud backup in Logi Options+ (checked by check.sh, never written)
   - Accessibility grants (TCC); Notifications; Spotlight result categories
   - Set Hostname (requires sudo)
 MANUAL

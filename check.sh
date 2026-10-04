@@ -6,7 +6,7 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -642,6 +642,47 @@ else
   else
     g_diff="$(diff <(printf '%s\n' "$g_want") <(printf '%s\n' "$g_eff") | grep -E '^[<>]' | head -3 | tr '\n' ' ')"
     bad "Ghostty's effective config differs from ghostty/config (< repo, > loaded): ${g_diff% } — check the symlink and override files"
+  fi
+fi
+
+# ---- 13c. Logi Options+ (MX Master 3S settings, check-only) ---------------
+# lib/logi-settings.py reads a temporary copy of Logi Options+'s settings.db (deleted
+# afterwards) and compares it with lib/logi-expected.list; the device is found by model,
+# not serial. Never writes the database: any drift is restored by hand in the app.
+# Cloud backup is reported by the manual-steps section (step logi-cloud-backup).
+hdr "Logi Options+"
+LOGI_APP=/Applications/logioptionsplus.app
+LOGI_HELPER="$DOTDIR/lib/logi-settings.py"
+CHECKED=$((CHECKED + 1))
+if [ ! -d "$LOGI_APP" ]; then
+  fixid app-install; warn "Logi Options+ not installed — brew bundle (cask \"logi-options+\")"
+elif [ -z "$DOT_PYTHON" ] || [ ! -r "$LOGI_HELPER" ]; then
+  fixid tooling; warn "can't check Logi Options+ settings (python3 or lib/logi-settings.py missing)"
+else
+  logi_ids="$(grep -Ev '^[[:space:]]*(#|$|model\|)' "$DOTDIR/lib/logi-expected.list" 2>/dev/null \
+    | cut -d'|' -f1 | grep -vx backup | tr '\n' ',' | sed 's/,$//')"
+  if logi_out="$(with_timeout 20 "$DOT_PYTHON" "$LOGI_HELPER" --only "$logi_ids" </dev/null 2>&1)"; then logi_rc=0; else logi_rc=$?; fi
+  logi_n=0
+  while IFS='|' read -r l_st _ l_msg; do
+    [ -n "$l_st" ] || continue
+    case "$l_st" in
+      ok)    logi_n=$((logi_n + 1)); [ "$logi_n" -eq 1 ] || CHECKED=$((CHECKED + 1)); pass "$l_msg" ;;
+      drift) logi_n=$((logi_n + 1)); [ "$logi_n" -eq 1 ] || CHECKED=$((CHECKED + 1))
+             fixid logi-settings; bad "$l_msg — set it back in Logi Options+ (MX Master 3S)" ;;
+      warn)  logi_n=$((logi_n + 1)); [ "$logi_n" -eq 1 ] || CHECKED=$((CHECKED + 1))
+             fixid logi-settings; warn "$l_msg" ;;
+      note)  note "$l_msg" ;;
+      *)     fixid logi-unreadable; warn "Logi Options+: ${l_msg:-$l_st}" ;;
+    esac
+  done <<LOGI_EOF
+$logi_out
+LOGI_EOF
+  case "$logi_rc" in
+    0|1|2|3) ;;
+    *) fixid logi-unreadable; warn "Logi Options+ check failed or timed out (rc=$logi_rc) — settings not verified" ;;
+  esac
+  if [ "$logi_n" -eq 0 ] && [ "$logi_rc" -le 1 ]; then
+    fixid logi-unreadable; warn "Logi Options+ check printed no results — settings not verified"
   fi
 fi
 
