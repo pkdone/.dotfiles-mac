@@ -1,0 +1,135 @@
+-- Unit tests for hammerspoon/modes.lua + the pure half of hammerspoon/mode_switcher.lua.
+-- Run by tests/modes.test.sh with a plain Lua 5.4 (CI) or inside Hammerspoon (`hs`).
+-- Returns (and prints) "modes tests: N passed, M failed".
+local DIR = (arg and arg[1]) or MODES_TEST_DIR or '.'
+local ms = dofile(DIR .. '/hammerspoon/mode_switcher.lua')
+local cfg = dofile(DIR .. '/hammerspoon/modes.lua')
+
+local pass, fail, out = 0, 0, {}
+local function ok(desc, cond, extra)
+  if cond then pass = pass + 1 else fail = fail + 1; out[#out + 1] = 'FAIL: ' .. desc .. (extra and (' — ' .. tostring(extra)) or '') end
+end
+local function eq(desc, want, got) ok(desc, want == got, 'expected [' .. tostring(want) .. '] got [' .. tostring(got) .. ']') end
+local function deepcopy(t)
+  if type(t) ~= 'table' then return t end
+  local r = {}
+  for k, v in pairs(t) do r[k] = deepcopy(v) end
+  return r
+end
+local function has(lines, needle)
+  for _, l in ipairs(lines) do if l:find(needle, 1, true) then return true end end
+  return false
+end
+
+-- ---- the real modes.lua -----------------------------------------------------
+local valid, errs = ms.validate(cfg)
+ok('modes.lua is valid', valid, errs and table.concat(errs, '; '))
+eq('order starts with Normal', 'Normal', cfg.order[1])
+for _, name in ipairs({ 'Normal', 'WebConf', 'DeepWork' }) do ok(name .. ' defined', cfg.modes[name] ~= nil) end
+eq('WebConf icon is the red record', 'record.circle.fill', cfg.modes.WebConf.icon.symbol)
+eq('DeepWork default timer', 50, cfg.modes.DeepWork.timerMinutes)
+eq('Chrome default scope', 'work-window', cfg.chrome.closeNonPinned)
+ok('Meet is never closed', ms.hostMatches('https://meet.google.com/abc', cfg.chrome.keepDomains))
+eq('validateFile on the repo file', 'ok', ms.validateFile(DIR .. '/hammerspoon/modes.lua'))
+
+-- ---- validation catches mistakes ----------------------------------------------
+local function bad(desc, mutate, needle)
+  local c = deepcopy(cfg); mutate(c)
+  local v, e = ms.validate(c)
+  ok(desc .. ' rejected', not v)
+  if needle then ok(desc .. ' message', e and table.concat(e, '; '):find(needle, 1, true) ~= nil, e and table.concat(e, '; ')) end
+end
+bad('missing Normal', function(c) c.modes.Normal = nil end, 'a Normal mode is required')
+bad('Normal with actions', function(c) c.modes.Normal.quit = { 'com.x.y' } end, "Normal can't have actions")
+bad('typo key', function(c) c.modes.WebConf.qiut = {} end, "unknown key 'qiut'")
+bad('bad bundle id', function(c) c.modes.WebConf.quit = { 'not a bundle' } end, 'bad bundle id')
+bad('unknown focus', function(c) c.modes.DeepWork.focus = 'Nope' end, "focus 'Nope'")
+bad('mode not in order', function(c) c.modes.Extra = { label = 'x', icon = { symbol = 'a', fallback = 'b' } } end, 'missing from order')
+bad('bad close scope', function(c) c.chrome.closeNonPinned = 'everything' end, 'closeNonPinned')
+bad('timer out of range', function(c) c.modes.DeepWork.timerMinutes = 0 end, 'timerMinutes must be 1-600')
+bad('meetings too frequent', function(c) c.meetings.checkEverySec = 1 end, 'checkEverySec')
+eq('validateFile reports syntax errors', 'error', (ms.validateFile(DIR .. '/tests/modes_spec.lua.nope')):sub(1, 5))
+
+-- ---- helpers --------------------------------------------------------------------
+eq('duration <1m', '<1m', ms.formatDuration(30))
+eq('duration minutes', '42m', ms.formatDuration(42 * 60 + 5))
+eq('duration hours', '2h 05m', ms.formatDuration(125 * 60))
+eq('url host', 'www.youtube.com', ms.urlHost('https://user@WWW.YouTube.com:443/watch?v=1'))
+ok('subdomain matches', ms.hostMatches('https://music.youtube.com/', { 'youtube.com' }))
+ok('lookalike does not match', not ms.hostMatches('https://notyoutube.com/', { 'youtube.com' }))
+ok('non-URL does not match', not ms.hostMatches('chrome://newtab/', { 'youtube.com' }))
+eq('two pinned tabs', 2, ms.pinnedCount({ 40, 40, 220, 220 }, 60))
+eq('no pinned tabs', 0, ms.pinnedCount({ 220, 220 }, 60))
+eq('crowded strip = unknown', nil, ms.pinnedCount({ 30, 30, 30 }, 60))
+eq('no widths = unknown', nil, ms.pinnedCount(nil, 60))
+
+-- ---- Chrome close plan ---------------------------------------------------------------
+local c = deepcopy(cfg.chrome)
+local wins = {
+  { id = 1, pinned = 1, tabs = { { id = 11, url = 'https://mail.google.com/' },      -- pinned
+                                 { id = 12, url = 'https://docs.google.com/x' },     -- non-pinned work
+                                 { id = 13, url = 'https://www.youtube.com/w' },     -- personal
+                                 { id = 14, url = 'https://meet.google.com/abc' } } },-- kept
+  { id = 2, pinned = 0, tabs = { { id = 21, url = 'https://github.com/' },           -- 2nd window: kept
+                                 { id = 22, url = 'https://reddit.com/r/x' } } },    -- personal
+}
+local p = ms.chromeClosePlan(c, wins)
+eq('personal tabs counted', 2, p.counts.personal)
+eq('non-pinned only in the front window', 1, p.counts.nonPinned)
+eq('front window closes 12 + 13', '12,13', table.concat(p.close[1].tabs, ','))
+eq('second window closes only reddit', '22', table.concat(p.close[2].tabs, ','))
+c.closeNonPinned = 'off'
+eq('scope off: personal only', 0, ms.chromeClosePlan(c, wins).counts.nonPinned)
+c.closeNonPinned = 'work-windows'
+eq('all work windows', 2, ms.chromeClosePlan(c, wins).counts.nonPinned)
+c.closeNonPinned = 'work-window'
+local unknown = ms.chromeClosePlan(c, { { id = 3, tabs = { { id = 31, url = 'https://a.example/' },
+                                                            { id = 32, url = 'https://youtube.com/' } } } })
+eq('pinned unknown: non-pinned kept', 0, unknown.counts.nonPinned)
+eq('pinned unknown: personal still closed', 1, unknown.counts.personal)
+ok('pinned unknown: noted', unknown.notes[1] and unknown.notes[1]:find("can't see which tabs are pinned", 1, true))
+local all = ms.chromeClosePlan(c, { { id = 4, pinned = 0, tabs = { { id = 41, url = 'https://a.example/' } } } })
+ok('window that would empty gets a new tab', all.close[1].keepWindow)
+c.personalProfiles = { 'Personal' }
+local pp = ms.chromeClosePlan(c, { { id = 5, profile = 'Personal', pinned = 0, tabs = { { id = 51, url = 'https://bank.example/' } } } })
+eq('personal profile window: all tabs personal', 1, pp.counts.personal)
+
+-- ---- dry-run plans -----------------------------------------------------------------------
+local snap = { current = 'Normal', changes = {}, shortcuts = {},
+  running = { ['net.whatsapp.WhatsApp'] = true, ['com.tinyspeck.slackmacgap'] = true, ['com.granola.app'] = true },
+  hidden = {}, names = { ['net.whatsapp.WhatsApp'] = 'WhatsApp', ['com.tinyspeck.slackmacgap'] = 'Slack',
+                         ['com.spotify.client'] = 'Spotify', ['com.granola.app'] = 'Granola' } }
+local wc = ms.plan(cfg, 'WebConf', snap)
+ok('WebConf: dry-run header', wc[1]:find('dry run, nothing changed', 1, true))
+ok('WebConf: state written first', has(wc, 'write state.json'))
+ok('WebConf: quits WhatsApp', has(wc, 'quit WhatsApp politely'))
+ok('WebConf: Spotify not running', has(wc, 'quit Spotify: not running, skip'))
+ok('WebConf: hides Slack', has(wc, 'hide Slack'))
+ok('WebConf: missing Focus Shortcut noted', has(wc, "Shortcut 'Mode WebConf On' (MISSING"))
+ok('WebConf: display awake', has(wc, 'keep the display awake'))
+ok('WebConf: badges explained', has(wc, 'no macOS API'))
+ok('WebConf: Granola to the front', has(wc, 'bring Granola to the front'))
+local dw = ms.plan(cfg, 'DeepWork', snap)
+ok('DeepWork: quits Slack', has(dw, 'quit Slack politely'))
+ok('DeepWork: hides Granola', has(dw, 'hide Granola'))
+ok('DeepWork: timer', has(dw, '50-minute countdown'))
+ok('DeepWork: never auto-switches', has(dw, 'never switches by itself'))
+ok('DeepWork: Spotify untouched', not has(dw, 'Spotify'))
+local from = deepcopy(snap); from.current = 'WebConf'
+from.changes = { quit = { { bundle = 'com.spotify.client', name = 'Spotify' } }, hidden = { { bundle = 'com.tinyspeck.slackmacgap', name = 'Slack' } },
+                 focus = 'WebConf', desktopIcons = true, displayAwake = true, chromeClosed = 3 }
+local sw = ms.plan(cfg, 'DeepWork', from)
+ok('switch between modes restores first', has(sw, 'first, restore'))
+local nm = ms.plan(cfg, 'Normal', from)
+ok('Normal: reopens quit apps in background', has(nm, 'reopen Spotify in the background'))
+ok('Normal: unhides', has(nm, 'unhide Slack'))
+ok('Normal: Focus off', has(nm, "Shortcut 'Mode WebConf Off'"))
+ok('Normal: desktop icons back', has(nm, 'show desktop icons'))
+ok('Normal: display sleep back', has(nm, 'allow display sleep'))
+ok('Normal: closed tabs not reopened', has(nm, 'not reopened'))
+ok('Normal from Normal: nothing', has(ms.plan(cfg, 'Normal', snap), 'nothing recorded to restore'))
+
+local summary = string.format('modes tests: %d passed, %d failed', pass, fail)
+if #out > 0 then summary = table.concat(out, '\n') .. '\n' .. summary end
+print(summary)
+return summary

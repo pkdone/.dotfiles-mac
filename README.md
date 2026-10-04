@@ -8,7 +8,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
-- `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`)
+- `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua` and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
 - `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `autofix-lib.sh`, `defaults-lib.sh`)
@@ -166,6 +166,43 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 
 **Manual once (TCC):** System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27) → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](#manual-steps).)
 
+### Modes (menu-bar switcher)
+
+A Hammerspoon menu-bar dropdown switches between three modes. Switching is **manual only**: no hotkey, no automatic triggers. Settings are in [`hammerspoon/modes.lua`](hammerspoon/modes.lua) (a commented Lua table); the engine is `hammerspoon/mode_switcher.lua`, loaded from `init.lua`.
+
+| Mode | Icon | What it does |
+|------|------|------|
+| **Normal** | ○ circle | Undoes whatever the last mode recorded: reopens apps it quit (in the background, not hidden), unhides apps it hid, turns its Focus off, shows desktop icons, lets the display sleep again. Notification badges come back with the Focus. |
+| **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; hides desktop icons (a wallpaper overlay above them, so no Finder restart); keeps the display awake; tidies Chrome (below); brings Granola to the front. Keeps the Dock. |
+| **DeepWork** | `brain.head.profile` + time left (e.g. `42m`) | Quits Slack and WhatsApp, hides Granola, DeepWork Focus on, leaves Spotify alone. Counts down 50 min (`timerMinutes`); at the end a notification offers **Take a break** / **Back to Normal** / **Another session** (it never switches by itself). Meeting alerts: every minute it asks Shortcuts for events starting within 5 min and alerts you itself, so the Focus can hold everything else back. |
+
+The dropdown ticks the current mode, shows how long it's been on, notes anything missing (Shortcuts, meeting alerts) or skipped, and has **Dry run** (prints what a mode would do to the Hammerspoon Console, changes nothing) and **Open switch log**. The icon's tooltip names the mode.
+
+**Safety rails**
+
+- `~/Library/Application Support/pdone-modes/state.json` records the mode and what it changed, written **before** anything changes. After a Hammerspoon reload or a reboot the switcher reads it, shows the persisted mode (re-applying the overlay, display-awake and timer), and Normal can still undo everything.
+- Switching from one non-Normal mode to another runs Normal's restore first.
+- Apps are quit politely (`hs.application:kill()`, like Command-Q), never forced. An app with unsaved work, or one that doesn't quit, is left running and you're told.
+- Every switch is logged to `~/Library/Logs/pdone-modes.log` (time, mode, how long the previous mode lasted).
+- Menu-bar notification badges can't be switched off (macOS has no API for it), so the Focus is what hides them.
+
+**Chrome in WebConf.** Closed tabs' addresses are never saved (not in `state.json`, not in the log). In `modes.lua` → `chrome`:
+
+- `personalDomains` (e.g. youtube.com, netflix.com, reddit.com) and `personalProfiles`: those tabs close in every window.
+- `closeNonPinned`: `'work-window'` (default: the other non-pinned tabs in the front window of the work profile), `'work-windows'`, or `'off'`. Pinned tabs are always kept. Chrome's scripting can't say which tabs are pinned, so the switcher reads the tab strip with Accessibility; if it can't (window on another Space), it keeps the non-pinned tabs and tells you.
+- `keepDomains` (Meet, Zoom, Teams, Slack) are never closed.
+- Try it safely first: menu → Dry run → **Chrome tabs WebConf would close** (counts only).
+
+**Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs Shortcuts you create once: `Mode WebConf On` / `Mode WebConf Off` / `Mode DeepWork On` / `Mode DeepWork Off` (one **Set Focus** action each), plus `Mode Upcoming Meetings` for DeepWork's meeting alerts. Hammerspoon has no calendar permission of its own, so Shortcuts does the calendar lookup. If any are missing, the mode still runs and the menu says what's missing. The manual steps `mode-*` walk through it, and `check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
+
+From a terminal:
+
+```bash
+hs -c "return loaded.mode_switcher.status()"
+hs -c "return loaded.mode_switcher.dryRun('WebConf')"   # or DeepWork / Normal; changes nothing
+hs -c "loaded.mode_switcher.switch('Normal')"
+```
+
 ### App settings as code (Ghostty, Raycast)
 
 **Ghostty: fully in the repo.** `ghostty/config` is symlinked to `~/.config/ghostty/config` (`lib/links.list`). `check.sh` (the **Ghostty config** section) checks four things:
@@ -204,7 +241,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-By default `check.sh` is read-only (see [Read-only vs `--fix`](#read-only-vs---fix-self-healing-drift) for the opt-in self-healing mode): it reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/Ghostty config/Logi Options+/`*.app.back`, FileVault / pending updates, …) and ends with the [manual steps](#manual-steps): failed automated checks are warnings (not drift), and steps with no reliable check show as `info` lines, counted as "to check by hand" in the summary. Exits non-zero on drift — run after macOS updates:
+By default `check.sh` is read-only (see [Read-only vs `--fix`](#read-only-vs---fix-self-healing-drift) for the opt-in self-healing mode): it reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/Ghostty config/Logi Options+/Modes/`*.app.back`, FileVault / pending updates, …) and ends with the [manual steps](#manual-steps): failed automated checks are warnings (not drift), and steps with no reliable check show as `info` lines, counted as "to check by hand" in the summary. Exits non-zero on drift — run after macOS updates:
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -357,6 +394,11 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 | 38 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
 | 39 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
 | 40 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
+| 41 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so its meeting alerts get through) | System Settings → Focus → Add Focus… → Custom | check.sh |
+| 42 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | check.sh |
+| 43 | Create Shortcut "Mode Upcoming Meetings": Find Calendar Events where Start Date is in the next 5 minutes → Get Details of Calendar Events (Title) → Combine Text (New Lines) → Stop and Output; run it once and allow Calendar access | Shortcuts → + (Hammerspoon has no calendar permission of its own; Shortcuts does the lookup) | check.sh |
+| 44 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
+| 45 | Allow Hammerspoon to control Google Chrome (asked the first time WebConf tidies tabs; try it safely with the menu's Dry run → Chrome tabs WebConf would close) | System Settings → Privacy & Security → Automation → Hammerspoon → Google Chrome | by hand |
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
@@ -441,7 +483,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `modes.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes

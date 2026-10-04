@@ -37,6 +37,9 @@ url-handler|PAUL||default-app changes can raise a macOS confirmation dialog — 
 app-config|PAUL||an app config in the repo is invalid or overridden — fix ghostty/config, or merge and remove the override by hand
 logi-settings|PAUL||a Logi Options+ setting (MX Master 3S) drifted from lib/logi-expected.list — set it back in the app; settings.db is never written
 logi-unreadable|PAUL||Logi Options+ settings.db missing or in an unreadable format — open the app once, or update lib/logi-settings.py
+modes-config|PAUL||hammerspoon/modes.lua invalid or state.json unreadable — fix modes.lua and reload Hammerspoon / switch to Normal from the menu bar
+modes-setup|PAUL||a Focus mode or Focus / meeting Shortcut named in modes.lua is missing — create it (scripts/manual-steps.sh open)
+mode-long|PAUL||a non-Normal mode has been on longer than HEALTH_MODE_MAX_HOURS — switch back from the menu bar (never switched automatically)
 karabiner-rules|PAUL||karabiner.json is a repo file — restore it from git (dotfiles git state)
 repo-file|PAUL||a repo script is missing — restore it from git (dotfiles git state)
 login-items|PAUL||login items — System Settings → General → Login Items & Extensions
