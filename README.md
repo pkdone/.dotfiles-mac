@@ -164,7 +164,7 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 - Screen names are logged to the Hammerspoon Console (menu-bar icon → Console). Status from a terminal: `hs -c 'loaded.sidecar_slack.status()'`. If your iPad shows up under another name: `hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad', '<name>'}); hs.reload()"`.
 - `check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, and warns if Hammerspoon isn't running or lacks Accessibility. `macos.sh` / `check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
 
-**Manual once (TCC):** System Settings → Privacy & Security → **Accessibility** → enable **Hammerspoon** (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off.
+**Manual once (TCC):** System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27) → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off.
 
 ### macOS defaults
 
@@ -244,7 +244,7 @@ The settings below aren't automated (not exposed via `defaults`, require sudo, o
 | Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
 | Privacy & Security | Full Disk Access — Ghostty | On | Needed for interactive `./check.sh` Login Items + Finder Recents (sharedfilelist / BTM). Grok Bot already has this for unattended runs. |
 | Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable (`karabiner/karabiner.json` is managed). After install: enable DriverKit VirtualHIDDevice; Accessibility for Karabiner-Elements + Karabiner-Core-Service (`/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app`); allow Login Items background |
-| Hammerspoon | Privacy & Security → Accessibility — Hammerspoon | On | TCC — not scriptable. Needed to move/full-screen Slack and send zoom keys (see [Hammerspoon](#hammerspoon-sidecar--slack)) |
+| Hammerspoon | Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) — Hammerspoon | On | TCC — not scriptable. Needed to move/full-screen Slack and send zoom keys (see [Hammerspoon](#hammerspoon-sidecar--slack)) |
 
 #### Finder
 
@@ -287,7 +287,7 @@ To bind a global hotkey for activating Finder from anywhere:
 
 To enable Clipboard History:
 1. Open Raycast and run the **Clipboard History** command once
-2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Accessibility → enable Raycast)
+2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) → enable Raycast)
 3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard", then in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V`.
    - Avoid `Command + Shift + V` (paste without formatting) and `Command + Option + V` (Finder paste-as-move).
 4. Set **Keep History For** to 1 Day

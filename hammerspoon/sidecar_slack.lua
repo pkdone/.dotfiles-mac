@@ -15,7 +15,7 @@
 -- If your Sidecar screen name doesn't match, set extra name fragments, then reload:
 --   hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad'}); hs.reload()"
 --
--- Needs Accessibility: System Settings -> Privacy & Security -> Accessibility -> Hammerspoon.
+-- Needs Accessibility: System Settings -> Privacy & Security -> Device Control and Data Access (Accessibility before macOS 27) -> Hammerspoon.
 
 local M = {}
 

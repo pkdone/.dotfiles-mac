@@ -451,7 +451,7 @@ else
     ax="$(hs -q -t 3 -c 'hs.accessibilityState()' </dev/null 2>/dev/null || true)"
     case "$ax" in
       true)  pass "Hammerspoon has Accessibility" ;;
-      false) warn "Hammerspoon lacks Accessibility — System Settings → Privacy & Security → Accessibility → enable Hammerspoon" ;;
+      false) warn "Hammerspoon lacks Accessibility — System Settings → Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) → enable Hammerspoon" ;;
       *)     warn "could not query Hammerspoon via hs CLI (hs.ipc not loaded?) — check Accessibility by hand" ;;
     esac
   fi
