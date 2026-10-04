@@ -1,0 +1,37 @@
+# Login / background items that are EXPECTED to be enabled
+# (System Settings → General → Login Items & Extensions). check.sh ("Mac health")
+# warns about any enabled item that is neither listed here nor approved by an MDM
+# Service Management rule (Kandji pushes those; lib/btm-login-items.py reads them from
+# the BTM store, so company agents such as Iru, Cyberhaven, Phorion EDR, Fleet, Formal,
+# Zoom, Docker, Chrome and 1Password need no row here). Items whose app no longer
+# exists are always flagged as stale, even if listed.
+#
+# Format (pipe-delimited): type | value | note
+#   type:  team          Apple Team ID (all of that developer's items)
+#          bundle        bundle id (also covers login items/agents inside that app)
+#          label         launchd label (LaunchAgents / LaunchDaemons)
+#          label-prefix  launchd label prefix
+# See what's enabled now: python3 lib/btm-login-items.py --audit lib/login-items-allow.list
+# Blank lines and lines beginning with # are ignored.
+
+# ---- Tools this repo sets up (Brewfile / links.list) ----
+team|G43BCU2T37|Karabiner-Elements agents and daemons (Core-Service, VirtualHIDDevice)
+bundle|org.hammerspoon.Hammerspoon|Hammerspoon opens at login (Sidecar → Slack)
+bundle|com.raycast.macos|Raycast opens at login
+team|QED4VVPZWA|Logi Options+ agents and updater
+bundle|com.mitchellh.ghostty|Ghostty opens at login
+bundle|com.granola.app|Granola opens at login
+bundle|com.tinyspeck.slackmacgap|Slack opens at login
+bundle|net.whatsapp.WhatsApp|WhatsApp opens at login
+bundle|com.anysphere.sand|Grok Bot opens at login
+label-prefix|com.microsoft.teams2|Microsoft Teams agent (cask microsoft-teams)
+team|X4QN7LTP59|Multipass daemon (cask multipass)
+label|com.pdone.pin-dictation-hotkey-164|this repo's LaunchAgent (launchagents/)
+
+# ---- Company / MDM apps (most are also covered by MDM rules) ----
+team|2BUA8C4S2C|1Password launcher and browser helper (Iru Self Service)
+bundle|com.okta.mobile|Okta Verify opens at login (Iru Self Service)
+team|P3FGV63VK7|Kandji / Iru agent and menu
+team|6KKW3K37TU|Cyberhaven
+team|Z2FDA4QHGU|Phorion EDR
+team|8VBZ3948LU|Fleet orbit
