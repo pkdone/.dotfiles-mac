@@ -11,8 +11,8 @@ Personal macOS dotfiles and bootstrap setup.
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `defaults-lib.sh`)
-- `scripts/` — helpers (e.g. `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `mdm-apps.list`, `manual-steps.list`, `defaults-lib.sh`)
+- `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `tests/`, `hooks/` — unit tests and pre-push lint/test gate
@@ -64,7 +64,7 @@ These apps can't be installed by `brew bundle`, so set them up by hand after boo
 - **Okta Verify** — company MDM (Kandji). Listed in `lib/mdm-apps.list`, not the Brewfile: `mas` cannot upgrade the `root:wheel` App Store copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`. Updates come from MDM / the App Store UI.
 - **1Password** (desktop) — company MDM (Kandji Self Service). Listed in `lib/mdm-apps.list`, not the Brewfile, so Homebrew and Kandji never fight over the app. The CLI (`1password-cli` / `op`) stays in the Brewfile; turn on Settings → Developer → Integrate with 1Password CLI in the app.
 
-Do these before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
+These are also in the [manual steps](#manual-steps) checklist (`scripts/manual-steps.sh`). Do them before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
 
 ### Set login shell
 
@@ -150,7 +150,7 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 - Top-row brightness/volume still work without Fn
 - `check.sh` drifts if the dir symlink, Fn-kill rule, or Finder Trash rule is missing
 
-**Manual once (TCC / DriverKit):** see the Karabiner-Elements row under [Manual macOS tweaks](#manual-macos-tweaks) (Driver Extensions + Accessibility + Login Items). Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
+**Manual once (TCC / DriverKit):** Driver Extensions + Device Control and Data Access (Karabiner-Core-Service) + Allow in the Background — see [Manual steps](#manual-steps) (`karabiner-*`; `check.sh` verifies the driver and the Core-Service grant). Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
 
 ### Hammerspoon (Sidecar → Slack)
 
@@ -162,9 +162,9 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 - Does nothing if Slack isn't running. Screen changes are debounced and only real Sidecar on/off transitions act.
 - **Manual toggle / test:** `Shift + Control + Option + Command + S`.
 - Screen names are logged to the Hammerspoon Console (menu-bar icon → Console). Status from a terminal: `hs -c 'loaded.sidecar_slack.status()'`. If your iPad shows up under another name: `hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad', '<name>'}); hs.reload()"`.
-- `check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, and warns if Hammerspoon isn't running or lacks Accessibility. `macos.sh` / `check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
+- `check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, warns if Hammerspoon isn't running, and (Manual steps section) warns if it lacks Device Control and Data Access. `macos.sh` / `check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
 
-**Manual once (TCC):** System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27) → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off.
+**Manual once (TCC):** System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27) → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](#manual-steps).)
 
 ### macOS defaults
 
@@ -185,7 +185,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 > _Standalone tool — not run by `bootstrap.sh`; run it whenever you want to check for drift._
 
-`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/`*.app.back`, FileVault / pending updates, …). Exits non-zero on drift — run after macOS updates:
+`check.sh` is read-only: reports drift vs the repo (symlinks, Brewfile + undeclared extras, defaults, Dock, shell, hostname, handlers, unwanted apps, Dictation/Karabiner/Hammerspoon/Login Items/Recents/CotEditor/`*.app.back`, FileVault / pending updates, …) and ends with the [manual steps](#manual-steps): failed automated checks are warnings (not drift), and steps with no reliable check show as `info` lines, counted as "to check by hand" in the summary. Exits non-zero on drift — run after macOS updates:
 
 ```bash
 ~/.dotfiles-mac/check.sh
@@ -208,47 +208,69 @@ To find which `defaults` key backs a System Settings toggle (so you can add it t
 
 - It scans every domain, so the diff usually includes a little unrelated churn (timestamps, recent-item lists), and each snapshot takes a minute or so. Look for the row matching what you toggled and ignore the rest.
 - `cfprefsd` caches preferences, so a value you just changed may not appear until you quit and reopen System Settings (or run `killall cfprefsd`) before the `after` snapshot.
-- Settings not exposed via `defaults` (private-API sliders, sudo-only, TCC-gated) won't show up — those stay in the manual list below.
+- Settings not exposed via `defaults` (private-API sliders, sudo-only, TCC-gated) won't show up — those stay in `lib/manual-steps.list` (see [Manual steps](#manual-steps)).
 
-### Manual macOS tweaks
+### Manual steps
 
-The settings below aren't automated (not exposed via `defaults`, require sudo, or out of scope) — apply them by hand on a fresh machine to match this setup.
+> _Manual — no script can do these. `install.sh` and `bootstrap.sh` print this checklist when they finish and, on a terminal, offer to walk through it._
 
-#### System Settings
+Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't exposed via `defaults`, are SIP-protected, device-specific or fragile to write (notifications, Spotlight, display scaling, trackpad/mouse feel). **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it:
 
-| Area | Setting | Value | Reason not automated |
-|------|------|------|------|
-| Apple Account | ID | `<myuserid>@icloud.com` | Interactive Apple ID sign-in; not a `defaults` key |
-| System Settings → Apple ID → iCloud | Photos, iCloud Drive, Messages (and other unused sync) Off; Passwords + Find My On | As listed | Apple Account UI; no supported durable CLI — do by hand. Passwords = iCloud Keychain — do not turn Off casually |
-| Displays | Built-in Display | More Space | Display scaling is hardware-specific; not reliably scriptable |
-| Appearance | Sidebar icon size | Large | Now in `lib/macos-defaults.list` (`NSTableViewDefaultSizeMode` = `3`); `macos.sh` / `check.sh` |
-| Desktop & Dock | Widgets on desktop | None (all removed) | Widget placement isn't exposed via `defaults`; removed per-widget in the UI |
-| Keyboard | Text input sources | British | Input sources are a complex array blob; error-prone to script |
-| Mouse | Tracking speed | faster | Device-specific pointer scaling; left manual to preserve feel |
-| Mouse | Natural scrolling | Off | Global key also flips the trackpad; handled via Logi Options+ |
-| Mouse | Secondary click | Click Right Side | Button mapping stored per-device, not a stable global key |
-| Mouse | Double click speed | faster | Device-specific timing; no stable global `defaults` key |
-| Mouse | Scrolling speed | faster | Device-specific scaling; left manual |
-| Trackpad | Point & Click tracking speed | Slower | Trackpad prefs span two interdependent domains; fragile to script |
-| Trackpad | Point & Click - click | Light | Trackpad prefs span two interdependent domains; fragile to script |
-| Trackpad | Point & Click - Lookup & Data Detectors | off | Trackpad prefs span two interdependent domains; fragile to script |
-| Trackpad | Point & Click - Secondary click | Click in bottom right corner | Trackpad prefs span two interdependent domains; fragile to script |
-| Trackpad | Point & Click - Tap to click | On | Trackpad prefs span two interdependent domains; fragile to script |
-| Trackpad | Point & Click - Force Click and haptic feedback | Off | Trackpad prefs span two interdependent domains; fragile to script |
-| Trackpad | More Gestures - Three-finger drag | Off | Trackpad prefs span two interdependent domains; fragile to script |
-| Accessibility | Pointer Control — Trackpad Options — Use trackpad for dragging | On (Without Drag Lock) | Accessibility settings are TCC-protected; not writable via `defaults` |
-| Accessibility | Display — Pointer — Pointer size | One notch above Normal | Accessibility settings are TCC-protected; not writable via `defaults` |
-| User & Groups | Main user's icon | Dog | Account picture is set via Directory Services, not `defaults` |
-| Notifications | When mirroring or sharing the display | Notifications Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
-| Notifications | App notifications turned Off: Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | Off | Notification prefs are SIP-protected (ncprefs); unsafe to script |
-| Spotlight | Results from Apps — disable: Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | Off | Changing categories triggers reindexing; complex ordered array, out of scope |
-| Privacy & Security | Full Disk Access — Ghostty | On | Needed for interactive `./check.sh` Login Items + Finder Recents (sharedfilelist / BTM). Grok Bot already has this for unattended runs. |
-| Karabiner-Elements | Driver Extensions + Accessibility (Karabiner-Elements, Karabiner-Core-Service) + Login Items background | Enabled | TCC / DriverKit — not scriptable (`karabiner/karabiner.json` is managed). After install: enable DriverKit VirtualHIDDevice; Accessibility for Karabiner-Elements + Karabiner-Core-Service (`/Library/Application Support/org.pqrs/Karabiner-Elements/Karabiner-Core-Service.app`); allow Login Items background |
-| Hammerspoon | Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) — Hammerspoon | On | TCC — not scriptable. Needed to move/full-screen Slack and send zoom keys (see [Hammerspoon](#hammerspoon-sidecar--slack)) |
+```bash
+~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist
+~/.dotfiles-mac/scripts/manual-steps.sh open    # walk through the steps not yet done, opening each System Settings page (terminal only; --all for every step)
+~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand (also the "Manual steps" section of check.sh)
+```
+
+`check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), trackpad and pointer `defaults`, the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, `gh auth status` and `op whoami`. Steps marked `check.sh` below are verified by their own `check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and refresh this table with `scripts/manual-steps.sh list --markdown`.
+
+| # | Step | Where | Checked |
+|---|------|------|------|
+| 1 | Sign in to the GitHub CLI (needed to clone this private repo) | Terminal: gh auth login | auto |
+| 2 | Sign in with your Apple Account (your @icloud.com Apple ID) | System Settings → Apple Account | by hand |
+| 3 | iCloud: Photos, iCloud Drive, Messages and other unused sync Off; Passwords (iCloud Keychain) and Find My On | System Settings → Apple Account → iCloud | by hand |
+| 4 | Sign in to the App Store (brew bundle needs it for WhatsApp and the other mas apps) | App Store → Store → Sign In | by hand |
+| 5 | Install Okta Verify and 1Password from Iru Self Service (Kandji), not Homebrew | Applications → Iru Self Service | check.sh |
+| 6 | Sign in to 1Password and unlock it | 1Password app | by hand |
+| 7 | Turn on Integrate with 1Password CLI, then run op whoami in a terminal | 1Password → Settings → Developer | auto |
+| 8 | Install Cursor Nightly (separate app, next to the stable Cursor) | cursor.com/nightlydownload | auto |
+| 9 | Install YouTube Music as a Chrome app | Chrome → music.youtube.com → ⋮ → Cast, save, and share → Install page as app | auto |
+| 10 | Allow Hammerspoon (Sidecar → Slack), then restart it and choose Reload Config | System Settings → Privacy & Security → Device Control and Data Access → Hammerspoon | auto |
+| 11 | Enable the Karabiner DriverKit VirtualHIDDevice driver | System Settings → General → Login Items & Extensions → Driver Extensions | auto |
+| 12 | Allow Karabiner-Elements and Karabiner-Core-Service | System Settings → Privacy & Security → Device Control and Data Access | auto |
+| 13 | Allow Karabiner-Elements to run in the background | System Settings → General → Login Items & Extensions → Allow in the Background | by hand |
+| 14 | Allow Raycast (needed for Clipboard History) | System Settings → Privacy & Security → Device Control and Data Access → Raycast | auto |
+| 15 | Give Ghostty Full Disk Access (lets check.sh read Login Items and Finder Recents) | System Settings → Privacy & Security → Full Disk Access → Ghostty | auto |
+| 16 | Give Grok Bot Full Disk Access (for its unattended check.sh runs) | System Settings → Privacy & Security → Full Disk Access → Grok Bot | auto |
+| 17 | Trackpad: Tap to click On | System Settings → Trackpad → Point & Click | auto |
+| 18 | Trackpad: Click pressure Light | System Settings → Trackpad → Point & Click → Click | auto |
+| 19 | Trackpad: Secondary click = Click in bottom right corner | System Settings → Trackpad → Point & Click → Secondary click | auto |
+| 20 | Trackpad: Look up & data detectors Off; Force Click and haptic feedback Off | System Settings → Trackpad → Point & Click | by hand |
+| 21 | Trackpad: Tracking speed Slower | System Settings → Trackpad → Point & Click → Tracking speed | by hand |
+| 22 | Trackpad: Three-finger drag Off | System Settings → Trackpad → More Gestures | auto |
+| 23 | Use trackpad for dragging On (Without Drag Lock) | System Settings → Accessibility → Pointer Control → Trackpad Options | auto |
+| 24 | Pointer size one notch above Normal | System Settings → Accessibility → Display → Pointer → Pointer size | auto |
+| 25 | Mouse: tracking, double-click and scrolling speed faster; secondary click on right side; natural scrolling Off (the global switch also flips the trackpad, so use Logi Options+) | System Settings → Mouse | by hand |
+| 26 | Logi Options+: Smooth scrolling On | Logi Options+ → Pointer & Scrolling | by hand |
+| 27 | Built-in display: More Space | System Settings → Displays | by hand |
+| 28 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
+| 29 | Remove all desktop widgets | Desktop: right-click each widget → Remove Widget (System Settings → Desktop & Dock → Widgets) | by hand |
+| 30 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
+| 31 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
+| 32 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | System Settings → Notifications → Application Notifications | by hand |
+| 33 | Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | System Settings → Spotlight → Results from Apps | by hand |
+| 34 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | check.sh |
+| 35 | Finder View Options: icon size 72, text size 13 (Use as Defaults) | Finder → View → Show View Options (Command+J) | check.sh |
+| 36 | Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT) | Gemini → Settings → Shortcuts | by hand |
+| 37 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | by hand |
+| 38 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
+| 39 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
+
+Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Natural scrolling is left to Logi Options+ because the global switch also flips the trackpad. The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
 #### Finder
 
-Per-window View Options and chrome (kept manual so folder views stay intentional):
+Per-window View Options and chrome (kept manual so folder views stay intentional; the default icon view 72/13 is pinned by `macos.sh` and checked by `check.sh`):
 
 1. Open any Finder window → **View → Show View Options** (`Command + J`)
 2. Set **Icon size** to **72×72**
@@ -300,8 +322,8 @@ To enable Clipboard History:
 | Script | What it does, and when to run it |
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
-| `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
-| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates). Run any time (especially after a macOS update). Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
+| `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
+| `check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, and the manual-steps checks). Run any time (especially after a macOS update). Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
 | `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme default apps from `lib/url-handlers.list` (e.g. mailto → Chrome). `--dry-run` / `--list`. Idempotent; needs `duti`. |
@@ -309,6 +331,7 @@ To enable Clipboard History:
 | `shell.sh` | Make fish the login shell. Run once on a fresh machine (see "Set login shell"). Idempotent; sudo/`chsh` only if needed. |
 | `hostname.sh` | Set HostName/LocalHostName/ComputerName. Run once on a fresh machine (see "Set Hostname"). Idempotent; sudo only if a name differs. |
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
+| `scripts/manual-steps.sh` | The by-hand steps from `lib/manual-steps.list`: `list` (numbered checklist, `--markdown` for the README table), `open` (interactive walk-through that opens each settings page), `check` (read-only ok / warn / by hand; also run by `check.sh`). |
 
 All scripts accept `-h`/`--help`.
 
@@ -316,7 +339,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests. A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes
@@ -333,6 +356,7 @@ dotpush "your message"
 - **Desktop assignments:** set each app via its Dock icon → Options → Assign To (macOS has no reliable way to script this), then record it in `lib/desktop-bindings.list` so `check.sh` flags it if macOS drops or moves the pin. Desktop numbers are for the main display.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
 - **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.
+- **Manual steps:** add a row to `lib/manual-steps.list` (with a read-only check if one is reliable), then refresh the README table with `scripts/manual-steps.sh list --markdown`.
 - After any change, run `check.sh` to confirm the machine still matches the repo.
 
 ### Fish functions
