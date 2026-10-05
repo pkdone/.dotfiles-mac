@@ -391,6 +391,7 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 | 42 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | check.sh |
 | 43 | Create Shortcut "Mode Upcoming Meetings": Find Calendar Events where Start Date is in the next 5 minutes → Get Details of Calendar Events (Title) → Combine Text (New Lines) → Stop and Output; run it once and allow Calendar access | Shortcuts → + (Hammerspoon has no calendar permission of its own; Shortcuts does the lookup) | check.sh |
 | 44 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
+| 45 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (○ / red ⏺ / brain) | by hand |
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
