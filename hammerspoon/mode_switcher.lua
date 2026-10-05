@@ -3,7 +3,7 @@
 -- Settings live in modes.lua (pure data). Switching is manual only, from the menu-bar
 -- dropdown: no hotkey, no automatic triggers. The menu ticks the current mode; the icon
 -- is an SF Symbol (rendered once to ~/Library/Caches/pdone-modes, text fallback):
--- Normal = house, WebConf = red record.circle.fill (on air), DeepWork = brain + time left.
+-- Normal = desktopcomputer, WebConf = red record.circle.fill (on air), DeepWork = brain + time left.
 --
 -- State: ~/Library/Application Support/pdone-modes/state.json, written BEFORE anything
 -- changes, records what the current mode changed so Normal can undo exactly that, also

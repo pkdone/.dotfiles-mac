@@ -26,7 +26,7 @@ local valid, errs = ms.validate(cfg)
 ok('modes.lua is valid', valid, errs and table.concat(errs, '; '))
 eq('order starts with Normal', 'Normal', cfg.order[1])
 for _, name in ipairs({ 'Normal', 'WebConf', 'DeepWork' }) do ok(name .. ' defined', cfg.modes[name] ~= nil) end
-eq('Normal icon is the house', 'house', cfg.modes.Normal.icon.symbol)
+eq('Normal icon is the desktop computer', 'desktopcomputer', cfg.modes.Normal.icon.symbol)
 eq('WebConf icon is the red record', 'record.circle.fill', cfg.modes.WebConf.icon.symbol)
 eq('DeepWork default timer', 50, cfg.modes.DeepWork.timerMinutes)
 eq('validateFile on the repo file', 'ok', ms.validateFile(DIR .. '/hammerspoon/modes.lua'))
