@@ -26,17 +26,11 @@ local M = {}
 local MODE_KEYS = {
   label = 'string', icon = 'table', quit = 'list', hide = 'list', focus = 'string',
   front = 'string', keepDisplayAwake = 'boolean',
-  chromeTabs = 'boolean', timerMinutes = 'number', breakMinutes = 'number',
+  timerMinutes = 'number', breakMinutes = 'number',
   meetingAlerts = 'boolean',
 }
 local ACTION_KEYS = { 'quit', 'hide', 'focus', 'front', 'keepDisplayAwake',
-                      'chromeTabs', 'timerMinutes', 'breakMinutes', 'meetingAlerts' }
-local CHROME_KEYS = {
-  bundle = 'string', personalDomains = 'list', personalProfiles = 'list',
-  closeNonPinned = 'string', workProfile = 'string', keepDomains = 'list',
-  pinnedMaxWidth = 'number',
-}
-local CLOSE_SCOPES = { off = true, ['work-window'] = true, ['work-windows'] = true }
+                      'timerMinutes', 'breakMinutes', 'meetingAlerts' }
 
 local function isList(t)
   if type(t) ~= 'table' then return false end
@@ -108,36 +102,10 @@ function M.validate(cfg)
       if m.meetingAlerts and type(cfg.meetings) ~= 'table' then
         err("mode '%s': meetingAlerts needs a meetings table", name)
       end
-      if m.chromeTabs and type(cfg.chrome) ~= 'table' then err("mode '%s': chromeTabs needs a chrome table", name) end
       if name == 'Normal' then
         for _, k in ipairs(ACTION_KEYS) do
           if m[k] ~= nil then err("Normal can't have actions ('%s'): it only restores", k) end
         end
-      end
-    end
-  end
-  if cfg.chrome ~= nil then
-    local c = cfg.chrome
-    if type(c) ~= 'table' then err('chrome must be a table')
-    else
-      for k, v in pairs(c) do
-        local want = CHROME_KEYS[k]
-        if not want then err("chrome: unknown key '%s'", tostring(k))
-        elseif want == 'list' then
-          if not isList(v) then err('chrome.%s must be a list', k)
-          else
-            for _, s in ipairs(v) do
-              if type(s) ~= 'string' or s == '' then err('chrome.%s entries must be non-empty strings', k) end
-            end
-          end
-        elseif type(v) ~= want then err('chrome.%s must be a %s', k, want) end
-      end
-      if not bundleOk(c.bundle) then err('chrome.bundle must be a bundle id') end
-      if not CLOSE_SCOPES[c.closeNonPinned or ''] then
-        err("chrome.closeNonPinned must be 'off', 'work-window' or 'work-windows'")
-      end
-      if type(c.pinnedMaxWidth) ~= 'number' or c.pinnedMaxWidth < 10 or c.pinnedMaxWidth > 200 then
-        err('chrome.pinnedMaxWidth must be a number of px (10-200)')
       end
     end
   end
@@ -171,81 +139,6 @@ function M.formatDuration(secs)
   return string.format('%dh %02dm', m // 60, m % 60)
 end
 
--- Host of a URL, lower-case ('https://www.YouTube.com/x' -> 'www.youtube.com').
-function M.urlHost(url)
-  if type(url) ~= 'string' then return nil end
-  local host = url:match('^%a[%w+.-]*://([^/?#]+)')
-  if not host then return nil end
-  host = host:gsub('^[^@]*@', ''):gsub(':%d+$', '')
-  return host:lower()
-end
-
--- True when the URL's host is one of the domains or a subdomain of one.
-function M.hostMatches(url, domains)
-  local host = M.urlHost(url)
-  if not host then return false end
-  for _, d in ipairs(domains or {}) do
-    d = d:lower()
-    if host == d or host:sub(-(#d + 1)) == '.' .. d then return true end
-  end
-  return false
-end
-
--- Pinned tabs lead Chrome's tab strip and are narrow. Returns the number of pinned tabs,
--- or nil when it can't tell (no widths, or every tab is that narrow: a crowded strip).
-function M.pinnedCount(widths, maxWidth)
-  if type(widths) ~= 'table' or #widths == 0 then return nil end
-  local n = 0
-  for _, w in ipairs(widths) do
-    if type(w) == 'number' and w <= maxWidth then n = n + 1 else break end
-  end
-  if n == #widths then return nil end
-  return n
-end
-
--- Which Chrome tabs WebConf closes. windows = { { id, front = bool, profile = 'name'|nil,
--- pinned = n|nil, tabs = { { id, url }, ... } }, ... } (front-to-back). Returns
--- { close = { { window = id, tabs = { tabId, ... }, keepWindow = bool }, ... },
---   notes = { '...' }, counts = { personal = n, nonPinned = n } }. URLs are only read.
-function M.chromeClosePlan(c, windows)
-  local res = { close = {}, notes = {}, counts = { personal = 0, nonPinned = 0 } }
-  local personalProfile = {}
-  for _, p in ipairs(c.personalProfiles or {}) do personalProfile[p] = true end
-  local frontWorkSeen = false
-  local skippedUnknown = 0
-  for _, w in ipairs(windows or {}) do
-    local isPersonalWin = w.profile ~= nil and personalProfile[w.profile] == true
-    local isWork = not isPersonalWin and (c.workProfile == nil or w.profile == c.workProfile)
-    local scopeHit = false
-    if isWork and c.closeNonPinned == 'work-windows' then scopeHit = true end
-    if isWork and c.closeNonPinned == 'work-window' and not frontWorkSeen then scopeHit = true end
-    if isWork then frontWorkSeen = true end
-    local ids = {}
-    local pinned = w.pinned
-    local kept = 0
-    for i, t in ipairs(w.tabs or {}) do
-      local isPinned = pinned ~= nil and i <= pinned
-      local keep = isPinned or M.hostMatches(t.url, c.keepDomains)
-      if not keep then
-        if isPersonalWin or M.hostMatches(t.url, c.personalDomains) then
-          ids[#ids + 1] = t.id; res.counts.personal = res.counts.personal + 1
-        elseif scopeHit then
-          if pinned == nil then skippedUnknown = skippedUnknown + 1; kept = kept + 1
-          else ids[#ids + 1] = t.id; res.counts.nonPinned = res.counts.nonPinned + 1 end
-        else kept = kept + 1 end
-      else kept = kept + 1 end
-    end
-    if #ids > 0 then
-      res.close[#res.close + 1] = { window = w.id, tabs = ids, keepWindow = (kept == 0) }
-    end
-  end
-  if skippedUnknown > 0 then
-    res.notes[#res.notes + 1] = string.format(
-      "kept %d non-pinned tab(s): can't see which tabs are pinned (window on another Space?)", skippedUnknown)
-  end
-  return res
-end
-
 local function appName(snap, bundle)
   return (snap.names and snap.names[bundle]) or bundle
 end
@@ -273,17 +166,13 @@ local function restoreLines(cfg, changes, snap, out, indent)
   end
   if changes.displayAwake then any = true; out[#out + 1] = indent .. 'allow display sleep again (displayIdle off)' end
   if changes.timer then any = true; out[#out + 1] = indent .. 'stop the DeepWork timer and meeting checks' end
-  if changes.chromeClosed and changes.chromeClosed > 0 then
-    any = true
-    out[#out + 1] = indent .. string.format('%d closed Chrome tab(s) are not reopened (addresses were never saved)', changes.chromeClosed)
-  end
   if changes.focus then out[#out + 1] = indent .. 'notification badges come back with the Focus off' end
   if not any then out[#out + 1] = indent .. 'nothing recorded to restore' end
 end
 
 --- plan(cfg, name, snap) -> { lines }. snap = { current = 'Mode', changes = {...},
 --- running = { [bundle] = true }, hidden = { [bundle] = true }, names = { [bundle] = 'Name' },
---- shortcuts = { [name] = true } | nil (unknown), chrome = chromeClosePlan result | nil }
+--- shortcuts = { [name] = true } | nil (unknown) }
 function M.plan(cfg, name, snap)
   snap = snap or {}
   local out = {}
@@ -330,22 +219,6 @@ function M.plan(cfg, name, snap)
     out[#out + 1] = line
   end
   if m.keepDisplayAwake then out[#out + 1] = '  keep the display awake (displayIdle) until you leave the mode' end
-  if m.chromeTabs and cfg.chrome then
-    local c = cfg.chrome
-    out[#out + 1] = string.format('  Chrome: close tabs on personal domains (%s)%s in every window',
-      table.concat(c.personalDomains or {}, ', '),
-      (#(c.personalProfiles or {}) > 0) and (' and windows of profile(s) ' .. table.concat(c.personalProfiles, ', ')) or '')
-    local scope = ({ off = 'never close other tabs',
-                     ['work-window'] = 'close the other non-pinned tabs in the front work-profile window',
-                     ['work-windows'] = 'close the other non-pinned tabs in every work-profile window' })[c.closeNonPinned]
-    out[#out + 1] = '  Chrome: ' .. scope .. '; keep pinned tabs and ' .. table.concat(c.keepDomains or {}, ', ')
-    out[#out + 1] = "  Chrome: closed tabs' addresses are not saved anywhere"
-    if snap.chrome then
-      out[#out + 1] = string.format('  Chrome now: would close %d personal + %d non-pinned tab(s)',
-        snap.chrome.counts.personal, snap.chrome.counts.nonPinned)
-      for _, n in ipairs(snap.chrome.notes) do out[#out + 1] = '  Chrome now: ' .. n end
-    end
-  end
   if m.front then
     out[#out + 1] = '  bring ' .. appName(snap, m.front) .. ' to the front'
       .. ((snap.running and not snap.running[m.front]) and ' (launches it)' or '')
@@ -697,109 +570,6 @@ local function startMeetingChecks()
   every('meetings', cfg.meetings.checkEverySec, checkMeetings)
 end
 
--- ---- Chrome (WebConf) ---------------------------------------------------------
-
--- Tab-strip widths per Chrome window visible to Hammerspoon (current Space), keyed by
--- the window title, to find pinned tabs. Read-only.
-local function chromeAxInfo(bundle)
-  local info = {}
-  local app = appByBundle(bundle)
-  if not app then return info end
-  for _, w in ipairs(app:allWindows()) do
-    local ax = hs.axuielement.windowElement(w)
-    local widths
-    local function walk(e, depth)
-      if widths or depth > 12 or not e then return end
-      if e:attributeValue('AXRole') == 'AXTabGroup' then
-        widths = {}
-        for _, t in ipairs(e:attributeValue('AXChildren') or {}) do
-          local r = t:attributeValue('AXRole')
-          if r == 'AXRadioButton' or r == 'AXTab' then
-            local sz = t:attributeValue('AXSize')
-            widths[#widths + 1] = sz and sz.w or 999
-          end
-        end
-        return
-      end
-      for _, ch in ipairs(e:attributeValue('AXChildren') or {}) do walk(ch, depth + 1) end
-    end
-    walk(ax, 0)
-    info[#info + 1] = { title = w:title() or '', widths = widths }
-  end
-  return info
-end
-
--- Reads Chrome's windows/tabs via osascript (async, so a first-time Automation prompt
--- can't freeze Hammerspoon). URLs stay in memory only, to decide what to close.
-local CHROME_READ = [[
-set out to ""
-set TB to character id 9
-set LF to character id 10
-tell application id "com.google.Chrome"
-  repeat with w in windows
-    if mode of w is "normal" then
-      set out to out & "W" & TB & (id of w) & TB & (title of active tab of w) & LF
-      repeat with t in tabs of w
-        set out to out & "T" & TB & (id of t) & TB & (URL of t) & LF
-      end repeat
-    end if
-  end repeat
-end tell
-return out
-]]
-
-local function readChrome(cb)
-  local c = cfg.chrome
-  if not appByBundle(c.bundle) then cb(nil, 'Chrome not running'); return end
-  runTask('/usr/bin/osascript', { '-e', CHROME_READ }, function(code, out, err)
-    if code ~= 0 then cb(nil, 'could not read Chrome tabs: ' .. err:gsub('%s+$', '')); return end
-    local windows, cur = {}, nil
-    for line in out:gmatch('[^\n]+') do
-      local kind, id, rest = line:match('^(%a)\t(%d+)\t(.*)$')
-      if kind == 'W' then
-        cur = { id = tonumber(id), activeTitle = rest, tabs = {} }
-        windows[#windows + 1] = cur
-      elseif kind == 'T' and cur then
-        cur.tabs[#cur.tabs + 1] = { id = tonumber(id), url = rest }
-      end
-    end
-    -- Match AppleScript windows to AX windows (title starts with the active tab's
-    -- title and the tab count agrees) for pinned tabs and the profile name.
-    local ax = chromeAxInfo(c.bundle)
-    for i, w in ipairs(windows) do
-      w.front = (i == 1)
-      for _, a in ipairs(ax) do
-        if a.widths and #a.widths == #w.tabs and w.activeTitle ~= '' and a.title:sub(1, #w.activeTitle) == w.activeTitle then
-          w.pinned = M.pinnedCount(a.widths, c.pinnedMaxWidth)
-          local prof = a.title:match(' %- Google Chrome %- (.+)$')
-          w.profile = prof
-          break
-        end
-      end
-    end
-    cb(windows)
-  end)
-end
-
-local function closeChromeTabs(plan, cb)
-  if #plan.close == 0 then cb(0); return end
-  local lines = { 'tell application id "com.google.Chrome"' }
-  local n = 0
-  for _, w in ipairs(plan.close) do
-    lines[#lines + 1] = string.format('  set w to window id %d', w.window)
-    if w.keepWindow then lines[#lines + 1] = '  tell w to make new tab' end
-    for _, id in ipairs(w.tabs) do
-      lines[#lines + 1] = string.format('  try\n    close (tab id %d of w)\n  end try', id)
-      n = n + 1
-    end
-  end
-  lines[#lines + 1] = 'end tell'
-  runTask('/usr/bin/osascript', { '-e', table.concat(lines, '\n') }, function(code, _, err)
-    if code ~= 0 then log.w('closing Chrome tabs: ' .. err) end
-    cb(code == 0 and n or 0)
-  end)
-end
-
 -- ---- quitting / hiding --------------------------------------------------------
 
 local function unsavedWork(app)
@@ -910,21 +680,6 @@ local function applyMode(name)
   if m.front then
     after('front', 0.8, function() hs.application.launchOrFocusByBundleID(m.front) end)
   end
-  if m.chromeTabs and cfg.chrome then
-    readChrome(function(windows, err)
-      if not windows then
-        if err ~= 'Chrome not running' then skipped[#skipped + 1] = 'Chrome tabs (' .. err .. ')' end
-        return
-      end
-      local plan = M.chromeClosePlan(cfg.chrome, windows)
-      windows = nil   -- drop the URLs
-      closeChromeTabs(plan, function(n)
-        state.changes.chromeClosed = n
-        writeState(state)
-        for _, note in ipairs(plan.notes) do alert('Chrome: ' .. note, 5) end
-      end)
-    end)
-  end
   if m.timerMinutes then startTimer() end
   startMeetingChecks()
 
@@ -987,19 +742,6 @@ end
 function M.anotherSession()
   local name = state.mode ~= 'Normal' and state.mode or 'DeepWork'
   M.switch(name)
-end
-
--- Live Chrome preview for WebConf: reads the tabs (osascript; the first run asks for
--- Automation permission) and prints how many would close. Closes nothing.
-function M.chromePreview()
-  readChrome(function(windows, err)
-    if not windows then print('Chrome preview: ' .. tostring(err)); return end
-    local p = M.chromeClosePlan(cfg.chrome, windows)
-    print(string.format('Chrome preview: would close %d personal + %d non-pinned tab(s) in %d window(s)',
-      p.counts.personal, p.counts.nonPinned, #p.close))
-    for _, n in ipairs(p.notes) do print('Chrome preview: ' .. n) end
-  end)
-  return 'Chrome preview started: result in the Hammerspoon Console'
 end
 
 function M.dryRun(name)
@@ -1079,11 +821,6 @@ local function menuItems()
   for _, name in ipairs(cfg.order) do
     local nm = name
     dry[#dry + 1] = { title = cfg.modes[name].label, fn = function() M.dryRun(nm); hs.openConsole() end }
-  end
-  if cfg.chrome then
-    dry[#dry + 1] = { title = '-' }
-    dry[#dry + 1] = { title = 'Chrome tabs WebConf would close (count only)',
-                      fn = function() M.chromePreview(); hs.openConsole() end }
   end
   items[#items + 1] = { title = 'Dry run (prints to the Console)', menu = dry }
   items[#items + 1] = { title = 'Open switch log', fn = function() runTask('/usr/bin/open', { '-a', 'Console', LOG_FILE }) end }

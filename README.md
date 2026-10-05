@@ -173,7 +173,7 @@ A Hammerspoon menu-bar dropdown switches between three modes. Switching is **man
 | Mode | Icon | What it does |
 |------|------|------|
 | **Normal** | ○ circle | Undoes whatever the last mode recorded: reopens apps it quit (in the background, not hidden), unhides apps it hid, turns its Focus off, lets the display sleep again. Notification badges come back with the Focus. |
-| **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; keeps the display awake; tidies Chrome (below); brings Granola to the front. Keeps the Dock. |
+| **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; keeps the display awake; brings Granola to the front. Keeps the Dock. |
 | **DeepWork** | `brain.head.profile` + time left (e.g. `42m`) | Quits Slack and WhatsApp, hides Granola, DeepWork Focus on, leaves Spotify alone. Counts down 50 min (`timerMinutes`); at the end a notification offers **Take a break** / **Back to Normal** / **Another session** (it never switches by itself). Meeting alerts: every minute it asks Shortcuts for events starting within 5 min and alerts you itself, so the Focus can hold everything else back. |
 
 The dropdown ticks the current mode, shows how long it's been on, notes anything missing (Shortcuts, meeting alerts) or skipped, and has **Dry run** (prints what a mode would do to the Hammerspoon Console, changes nothing) and **Open switch log**. The icon's tooltip names the mode.
@@ -185,13 +185,6 @@ The dropdown ticks the current mode, shows how long it's been on, notes anything
 - Apps are quit politely (`hs.application:kill()`, like Command-Q), never forced. An app with unsaved work, or one that doesn't quit, is left running and you're told.
 - Every switch is logged to `~/Library/Logs/pdone-modes.log` (time, mode, how long the previous mode lasted).
 - Menu-bar notification badges can't be switched off (macOS has no API for it), so the Focus is what hides them.
-
-**Chrome in WebConf.** Closed tabs' addresses are never saved (not in `state.json`, not in the log). In `modes.lua` → `chrome`:
-
-- `personalDomains` (e.g. youtube.com, netflix.com, reddit.com) and `personalProfiles`: those tabs close in every window.
-- `closeNonPinned`: `'work-window'` (default: the other non-pinned tabs in the front window of the work profile), `'work-windows'`, or `'off'`. Pinned tabs are always kept. Chrome's scripting can't say which tabs are pinned, so the switcher reads the tab strip with Accessibility; if it can't (window on another Space), it keeps the non-pinned tabs and tells you.
-- `keepDomains` (Meet, Zoom, Teams, Slack) are never closed.
-- Try it safely first: menu → Dry run → **Chrome tabs WebConf would close** (counts only).
 
 **Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs Shortcuts you create once: `Mode WebConf On` / `Mode WebConf Off` / `Mode DeepWork On` / `Mode DeepWork Off` (one **Set Focus** action each), plus `Mode Upcoming Meetings` for DeepWork's meeting alerts. Hammerspoon has no calendar permission of its own, so Shortcuts does the calendar lookup. If any are missing, the mode still runs and the menu says what's missing. The manual steps `mode-*` walk through it, and `check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
 
@@ -398,7 +391,6 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 | 42 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | check.sh |
 | 43 | Create Shortcut "Mode Upcoming Meetings": Find Calendar Events where Start Date is in the next 5 minutes → Get Details of Calendar Events (Title) → Combine Text (New Lines) → Stop and Output; run it once and allow Calendar access | Shortcuts → + (Hammerspoon has no calendar permission of its own; Shortcuts does the lookup) | check.sh |
 | 44 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
-| 45 | Allow Hammerspoon to control Google Chrome (asked the first time WebConf tidies tabs; try it safely with the menu's Dry run → Chrome tabs WebConf would close) | System Settings → Privacy & Security → Automation → Hammerspoon → Google Chrome | by hand |
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 

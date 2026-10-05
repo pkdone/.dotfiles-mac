@@ -18,7 +18,6 @@ local apps = {
   granola      = 'com.granola.app',
   finder       = 'com.apple.finder',
   grokBot      = 'com.anysphere.sand',
-  chrome       = 'com.google.Chrome',
 }
 
 return {
@@ -46,31 +45,6 @@ return {
     checkEverySec = 60,
   },
 
-  -- WebConf's Chrome tidy-up. Closed tabs' addresses are never saved anywhere (not in
-  -- state.json, not in the log): they're gone, like closing them by hand.
-  chrome = {
-    bundle = apps.chrome,
-    -- "Personal" tabs: closed in every Chrome window (pinned tabs are kept when Chrome
-    -- shows which ones are pinned).
-    personalDomains  = { 'youtube.com', 'netflix.com', 'reddit.com', 'facebook.com',
-                         'instagram.com', 'web.whatsapp.com', 'open.spotify.com',
-                         'amazon.co.uk', 'ebay.co.uk' },
-    -- Chrome profile names whose windows are entirely personal (window titles end in
-    -- " - <profile>" once Chrome has more than one profile). Empty = none.
-    personalProfiles = {},
-    -- Closing every non-pinned tab is destructive, so it's scoped:
-    --   'off'           never
-    --   'work-window'   only the frontmost window of the work profile (default)
-    --   'work-windows'  every window of the work profile
-    -- Pinned tabs are always kept. If Chrome's tab strip can't be read (window on
-    -- another Space, no Accessibility), nothing non-pinned is closed and you're told.
-    closeNonPinned   = 'work-window',
-    workProfile      = nil,      -- profile name in window titles; nil = single-profile Chrome
-    -- Never closed, whatever the rules above say (your call is probably in one of these).
-    keepDomains      = { 'meet.google.com', 'zoom.us', 'teams.microsoft.com', 'app.slack.com' },
-    pinnedMaxWidth   = 60,       -- px: tab-strip buttons this narrow, leading the strip, are pinned
-  },
-
   modes = {
     Normal = {
       label   = 'Normal',
@@ -86,7 +60,6 @@ return {
       focus   = 'WebConf',
       front   = apps.granola,              -- brought to the front last
       keepDisplayAwake  = true,            -- hs.caffeinate.set('displayIdle', true) while on
-      chromeTabs        = true,            -- the chrome rules above
       -- Menu-bar notification badges: macOS has no API to switch them off, so the
       -- WebConf Focus (which silences notifications and badges) is what hides them.
     },
