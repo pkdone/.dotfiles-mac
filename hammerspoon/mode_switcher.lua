@@ -7,9 +7,10 @@
 -- ~/Library/Caches/pdone-modes, text fallback):
 -- Normal = desktopcomputer, WebConf = red record.circle.fill (on air), DeepWork = brain + time left.
 --
--- A missing Focus Shortcut does not stop the mode. The menu keeps the disabled note, and
--- the switch shows a short alert ("WebConf Focus skipped — Shortcut missing"). A Shortcut
--- that is present does not raise that alert.
+-- A missing Focus Shortcut does not stop the mode. The menu has a clickable Fix (copies
+-- the Shortcut name(s) and opens Shortcuts), and the switch shows a short alert
+-- ("WebConf Focus skipped — create 'Mode WebConf On' in Shortcuts"). A Shortcut that is
+-- present does not raise that alert.
 --
 -- State: ~/Library/Application Support/pdone-modes/state.json, written BEFORE anything
 -- changes, records what the current mode changed so Normal can undo exactly that, also
@@ -140,10 +141,36 @@ function M.shortcutMissing(shortcuts, name)
   return type(shortcuts) == 'table' and not shortcuts[name]
 end
 
---- focusSkipToast(focusName) -> string
---- Short alert when a mode's Focus Shortcut is missing. The rest of the mode still runs.
-function M.focusSkipToast(focusName)
-  return string.format('%s Focus skipped — Shortcut missing', tostring(focusName))
+--- focusSkipToast(focusName, shortcutName) -> string
+--- Short alert when a mode's Focus Shortcut is missing. Names the Shortcut to create.
+--- The rest of the mode still runs.
+function M.focusSkipToast(focusName, shortcutName)
+  return string.format("%s Focus skipped — create '%s' in Shortcuts",
+    tostring(focusName), tostring(shortcutName))
+end
+
+--- missingFixTitle(names) -> string
+--- One clickable menu title listing every missing Focus Shortcut.
+function M.missingFixTitle(names)
+  names = names or {}
+  if #names == 0 then return 'Fix missing Focus Shortcuts…' end
+  return 'Create missing: ' .. table.concat(names, ', ')
+end
+
+--- missingFixClipboard(names) -> string
+--- Pasteboard text: one Shortcut name per line, so each can be pasted on its own.
+function M.missingFixClipboard(names)
+  return table.concat(names or {}, '\n')
+end
+
+--- missingFixAlert(names) -> string
+--- Short confirmation after the names are copied and Shortcuts is opening.
+function M.missingFixAlert(names)
+  names = names or {}
+  if #names == 1 then
+    return "Copied '" .. names[1] .. "' — opening Shortcuts"
+  end
+  return string.format('Copied %d Shortcut names — opening Shortcuts', #names)
 end
 
 --- afterFocusAttempt(prev, which, listed, present) -> { session = 'on'|'off'|nil, offSkipped = bool }
@@ -535,6 +562,13 @@ local function missingShortcuts()
   return miss
 end
 
+-- Copies every missing Focus Shortcut name and opens Shortcuts so they can be created.
+local function fixMissingShortcuts(names)
+  hs.pasteboard.setContents(M.missingFixClipboard(names))
+  alert(M.missingFixAlert(names), 4)
+  runTask('/usr/bin/open', { '-a', 'Shortcuts' })
+end
+
 local function runShortcut(name, what, focusName)
   local which = (what == 'Focus on') and 'on' or 'off'
   local listed = type(shortcutsKnown) == 'table'
@@ -543,7 +577,7 @@ local function runShortcut(name, what, focusName)
   focusTrack = M.afterFocusAttempt(focusTrack, which, listed, present)
   if M.shortcutMissing(shortcutsKnown, name) then
     notes.focus = "Focus not changed: create Shortcut '" .. name .. "'"
-    alert(M.focusSkipToast(focusName), 4)
+    alert(M.focusSkipToast(focusName, name), 4)
     return
   end
   runTask('/usr/bin/shortcuts', { 'run', name }, function(code, _, err)
@@ -870,7 +904,8 @@ local function menuItems()
   end
   local miss = missingShortcuts()
   if #miss > 0 then
-    items[#items + 1] = { title = 'Missing Shortcuts (Focus not used): ' .. table.concat(miss, ', '), disabled = true }
+    local names = miss
+    items[#items + 1] = { title = M.missingFixTitle(names), fn = function() fixMissingShortcuts(names) end }
   end
   for _, k in ipairs({ 'skipped', 'focus' }) do
     if notes[k] then items[#items + 1] = { title = notes[k], disabled = true } end
