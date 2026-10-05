@@ -174,9 +174,9 @@ A Hammerspoon menu-bar dropdown switches between three modes. Switching is **man
 |------|------|------|
 | **Normal** | 🖥 `desktopcomputer` | Undoes whatever the last mode recorded: reopens apps it quit (in the background, not hidden), unhides apps it hid, turns its Focus off, lets the display sleep again. Notification badges come back with the Focus. |
 | **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; keeps the display awake; brings Granola to the front. Keeps the Dock. |
-| **DeepWork** | `brain.head.profile` + time left (e.g. `42m`) | Quits Slack and WhatsApp, hides Granola, DeepWork Focus on, leaves Spotify alone. Counts down 50 min (`timerMinutes`); at the end a notification offers **Take a break** / **Back to Normal** / **Another session** (it never switches by itself). Meeting alerts: every minute it asks Shortcuts for events starting within 5 min and alerts you itself, so the Focus can hold everything else back. |
+| **DeepWork** | `brain.head.profile` + time left (e.g. `42m`) | Quits Slack and WhatsApp, hides Granola, DeepWork Focus on, leaves Spotify alone. Counts down 50 min (`timerMinutes`); at the end a notification offers **Take a break** / **Back to Normal** / **Another session** (it never switches by itself). |
 
-The dropdown ticks the current mode, shows how long it's been on, notes anything missing (Shortcuts, meeting alerts) or skipped, and has **Dry run** (prints what a mode would do to the Hammerspoon Console, changes nothing) and **Open switch log**. The icon's tooltip names the mode.
+The dropdown ticks the current mode, shows how long it's been on, notes anything missing (Shortcuts) or skipped, and has **Dry run** (prints what a mode would do to the Hammerspoon Console, changes nothing) and **Open switch log**. The icon's tooltip names the mode.
 
 **Safety rails**
 
@@ -186,7 +186,7 @@ The dropdown ticks the current mode, shows how long it's been on, notes anything
 - Every switch is logged to `~/Library/Logs/pdone-modes.log` (time, mode, how long the previous mode lasted).
 - Menu-bar notification badges can't be switched off (macOS has no API for it), so the Focus is what hides them.
 
-**Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs Shortcuts you create once: `Mode WebConf On` / `Mode WebConf Off` / `Mode DeepWork On` / `Mode DeepWork Off` (one **Set Focus** action each), plus `Mode Upcoming Meetings` for DeepWork's meeting alerts. Hammerspoon has no calendar permission of its own, so Shortcuts does the calendar lookup. If any are missing, the mode still runs and the menu says what's missing. The manual steps `mode-*` walk through it, and `check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
+**Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs Shortcuts you create once: `Mode WebConf On` / `Mode WebConf Off` / `Mode DeepWork On` / `Mode DeepWork Off` (one **Set Focus** action each). If any are missing, the mode still runs and the menu says what's missing. The manual steps `mode-*` walk through it, and `check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
 
 From a terminal:
 
@@ -388,11 +388,10 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 | 38 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
 | 39 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
 | 40 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
-| 41 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so its meeting alerts get through) | System Settings → Focus → Add Focus… → Custom | check.sh |
+| 41 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through) | System Settings → Focus → Add Focus… → Custom | check.sh |
 | 42 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | check.sh |
-| 43 | Create Shortcut "Mode Upcoming Meetings": Find Calendar Events where Start Date is in the next 5 minutes → Get Details of Calendar Events (Title) → Combine Text (New Lines) → Stop and Output; run it once and allow Calendar access | Shortcuts → + (Hammerspoon has no calendar permission of its own; Shortcuts does the lookup) | check.sh |
-| 44 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
-| 45 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
+| 43 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
+| 44 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
