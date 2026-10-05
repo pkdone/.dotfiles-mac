@@ -98,6 +98,68 @@ ok('Normal: stops the DeepWork timer', has(nt, 'stop the DeepWork timer'))
 ok('Normal: no meeting checks', not has(nt, 'meeting'))
 ok('Normal from Normal: nothing', has(ms.plan(cfg, 'Normal', snap), 'nothing recorded to restore'))
 
+-- ---- Focus skip toast + menu status line ---------------------------------------
+eq('missing Shortcut is missing', true, ms.shortcutMissing({}, 'Mode WebConf On'))
+eq('present Shortcut is not missing', false, ms.shortcutMissing({ ['Mode WebConf On'] = true }, 'Mode WebConf On'))
+eq('unknown Shortcut list is not missing', false, ms.shortcutMissing(nil, 'Mode WebConf On'))
+eq('WebConf skip toast', 'WebConf Focus skipped — Shortcut missing', ms.focusSkipToast('WebConf'))
+eq('DeepWork skip toast', 'DeepWork Focus skipped — Shortcut missing', ms.focusSkipToast('DeepWork'))
+
+local function attempt(prev, which, listed, present)
+  return ms.afterFocusAttempt(prev, which, listed, present)
+end
+local onThere = attempt(nil, 'on', true, true)
+eq('present On records Focus on', 'on', onThere.session)
+eq('present On does not skip', false, onThere.offSkipped)
+local onGone = attempt(nil, 'on', true, false)
+eq('missing On records Focus off', 'off', onGone.session)
+eq('unlisted Shortcuts record nothing', nil, attempt(nil, 'on', false, false).session)
+local offGone = attempt(nil, 'off', true, false)
+eq('missing Off is unknown', nil, offGone.session)
+eq('missing Off is flagged', true, offGone.offSkipped)
+local bothGone = attempt(offGone, 'on', true, false)
+eq('missing Off then On stays unknown', nil, bothGone.session)
+eq('present On after missing Off is Focus on', 'on', attempt(offGone, 'on', true, true).session)
+eq('present Off records Focus off', 'off', attempt(nil, 'off', true, true).session)
+
+local webOn = { ['Mode WebConf On'] = true }
+local deepOn = { ['Mode DeepWork On'] = true }
+eq('WebConf status', 'WebConf · 12m · Focus on', ms.modeStatus({
+  mode = 'WebConf', elapsed = 12 * 60 + 20, focusName = 'WebConf',
+  onShortcut = 'Mode WebConf On', shortcuts = webOn,
+}))
+eq('DeepWork status prefers time left', 'DeepWork · 42m left · Focus on', ms.modeStatus({
+  mode = 'DeepWork', elapsed = 8 * 60, remaining = 42 * 60 + 10, focusName = 'DeepWork',
+  onShortcut = 'Mode DeepWork On', shortcuts = deepOn,
+}))
+eq('Normal status', 'Normal · restored', ms.modeStatus({
+  mode = 'Normal', elapsed = 3 * 60, shortcuts = { ['Mode WebConf Off'] = true },
+}))
+eq('Normal Focus off when restored', 'Normal · restored · Focus off', ms.modeStatus({
+  mode = 'Normal', session = 'off',
+}))
+eq('DeepWork done', 'DeepWork · done · Focus on', ms.modeStatus({
+  mode = 'DeepWork', timerDone = true, remaining = 0, elapsed = 50 * 60, session = 'on',
+}))
+eq('WebConf Focus unknown while Shortcuts are unlisted', 'WebConf · <1m', ms.modeStatus({
+  mode = 'WebConf', elapsed = 10, focusName = 'WebConf', onShortcut = 'Mode WebConf On',
+}))
+eq('missing On shows Focus off', 'WebConf · 12m · Focus off', ms.modeStatus({
+  mode = 'WebConf', elapsed = 12 * 60, session = 'off', focusName = 'WebConf',
+  onShortcut = 'Mode WebConf On', shortcuts = {},
+}))
+eq('failed Shortcut omits Focus', 'WebConf · 12m', ms.modeStatus({
+  mode = 'WebConf', elapsed = 12 * 60, focusName = 'WebConf', onShortcut = 'Mode WebConf On',
+  shortcuts = webOn, note = "Focus on: Shortcut 'Mode WebConf On' failed",
+}))
+eq('break status', 'Normal · break 8m left · Focus off', ms.modeStatus({
+  mode = 'Normal', breakLeft = 8 * 60 + 5, session = 'off',
+}))
+eq('skipped Off does not claim Focus off', 'DeepWork · 42m left', ms.modeStatus({
+  mode = 'DeepWork', remaining = 42 * 60, offSkipped = true, focusName = 'DeepWork',
+  onShortcut = 'Mode DeepWork On', shortcuts = {},
+}))
+
 local summary = string.format('modes tests: %d passed, %d failed', pass, fail)
 if #out > 0 then summary = table.concat(out, '\n') .. '\n' .. summary end
 print(summary)

@@ -1,9 +1,15 @@
 -- mode_switcher.lua: menu-bar mode switcher (Normal / WebConf / DeepWork).
 --
 -- Settings live in modes.lua (pure data). Switching is manual only, from the menu-bar
--- dropdown: no hotkey, no automatic triggers. The menu ticks the current mode; the icon
--- is an SF Symbol (rendered once to ~/Library/Caches/pdone-modes, text fallback):
+-- dropdown: no hotkey, no automatic triggers. The menu ticks the current mode and, under
+-- the tick, a one-line status (time in the mode, or time left on a DeepWork timer, and
+-- Focus on/off when that is known). The icon is an SF Symbol (rendered once to
+-- ~/Library/Caches/pdone-modes, text fallback):
 -- Normal = desktopcomputer, WebConf = red record.circle.fill (on air), DeepWork = brain + time left.
+--
+-- A missing Focus Shortcut does not stop the mode. The menu keeps the disabled note, and
+-- the switch shows a short alert ("WebConf Focus skipped — Shortcut missing"). A Shortcut
+-- that is present does not raise that alert.
 --
 -- State: ~/Library/Application Support/pdone-modes/state.json, written BEFORE anything
 -- changes, records what the current mode changed so Normal can undo exactly that, also
@@ -127,6 +133,91 @@ function M.formatDuration(secs)
   return string.format('%dh %02dm', m // 60, m % 60)
 end
 
+--- shortcutMissing(shortcuts, name) -> bool
+--- True only when the Shortcuts list is known and this name is not on it.
+--- nil shortcuts means "not listed yet", which is not the same as missing.
+function M.shortcutMissing(shortcuts, name)
+  return type(shortcuts) == 'table' and not shortcuts[name]
+end
+
+--- focusSkipToast(focusName) -> string
+--- Short alert when a mode's Focus Shortcut is missing. The rest of the mode still runs.
+function M.focusSkipToast(focusName)
+  return string.format('%s Focus skipped — Shortcut missing', tostring(focusName))
+end
+
+--- afterFocusAttempt(prev, which, listed, present) -> { session = 'on'|'off'|nil, offSkipped = bool }
+--- which is 'on' or 'off'. When the list is unknown, focus is unknown.
+--- A missing Off Shortcut leaves focus unknown (the previous Focus may still be on);
+--- a later missing On then stays unknown rather than claiming "Focus off".
+function M.afterFocusAttempt(prev, which, listed, present)
+  prev = prev or {}
+  if not listed then return { session = nil, offSkipped = false } end
+  if not present then
+    if which == 'off' or prev.offSkipped then
+      return { session = nil, offSkipped = true }
+    end
+    return { session = 'off', offSkipped = false }
+  end
+  if which == 'on' then return { session = 'on', offSkipped = false } end
+  return { session = 'off', offSkipped = false }
+end
+
+--- knownFocus(info) -> 'on'|'off'|nil
+--- info.session is what this process's last switch established.
+--- Otherwise infer from the Shortcuts list: an On Shortcut that exists means Focus on,
+--- one that is missing means Focus off. Normal is not guessed (say "restored" only).
+--- A note that the Shortcut failed, when the Shortcut does exist, means unknown.
+function M.knownFocus(info)
+  info = info or {}
+  if info.session == 'on' or info.session == 'off' then return info.session end
+  -- Off was skipped, so a previous Focus may still be on. Don't claim off.
+  if info.offSkipped then return nil end
+  if type(info.shortcuts) ~= 'table' then return nil end
+  if info.mode == 'Normal' or not info.focusName or type(info.onShortcut) ~= 'string' then
+    return nil
+  end
+  if info.note and info.shortcuts[info.onShortcut] then return nil end
+  if info.shortcuts[info.onShortcut] then return 'on' end
+  return 'off'
+end
+
+--- modeStatusLine(info) -> string  One disabled menu line for the current mode.
+--- info.mode, elapsed (seconds), remaining (seconds left on a timer), timerDone,
+--- breakLeft (seconds), focus ('on'|'off'|nil).
+--- DeepWork prefers time left while the timer is running. Normal says "restored".
+function M.modeStatusLine(info)
+  info = info or {}
+  local parts = { tostring(info.mode or '?') }
+  if info.breakLeft ~= nil then
+    parts[#parts + 1] = 'break ' .. M.formatDuration(info.breakLeft) .. ' left'
+  elseif info.timerDone then
+    parts[#parts + 1] = 'done'
+  elseif info.remaining ~= nil then
+    parts[#parts + 1] = M.formatDuration(info.remaining) .. ' left'
+  elseif info.mode == 'Normal' then
+    parts[#parts + 1] = 'restored'
+  elseif info.elapsed ~= nil then
+    parts[#parts + 1] = M.formatDuration(info.elapsed)
+  end
+  if info.focus == 'on' then parts[#parts + 1] = 'Focus on'
+  elseif info.focus == 'off' then parts[#parts + 1] = 'Focus off' end
+  return table.concat(parts, ' · ')
+end
+
+--- modeStatus(info) -> string  Status line, including Focus when it is known.
+function M.modeStatus(info)
+  info = info or {}
+  return M.modeStatusLine({
+    mode = info.mode,
+    elapsed = info.elapsed,
+    remaining = info.remaining,
+    timerDone = info.timerDone,
+    breakLeft = info.breakLeft,
+    focus = M.knownFocus(info),
+  })
+end
+
 local function appName(snap, bundle)
   return (snap.names and snap.names[bundle]) or bundle
 end
@@ -245,6 +336,7 @@ local timers = {}            -- name -> hs.timer (strong refs)
 local tasks = {}             -- running hs.task objects (strong refs)
 local shortcutsKnown         -- set of Shortcut names, nil until listed
 local notes = {}             -- key -> text shown (disabled) in the menu
+local focusTrack = {}        -- { session = 'on'|'off'|nil, offSkipped = bool } from the last switch
 local timerDone = false
 local endNotification
 
@@ -443,15 +535,22 @@ local function missingShortcuts()
   return miss
 end
 
-local function runShortcut(name, what)
-  if shortcutsKnown and not shortcutsKnown[name] then
+local function runShortcut(name, what, focusName)
+  local which = (what == 'Focus on') and 'on' or 'off'
+  local listed = type(shortcutsKnown) == 'table'
+  local present = listed and shortcutsKnown[name] == true
+  -- Record the result first so a synchronous task failure can clear it.
+  focusTrack = M.afterFocusAttempt(focusTrack, which, listed, present)
+  if M.shortcutMissing(shortcutsKnown, name) then
     notes.focus = "Focus not changed: create Shortcut '" .. name .. "'"
+    alert(M.focusSkipToast(focusName), 4)
     return
   end
   runTask('/usr/bin/shortcuts', { 'run', name }, function(code, _, err)
     if code ~= 0 then
       notes.focus = string.format("%s: Shortcut '%s' failed", what, name)
       log.w(notes.focus .. ': ' .. err)
+      if focusTrack.session == which then focusTrack.session = nil end
       if updateMenu then updateMenu() end
     end
   end)
@@ -555,7 +654,7 @@ local function restoreChanges(changes)
     if a and a:isHidden() then a:unhide() end
   end
   if changes.focus and cfg.focus[changes.focus] then
-    runShortcut(cfg.focus[changes.focus].off, 'Focus off')
+    runShortcut(cfg.focus[changes.focus].off, 'Focus off', changes.focus)
   end
   if changes.displayAwake then setDisplayAwake(false) end
   stopTimer('countdown'); stopTimer('break')
@@ -612,7 +711,7 @@ local function applyMode(name)
     local a = appByBundle(h.bundle)
     if a then a:hide() end
   end
-  if m.focus then runShortcut(cfg.focus[m.focus].on, 'Focus on') end
+  if m.focus then runShortcut(cfg.focus[m.focus].on, 'Focus on', m.focus) end
   if m.keepDisplayAwake then setDisplayAwake(true) end
   if m.front then
     after('front', 0.8, function() hs.application.launchOrFocusByBundleID(m.front) end)
@@ -644,6 +743,7 @@ function M.switch(name)
   if not cfg.modes[name] then alert("Modes: unknown mode '" .. tostring(name) .. "'"); return end
   local prev, prevSince = state.mode, state.since
   notes.skipped = nil; notes.focus = nil
+  focusTrack = {}
   if state.mode ~= 'Normal' or state.phase == 'restoring' then restoreToNormal() end
   if name ~= 'Normal' then applyMode(name) end
   logSwitch(name, prev, prevSince)
@@ -720,6 +820,30 @@ updateMenu = function()
   menu:setTooltip('Mode: ' .. (m.label or state.mode))
 end
 
+local function currentStatusLine()
+  local name = state.mode or 'Normal'
+  local m = (cfg and cfg.modes[name]) or {}
+  local focusName = m.focus
+  local spec = focusName and cfg.focus and cfg.focus[focusName]
+  local info = {
+    mode = name,
+    elapsed = now() - (state.since or now()),
+    session = focusTrack.session,
+    offSkipped = focusTrack.offSkipped,
+    focusName = focusName,
+    onShortcut = spec and spec.on,
+    shortcuts = shortcutsKnown,
+    note = notes.focus,
+  }
+  if state.breakEndsAt then
+    info.breakLeft = state.breakEndsAt - now()
+  elseif state.changes and state.changes.timer then
+    local left = state.changes.timer.endsAt - now()
+    if timerDone or left <= 0 then info.timerDone = true else info.remaining = left end
+  end
+  return M.modeStatus(info)
+end
+
 local function menuItems()
   local items = {}
   if not cfg then
@@ -730,9 +854,8 @@ local function menuItems()
     items[#items + 1] = { title = cfg.modes[name].label, checked = (state.mode == name),
                           fn = function() M.switch(nm) end }
   end
+  items[#items + 1] = { title = currentStatusLine(), disabled = true }
   items[#items + 1] = { title = '-' }
-  local since = M.formatDuration(now() - (state.since or now()))
-  items[#items + 1] = { title = string.format('%s for %s', cfg.modes[state.mode] and cfg.modes[state.mode].label or state.mode, since), disabled = true }
   if state.changes.timer then
     if timerDone then
       items[#items + 1] = { title = 'Session done: Take a break', fn = M.takeBreak }
