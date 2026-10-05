@@ -35,7 +35,7 @@ eq "every autofix.list row is well formed" "" "$bad_rows"
 eq "ids are unique" "" "$(rows | cut -d'|' -f1 | sort | uniq -d)"
 
 # ---- the classes Paul asked for ----
-for id in defaults dictation-164 finder-icon-view finder-recents coteditor launchagent symlink hammerspoon; do
+for id in defaults dictation-164 quicknote-190 finder-icon-view finder-recents coteditor launchagent symlink hammerspoon; do
   eq "$id is SAFE" SAFE "$(autofix_class "$LIST" "$id")"
 done
 for id in brew app-install unwanted-app dock-apps desktop-assign login-shell hostname url-handler \

@@ -12,7 +12,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
 - `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `autofix-lib.sh`, `defaults-lib.sh`)
-- `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-finder-icon-view.sh`, `load-launchagent.sh`)
+- `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-quicknote-hotkey-190.sh`, `pin-finder-icon-view.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `tests/`, `hooks/` — unit tests and pre-push lint/test gate
@@ -274,6 +274,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `che
 | A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, menu bar, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings as "log out to finish" |
 | Finder icon view 72/13, Finder sidebar Recents, CotEditor theme / font | `macos.sh --only @finder-icon-view` / `@finder-recents` / `@coteditor` (the existing `scripts/pin-finder-icon-view.sh` and `lib/finder-sidebar-recents.py`) |
 | Dictation hotkey 164 | `macos.sh --only @dictation-164`, which runs `scripts/pin-dictation-hotkey-164.sh` |
+| Quick Note hotkey 190 | `macos.sh --only @quicknote-190`, which runs `scripts/pin-quicknote-hotkey-190.sh` |
 | Repo LaunchAgent not loaded | `scripts/load-launchagent.sh` (bootstraps it only if it isn't loaded; `install.sh` uses the same script with `--reload`) |
 | Repo-managed symlink missing or pointing elsewhere | `ln -sfn` to the repo file, **only** when the target is a symlink or missing. A real file in the way is never overwritten; that becomes Needs Paul |
 | Hammerspoon not running | `open -g -a Hammerspoon` |

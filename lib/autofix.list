@@ -18,6 +18,7 @@
 # ---- SAFE: applied automatically by --fix ----
 defaults|SAFE|macos|macOS default from lib/macos-defaults.list (Dock, Finder, Spaces, menu bar, …)
 dictation-164|SAFE|macos|dictation hotkey 164 re-pinned by scripts/pin-dictation-hotkey-164.sh
+quicknote-190|SAFE|macos|Quick Note hotkey 190 (Globe/Fn+Q) disabled by scripts/pin-quicknote-hotkey-190.sh
 finder-icon-view|SAFE|macos|Finder icon view 72/13 re-pinned by scripts/pin-finder-icon-view.sh
 finder-recents|SAFE|macos|Finder sidebar Recents hidden by lib/finder-sidebar-recents.py
 coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)

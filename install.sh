@@ -78,19 +78,20 @@ if [ -n "$BACKUP_DIR" ]; then
 fi
 
 echo ""
-echo "🚀 Loading login LaunchAgent (dictation hotkey 164)..."
-LA_LABEL=com.pdone.pin-dictation-hotkey-164
-LA_PLIST="$HOME/Library/LaunchAgents/${LA_LABEL}.plist"
-if [ -f "$LA_PLIST" ]; then
-  # Shared with `check.sh --fix`; --reload picks up plist changes on a re-run.
-  if "$DOTFILES/scripts/load-launchagent.sh" --reload "$LA_PLIST" >/dev/null; then
-    echo "  loaded $LA_LABEL"
+echo "🚀 Loading login LaunchAgents (dictation 164, Quick Note 190)..."
+for LA_LABEL in com.pdone.pin-dictation-hotkey-164 com.pdone.pin-quicknote-hotkey-190; do
+  LA_PLIST="$HOME/Library/LaunchAgents/${LA_LABEL}.plist"
+  if [ -f "$LA_PLIST" ]; then
+    # Shared with `check.sh --fix`; --reload picks up plist changes on a re-run.
+    if "$DOTFILES/scripts/load-launchagent.sh" --reload "$LA_PLIST" >/dev/null; then
+      echo "  loaded $LA_LABEL"
+    else
+      echo "  ⚠️  could not bootstrap $LA_LABEL — run: launchctl bootstrap gui/$(id -u) $LA_PLIST"
+    fi
   else
-    echo "  ⚠️  could not bootstrap $LA_LABEL — run: launchctl bootstrap gui/$(id -u) $LA_PLIST"
+    echo "  ⚠️  $LA_PLIST missing after symlink step"
   fi
-else
-  echo "  ⚠️  $LA_PLIST missing after symlink step"
-fi
+done
 
 echo ""
 echo "🍺 Installing from Brewfile..."

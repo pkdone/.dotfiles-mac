@@ -13,3 +13,6 @@ karabiner|@HOME@/.config/karabiner
 hammerspoon|@HOME@/.hammerspoon
 # Login LaunchAgent: re-pin dictation hotkey 164 after OS updates reset it
 launchagents/com.pdone.pin-dictation-hotkey-164.plist|@HOME@/Library/LaunchAgents/com.pdone.pin-dictation-hotkey-164.plist
+
+# Login LaunchAgent: keep Quick Note (Globe/Fn+Q) disabled after OS updates
+launchagents/com.pdone.pin-quicknote-hotkey-190.plist|@HOME@/Library/LaunchAgents/com.pdone.pin-quicknote-hotkey-190.plist

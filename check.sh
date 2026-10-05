@@ -6,7 +6,7 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + login LaunchAgent, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh) and the two can never drift.
@@ -443,6 +443,47 @@ LA_LABEL=com.pdone.pin-dictation-hotkey-164
 fixid launchagent "$LA_LABEL|$HOME/Library/LaunchAgents/$LA_LABEL.plist"
 if launchctl print "gui/$(id -u)/$LA_LABEL" >/dev/null 2>&1; then
   pass "LaunchAgent $LA_LABEL loaded (re-pins 164 at login)"
+else
+  bad "LaunchAgent $LA_LABEL not loaded — re-run install.sh"
+fi
+
+# ---- 9a. Quick Note shortcut (Globe/Fn+Q) ---------------------------------
+# Symbolic hotkey 190 is "Quick Note". Default is enabled with Fn/Globe+Q.
+# Desired: disabled (enabled=0, type=standard, parameters unbound).
+hdr "Quick Note shortcut"
+fixid quicknote-190
+CHECKED=$((CHECKED + 1))
+hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
+if [ -z "$hk" ]; then
+  bad "symbolichotkeys not readable"
+else
+  blk="$(printf '%s\n' "$hk" | awk '
+    $0 ~ /^[[:space:]]*190 =/ {grab=1}
+    grab {print}
+    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
+  ')"
+  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
+  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
+  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  case "${enabled:-}" in 0|false|False) en_ok=1 ;; *) en_ok=0 ;; esac
+  if [ "$en_ok" = 1 ] && [ "${ptype:-}" = "standard" ] && [ "${p1:-}" = "65535" ]; then
+    pass "Quick Note hotkey 190 = disabled (not Globe/Fn+Q)"
+  else
+    bad "Quick Note hotkey 190 enabled=${enabled:-missing} type=${ptype:-?} p1=${p1:-?} (expected enabled=0 type=standard p1=65535)"
+  fi
+fi
+CHECKED=$((CHECKED + 1))
+fixid repo-file
+if [ -x "$DOTDIR/scripts/pin-quicknote-hotkey-190.sh" ]; then
+  pass "scripts/pin-quicknote-hotkey-190.sh present"
+else
+  bad "scripts/pin-quicknote-hotkey-190.sh missing"
+fi
+CHECKED=$((CHECKED + 1))
+LA_LABEL=com.pdone.pin-quicknote-hotkey-190
+fixid launchagent "$LA_LABEL|$HOME/Library/LaunchAgents/$LA_LABEL.plist"
+if launchctl print "gui/$(id -u)/$LA_LABEL" >/dev/null 2>&1; then
+  pass "LaunchAgent $LA_LABEL loaded (re-disables 190 at login)"
 else
   bad "LaunchAgent $LA_LABEL not loaded — re-run install.sh"
 fi
@@ -1346,6 +1387,7 @@ if [ "$FIX" = 1 ]; then
     case "$1" in
       defaults)         pat="${2%%|*} ${2#*|} —" ;;
       dictation-164)    pat="dictation hotkey 164" ;;
+      quicknote-190)    pat="Quick Note hotkey 190" ;;
       coteditor)        pat="CotEditor" ;;
       finder-recents)   pat="Finder sidebar Recents" ;;
       finder-icon-view) pat="Finder icon view defaults" ;;

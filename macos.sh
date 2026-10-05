@@ -16,7 +16,7 @@
 #   --no-color  Disable ANSI colour (also honours the NO_COLOR env var).
 #   --list      Print the managed settings as a Markdown table and exit.
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
-#               lib/macos-defaults.list, or @dictation-164 / @coteditor /
+#               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
 #               @finder-recents / @finder-icon-view. Values that already match are
 #               left alone (no re-assert write). Used by `check.sh --fix`.
 #   --yes       Run the deferred UI restarts without prompting (still only if
@@ -58,7 +58,7 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
   --list       Print the managed settings as a Markdown table and exit.
   --only ID    Apply only this item (repeatable): "domain|key" from
-               lib/macos-defaults.list, or @dictation-164, @coteditor,
+               lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
                @finder-recents, @finder-icon-view. Matching values are left alone.
   --yes        Restart Dock/Finder/SystemUIServer without prompting (only if
                something changed).
@@ -306,6 +306,53 @@ apply_dictation_hotkey() {
   queue_restart logout "Dictation shortcut (symbolic hotkey 164)"
 }
 if selected @dictation-164; then apply_dictation_hotkey; fi
+
+# ---- Quick Note hotkey 190 (nested symbolichotkeys; not a macos-defaults row) ----
+# Disable Globe/Fn+Q so Quick Note never pops open Notes.
+apply_quicknote_hotkey() {
+  local pin="$DOTDIR/scripts/pin-quicknote-hotkey-190.sh"
+  local hk blk enabled ptype p1
+  CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -x "$pin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "scripts/pin-quicknote-hotkey-190.sh missing — skip Quick Note hotkey"
+    return 0
+  fi
+  hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
+  blk="$(printf '%s\n' "$hk" | awk '
+    $0 ~ /^[[:space:]]*190 =/ {grab=1}
+    grab {print}
+    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
+  ')"
+  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
+  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
+  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  case "${enabled:-}" in 0|false|False) en_ok=1 ;; *) en_ok=0 ;; esac
+  if [ "$en_ok" = 1 ] && [ "$ptype" = standard ] && [ "$p1" = 65535 ]; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Quick Note hotkey 190 already disabled (dry-run)"
+    elif [ -n "$ONLY_IDS" ]; then
+      say_ok "Quick Note hotkey 190 already disabled (left alone)"
+    else
+      "$pin" >/dev/null
+      REASSERTED=$((REASSERTED + 1))
+      say_ok "Quick Note hotkey 190 already disabled (re-asserted)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Quick Note hotkey 190 enabled=${enabled:-missing} type=${ptype:-?} p1=${p1:-?} -> disabled (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.symbolichotkeys"
+  ensure_backup
+  "$pin" >/dev/null
+  CHANGED=$((CHANGED + 1))
+  say_chg "Quick Note hotkey 190 enabled=${enabled:-missing} type=${ptype:-?} p1=${p1:-?} -> disabled"
+  queue_restart logout "Quick Note shortcut (symbolic hotkey 190)"
+}
+if selected @quicknote-190; then apply_quicknote_hotkey; fi
 
 # ---- CotEditor theme + monospaced font (nested prefs via export/import) ----
 apply_coteditor() {
