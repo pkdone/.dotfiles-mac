@@ -172,7 +172,7 @@ A Hammerspoon menu-bar dropdown switches between three modes. Switching is **man
 
 | Mode | Icon | What it does |
 |------|------|------|
-| **Normal** | ○ circle | Undoes whatever the last mode recorded: reopens apps it quit (in the background, not hidden), unhides apps it hid, turns its Focus off, lets the display sleep again. Notification badges come back with the Focus. |
+| **Normal** | ⌂ `house` | Undoes whatever the last mode recorded: reopens apps it quit (in the background, not hidden), unhides apps it hid, turns its Focus off, lets the display sleep again. Notification badges come back with the Focus. |
 | **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; keeps the display awake; brings Granola to the front. Keeps the Dock. |
 | **DeepWork** | `brain.head.profile` + time left (e.g. `42m`) | Quits Slack and WhatsApp, hides Granola, DeepWork Focus on, leaves Spotify alone. Counts down 50 min (`timerMinutes`); at the end a notification offers **Take a break** / **Back to Normal** / **Another session** (it never switches by itself). Meeting alerts: every minute it asks Shortcuts for events starting within 5 min and alerts you itself, so the Focus can hold everything else back. |
 
@@ -391,7 +391,7 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 | 42 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | check.sh |
 | 43 | Create Shortcut "Mode Upcoming Meetings": Find Calendar Events where Start Date is in the next 5 minutes → Get Details of Calendar Events (Title) → Combine Text (New Lines) → Stop and Output; run it once and allow Calendar access | Shortcuts → + (Hammerspoon has no calendar permission of its own; Shortcuts does the lookup) | check.sh |
 | 44 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
-| 45 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (○ / red ⏺ / brain) | by hand |
+| 45 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (house / red ⏺ / brain) | by hand |
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 

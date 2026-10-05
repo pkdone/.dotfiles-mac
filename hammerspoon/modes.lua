@@ -48,7 +48,7 @@ return {
   modes = {
     Normal = {
       label   = 'Normal',
-      icon    = { symbol = 'circle', fallback = '○' },
+      icon    = { symbol = 'house', fallback = '⌂' },
       -- Normal has no actions of its own: it restores whatever state.json recorded.
     },
 
