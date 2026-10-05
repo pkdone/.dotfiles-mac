@@ -45,7 +45,8 @@ bad('bad bundle id', function(c) c.modes.WebConf.quit = { 'not a bundle' } end, 
 bad('unknown focus', function(c) c.modes.DeepWork.focus = 'Nope' end, "focus 'Nope'")
 bad('mode not in order', function(c) c.modes.Extra = { label = 'x', icon = { symbol = 'a', fallback = 'b' } } end, 'missing from order')
 bad('timer out of range', function(c) c.modes.DeepWork.timerMinutes = 0 end, 'timerMinutes must be 1-600')
-bad('meetings too frequent', function(c) c.meetings.checkEverySec = 1 end, 'checkEverySec')
+bad('meetingAlerts removed', function(c) c.modes.DeepWork.meetingAlerts = true end, "unknown key 'meetingAlerts'")
+ok('no meetings config', cfg.meetings == nil)
 eq('validateFile reports syntax errors', 'error', (ms.validateFile(DIR .. '/tests/modes_spec.lua.nope')):sub(1, 5))
 
 -- ---- helpers --------------------------------------------------------------------
@@ -78,6 +79,7 @@ ok('DeepWork: hides Granola', has(dw, 'hide Granola'))
 ok('DeepWork: timer', has(dw, '50-minute countdown'))
 ok('DeepWork: never auto-switches', has(dw, 'never switches by itself'))
 ok('DeepWork: Spotify untouched', not has(dw, 'Spotify'))
+ok('DeepWork: no meeting alerts', not has(dw, 'meeting') and not has(dw, 'Mode Upcoming Meetings') and not has(dw, 'calendar'))
 local from = deepcopy(snap); from.current = 'WebConf'
 from.changes = { quit = { { bundle = 'com.spotify.client', name = 'Spotify' } }, hidden = { { bundle = 'com.tinyspeck.slackmacgap', name = 'Slack' } },
                  focus = 'WebConf', displayAwake = true }
@@ -89,6 +91,11 @@ ok('Normal: unhides', has(nm, 'unhide Slack'))
 ok('Normal: Focus off', has(nm, "Shortcut 'Mode WebConf Off'"))
 ok('Normal: display sleep back', has(nm, 'allow display sleep'))
 ok('Normal: nothing about Chrome tabs', not has(nm, 'Chrome'))
+local timed = deepcopy(from)
+timed.changes.timer = { minutes = 50 }
+local nt = ms.plan(cfg, 'Normal', timed)
+ok('Normal: stops the DeepWork timer', has(nt, 'stop the DeepWork timer'))
+ok('Normal: no meeting checks', not has(nt, 'meeting'))
 ok('Normal from Normal: nothing', has(ms.plan(cfg, 'Normal', snap), 'nothing recorded to restore'))
 
 local summary = string.format('modes tests: %d passed, %d failed', pass, fail)

@@ -767,10 +767,10 @@ else
     *)        fixid tooling; warn "hammerspoon/modes.lua: unexpected validator output: $(printf '%s' "$modes_val" | head -c 200)" ;;
   esac
 
-  # Shortcuts named in modes.lua (Focus on/off + upcoming meetings)
+  # Shortcuts named in modes.lua (Focus on/off only)
   fixid modes-setup
   CHECKED=$((CHECKED + 1))
-  modes_need="$(grep -oE "(on|off|shortcut)[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/^[a-z]+[[:space:]]*=[[:space:]]*'//; s/'\$//" | sort -u)"
+  modes_need="$(grep -oE "(on|off)[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/^[a-z]+[[:space:]]*=[[:space:]]*'//; s/'\$//" | sort -u)"
   if ! command -v shortcuts >/dev/null 2>&1; then
     fixid tooling; warn "shortcuts CLI not found — can't check the Focus Shortcuts"
   elif ! modes_have="$(with_timeout 15 shortcuts list </dev/null 2>/dev/null)"; then
@@ -782,9 +782,9 @@ else
       if ! printf '%s\n' "$modes_have" | grep -Fxq "$s"; then modes_missing="$modes_missing '$s',"; fi
     done <<< "$modes_need"
     if [ -n "$modes_missing" ]; then
-      warn "Shortcuts missing:${modes_missing%,} — create them (manual steps mode-focus-shortcuts / mode-meetings-shortcut); modes still run, without Focus / meeting alerts"
+      warn "Shortcuts missing:${modes_missing%,} — create them (manual step mode-focus-shortcuts); modes still run, without the Focus"
     else
-      pass "Focus + meeting Shortcuts exist ($(printf '%s\n' "$modes_need" | grep -c .))"
+      pass "Focus Shortcuts exist ($(printf '%s\n' "$modes_need" | grep -c .))"
     fi
   fi
 

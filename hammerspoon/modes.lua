@@ -35,16 +35,6 @@ return {
     DeepWork = { on = 'Mode DeepWork On', off = 'Mode DeepWork Off' },
   },
 
-  -- Meeting alerts in DeepWork: Hammerspoon has no calendar permission of its own, so
-  -- a Shortcut does the calendar lookup (Shortcuts asks for Calendar access once). It
-  -- must output the titles of events starting in the next `minutes` minutes, one per
-  -- line. Missing Shortcut = no meeting alerts (the menu says so).
-  meetings = {
-    shortcut      = 'Mode Upcoming Meetings',
-    minutes       = 5,
-    checkEverySec = 60,
-  },
-
   modes = {
     Normal = {
       label   = 'Normal',
@@ -72,7 +62,6 @@ return {
       focus   = 'DeepWork',                -- Spotify is left alone
       timerMinutes  = 50,                  -- menu-bar countdown; when it ends you choose,
       breakMinutes  = 10,                  --   it never switches by itself
-      meetingAlerts = true,                -- see `meetings` above
     },
   },
 }

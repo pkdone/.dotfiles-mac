@@ -27,10 +27,9 @@ local MODE_KEYS = {
   label = 'string', icon = 'table', quit = 'list', hide = 'list', focus = 'string',
   front = 'string', keepDisplayAwake = 'boolean',
   timerMinutes = 'number', breakMinutes = 'number',
-  meetingAlerts = 'boolean',
 }
 local ACTION_KEYS = { 'quit', 'hide', 'focus', 'front', 'keepDisplayAwake',
-                      'timerMinutes', 'breakMinutes', 'meetingAlerts' }
+                      'timerMinutes', 'breakMinutes' }
 
 local function isList(t)
   if type(t) ~= 'table' then return false end
@@ -99,22 +98,11 @@ function M.validate(cfg)
         end
       end
       if m.breakMinutes and not m.timerMinutes then err("mode '%s': breakMinutes needs timerMinutes", name) end
-      if m.meetingAlerts and type(cfg.meetings) ~= 'table' then
-        err("mode '%s': meetingAlerts needs a meetings table", name)
-      end
       if name == 'Normal' then
         for _, k in ipairs(ACTION_KEYS) do
           if m[k] ~= nil then err("Normal can't have actions ('%s'): it only restores", k) end
         end
       end
-    end
-  end
-  if cfg.meetings ~= nil then
-    local mt = cfg.meetings
-    if type(mt) ~= 'table' or type(mt.shortcut) ~= 'string' or mt.shortcut == ''
-       or type(mt.minutes) ~= 'number' or mt.minutes < 1 or mt.minutes > 60
-       or type(mt.checkEverySec) ~= 'number' or mt.checkEverySec < 15 then
-      err('meetings needs shortcut (name), minutes (1-60) and checkEverySec (>= 15)')
     end
   end
   return #errs == 0, errs
@@ -165,7 +153,7 @@ local function restoreLines(cfg, changes, snap, out, indent)
     out[#out + 1] = indent .. string.format("Focus %s off: Shortcut '%s'", changes.focus, f and f.off or '?')
   end
   if changes.displayAwake then any = true; out[#out + 1] = indent .. 'allow display sleep again (displayIdle off)' end
-  if changes.timer then any = true; out[#out + 1] = indent .. 'stop the DeepWork timer and meeting checks' end
+  if changes.timer then any = true; out[#out + 1] = indent .. 'stop the DeepWork timer' end
   if changes.focus then out[#out + 1] = indent .. 'notification badges come back with the Focus off' end
   if not any then out[#out + 1] = indent .. 'nothing recorded to restore' end
 end
@@ -230,13 +218,6 @@ function M.plan(cfg, name, snap)
     out[#out + 1] = string.format('  start a %d-minute countdown in the menu bar; at the end a notification offers', m.timerMinutes)
     out[#out + 1] = string.format('    Take a break (%d min) / Back to Normal / Another session (never switches by itself)', m.breakMinutes or 10)
   end
-  if m.meetingAlerts and cfg.meetings then
-    local mt = cfg.meetings
-    local line = string.format("  meeting alerts: every %ds run Shortcut '%s'; alert for meetings starting within %d min",
-      mt.checkEverySec, mt.shortcut, mt.minutes)
-    if snap.shortcuts and not snap.shortcuts[mt.shortcut] then line = line .. ' (MISSING: no meeting alerts)' end
-    out[#out + 1] = line
-  end
   out[#out + 1] = '  log the switch to ~/Library/Logs/pdone-modes.log'
   return out
 end
@@ -264,7 +245,6 @@ local timers = {}            -- name -> hs.timer (strong refs)
 local tasks = {}             -- running hs.task objects (strong refs)
 local shortcutsKnown         -- set of Shortcut names, nil until listed
 local notes = {}             -- key -> text shown (disabled) in the menu
-local seenMeetings = {}
 local timerDone = false
 local endNotification
 
@@ -437,7 +417,7 @@ local function renderIcons()
   end)
 end
 
--- ---- Shortcuts (Focus + meetings) ---------------------------------------------
+-- ---- Shortcuts (Focus) --------------------------------------------------------
 
 local function refreshShortcuts(cb)
   runTask('/usr/bin/shortcuts', { 'list' }, function(code, out)
@@ -460,7 +440,6 @@ local function missingShortcuts()
       if not shortcutsKnown[f.off] then miss[#miss + 1] = f.off end
     end
   end
-  if cfg.meetings and not shortcutsKnown[cfg.meetings.shortcut] then miss[#miss + 1] = cfg.meetings.shortcut end
   return miss
 end
 
@@ -484,7 +463,7 @@ local function setDisplayAwake(on)
   hs.caffeinate.set('displayIdle', on, true)
 end
 
--- ---- DeepWork timer + meeting alerts ----------------------------------------
+-- ---- DeepWork timer -----------------------------------------------------------
 
 local startTimer -- forward
 local M_switch   -- forward
@@ -527,47 +506,6 @@ startTimer = function()
     if now() >= t.endsAt then stopTimer('countdown'); onTimerEnd() end
     if updateMenu then updateMenu() end
   end)
-end
-
-local function checkMeetings()
-  local mt = cfg.meetings
-  if not mt then return end
-  if shortcutsKnown and not shortcutsKnown[mt.shortcut] then
-    notes.meetings = "Meeting alerts off: create Shortcut '" .. mt.shortcut .. "'"
-    return
-  end
-  local outFile = CACHE_DIR .. '/upcoming-meetings.txt'
-  os.remove(outFile)
-  runTask('/usr/bin/shortcuts', { 'run', mt.shortcut, '--output-path', outFile }, function(code, _, err)
-    if code ~= 0 then
-      notes.meetings = "Meeting alerts: Shortcut '" .. mt.shortcut .. "' failed (calendar access?)"
-      log.w(notes.meetings .. ': ' .. err)
-      return
-    end
-    notes.meetings = nil
-    local f = io.open(outFile, 'r')
-    if not f then return end
-    local text = f:read('a') or ''
-    f:close()
-    os.remove(outFile)
-    for title in text:gmatch('[^\r\n]+') do
-      title = title:gsub('^%s+', ''):gsub('%s+$', '')
-      local key = title .. os.date('|%Y%m%d%H')
-      if title ~= '' and not seenMeetings[key] then
-        seenMeetings[key] = true
-        alert('📅 Meeting within ' .. mt.minutes .. ' min: ' .. title, 10)
-        notify('Meeting soon', title .. ' starts within ' .. mt.minutes .. ' minutes')
-      end
-    end
-  end)
-end
-
-local function startMeetingChecks()
-  stopTimer('meetings')
-  local m = cfg.modes[state.mode]
-  if not (m and m.meetingAlerts and cfg.meetings) then notes.meetings = nil; return end
-  checkMeetings()
-  every('meetings', cfg.meetings.checkEverySec, checkMeetings)
 end
 
 -- ---- quitting / hiding --------------------------------------------------------
@@ -620,10 +558,9 @@ local function restoreChanges(changes)
     runShortcut(cfg.focus[changes.focus].off, 'Focus off')
   end
   if changes.displayAwake then setDisplayAwake(false) end
-  stopTimer('countdown'); stopTimer('meetings'); stopTimer('break')
+  stopTimer('countdown'); stopTimer('break')
   timerDone = false
   if endNotification then endNotification:withdraw(); endNotification = nil end
-  notes.meetings = nil
   return msgs
 end
 
@@ -681,7 +618,6 @@ local function applyMode(name)
     after('front', 0.8, function() hs.application.launchOrFocusByBundleID(m.front) end)
   end
   if m.timerMinutes then startTimer() end
-  startMeetingChecks()
 
   -- After a moment, check the quits stuck; anything still running was not quit.
   after('verifyQuit', QUIT_WAIT_SECS, function()
@@ -811,9 +747,9 @@ local function menuItems()
   end
   local miss = missingShortcuts()
   if #miss > 0 then
-    items[#items + 1] = { title = 'Missing Shortcuts (Focus / meetings not used): ' .. table.concat(miss, ', '), disabled = true }
+    items[#items + 1] = { title = 'Missing Shortcuts (Focus not used): ' .. table.concat(miss, ', '), disabled = true }
   end
-  for _, k in ipairs({ 'skipped', 'focus', 'meetings' }) do
+  for _, k in ipairs({ 'skipped', 'focus' }) do
     if notes[k] then items[#items + 1] = { title = notes[k], disabled = true } end
   end
   items[#items + 1] = { title = '-' }
@@ -859,7 +795,6 @@ function M.start()
   if state.mode ~= 'Normal' and state.phase ~= 'restoring' then
     if ch.displayAwake then setDisplayAwake(true) end
     if ch.timer then startTimer() end
-    startMeetingChecks()
     log.i('restored persisted mode ' .. state.mode)
   end
   if state.mode == 'Normal' and state.breakEndsAt then startBreakTimer() end
