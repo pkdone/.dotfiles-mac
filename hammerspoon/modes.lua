@@ -28,8 +28,8 @@ return {
 
   -- Focus can't be set directly on macOS, so each Focus is toggled by a Shortcut that
   -- you create once (see README "Modes" / scripts/manual-steps.sh). check.sh verifies
-  -- they exist (`shortcuts list`). A missing Shortcut doesn't stop the mode: the menu
-  -- notes it and everything else still runs.
+  -- they exist (`shortcuts list`). A missing Shortcut doesn't stop the mode: everything
+  -- else still runs, the menu notes it, and the switch shows a short alert.
   focus = {
     WebConf  = { on = 'Mode WebConf On',  off = 'Mode WebConf Off'  },
     DeepWork = { on = 'Mode DeepWork On', off = 'Mode DeepWork Off' },

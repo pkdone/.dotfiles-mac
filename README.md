@@ -176,7 +176,7 @@ A Hammerspoon menu-bar dropdown switches between three modes. Switching is **man
 | **WebConf** (on air) | red ⏺ `record.circle.fill` | Quits WhatsApp, Spotify and YouTube Music (Chrome app `com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod`); hides Slack, Finder windows and Grok Bot; WebConf Focus on; keeps the display awake; brings Granola to the front. Keeps the Dock. |
 | **DeepWork** | `brain.head.profile` + time left (e.g. `42m`) | Quits Slack and WhatsApp, hides Granola, DeepWork Focus on, leaves Spotify alone. Counts down 50 min (`timerMinutes`); at the end a notification offers **Take a break** / **Back to Normal** / **Another session** (it never switches by itself). |
 
-The dropdown ticks the current mode, shows how long it's been on, notes anything missing (Shortcuts) or skipped, and has **Dry run** (prints what a mode would do to the Hammerspoon Console, changes nothing) and **Open switch log**. The icon's tooltip names the mode.
+The dropdown ticks the current mode. Under the tick, a disabled line says why you're in it: `WebConf · 12m · Focus on`, `DeepWork · 42m left · Focus on` (time left while the timer is running; otherwise how long the mode has been on), or `Normal · restored`. Focus on/off is included when the switcher knows it. The menu still notes anything missing (Shortcuts) or skipped, and has **Dry run** (prints what a mode would do to the Hammerspoon Console, changes nothing) and **Open switch log**. The icon's tooltip names the mode.
 
 **Safety rails**
 
@@ -186,7 +186,7 @@ The dropdown ticks the current mode, shows how long it's been on, notes anything
 - Every switch is logged to `~/Library/Logs/pdone-modes.log` (time, mode, how long the previous mode lasted).
 - Menu-bar notification badges can't be switched off (macOS has no API for it), so the Focus is what hides them.
 
-**Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs Shortcuts you create once: `Mode WebConf On` / `Mode WebConf Off` / `Mode DeepWork On` / `Mode DeepWork Off` (one **Set Focus** action each). If any are missing, the mode still runs and the menu says what's missing. The manual steps `mode-*` walk through it, and `check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
+**Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs Shortcuts you create once: `Mode WebConf On` / `Mode WebConf Off` / `Mode DeepWork On` / `Mode DeepWork Off` (one **Set Focus** action each). If any are missing, the mode still runs and the menu says what's missing. The switch also shows a short alert, for example `WebConf Focus skipped — Shortcut missing`, so you notice without opening the menu. A Shortcut that is present does not raise that alert. The manual steps `mode-*` walk through it, and `check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
 
 From a terminal:
 
