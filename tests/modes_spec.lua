@@ -102,8 +102,20 @@ ok('Normal from Normal: nothing', has(ms.plan(cfg, 'Normal', snap), 'nothing rec
 eq('missing Shortcut is missing', true, ms.shortcutMissing({}, 'Mode WebConf On'))
 eq('present Shortcut is not missing', false, ms.shortcutMissing({ ['Mode WebConf On'] = true }, 'Mode WebConf On'))
 eq('unknown Shortcut list is not missing', false, ms.shortcutMissing(nil, 'Mode WebConf On'))
-eq('WebConf skip toast', 'WebConf Focus skipped — Shortcut missing', ms.focusSkipToast('WebConf'))
-eq('DeepWork skip toast', 'DeepWork Focus skipped — Shortcut missing', ms.focusSkipToast('DeepWork'))
+eq('WebConf skip toast', "WebConf Focus skipped — create 'Mode WebConf On' in Shortcuts",
+  ms.focusSkipToast('WebConf', 'Mode WebConf On'))
+eq('DeepWork skip toast', "DeepWork Focus skipped — create 'Mode DeepWork On' in Shortcuts",
+  ms.focusSkipToast('DeepWork', 'Mode DeepWork On'))
+eq('one missing Fix title', 'Create missing: Mode WebConf On',
+  ms.missingFixTitle({ 'Mode WebConf On' }))
+eq('several missing Fix title', 'Create missing: Mode WebConf On, Mode WebConf Off',
+  ms.missingFixTitle({ 'Mode WebConf On', 'Mode WebConf Off' }))
+eq('missing Fix clipboard is one name per line', "Mode WebConf On\nMode DeepWork Off",
+  ms.missingFixClipboard({ 'Mode WebConf On', 'Mode DeepWork Off' }))
+eq('one missing Fix alert', "Copied 'Mode WebConf On' — opening Shortcuts",
+  ms.missingFixAlert({ 'Mode WebConf On' }))
+eq('several missing Fix alert', 'Copied 2 Shortcut names — opening Shortcuts',
+  ms.missingFixAlert({ 'Mode WebConf On', 'Mode WebConf Off' }))
 
 local function attempt(prev, which, listed, present)
   return ms.afterFocusAttempt(prev, which, listed, present)
