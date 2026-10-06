@@ -12,6 +12,8 @@
 #             symlink      ln -sfn to the repo source, ONLY if the target is a symlink or
 #                          missing — a real file is never overwritten
 #             hammerspoon  open -g -a Hammerspoon (only if installed and not running)
+#             desktop      lib/desktop-bindings.py --apply (backs up com.apple.spaces,
+#                          writes app-bindings, restarts Dock only if a pin changed)
 # An id that isn't listed here is treated as PAUL ("not classified").
 # Blank lines and lines beginning with # are ignored.
 
@@ -25,13 +27,13 @@ coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
 launchagent|SAFE|launchagent|repo LaunchAgent loaded with launchctl bootstrap
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
 hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon)
+desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; restarts Dock)
 
 # ---- PAUL: report only, never automated ----
 brew|PAUL||installing / uninstalling / updating apps — brewsync (the routine runs it separately)
 app-install|PAUL||an app is missing — install it (Brewfile / brewsync, App Store or Self Service)
 unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
 dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
-desktop-assign|PAUL||desktop assignments can't be scripted — Dock icon → Options → Assign To
 login-shell|PAUL||login shell change needs sudo / chsh — shell.sh
 hostname|PAUL||hostname change needs sudo — hostname.sh
 url-handler|PAUL||default-app changes can raise a macOS confirmation dialog — handlers.sh

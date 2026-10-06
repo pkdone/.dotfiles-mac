@@ -1,7 +1,10 @@
-# Dock "Options → Assign To" desktop pins, checked by check.sh (read-only; not applied).
+# Dock "Options → Assign To" desktop pins. check.sh compares them; check.sh --fix applies them
+# (lib/desktop-bindings.py --apply) by writing com.apple.spaces app-bindings.
 # Format (pipe-delimited): Display name | bundle id | desktop
 #   desktop: 1..N = "This Desktop" on Desktop N of the main display; none = not assigned
 #   Bundle ids are matched case-insensitively (macOS stores them lowercased).
+#   Desktop N is resolved to that Space's current UUID when applying (Desktop 1 is "").
+#   UUIDs for Desktops 2+ change if Spaces are recreated; they are not stored here.
 #   YouTube Music is a Chrome web app with its own bundle id.
 # Blank lines and lines beginning with # are ignored.
 Slack|com.tinyspeck.slackmacgap|1

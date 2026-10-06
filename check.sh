@@ -9,7 +9,7 @@
 # Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
-# (macos.sh / dock.sh) and the two can never drift.
+# (macos.sh / dock.sh / lib/desktop-bindings.py) and the two can never drift.
 #
 # Flags:
 #   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
@@ -315,16 +315,18 @@ else
 fi
 
 # ---- 4b. Dock "Assign To" desktop pins ----------------------------------
+# Read-only here. --fix writes the drifted bundles back (same Desktop N → Space
+# UUID map) via the desktop fixer below.
 hdr "Desktop assignments (Dock → Options → Assign To)"
 fixid desktop-assign
 if PY="$(dot_python)"; then
-  while IFS='|' read -r status msg; do
+  while IFS='|' read -r status bundle msg; do
     [ -z "$status" ] && continue
     CHECKED=$((CHECKED + 1))
     case "$status" in
       ok)  pass "$msg" ;;
-      bad) bad "$msg" ;;
-      *)   warn "$msg" ;;
+      bad) fixid desktop-assign "$bundle"; bad "$msg" ;;
+      *)   fixid tooling; warn "${msg:-$bundle}" ;;
     esac
   done < <("$PY" "$DOTDIR/lib/desktop-bindings.py" "$DOTDIR/lib/desktop-bindings.list")
 else
@@ -1360,6 +1362,7 @@ if [ "$FIX" = 1 ]; then
   # Classify every drift / warning. SAFE items are de-duplicated on id|arg.
   SAFE_ITEMS=()                 # "id US arg US message US fixer"
   MACOS_ARGS=()                 # macos.sh --only … arguments (one batched call)
+  DESKTOP_ONLY=""               # bundle ids for one batched desktop-bindings.py --apply
   safe_seen="$US"
   for it in ${FIX_ITEMS[@]+"${FIX_ITEMS[@]}"}; do
     IFS="$US" read -r _it_kind it_id it_arg it_msg <<< "$it"
@@ -1374,12 +1377,15 @@ if [ "$FIX" = 1 ]; then
     SAFE_ITEMS+=("$it_id$US$it_arg$US$it_msg$US$it_fixer")
     if [ "$it_fixer" = macos ]; then
       if [ "$it_id" = defaults ]; then MACOS_ARGS+=(--only "$it_arg"); else MACOS_ARGS+=(--only "@$it_id"); fi
+    elif [ "$it_fixer" = desktop ] && [ -n "$it_arg" ]; then
+      DESKTOP_ONLY="${DESKTOP_ONLY:+$DESKTOP_ONLY,}$it_arg"
     fi
   done
 
   # Run the fixers in dependency order: symlinks (a LaunchAgent plist may be one), then one
-  # batched macos.sh call (one backup, at most one restart per process), then LaunchAgents
-  # and Hammerspoon. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
+  # batched macos.sh call (one backup, at most one restart per process), then one batched
+  # desktop-bindings.py --apply (one backup, one Dock restart), then LaunchAgents and
+  # Hammerspoon. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
   FIX_RESULTS=()
   MACOS_OUT=""
   macos_line() {  # id arg — this item's chg / warn / ok line from the macos.sh output
@@ -1395,11 +1401,22 @@ if [ "$FIX" = 1 ]; then
     printf '%s\n' "$MACOS_OUT" | grep -F -- "$pat" | grep -E '^  (chg|warn|ok) ' | head -1 | sed -E 's/^ +(chg|warn|ok) +//'
   }
   run_fix() {  # fixer arg id — dispatch to the fixer; prints its line, returns its status
-    local ml
+    local ml rest
     case "$1" in
       symlink)     fix_symlink "$2" ;;
       launchagent) fix_launchagent "$2" ;;
       hammerspoon) fix_hammerspoon ;;
+      desktop)
+        ml="$(printf '%s\n' "$DESKTOP_OUT" | awk -F'|' -v b="$2" '$2 == b { print; exit }')"
+        if [ -z "$ml" ]; then echo "desktop-bindings.py printed nothing for this item"; return 1; fi
+        rest="${ml#*|}"; rest="${rest#*|}"
+        echo "desktop: $rest"
+        case "${ml%%|*}" in
+          chg|ok|dry) return 0 ;;
+          refuse) return 2 ;;
+          *) return 1 ;;
+        esac
+        ;;
       macos)
         ml="$(macos_line "$3" "$2")"
         if [ -z "$ml" ]; then echo "macos.sh printed nothing for this item"; return 1; fi
@@ -1437,7 +1454,29 @@ if [ "$FIX" = 1 ]; then
       LOGOUT_NEEDED+=("${ml#  - }")
     done < <(printf '%s\n' "$MACOS_OUT" | awk '/^Note: the following changed/ {grab=1; next} grab && /^  - / {print}')
   fi
-  fix_pass macos launchagent hammerspoon
+  # One apply for every drifted bundle: resolve Desktop N → current Space UUID,
+  # write app-bindings, restart Dock once. DESKTOP_OUT is status|bundle|message.
+  DESKTOP_OUT=""
+  if [ -n "$DESKTOP_ONLY" ]; then
+    if ! desk_py="$(dot_python)"; then
+      while IFS= read -r b; do
+        [ -n "$b" ] || continue
+        DESKTOP_OUT="${DESKTOP_OUT}fail|${b}|python3 not found — desktop assignment not changed"$'\n'
+      done < <(printf '%s\n' "$DESKTOP_ONLY" | tr ',' '\n')
+    else
+      desk_cmd=("$desk_py" "$DOTDIR/lib/desktop-bindings.py" --apply)
+      if [ "$DRY_RUN" = 1 ]; then desk_cmd+=(--dry-run); fi
+      desk_cmd+=(--only "$DESKTOP_ONLY" "$DOTDIR/lib/desktop-bindings.list")
+      DESKTOP_OUT="$("${desk_cmd[@]}" 2>&1)" || true
+      if [ "$DRY_RUN" != 1 ]; then
+        while IFS= read -r dl; do
+          if [ -n "$dl" ]; then fix_log "desktop: $dl"; fi
+        done <<< "$DESKTOP_OUT"
+      fi
+    fi
+    printf '%s\n' "$DESKTOP_OUT" | awk -F'|' 'NF >= 3 && $3 != "" { print "        " $3 }'
+  fi
+  fix_pass macos desktop launchagent hammerspoon
   # Items with a fixer name the dispatcher doesn't know (a typo in lib/autofix.list).
   n=0
   for item in ${SAFE_ITEMS[@]+"${SAFE_ITEMS[@]}"}; do
