@@ -278,11 +278,12 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `che
 | Repo LaunchAgent not loaded | `scripts/load-launchagent.sh` (bootstraps it only if it isn't loaded; `install.sh` uses the same script with `--reload`) |
 | Repo-managed symlink missing or pointing elsewhere | `ln -sfn` to the repo file, **only** when the target is a symlink or missing. A real file in the way is never overwritten; that becomes Needs Paul |
 | Hammerspoon not running | `open -g -a Hammerspoon` |
+| Dock "Assign To" pins (`lib/desktop-bindings.list`) | `lib/desktop-bindings.py --apply`: writes `com.apple.spaces` `app-bindings` (bundle id → that Desktop's current Space UUID on the main display; Desktop 1 is `""`; `none` deletes the key), backs the domain up first, and restarts Dock only if a pin changed. A pin whose Desktop doesn't exist is left for you — Spaces are never created |
 
 **Needs Paul: reported, never automated**
 
 - Installing, uninstalling or updating apps (Brewfile / `brewsync`, which the routine runs separately; `prune-apps.sh`), and the Dock app layout (`dock.sh` rebuilds the whole Dock)
-- Login items, desktop assignments (macOS can't script them) and URL handlers (macOS may ask to confirm)
+- Login items and URL handlers (macOS may ask to confirm)
 - TCC permissions and the [manual steps](#manual-steps)
 - MDM, security settings, software updates, and Mac health signals
 - Hostname and login shell (they need sudo), and anything else that needs sudo or deletes files
@@ -476,7 +477,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `modes.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `modes.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes
@@ -490,7 +491,7 @@ dotpush "your message"
 - **New packages:** add to `Brewfile`, run `brewsync`. `check.sh` warns on brew/cask/MAS installs that aren’t declared (does not auto-remove them).
 - **Managed macOS settings:** edit `lib/macos-defaults.list`, then run `macos.sh` (use `defaults-diff.sh` to find the key first).
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
-- **Desktop assignments:** set each app via its Dock icon → Options → Assign To (macOS has no reliable way to script this), then record it in `lib/desktop-bindings.list` so `check.sh` flags it if macOS drops or moves the pin. Desktop numbers are for the main display.
+- **Desktop assignments:** edit `lib/desktop-bindings.list` (`1`..`N` = Desktop N on the main display, `none` = not assigned), then run `check.sh --fix`. That writes `com.apple.spaces` `app-bindings`, resolving Desktop N to the current Space UUID (Desktop 1 is `""`; Desktops 2+ change if Spaces are recreated) and restarts the Dock only if a pin changed. If that Desktop doesn't exist yet, the pin is left for you — the fix never creates Spaces.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
 - **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.
 - **Manual steps:** add a row to `lib/manual-steps.list` (with a read-only check if one is reliable), then refresh the README table with `scripts/manual-steps.sh list --markdown`.

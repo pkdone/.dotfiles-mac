@@ -89,6 +89,11 @@ jobs:
           # The safe / needs-Paul split for check.sh --fix: list format, the
           # required classes, and agreement with check.sh's fixid tags.
           ./tests/autofix.test.sh
+      - name: Run lib/desktop-bindings.py tests
+        run: |
+          # Dock Assign To check + apply against synthetic plists and a fake
+          # defaults/killall. No live Dock and no com.apple.spaces writes.
+          ./tests/desktop-bindings.test.sh
       - name: Run lib/logi-settings.py tests
         run: |
           # The read-only Logi Options+ check against a synthetic settings.db:

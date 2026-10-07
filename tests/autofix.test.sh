@@ -27,7 +27,7 @@ rows() { awk -F'|' '$1 !~ /^#/ && NF' "$LIST"; }
 bad_rows="$(rows | awk -F'|' '
   NF != 4                                   { print NR ": " $0 " (want 4 fields)"; next }
   $2 != "SAFE" && $2 != "PAUL"              { print NR ": " $0 " (class must be SAFE or PAUL)"; next }
-  $2 == "SAFE" && $3 !~ /^(macos|launchagent|symlink|hammerspoon)$/ { print NR ": " $0 " (unknown fixer)"; next }
+  $2 == "SAFE" && $3 !~ /^(macos|launchagent|symlink|hammerspoon|desktop)$/ { print NR ": " $0 " (unknown fixer)"; next }
   $2 == "PAUL" && $3 != ""                  { print NR ": " $0 " (PAUL rows have no fixer)"; next }
   $4 == ""                                  { print NR ": " $0 " (missing description)"; next }
   $1 !~ /^[a-z0-9-]+$/                      { print NR ": " $0 " (id must be [a-z0-9-])" }')"
@@ -35,14 +35,21 @@ eq "every autofix.list row is well formed" "" "$bad_rows"
 eq "ids are unique" "" "$(rows | cut -d'|' -f1 | sort | uniq -d)"
 
 # ---- the classes Paul asked for ----
-for id in defaults dictation-164 quicknote-190 finder-icon-view finder-recents coteditor launchagent symlink hammerspoon; do
+for id in defaults dictation-164 quicknote-190 finder-icon-view finder-recents coteditor launchagent symlink hammerspoon desktop-assign; do
   eq "$id is SAFE" SAFE "$(autofix_class "$LIST" "$id")"
 done
-for id in brew app-install unwanted-app dock-apps desktop-assign login-shell hostname url-handler \
+eq "desktop-assign fixer is desktop" desktop "$(autofix_lookup "$LIST" desktop-assign | cut -d'|' -f2)"
+for id in brew app-install unwanted-app dock-apps login-shell hostname url-handler \
           login-items tcc manual-step mdm security software-update delete-files dotfiles-git \
           karabiner-rules repo-file launchagent-exit health tooling; do
   eq "$id needs Paul" PAUL "$(autofix_class "$LIST" "$id")"
 done
+unscriptable="$(grep -n -e "can't be scripted" -e "no reliable way to script" \
+  "$DIR/lib/autofix.list" "$DIR/lib/desktop-bindings.list" || true)"
+readme_claim="$(grep -n -e "no reliable way to script" -e "desktop assignments (macOS can't" \
+  "$DIR/README.md" || true)"
+eq "list files don't call assignments unscriptable" "" "$unscriptable"
+eq "README doesn't call assignments unscriptable" "" "$readme_claim"
 
 # ---- lookup semantics ----
 eq "SAFE lookup returns class|fixer|why" "SAFE|symlink" "$(autofix_lookup "$LIST" symlink | cut -d'|' -f1-2)"
