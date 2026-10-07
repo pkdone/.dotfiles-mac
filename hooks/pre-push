@@ -59,6 +59,10 @@ if [ -x ./tests/file-handlers.test.sh ]; then
   echo "  unit tests (lib/file-handlers.py Finder default apps)"
   ./tests/file-handlers.test.sh || status=1
 fi
+if [ -x ./tests/auto-brightness.test.sh ]; then
+  echo "  unit tests (lib/auto-brightness.py display auto-brightness)"
+  ./tests/auto-brightness.test.sh || status=1
+fi
 if [ -x ./tests/logi-settings.test.sh ]; then
   echo "  unit tests (lib/logi-settings.py read-only Logi Options+ check)"
   ./tests/logi-settings.test.sh || status=1

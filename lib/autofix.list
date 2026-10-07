@@ -40,6 +40,7 @@ unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
 dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
 login-shell|PAUL||login shell change needs sudo / chsh — shell.sh
 hostname|PAUL||hostname change needs sudo — hostname.sh
+auto-brightness|PAUL||Automatically adjust brightness — System Settings → Displays. Readable without sudo via corebrightnessdiag; the saved CoreBrightness plist is root-owned and its keys move between macOS versions, so --fix never writes it. True Tone and battery dim are left alone
 url-handler|PAUL||default-app changes can raise a macOS confirmation dialog — handlers.sh
 app-config|PAUL||an app config in the repo is invalid or overridden — fix ghostty/config, or merge and remove the override by hand
 logi-settings|PAUL||a Logi Options+ setting (MX Master 3S) drifted from lib/logi-expected.list — set it back in the app; settings.db is never written

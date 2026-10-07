@@ -68,6 +68,7 @@ logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on c
 
 # ---- Display, keyboard & desktop ----
 display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|
+auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@check.sh
 input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 desktop-widgets|Display, keyboard & desktop|Remove all desktop widgets|Desktop: right-click each widget → Remove Widget (System Settings → Desktop & Dock → Widgets)|x-apple.systempreferences:com.apple.Desktop-Settings.extension|
 user-picture|Display, keyboard & desktop|Set your user picture to the Dog|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|

@@ -24,7 +24,7 @@
 #   -h|--help   Show usage.
 #
 # Safety:
-#   - No sudo. sudo-only items (e.g. hostname) stay manual (see README).
+#   - No sudo. sudo-only items (e.g. hostname, display auto-brightness) stay manual (see README).
 #   - Before the first value-changing write, every affected domain is exported
 #     to backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
 #   - UI restarts (killall) are deferred to the end, run only if something

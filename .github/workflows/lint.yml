@@ -99,6 +99,11 @@ jobs:
           # Finder double-click defaults: check + apply against a fake duti.
           # No live Launch Services database.
           ./tests/file-handlers.test.sh
+      - name: Run lib/auto-brightness.py tests
+        run: |
+          # Automatically adjust brightness, from a synthetic status-info plist.
+          # No corebrightnessdiag and no root plist.
+          ./tests/auto-brightness.test.sh
       - name: Run lib/logi-settings.py tests
         run: |
           # The read-only Logi Options+ check against a synthetic settings.db:

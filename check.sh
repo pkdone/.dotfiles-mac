@@ -6,7 +6,7 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
@@ -358,6 +358,40 @@ for which in HostName LocalHostName ComputerName; do
     bad "$which = ${cur:-unset} (expected $EXPECTED_HOST)"
   fi
 done
+
+# ---- 6b. Display auto-brightness ----------------------------------------
+# Read-only. corebrightnessdiag status-info needs no sudo. The saved value is
+# the root-owned CoreBrightness plist, and published writers also change True
+# Tone, so this is not applied here or by --fix.
+hdr "Display auto-brightness"
+fixid auto-brightness
+CHECKED=$((CHECKED + 1))
+if [ ! -x /usr/libexec/corebrightnessdiag ]; then
+  fixid tooling
+  warn "corebrightnessdiag missing — can't check Automatically adjust brightness"
+elif [ ! -r "$DOTDIR/lib/auto-brightness.py" ]; then
+  fixid repo-file
+  warn "lib/auto-brightness.py missing — can't check Automatically adjust brightness"
+elif ! PY="$(dot_python)"; then
+  fixid tooling
+  warn "no python3 — can't check Automatically adjust brightness"
+else
+  diag_out="$(with_timeout 15 /usr/libexec/corebrightnessdiag status-info 2>/dev/null || true)"
+  if [ -z "$diag_out" ]; then
+    fixid tooling
+    warn "corebrightnessdiag status-info returned nothing — can't check Automatically adjust brightness"
+  else
+    ab_line="$(printf '%s\n' "$diag_out" | "$PY" "$DOTDIR/lib/auto-brightness.py" || true)"
+    ab_status="${ab_line%%|*}"
+    ab_msg="${ab_line#*|}"
+    ab_msg="${ab_msg#*|}"
+    case "$ab_status" in
+      ok)  pass "$ab_msg" ;;
+      bad) bad "$ab_msg" ;;
+      *)   fixid tooling; warn "${ab_msg:-auto-brightness check failed}" ;;
+    esac
+  fi
+fi
 
 # ---- 7. URL handlers ----------------------------------------------------
 hdr "URL handlers"
