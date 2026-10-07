@@ -4,6 +4,11 @@
 #
 # Keep Apple Mail / Music / News / Books / Podcasts / Games from owning these.
 # GarageBand / iMovie have no URL schemes; Photos/FaceTime deep-links are left alone.
+# http and https are the default browser. File handlers must not set public.html;
+# that switches these (and com.apple.default-app.web-browser) off Chrome.
+# Scheme form is `duti -s <bundle> <scheme>` with no role. Role `all` is error -50.
+http|com.google.Chrome
+https|com.google.Chrome
 mailto|com.google.Chrome
 applenews|com.google.Chrome
 applenewss|com.google.Chrome

@@ -8,7 +8,7 @@
 #   3. hostname.sh  set HostName / LocalHostName / ComputerName
 #   4. macos.sh     apply the managed macOS defaults
 #   5. dock.sh      pin the Dock apps in order
-#   6. handlers.sh  set URL-scheme default apps (mailto → Chrome)
+#   6. handlers.sh  set URL-scheme default apps (mailto → Chrome) and Finder file handlers
 #   7. prune-apps.sh remove unwanted App Store apps (GarageBand, iMovie)
 #
 # It ends by printing the manual steps (lib/manual-steps.list: permissions, sign-ins,
@@ -123,7 +123,7 @@ step 2 "shell.sh — make fish the login shell"         shell.sh    --dry-run
 step 3 "hostname.sh — set host names"                 hostname.sh --dry-run
 step 4 "macos.sh — apply managed macOS defaults"      macos.sh    --dry-run
 step 5 "dock.sh — pin the Dock apps in order"         dock.sh     --list      precheck_dock
-step 6 "handlers.sh — URL-scheme handlers (mailto)"   handlers.sh --dry-run
+step 6 "handlers.sh — URL schemes and Finder file handlers"   handlers.sh --dry-run
 step 7 "prune-apps.sh — remove unwanted apps"         prune-apps.sh --dry-run
 
 banner "Done"
