@@ -1,19 +1,25 @@
 # Finder double-click default apps (role: all).
 # check.sh compares each row with `duti -x`; handlers.sh and `check.sh --fix`
 # apply drift with `duti -s <bundle-id> .<ext> all`.
-# Format (pipe-delimited): extension | app | bundle-id
+# Format (pipe-delimited): extension | app | bundle-id [| flag]
 #   extension: no leading dot (txt, not .txt). A leading dot is accepted and stripped.
 #   app:       display name, for reading this file. duti is called with the bundle-id.
 #   bundle-id: Launch Services bundle id. Cursor here is the stable `cursor` cask,
 #              not Cursor Nightly (co.anysphere.cursor.nightly).
+#   flag:      optional.
+#              unpinnable — no declared UTI. duti -s returns error -50 (paramErr)
+#                on the dynamic UTI, so the handler cannot be set. check.sh prints
+#                info, not DRIFT, and --fix does not call duti.
+#              uti:a,b — also set these UTIs with role all. .plist's preferred type
+#                is com.apple.xml-property-list, but duti -x plist follows
+#                com.apple.property-list, so both are set.
+# html, htm, and xhtml are not listed. They are public.html / public.xhtml, and
+# setting that UTI switches the default web browser (http, https, and
+# com.apple.default-app.web-browser). The fixer refuses those extensions, those
+# UTIs, and any URL scheme even if a row is added back. URL schemes live in
+# lib/url-handlers.list (`duti -s <bundle> <scheme>`, no role; role all is error -50).
 # Setting an extension sets that extension's UTI. Two extensions that share a UTI
-# (txt and text are both public.plain-text) follow the same app; every such pair
-# in this list wants the same app.
-# Extensions with no declared UTI (.env, .list) are still pinned. duti asks Launch
-# Services for a type conforming to public.content, gets a dynamic UTI (dyn.…),
-# and sets the handler there. `duti -x` reads that same binding. Nothing here is skipped.
-# html is public.html, which macOS sometimes refuses to change (duti error -54).
-# The row is still applied; a refusal stays DRIFT and --fix reports it.
+# follow the same app; every such pair in this list wants the same app.
 # Blank lines and lines beginning with # are ignored.
 
 # CotEditor
@@ -26,19 +32,18 @@ bash|CotEditor|com.coteditor.CotEditor
 zsh|CotEditor|com.coteditor.CotEditor
 fish|CotEditor|com.coteditor.CotEditor
 conf|CotEditor|com.coteditor.CotEditor
-cfg|CotEditor|com.coteditor.CotEditor
+cfg|CotEditor|com.coteditor.CotEditor|unpinnable
 ini|CotEditor|com.coteditor.CotEditor
-env|CotEditor|com.coteditor.CotEditor
+env|CotEditor|com.coteditor.CotEditor|unpinnable
 toml|CotEditor|com.coteditor.CotEditor
 yaml|CotEditor|com.coteditor.CotEditor
 yml|CotEditor|com.coteditor.CotEditor
-list|CotEditor|com.coteditor.CotEditor
+list|CotEditor|com.coteditor.CotEditor|unpinnable
 log|CotEditor|com.coteditor.CotEditor
 csv|CotEditor|com.coteditor.CotEditor
 json|CotEditor|com.coteditor.CotEditor
 xml|CotEditor|com.coteditor.CotEditor
-plist|CotEditor|com.coteditor.CotEditor
-html|CotEditor|com.coteditor.CotEditor
+plist|CotEditor|com.coteditor.CotEditor|uti:com.apple.property-list,com.apple.xml-property-list
 css|CotEditor|com.coteditor.CotEditor
 
 # Cursor (stable cask)

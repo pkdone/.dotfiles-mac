@@ -56,12 +56,47 @@ argv = sys.argv[1:]
 fail_s = set(filter(None, os.environ.get("DUTI_S_FAIL", "").split(",")))
 lie_s = set(filter(None, os.environ.get("DUTI_S_LIE", "").split(",")))
 x_error = os.environ.get("DUTI_X_ERROR", "")
+lag = int(os.environ.get("DUTI_X_LAG", "0"))
+DECLARED = {
+    "html": ["public.html"],
+    "htm": ["public.html"],
+    "xhtml": ["public.xhtml"],
+    "shtml": ["public.html"],
+    "plist": ["com.apple.property-list", "com.apple.xml-property-list"],
+}
+
+def bare(typed):
+    return typed[1:] if typed.startswith(".") else typed
+
+if len(argv) == 2 and argv[0] == "-e":
+    ext = bare(argv[1])
+    for ident in DECLARED.get(ext, ["public.plain-text"]):
+        sys.stdout.write("identifier: %s\n" % ident)
+    raise SystemExit(0)
 
 if len(argv) == 2 and argv[0] == "-x":
-    ext = argv[1][1:] if argv[1].startswith(".") else argv[1]
+    ext = bare(argv[1])
     if x_error:
         sys.stderr.write(x_error + "\n")
         raise SystemExit(2)
+    db = load()
+    lag_map = db.get("_lag") or {}
+    if ext in lag_map:
+        left, reveal = lag_map[ext]
+        if left > 0:
+            lag_map[ext] = [left - 1, reveal]
+            db["_lag"] = lag_map
+            save(db)
+            bundle = db.get(ext) or ""
+            if not bundle:
+                sys.stderr.write("Failed to get default application for extension '%s'\n" % ext)
+                raise SystemExit(2)
+            sys.stdout.write("App\n/Applications/App.app\n%s\n" % bundle)
+            raise SystemExit(0)
+        db[ext] = reveal
+        del lag_map[ext]
+        db["_lag"] = lag_map
+        save(db)
     db = load()
     bundle = db.get(ext) or ""
     if not bundle:
@@ -73,17 +108,41 @@ if len(argv) == 2 and argv[0] == "-x":
 
 if len(argv) == 4 and argv[0] == "-s":
     bundle, typed, role = argv[1], argv[2], argv[3]
-    if not typed.startswith(".") or typed == "." or role != "all":
-        sys.stderr.write("unexpected duti -s shape\n")
+    if role != "all":
+        sys.stderr.write("unexpected duti -s role\n")
         raise SystemExit(2)
-    ext = typed[1:]
-    if ext in fail_s:
-        sys.stderr.write("%s does not conform to any UTI hierarchy\n" % ext)
-        raise SystemExit(1)
-    if ext in lie_s:
-        raise SystemExit(0)
     db = load()
-    db[ext] = bundle
+    if typed.startswith("."):
+        ext = typed[1:]
+        if not ext:
+            sys.stderr.write("unexpected duti -s shape\n")
+            raise SystemExit(2)
+        if ext in fail_s:
+            sys.stderr.write("%s does not conform to any UTI hierarchy\n" % ext)
+            raise SystemExit(1)
+        if ext in lie_s:
+            raise SystemExit(0)
+        # .plist writes xml-property-list only. duti -x plist keeps reading
+        # com.apple.property-list, which is a separate -s.
+        if ext == "plist":
+            db["_set_com.apple.xml-property-list"] = bundle
+            save(db)
+            raise SystemExit(0)
+        if lag > 0:
+            lag_map = db.get("_lag") or {}
+            lag_map[ext] = [lag, bundle]
+            db["_lag"] = lag_map
+            save(db)
+            raise SystemExit(0)
+        db[ext] = bundle
+        save(db)
+        raise SystemExit(0)
+    if "." not in typed:
+        sys.stderr.write("failed to set %s as handler for %s (error -50)\n" % (bundle, typed))
+        raise SystemExit(1)
+    db["_set_" + typed] = bundle
+    if typed == "com.apple.property-list":
+        db["plist"] = bundle
     save(db)
     raise SystemExit(0)
 
@@ -98,6 +157,8 @@ export DUTI_DB="$tmp/db.json"
 export DUTI_S_FAIL=""
 export DUTI_S_LIE=""
 export DUTI_X_ERROR=""
+export DUTI_X_LAG=0
+export FILE_HANDLERS_SETTLE_SECS=5
 : > "$DUTI_LOG"
 printf '{}\n' > "$DUTI_DB"
 
@@ -117,7 +178,7 @@ print("count %d" % n)' "$1"
 rows() { awk -F'|' '$1 !~ /^#/ && NF { print $1 "|" $2 "|" $3 }' "$REAL_LIST"; }
 exts() { rows | cut -d'|' -f1 | sort; }
 eq "extensions, one per line" "$(printf '%s\n' \
-  bash cfg conf css csv env fish html ini js json list log markdown md plist sh swift text toml txt xml yaml yml zsh)" \
+  bash cfg conf css csv env fish ini js json list log markdown md plist sh swift text toml txt xml yaml yml zsh)" \
   "$(exts)"
 eq "extensions are unique" "" "$(exts | uniq -d)"
 eq "cursor extensions are js and swift" "$(printf '%s\n' js swift)" \
@@ -125,9 +186,18 @@ eq "cursor extensions are js and swift" "$(printf '%s\n' js swift)" \
 eq "cursor bundle is the stable cask" "com.todesktop.230313mzl4w4u92" \
   "$(rows | awk -F'|' '$2 == "Cursor" { print $3 }' | sort -u)"
 eq "every other row is CotEditor" "" "$(rows | awk -F'|' '$2 != "Cursor" && !($2 == "CotEditor" && $3 == "com.coteditor.CotEditor") { print }')"
-eq "25 extensions" 25 "$(rows | grep -c .)"
-bad_shape="$(rows | awk -F'|' 'NF != 3 || $1 ~ /\./ || $1 != tolower($1) { print }')"
-eq "rows are ext|app|bundle with no leading dot" "" "$bad_shape"
+eq "24 extensions" 24 "$(rows | grep -c .)"
+eq "html is not managed" "" "$(exts | grep -x html || true)"
+eq "unpinnable extensions" "$(printf '%s\n' cfg env list)" \
+  "$(awk -F'|' '$4 == "unpinnable" { print $1 }' "$REAL_LIST" | sort)"
+eq "plist sets both property-list UTIs" "uti:com.apple.property-list,com.apple.xml-property-list" \
+  "$(awk -F'|' '$1 == "plist" { print $4 }' "$REAL_LIST")"
+bad_shape="$(awk -F'|' '$1 !~ /^#/ && NF {
+  if (NF != 3 && NF != 4) print
+  else if ($1 ~ /\./ || $1 != tolower($1)) print
+  else if (NF == 4 && $4 != "unpinnable" && $4 !~ /^uti:/) print
+}' "$REAL_LIST")"
+eq "rows are ext|app|bundle with an optional flag" "" "$bad_shape"
 
 # ---- read-only check: bundle id is the last duti -x line, not the app name ----
 cat > "$tmp/small.list" <<'EOF'
@@ -237,12 +307,55 @@ export DUTI_S_FAIL=""
 
 # duti -s exits 0 but the handler does not change: report it, don't claim chg.
 export DUTI_S_LIE="env"
+export FILE_HANDLERS_SETTLE_SECS=0.4
 "$PY" -c 'import json,sys; json.dump({}, open(sys.argv[1],"w"))' "$DUTI_DB"
 printf '%s\n' 'env|CotEditor|com.coteditor.CotEditor' > "$tmp/lie.list"
 out="$(run --apply "$tmp/lie.list")"; rc=$?
 eq "a set that does not stick exits 1" 1 "$rc"
-has "a set that does not stick is fail" "fail|env|duti -s com.coteditor.CotEditor .env all did not stick: duti -x still shows unset" "$out"
+has "a set that does not stick is fail" "fail|env|duti -s com.coteditor.CotEditor .env all did not stick after 0.4s: duti -x still shows unset" "$out"
 export DUTI_S_LIE=""
+export FILE_HANDLERS_SETTLE_SECS=5
+
+# Launch Services applies a moment after duti returns. Poll before failing.
+export DUTI_X_LAG=3
+export FILE_HANDLERS_SETTLE_SECS=3
+"$PY" -c 'import json,sys; json.dump({"sh":"com.mitchellh.ghostty"}, open(sys.argv[1],"w"))' "$DUTI_DB"
+printf '%s\n' 'sh|CotEditor|com.coteditor.CotEditor' > "$tmp/lag.list"
+: > "$DUTI_LOG"
+out="$(run --apply "$tmp/lag.list")"; rc=$?
+eq "a late duti -x read still counts as set" 0 "$rc"
+has "late read is a change, not a failure" "chg|sh|.sh: com.mitchellh.ghostty -> CotEditor / com.coteditor.CotEditor" "$out"
+export DUTI_X_LAG=0
+export FILE_HANDLERS_SETTLE_SECS=5
+
+# Browser extensions, browser UTIs, and URL schemes are never passed to duti -s.
+cat > "$tmp/guard.list" <<'EOF'
+html|CotEditor|com.coteditor.CotEditor
+htm|CotEditor|com.coteditor.CotEditor
+xhtml|CotEditor|com.coteditor.CotEditor
+shtml|CotEditor|com.coteditor.CotEditor
+http|CotEditor|com.coteditor.CotEditor
+https|Google Chrome|com.google.Chrome
+mailto|CotEditor|com.coteditor.CotEditor
+txt|CotEditor|com.coteditor.CotEditor
+plist|CotEditor|com.coteditor.CotEditor|uti:public.html
+EOF
+"$PY" -c 'import json,sys; json.dump({}, open(sys.argv[1],"w"))' "$DUTI_DB"
+: > "$DUTI_LOG"
+out="$(run --apply "$tmp/guard.list")"; rc=$?
+eq "browser guard fails the apply" 1 "$rc"
+has "html is refused" "refuse|html|refusing .html: tied to the default web browser" "$out"
+has "htm is refused" "refuse|htm|refusing .htm:" "$out"
+has "xhtml is refused" "refuse|xhtml|refusing .xhtml:" "$out"
+has "shtml is refused via its UTI" "refuse|shtml|refusing .shtml:" "$out"
+has "http scheme is refused" "refuse|http|refusing http: URL schemes are not file handlers" "$out"
+has "https scheme is refused" "refuse|https|refusing https: URL schemes are not file handlers" "$out"
+has "mailto scheme is refused" "refuse|mailto|refusing mailto: URL schemes are not file handlers" "$out"
+has "public.html UTI is refused" "refuse|plist|refusing .plist:" "$out"
+has "a safe extension is still set" "chg|txt|.txt: unset -> CotEditor / com.coteditor.CotEditor" "$out"
+eq "guard calls duti -s only for txt" '["-s", "com.coteditor.CotEditor", ".txt", "all"]
+count 1' "$(s_calls "$DUTI_LOG")"
+eq "guard never sets a browser UTI or scheme" "" "$(s_calls "$DUTI_LOG" | grep -e html -e htm -e xhtml -e http -e https -e mailto -e public.html || true)"
 
 # Missing duti: check warns, apply fails closed.
 export PATH="/usr/bin:/bin"
@@ -261,18 +374,27 @@ tick='`'
 has "handlers --list shows a CotEditor extension" "| ${tick}txt${tick} | ${tick}CotEditor${tick} | ${tick}com.coteditor.CotEditor${tick} |" "$list_out"
 has "handlers --list shows Cursor js" "| ${tick}js${tick} | ${tick}Cursor${tick} | ${tick}com.todesktop.230313mzl4w4u92${tick} |" "$list_out"
 has "handlers --list still shows mailto" "| ${tick}mailto${tick} | ${tick}com.google.Chrome${tick} |" "$list_out"
+has "handlers --list shows https" "| ${tick}https${tick} | ${tick}com.google.Chrome${tick} |" "$list_out"
+eq "http and https are Chrome in url-handlers.list" "com.google.Chrome" \
+  "$(awk -F'|' '$1 == "http" || $1 == "https" { print $2 }' "$DIR/lib/url-handlers.list" | sort -u)"
 eq "handlers --list does not call duti" "" "$(cat "$DUTI_LOG")"
 
-# The real list applies cleanly from an empty handler db, including .env and .list.
-"$PY" -c 'import json,sys; json.dump({}, open(sys.argv[1],"w"))' "$DUTI_DB"
+# The real list applies pinnable rows. cfg/env/list are info, not duti -s.
+# .plist also sets com.apple.property-list, which is what duti -x plist reads.
+"$PY" -c 'import json,sys; json.dump({"plist":"com.todesktop.230313mzl4w4u92"}, open(sys.argv[1],"w"))' "$DUTI_DB"
 : > "$DUTI_LOG"
 out="$(run --apply "$REAL_LIST")"; rc=$?
 eq "real list apply exits 0" 0 "$rc"
-eq "real list sets every extension" 25 "$(printf '%s\n' "$out" | grep -c '^chg|')"
-eq "real list duti -s count" 25 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
+eq "real list sets every pinnable extension" 21 "$(printf '%s\n' "$out" | grep -c '^chg|')"
+eq "real list reports unpinnable rows" 3 "$(printf '%s\n' "$out" | grep -c '^info|')"
+eq "real list duti -s count" 23 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
+has "plist sets com.apple.property-list" '["-s", "com.coteditor.CotEditor", "com.apple.property-list", "all"]' "$(s_calls "$DUTI_LOG")"
+has "plist sets com.apple.xml-property-list" '["-s", "com.coteditor.CotEditor", "com.apple.xml-property-list", "all"]' "$(s_calls "$DUTI_LOG")"
+eq "real list does not set html cfg env or list" "" "$(s_calls "$DUTI_LOG" | grep -F -e '".html"' -e '".cfg"' -e '".env"' -e '".list"' -e 'public.html' || true)"
 out="$(run "$REAL_LIST")"
-eq "real list check is clean" "" "$(printf '%s\n' "$out" | grep -v '^ok|' || true)"
-eq "real list 25 ok" 25 "$(printf '%s\n' "$out" | grep -c '^ok|')"
+eq "real list has no drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
+eq "real list pinnable rows ok" 21 "$(printf '%s\n' "$out" | grep -c '^ok|')"
+eq "real list unpinnable rows are info" 3 "$(printf '%s\n' "$out" | grep -c '^info|')"
 
 # handlers.sh --dry-run uses the same helper (bootstrap step 6). URL schemes
 # hit the fake duti's -d and come back unset; file rows are already applied.

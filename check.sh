@@ -434,11 +434,11 @@ elif ! PY="$(dot_python)"; then
 else
   while IFS='|' read -r status ext msg; do
     [ -z "$status" ] && continue
-    CHECKED=$((CHECKED + 1))
     case "$status" in
-      ok)  fixid file-handler "$ext"; pass "$msg" ;;
-      bad) fixid file-handler "$ext"; bad "$msg" ;;
-      *)   fixid tooling; warn "${msg:-$ext}" ;;
+      ok)   CHECKED=$((CHECKED + 1)); fixid file-handler "$ext"; pass "$msg" ;;
+      bad)  CHECKED=$((CHECKED + 1)); fixid file-handler "$ext"; bad "$msg" ;;
+      info) note "$msg" ;;
+      *)    CHECKED=$((CHECKED + 1)); fixid tooling; warn "${msg:-$ext}" ;;
     esac
   done < <("$PY" "$DOTDIR/lib/file-handlers.py" "$FILE_HANDLERS_LIST")
 fi

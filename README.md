@@ -101,7 +101,7 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 
 ### URL handlers (Chrome, not Apple apps)
 
-`handlers.sh` sets default apps for URL schemes listed in `lib/url-handlers.list` via `duti` (idempotent). That covers `mailto:` plus Music / News / Books / Podcasts / Games schemes so those Apple apps don't claim the links — Chrome handles them instead:
+`handlers.sh` sets default apps for URL schemes listed in `lib/url-handlers.list` via `duti` (idempotent). That covers `http:` / `https:` (the default browser) plus `mailto:` and Music / News / Books / Podcasts / Games schemes so those Apple apps don't claim the links — Chrome handles them instead. Scheme changes are `duti -s <bundle> <scheme>` with no role:
 
 ```bash
 ~/.dotfiles-mac/handlers.sh --dry-run   # preview
@@ -116,7 +116,7 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 git pull && ./check.sh --fix
 ```
 
-`.env` and `.list` have no declared UTI. `duti -s` still pins them (a dynamic UTI conforming to `public.content`). `html` is `public.html`, which macOS sometimes refuses (duti error -54); if it doesn't stick, `--fix` says so.
+`.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.cfg`, `.env`, and `.list` have no declared UTI (`duti` error -50 on the dynamic UTI); they are marked `unpinnable` and `check.sh` prints info, not DRIFT. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`.
 
 ### Unwanted apps (GarageBand, iMovie, Pages)
 
@@ -289,7 +289,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `che
 | Repo-managed symlink missing or pointing elsewhere | `ln -sfn` to the repo file, **only** when the target is a symlink or missing. A real file in the way is never overwritten; that becomes Needs Paul |
 | Hammerspoon not running | `open -g -a Hammerspoon` |
 | Dock "Assign To" pins (`lib/desktop-bindings.list`) | `lib/desktop-bindings.py --apply`: writes `com.apple.spaces` `app-bindings` (bundle id → that Desktop's current Space UUID on the main display; Desktop 1 is `""`; `none` deletes the key), backs the domain up first, and restarts Dock only if a pin changed. A pin whose Desktop doesn't exist is left for you — Spaces are never created |
-| Finder double-click apps (`lib/file-handlers.list`) | `lib/file-handlers.py --apply`: `duti -s <bundle> .<ext> all` for each drifted extension. `.env` and `.list` are pinned on duti's dynamic UTI |
+| Finder double-click apps (`lib/file-handlers.list`) | `lib/file-handlers.py --apply`: `duti -s <bundle> .<ext> all` for each drifted extension, then polls `duti -x` for a few seconds. Refuses browser types (`html`, `public.html`) and URL schemes. Skips `unpinnable` rows (`.cfg`, `.env`, `.list`) |
 
 **Needs Paul: reported, never automated**
 
@@ -505,7 +505,7 @@ dotpush "your message"
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
 - **Desktop assignments:** edit `lib/desktop-bindings.list` (`1`..`N` = Desktop N on the main display, `none` = not assigned), then run `check.sh --fix`. That writes `com.apple.spaces` `app-bindings`, resolving Desktop N to the current Space UUID (Desktop 1 is `""`; Desktops 2+ change if Spaces are recreated) and restarts the Dock only if a pin changed. If that Desktop doesn't exist yet, the pin is left for you — the fix never creates Spaces.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
-- **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; role is always `all`), then run `check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted.
+- **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; optional `unpinnable` or `uti:…`; role is always `all`), then run `check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted. Do not add `html` — it switches the default browser. `.cfg`, `.env`, and `.list` stay `unpinnable`.
 - **Display auto-brightness:** Off. `check.sh` reads it with `corebrightnessdiag status-info` (no sudo). Turn it off in System Settings → Displays. `--fix` does not write it. True Tone and Slightly dim the display on battery are left alone.
 - **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.
 - **Manual steps:** add a row to `lib/manual-steps.list` (with a read-only check if one is reliable), then refresh the README table with `scripts/manual-steps.sh list --markdown`.

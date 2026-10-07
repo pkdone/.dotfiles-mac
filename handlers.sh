@@ -49,7 +49,7 @@ if [ "$LIST_ONLY" = 1 ]; then
     printf '| `%s` | `%s` |\n' "$scheme" "$bundle"
   done < "$LIST"
   printf '\n| Extension | App | Bundle ID |\n|------|------|------|\n'
-  while IFS='|' read -r ext app bundle; do
+  while IFS='|' read -r ext app bundle _flag; do
     case "$ext" in ''|'#'*) continue ;; esac
     # shellcheck disable=SC2016
     printf '| `%s` | `%s` | `%s` |\n' "$ext" "$app" "$bundle"
@@ -110,6 +110,7 @@ apply_file_handlers() {
         printf 'change  %s\n' "$msg"
         changed=1 ;;
       dry) printf 'would   %s\n' "$msg" ;;
+      info) printf 'info    %s\n' "$msg" ;;
       *)   printf 'error   %s\n' "${msg:-$status}" >&2 ;;
     esac
   done <<< "$file_out"
