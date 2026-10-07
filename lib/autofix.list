@@ -14,6 +14,9 @@
 #             hammerspoon  open -g -a Hammerspoon (only if installed and not running)
 #             desktop      lib/desktop-bindings.py --apply (backs up com.apple.spaces,
 #                          writes app-bindings, restarts Dock only if a pin changed)
+#             fileext      lib/file-handlers.py --apply (duti -s BUNDLE .ext all;
+#                          extensions with no declared UTI are pinned on the
+#                          dynamic UTI duti creates)
 # An id that isn't listed here is treated as PAUL ("not classified").
 # Blank lines and lines beginning with # are ignored.
 
@@ -28,6 +31,7 @@ launchagent|SAFE|launchagent|repo LaunchAgent loaded with launchctl bootstrap
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
 hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon)
 desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; restarts Dock)
+file-handler|SAFE|fileext|Finder double-click defaults from lib/file-handlers.list (duti -s BUNDLE .ext all; .env and .list use duti's dynamic UTI)
 
 # ---- PAUL: report only, never automated ----
 brew|PAUL||installing / uninstalling / updating apps — brewsync (the routine runs it separately)

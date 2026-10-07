@@ -94,6 +94,11 @@ jobs:
           # Dock Assign To check + apply against synthetic plists and a fake
           # defaults/killall. No live Dock and no com.apple.spaces writes.
           ./tests/desktop-bindings.test.sh
+      - name: Run lib/file-handlers.py tests
+        run: |
+          # Finder double-click defaults: check + apply against a fake duti.
+          # No live Launch Services database.
+          ./tests/file-handlers.test.sh
       - name: Run lib/logi-settings.py tests
         run: |
           # The read-only Logi Options+ check against a synthetic settings.db:

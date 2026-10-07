@@ -6,10 +6,10 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
-# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/hostname and lib/defaults-lib.sh
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
-# (macos.sh / dock.sh / lib/desktop-bindings.py) and the two can never drift.
+# (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
 #
 # Flags:
 #   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
@@ -382,6 +382,31 @@ else
       bad "$scheme -> ${cur:-unset} (expected $bundle)"
     fi
   done < "$HANDLERS_LIST"
+fi
+
+# ---- 7b. Finder file handlers -------------------------------------------
+# Read-only here. lib/file-handlers.py runs `duti -x <ext>` (bundle id is the
+# last line). --fix sets drifted extensions with `duti -s <bundle> .<ext> all`
+# via the fileext fixer below.
+hdr "File handlers"
+fixid file-handler
+FILE_HANDLERS_LIST="$DOTDIR/lib/file-handlers.list"
+if [ ! -r "$FILE_HANDLERS_LIST" ]; then
+  fixid repo-file; warn "lib/file-handlers.list missing — skipping file handlers check"
+elif ! command -v duti >/dev/null 2>&1; then
+  fixid tooling; warn "duti not installed — skipping file handlers check"
+elif ! PY="$(dot_python)"; then
+  fixid tooling; warn "no python3 — skipping file handlers check"
+else
+  while IFS='|' read -r status ext msg; do
+    [ -z "$status" ] && continue
+    CHECKED=$((CHECKED + 1))
+    case "$status" in
+      ok)  fixid file-handler "$ext"; pass "$msg" ;;
+      bad) fixid file-handler "$ext"; bad "$msg" ;;
+      *)   fixid tooling; warn "${msg:-$ext}" ;;
+    esac
+  done < <("$PY" "$DOTDIR/lib/file-handlers.py" "$FILE_HANDLERS_LIST")
 fi
 
 # ---- 8. unwanted apps ---------------------------------------------------
@@ -1363,6 +1388,7 @@ if [ "$FIX" = 1 ]; then
   SAFE_ITEMS=()                 # "id US arg US message US fixer"
   MACOS_ARGS=()                 # macos.sh --only … arguments (one batched call)
   DESKTOP_ONLY=""               # bundle ids for one batched desktop-bindings.py --apply
+  FILE_ONLY=""                  # extensions for one batched file-handlers.py --apply
   safe_seen="$US"
   for it in ${FIX_ITEMS[@]+"${FIX_ITEMS[@]}"}; do
     IFS="$US" read -r _it_kind it_id it_arg it_msg <<< "$it"
@@ -1379,12 +1405,15 @@ if [ "$FIX" = 1 ]; then
       if [ "$it_id" = defaults ]; then MACOS_ARGS+=(--only "$it_arg"); else MACOS_ARGS+=(--only "@$it_id"); fi
     elif [ "$it_fixer" = desktop ] && [ -n "$it_arg" ]; then
       DESKTOP_ONLY="${DESKTOP_ONLY:+$DESKTOP_ONLY,}$it_arg"
+    elif [ "$it_fixer" = fileext ] && [ -n "$it_arg" ]; then
+      FILE_ONLY="${FILE_ONLY:+$FILE_ONLY,}$it_arg"
     fi
   done
 
   # Run the fixers in dependency order: symlinks (a LaunchAgent plist may be one), then one
   # batched macos.sh call (one backup, at most one restart per process), then one batched
-  # desktop-bindings.py --apply (one backup, one Dock restart), then LaunchAgents and
+  # desktop-bindings.py --apply (one backup, one Dock restart), then one batched
+  # file-handlers.py --apply (duti -s for each drifted extension), then LaunchAgents and
   # Hammerspoon. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
   FIX_RESULTS=()
   MACOS_OUT=""
@@ -1411,6 +1440,17 @@ if [ "$FIX" = 1 ]; then
         if [ -z "$ml" ]; then echo "desktop-bindings.py printed nothing for this item"; return 1; fi
         rest="${ml#*|}"; rest="${rest#*|}"
         echo "desktop: $rest"
+        case "${ml%%|*}" in
+          chg|ok|dry) return 0 ;;
+          refuse) return 2 ;;
+          *) return 1 ;;
+        esac
+        ;;
+      fileext)
+        ml="$(printf '%s\n' "$FILE_OUT" | awk -F'|' -v e="$2" '$2 == e { print; exit }')"
+        if [ -z "$ml" ]; then echo "file-handlers.py printed nothing for this item"; return 1; fi
+        rest="${ml#*|}"; rest="${rest#*|}"
+        echo "fileext: $rest"
         case "${ml%%|*}" in
           chg|ok|dry) return 0 ;;
           refuse) return 2 ;;
@@ -1476,7 +1516,34 @@ if [ "$FIX" = 1 ]; then
     fi
     printf '%s\n' "$DESKTOP_OUT" | awk -F'|' 'NF >= 3 && $3 != "" { print "        " $3 }'
   fi
-  fix_pass macos desktop launchagent hammerspoon
+  # One apply for every drifted extension: `duti -s <bundle> .<ext> all`.
+  # FILE_OUT is status|ext|message.
+  FILE_OUT=""
+  if [ -n "$FILE_ONLY" ]; then
+    if ! file_py="$(dot_python)"; then
+      while IFS= read -r e; do
+        [ -n "$e" ] || continue
+        FILE_OUT="${FILE_OUT}fail|${e}|python3 not found — file handler not changed"$'\n'
+      done < <(printf '%s\n' "$FILE_ONLY" | tr ',' '\n')
+    elif ! command -v duti >/dev/null 2>&1; then
+      while IFS= read -r e; do
+        [ -n "$e" ] || continue
+        FILE_OUT="${FILE_OUT}fail|${e}|duti not installed — file handler not changed"$'\n'
+      done < <(printf '%s\n' "$FILE_ONLY" | tr ',' '\n')
+    else
+      file_cmd=("$file_py" "$DOTDIR/lib/file-handlers.py" --apply)
+      if [ "$DRY_RUN" = 1 ]; then file_cmd+=(--dry-run); fi
+      file_cmd+=(--only "$FILE_ONLY" "$DOTDIR/lib/file-handlers.list")
+      FILE_OUT="$("${file_cmd[@]}" 2>&1)" || true
+      if [ "$DRY_RUN" != 1 ]; then
+        while IFS= read -r fl; do
+          if [ -n "$fl" ]; then fix_log "fileext: $fl"; fi
+        done <<< "$FILE_OUT"
+      fi
+    fi
+    printf '%s\n' "$FILE_OUT" | awk -F'|' 'NF >= 3 && $3 != "" { print "        " $3 }'
+  fi
+  fix_pass macos desktop fileext launchagent hammerspoon
   # Items with a fixer name the dispatcher doesn't know (a typo in lib/autofix.list).
   n=0
   for item in ${SAFE_ITEMS[@]+"${SAFE_ITEMS[@]}"}; do
