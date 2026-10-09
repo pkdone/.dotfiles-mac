@@ -86,8 +86,8 @@ jobs:
           ./tests/manual-steps.test.sh
       - name: Run lib/autofix.list classification tests
         run: |
-          # The safe / needs-Paul split for check.sh --fix: list format, the
-          # required classes, and agreement with check.sh's fixid tags.
+          # The safe / needs-Paul split for macconfig-check.sh --fix: list format, the
+          # required classes, and agreement with macconfig-check.sh's fixid tags.
           ./tests/autofix.test.sh
       - name: Run lib/desktop-bindings.py tests
         run: |
@@ -109,10 +109,14 @@ jobs:
           # The read-only Logi Options+ check against a synthetic settings.db:
           # ok / drift / warn, model lookup, tolerance, missing or unreadable DB.
           ./tests/logi-settings.test.sh
-      - name: Run check.sh summary tests
+      - name: Run macconfig-check.sh summary tests
         run: |
-          # The multi-line summary block from check.sh, rendered with stub counts.
+          # The multi-line summary block from macconfig-check.sh, rendered with stub counts.
           ./tests/check-summary.test.sh
+      - name: Run check.sh shim and macconfig fish function tests
+        run: |
+          # The repo-root shim forwards args and exit status; the fish function file parses.
+          ./tests/macconfig.test.sh
       - name: Run hammerspoon/modes.lua tests
         run: |
           # modes.lua structure + the switcher's pure planning logic (plain Lua 5.4;

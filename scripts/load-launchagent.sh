@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Load a per-user LaunchAgent plist into the gui/<uid> domain. Idempotent.
-# Used by install.sh (--reload: pick up plist changes) and `check.sh --fix`
+# Used by install.sh (--reload: pick up plist changes) and `macconfig-check.sh --fix`
 # (default: bootstrap only if the agent isn't loaded; never unloads a loaded one).
 set -euo pipefail
 

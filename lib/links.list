@@ -1,4 +1,4 @@
-# Static symlinks created by install.sh and verified by check.sh.
+# Static symlinks created by install.sh and verified by macconfig-check.sh.
 # Format (pipe-delimited): repo-relative source | target (@HOME@ -> $HOME)
 # The fish functions directory (fish/functions/*.fish) is one-dir-to-many-links, so it's
 # handled as a glob special-case in both scripts rather than listed here.

@@ -1,6 +1,6 @@
 -- Hammerspoon config entry point.
 -- Symlinked as a directory: ~/.hammerspoon -> ~/.dotfiles-mac/hammerspoon
--- (via lib/links.list; install.sh creates it, check.sh verifies it).
+-- (via lib/links.list; install.sh creates it, macconfig-check.sh verifies it).
 --
 -- Keep this file small: each automation lives in its own module next to it and is
 -- listed in MODULES below. A module returns a table with a start() function.

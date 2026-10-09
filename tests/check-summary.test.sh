@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 #
-# Tests for the multi-line summary at the end of check.sh. The summary block is cut out
-# of check.sh (between "# ---- summary" and "# ---- --issues") and run with stub counts,
+# Tests for the multi-line summary at the end of macconfig-check.sh. The summary block is cut out
+# of macconfig-check.sh (between "# ---- summary" and "# ---- --issues") and run with stub counts,
 # so nothing macOS-specific executes. Plain bash; runs on Linux CI and macOS bash 3.2.
 # Run: ./tests/check-summary.test.sh   (exits non-zero if any assertion fails)
 #
 set -uo pipefail   # deliberately not -e: run every assertion, then tally failures
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BLOCK="$(awk '/^# ---- summary ---/ {on = 1} /^# ---- --issues/ {on = 0} on' "$DIR/check.sh")"
+BLOCK="$(awk '/^# ---- summary ---/ {on = 1} /^# ---- --issues/ {on = 0} on' "$DIR/macconfig-check.sh")"
 
 pass=0
 fail=0
@@ -21,7 +21,7 @@ eq() {  # description expected actual
 # Attention bullets come from T_ATTN (and T_RECHECK when T_RECHECK_RAN=1), each
 # "kind US section US id US message". T_COLOR=1 turns the summary colours on;
 # the default is plain text, which is what --no-color / NO_COLOR / a pipe produce.
-# shellcheck disable=SC2034  # the stub variables are read by the eval'd check.sh block
+# shellcheck disable=SC2034  # the stub variables are read by the eval'd macconfig-check.sh block
 render() {
   (
     set -eu
@@ -61,13 +61,13 @@ Summary
   ✖ drift          2
   ⚠ warnings       1
   ✋ by hand      20   (scripts/manual-steps.sh list)
-  → run ./check.sh --fix to repair 2 safe item(s)
+  → run ./macconfig-check.sh --fix to repair 2 safe item(s)
   3 need attention (2 drift, 1 warning)" \
   "$(render 139 136 2 1 20 0 0 2 1 0 0 0 defaults symlink brew)"
 
 eq "single warning, nothing SAFE" "  1 needs attention (1 warning)" \
   "$(render 139 138 0 1 20 0 0 0 1 0 0 0 dotfiles-git | tail -1)"
-eq "no fix hint when nothing is SAFE" "" "$(render 139 138 0 1 20 0 0 0 1 0 0 0 dotfiles-git | grep -F 'check.sh --fix')"
+eq "no fix hint when nothing is SAFE" "" "$(render 139 138 0 1 20 0 0 0 1 0 0 0 dotfiles-git | grep -F 'macconfig-check.sh --fix')"
 
 eq "--fix: fixed + needs Paul, drift before/after" "
 Summary
@@ -82,10 +82,10 @@ Summary
 eq "--fix --dry-run: would fix" "  ↻ would fix      1   (dry run: nothing changed)" \
   "$(render 139 138 1 0 20 1 1 1 0 0 0 1 defaults | grep 'would fix')"
 
-eq "check.sh no longer prints the old one-line summary" "" \
-  "$(grep -n 'checked, %d ok, %d drift' "$DIR/check.sh")"
+eq "macconfig-check.sh no longer prints the old one-line summary" "" \
+  "$(grep -n 'checked, %d ok, %d drift' "$DIR/macconfig-check.sh")"
 
-# Attention bullets. US separates kind / section / id / message, same as check.sh.
+# Attention bullets. US separates kind / section / id / message, same as macconfig-check.sh.
 US=$'\037'
 DRIFT_ITEM="drift${US}Symlinks${US}symlink${US}~/.gitconfig -> elsewhere (expected repo)"
 WARN_ITEM="warn${US}Mac health${US}health${US}disk: only 12 GB free (8%) on Data"
@@ -98,7 +98,7 @@ Summary
   ✖ drift          1
   ⚠ warnings       1
   ✋ by hand      22   (scripts/manual-steps.sh list)
-  → run ./check.sh --fix to repair 1 safe item(s)
+  → run ./macconfig-check.sh --fix to repair 1 safe item(s)
   2 need attention (1 drift, 1 warning)
     - drift  Symlinks: ~/.gitconfig -> elsewhere (expected repo) (fix: symlink)
     - warn   Mac health: disk: only 12 GB free (8%) on Data (Needs Paul)" "$attn_out"

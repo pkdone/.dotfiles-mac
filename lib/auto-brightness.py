@@ -102,7 +102,7 @@ def judge(found: list[tuple[str, object]]) -> tuple[str, str]:
             "bad",
             "Automatically adjust brightness is on"
             f" ({detail}) — System Settings → Displays → turn it off."
-            " check.sh --fix does not change this (the CoreBrightness plist is"
+            " macconfig-check.sh --fix does not change this (the CoreBrightness plist is"
             " root-owned; True Tone and Slightly dim the display on battery"
             " are left alone)",
         )
@@ -120,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
         else:
             data = sys.stdin.buffer.read()
         prefs = load_plist(data)
-    except Exception as exc:  # noqa: BLE001 - report, don't crash check.sh
+    except Exception as exc:  # noqa: BLE001 - report, don't crash macconfig-check.sh
         emit("warn", f"could not read corebrightnessdiag status-info ({exc})")
         return 0
     found: list[tuple[str, object]] = []

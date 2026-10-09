@@ -20,7 +20,7 @@ require_file "$DOTDIR/lib/dock-apps.list"
 
 # The Dock app list lives in lib/dock-apps.list (one "Display name | path" per line;
 # see that file's header for details). Loaded so the list is a single source of truth
-# shared with check.sh. Blank/# lines are skipped by the read loops.
+# shared with macconfig-check.sh. Blank/# lines are skipped by the read loops.
 APPS="$(<"$DOTDIR/lib/dock-apps.list")"
 
 list_apps() {

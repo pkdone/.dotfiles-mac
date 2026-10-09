@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Unit tests for lib/autofix.list + lib/autofix-lib.sh — the safe / needs-Paul split used
-# by `check.sh --fix`. Plain bash + awk + grep (runs on Linux CI; nothing macOS-specific
+# by `macconfig-check.sh --fix`. Plain bash + awk + grep (runs on Linux CI; nothing macOS-specific
 # is executed). Run: ./tests/autofix.test.sh   (exits non-zero if any assertion fails)
 #
 set -uo pipefail   # deliberately not -e: run every assertion, then tally failures
@@ -64,13 +64,13 @@ eq "SAFE row with a fixer stays SAFE" "SAFE|hammerspoon|start it" "$(autofix_loo
 eq "missing list file -> PAUL" PAUL "$(autofix_class "$tmp.missing" hs)"
 rm -f "$tmp"
 
-# ---- the list and check.sh agree ----
-used="$(grep -oE '(^|[;[:space:]])fixid [a-z0-9-]+' "$DIR/check.sh" | awk '{print $NF}' | grep -vx unclassified | sort -u)"
+# ---- the list and macconfig-check.sh agree ----
+used="$(grep -oE '(^|[;[:space:]])fixid [a-z0-9-]+' "$DIR/macconfig-check.sh" | awk '{print $NF}' | grep -vx unclassified | sort -u)"
 listed="$(rows | cut -d'|' -f1 | sort -u)"
-eq "every id check.sh tags is in lib/autofix.list" "" "$(comm -23 <(printf '%s\n' "$used") <(printf '%s\n' "$listed"))"
-eq "every id in lib/autofix.list is used by check.sh" "" "$(comm -13 <(printf '%s\n' "$used") <(printf '%s\n' "$listed"))"
+eq "every id macconfig-check.sh tags is in lib/autofix.list" "" "$(comm -23 <(printf '%s\n' "$used") <(printf '%s\n' "$listed"))"
+eq "every id in lib/autofix.list is used by macconfig-check.sh" "" "$(comm -13 <(printf '%s\n' "$used") <(printf '%s\n' "$listed"))"
 for fixer in $(rows | awk -F'|' '$2 == "SAFE" {print $3}' | sort -u); do
-  grep -qE "^[[:space:]]+${fixer}\)" "$DIR/check.sh"; ok "check.sh run_fix handles fixer '$fixer'" "$?"
+  grep -qE "^[[:space:]]+${fixer}\)" "$DIR/macconfig-check.sh"; ok "macconfig-check.sh run_fix handles fixer '$fixer'" "$?"
 done
 # macos-backed ids other than "defaults" are the @items macos.sh --only understands.
 for id in $(rows | awk -F'|' '$2 == "SAFE" && $3 == "macos" && $1 != "defaults" {print $1}'); do

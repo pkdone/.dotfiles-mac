@@ -251,7 +251,7 @@ def apply_plans(prefs: dict, plans, raw: dict, args) -> int:
     if changes:
         try:
             updated = new_bindings(raw, plans)
-        except Exception as exc:  # noqa: BLE001 - report, don't crash check.sh
+        except Exception as exc:  # noqa: BLE001 - report, don't crash macconfig-check.sh
             return fail_changes(plans, f"not written ({exc})")
         if args.out:
             try:

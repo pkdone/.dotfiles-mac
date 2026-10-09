@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 #
-# defaults-lib.sh — value-comparison helpers shared by macos.sh and check.sh.
+# defaults-lib.sh — value-comparison helpers shared by macos.sh and macconfig-check.sh.
 # Sourced, not executed (no shebang, not marked executable). Keeping these in one
-# place means the apply path (macos.sh) and the verify path (check.sh) compare
+# place means the apply path (macos.sh) and the verify path (macconfig-check.sh) compare
 # values with identical semantics and can never drift.
 
 norm_bool() {

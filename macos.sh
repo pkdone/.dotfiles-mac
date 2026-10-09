@@ -18,9 +18,9 @@
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
 #               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
 #               @finder-recents / @finder-icon-view. Values that already match are
-#               left alone (no re-assert write). Used by `check.sh --fix`.
+#               left alone (no re-assert write). Used by `macconfig-check.sh --fix`.
 #   --yes       Run the deferred UI restarts without prompting (still only if
-#               something changed). Used by `check.sh --fix`.
+#               something changed). Used by `macconfig-check.sh --fix`.
 #   -h|--help   Show usage.
 #
 # Safety:
@@ -104,7 +104,7 @@ require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2;
 for f in defaults-lib.sh macos-defaults.list; do require_file "$DOTDIR/lib/$f"; done
 
 # Value-comparison helpers (norm_bool, values_equal, type_token) live in a shared
-# lib so check.sh can reuse the exact same match semantics.
+# lib so macconfig-check.sh can reuse the exact same match semantics.
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
 . "$DOTDIR/lib/defaults-lib.sh"
 DOT_PYTHON="$(dot_python || true)"
@@ -230,7 +230,7 @@ apply_setting() {  # domain key type desired restart tol
 # ---- settings table -----------------------------------------------------
 # The managed settings live in lib/macos-defaults.list (one pipe-delimited row per
 # setting; see that file's header for the format). Loaded here so the list is a single
-# source of truth shared with check.sh. Blank/# lines are skipped by the read loops.
+# source of truth shared with macconfig-check.sh. Blank/# lines are skipped by the read loops.
 SETTINGS="$(<"$DOTDIR/lib/macos-defaults.list")"
 
 # Domains backed up before the first change = the unique set of domains the list
@@ -529,7 +529,7 @@ if [ "$NEEDS_LOGOUT" = 1 ] && [ "$CHANGED" -gt 0 ]; then
   done <<< "$LOGOUT_ITEMS"
 fi
 
-if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (check.sh --fix): skip the manual-steps footer
+if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (macconfig-check.sh --fix): skip the manual-steps footer
 
 cat <<'MANUAL'
 
@@ -537,7 +537,7 @@ Still manual (not scriptable / out of scope) — see README:
   - Apple Account sign-in; User & Groups account picture
   - Displays "More Space"; Keyboard British input source
   - Mouse + Trackpad speeds (System Settings); MX Master 3S wheel (Natural), buttons
-    in Logi Options+ (checked by check.sh, never written); Logi cloud backup
+    in Logi Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
   - Accessibility grants (TCC); Notifications; Spotlight result categories
   - Set Hostname (requires sudo)
 MANUAL

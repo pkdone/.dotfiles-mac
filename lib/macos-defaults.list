@@ -1,4 +1,4 @@
-# Managed macOS `defaults`, one per line. Loaded by macos.sh (and read by check.sh).
+# Managed macOS `defaults`, one per line. Loaded by macos.sh (and read by macconfig-check.sh).
 # Format (pipe-delimited): domain | key | type | desired | restart | area | label | display-value | tol
 #   domain:  plain defaults domain, or @host/<domain> for `defaults -currentHost` (ByHost)
 #   type:    string | int | float | bool

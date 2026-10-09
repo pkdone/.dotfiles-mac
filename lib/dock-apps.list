@@ -1,4 +1,4 @@
-# Dock apps, in left-to-right order. Loaded by dock.sh (and read by check.sh).
+# Dock apps, in left-to-right order. Loaded by dock.sh (and read by macconfig-check.sh).
 # Format (pipe-delimited): Display name | app path
 #   WhatsApp's bundle name carries a hidden left-to-right mark (U+200E), so its path is
 #   a glob; it contains no spaces, so it expands cleanly at add time.

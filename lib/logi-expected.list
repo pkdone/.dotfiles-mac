@@ -1,4 +1,4 @@
-# Logi Options+ settings that check.sh verifies (read-only) for the MX Master 3S.
+# Logi Options+ settings that macconfig-check.sh verifies (read-only) for the MX Master 3S.
 # Read by lib/logi-settings.py from a temporary copy of
 # ~/Library/Application Support/LogiOptionsPlus/settings.db; nothing is ever written
 # back (restore is by hand in the app, or from Logi's cloud backup).

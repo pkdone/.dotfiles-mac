@@ -1,10 +1,10 @@
-# What `check.sh --fix` may repair on its own. One row per issue id; check.sh tags every
-# drift / warning with one of these ids (`fixid <id>` in check.sh). The single place the
-# safe / needs-Paul split lives — tests/autofix.test.sh keeps it in sync with check.sh.
+# What `macconfig-check.sh --fix` may repair on its own. One row per issue id; macconfig-check.sh tags every
+# drift / warning with one of these ids (`fixid <id>` in macconfig-check.sh). The single place the
+# safe / needs-Paul split lives — tests/autofix.test.sh keeps it in sync with macconfig-check.sh.
 # Format (pipe-delimited): id | class | fixer | what it covers / why
 #   class:  SAFE = reversible preference write, applied automatically by --fix
 #           PAUL = report only, never automated (listed under "Needs Paul")
-#   fixer:  SAFE rows only — the check.sh fix routine that reuses an existing setter:
+#   fixer:  SAFE rows only — the macconfig-check.sh fix routine that reuses an existing setter:
 #             macos        macos.sh --only … (backs up the domain first; restarts Dock /
 #                          Finder / SystemUIServer only if a value changed; "logout" rows
 #                          are reported as needing a logout)
@@ -60,4 +60,4 @@ delete-files|PAUL||deleting files is never automated
 dotfiles-git|PAUL||dotfiles git state — no automatic commits / pushes / pulls (dotpush)
 launchagent-exit|PAUL||a LaunchAgent's last run failed — read its log
 health|PAUL||Mac health signal (battery, disk, memory, storage, crashes, uptime) — report only
-tooling|PAUL||a tool check.sh needs is missing or failed — install / fix it by hand
+tooling|PAUL||a tool macconfig-check.sh needs is missing or failed — install / fix it by hand

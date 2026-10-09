@@ -1,5 +1,5 @@
 # Login / background items that are EXPECTED to be enabled
-# (System Settings → General → Login Items & Extensions). check.sh ("Mac health")
+# (System Settings → General → Login Items & Extensions). macconfig-check.sh ("Mac health")
 # warns about any enabled item that is neither listed here nor approved by an MDM
 # Service Management rule (Kandji pushes those; lib/btm-login-items.py reads them from
 # the BTM store, so company agents such as Iru, Cyberhaven, Phorion EDR, Fleet, Formal,

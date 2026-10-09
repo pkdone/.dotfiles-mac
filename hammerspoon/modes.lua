@@ -1,6 +1,6 @@
 -- modes.lua: the menu-bar mode switcher's settings (engine: mode_switcher.lua).
 --
--- Pure data, no Hammerspoon calls, so tests/modes.test.sh and check.sh can validate it
+-- Pure data, no Hammerspoon calls, so tests/modes.test.sh and macconfig-check.sh can validate it
 -- outside Hammerspoon. Edit, then reload Hammerspoon (menu-bar icon -> Reload Config).
 -- Switching is manual only, from the menu-bar dropdown: no hotkey, no automatic triggers.
 --
@@ -27,7 +27,7 @@ return {
   order = { 'Normal', 'WebConf', 'DeepWork' },
 
   -- Focus can't be set directly on macOS, so each Focus is toggled by a Shortcut that
-  -- you create once (see README "Modes" / scripts/manual-steps.sh). check.sh verifies
+  -- you create once (see README "Modes" / scripts/manual-steps.sh). macconfig-check.sh verifies
   -- they exist (`shortcuts list`). A missing Shortcut doesn't stop the mode: everything
   -- else still runs, the menu offers a clickable Fix, and the switch names the Shortcut.
   focus = {

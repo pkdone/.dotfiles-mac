@@ -119,7 +119,7 @@ eq "no traceback anywhere" 0 "$({ run --db "$tmp/junk.db"; run --db "$tmp/badjso
 
 # ---- the expected-values file itself ----
 eq "expected-values file parses" "" "$(run --db "$tmp/good.db" | grep '^error')"
-eq "every check.sh-required id listed" "gesture-window-nav pointer-speed smartshift thumb-horizontal thumb-smooth wheel-natural wheel-smooth " \
+eq "every macconfig-check.sh-required id listed" "gesture-window-nav pointer-speed smartshift thumb-horizontal thumb-smooth wheel-natural wheel-smooth " \
   "$(grep -Ev '^[[:space:]]*(#|$|model\|)' "$DIR/lib/logi-expected.list" | cut -d'|' -f1 | sort | tr '\n' ' ')"
 
 rm -rf "$DIR/lib/__pycache__"

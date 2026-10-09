@@ -8,7 +8,7 @@
 #                       waits for Enter. Skips steps whose check already passes unless
 #                       --all. Does nothing when stdin isn't a terminal.
 #   check [--porcelain] run each step's read-only check: ok / warn / check by hand.
-#                       --porcelain prints status|num|id|title|detail for check.sh.
+#                       --porcelain prints status|num|id|title|detail for macconfig-check.sh.
 #                       Exit status: 1 if any automated check warns, else 0.
 #   validate            parse the list and report malformed rows (used by tests/).
 #
@@ -90,7 +90,7 @@ load_steps() {
 check_spec_ok() {
   local spec="$1" rest
   case "$spec" in
-    ''|'@check.sh') return 0 ;;
+    ''|'@macconfig-check.sh') return 0 ;;
     tcc:*)
       rest="${spec#tcc:}"
       case "$rest" in *:*) ;; *) return 1 ;; esac
@@ -250,7 +250,7 @@ run_check() {  # spec
   local spec="$1" rest path
   case "$spec" in
     '')          res hand "" ;;
-    '@check.sh') res covered "verified by check.sh" ;;
+    '@macconfig-check.sh') res covered "verified by macconfig-check.sh" ;;
     tcc:*)       rest="${spec#tcc:}"; check_tcc "${rest%%:*}" "${rest#*:}" ;;
     defaults:*)  rest="${spec#defaults:}"; check_defaults "${rest%%:*}" "${rest#*:}" ;;
     logi:*)      check_logi "${spec#logi:}" ;;
@@ -274,7 +274,7 @@ cmd_list() {
     printf '| # | Step | Where | Checked |\n|---|------|------|------|\n'
     i=0
     while [ "$i" -lt "$N" ]; do
-      case "${S_CHECK[$i]}" in '') auto="by hand" ;; '@check.sh') auto="check.sh" ;; *) auto="auto" ;; esac
+      case "${S_CHECK[$i]}" in '') auto="by hand" ;; '@macconfig-check.sh') auto="macconfig-check.sh" ;; *) auto="auto" ;; esac
       printf '| %d | %s | %s | %s |\n' "$((i + 1))" "${S_TITLE[$i]}" "${S_WHERE[$i]}" "$auto"
       i=$((i + 1))
     done
@@ -291,7 +291,7 @@ cmd_list() {
     printf '      %s%s%s\n' "$C_DIM" "${S_WHERE[$i]}" "$C_OFF"
     i=$((i + 1))
   done
-  printf '\nscripts/manual-steps.sh check   shows which are already done (also part of ./check.sh)\n'
+  printf '\nscripts/manual-steps.sh check   shows which are already done (also part of ./macconfig-check.sh)\n'
   printf 'scripts/manual-steps.sh open    walks through the rest, opening each settings page\n'
 }
 
@@ -335,7 +335,7 @@ cmd_open() {
   done
   if [ "$todo" = 0 ]; then echo "Nothing to do: every checkable step already passes (use --all to see them all)."; fi
   echo ""
-  echo "Done. Run scripts/manual-steps.sh check (or ./check.sh) to confirm."
+  echo "Done. Run scripts/manual-steps.sh check (or ./macconfig-check.sh) to confirm."
 }
 
 cmd_check() {
@@ -349,7 +349,7 @@ cmd_check() {
     case "$R_STATUS" in
       ok)      oks=$((oks + 1));         label="ok";       colour="$C_OK" ;;
       warn)    warns=$((warns + 1));     label="warn";     colour="$C_WARN" ;;
-      covered) covered=$((covered + 1)); label="check.sh"; colour="$C_DIM" ;;
+      covered) covered=$((covered + 1)); label="macconfig-check.sh"; colour="$C_DIM" ;;
       *)       hands=$((hands + 1));     label="by hand";  colour="$C_DIM"; R_STATUS=hand ;;
     esac
     if [ "$porcelain" = 1 ]; then
@@ -357,12 +357,12 @@ cmd_check() {
     else
       msg="${S_TITLE[$i]}"
       [ -n "$R_DETAIL" ] && msg="$msg — $R_DETAIL"
-      printf '  %s%-9s%s %2d. %s\n' "$colour" "$label" "$C_OFF" "$num" "$msg"
+      printf '  %s%-19s%s %2d. %s\n' "$colour" "$label" "$C_OFF" "$num" "$msg"
     fi
     i=$((i + 1))
   done
   if [ "$porcelain" = 0 ]; then
-    printf '\n%sSummary:%s %d ok, %d warn, %d to check by hand, %d verified by check.sh.\n' \
+    printf '\n%sSummary:%s %d ok, %d warn, %d to check by hand, %d verified by macconfig-check.sh.\n' \
       "$C_HDR" "$C_OFF" "$oks" "$warns" "$hands" "$covered"
   fi
   [ "$warns" -eq 0 ]

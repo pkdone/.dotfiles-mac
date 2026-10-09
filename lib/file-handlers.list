@@ -1,5 +1,5 @@
 # Finder double-click default apps (role: all).
-# check.sh compares each row with `duti -x`; handlers.sh and `check.sh --fix`
+# macconfig-check.sh compares each row with `duti -x`; handlers.sh and `macconfig-check.sh --fix`
 # apply drift with `duti -s <bundle-id> .<ext> all`.
 # Format (pipe-delimited): extension | app | bundle-id [| flag]
 #   extension: no leading dot (txt, not .txt). A leading dot is accepted and stripped.
@@ -8,7 +8,7 @@
 #              not Cursor Nightly (co.anysphere.cursor.nightly).
 #   flag:      optional.
 #              unpinnable — no declared UTI. duti -s returns error -50 (paramErr)
-#                on the dynamic UTI, so the handler cannot be set. check.sh prints
+#                on the dynamic UTI, so the handler cannot be set. macconfig-check.sh prints
 #                info, not DRIFT, and --fix does not call duti.
 #              uti:a,b — also set these UTIs with role all. .plist's preferred type
 #                is com.apple.xml-property-list, but duti -x plist follows
