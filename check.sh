@@ -15,14 +15,15 @@
 #   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
 #   --health-json  Print only a JSON summary (Mac health values, drift/warning counts and
 #                  messages) on stdout, for the weekly health note. Same checks, same exit.
-#                  With --fix it also has fixed[] / needs_paul[] (and would_fix[] on a dry run).
+#                  attention[] repeats the short "needs attention" bullets. With --fix it
+#                  also has fixed[] / needs_paul[] (and would_fix[] on a dry run).
 #   --fix          After the checks, apply the SAFE fixes (lib/autofix.list) for any drift or
 #                  warning found, re-run the checks, and report Fixed / Needs Paul. Every fix
 #                  is idempotent and logged to ~/Library/Logs/com.pdone.check-fix.log.
 #                  Exit status then reflects the drift left AFTER the fixes.
 #   --dry-run      With --fix: show what would be fixed; change nothing.
 #   --issues       Internal (used by --fix to re-check): print one line per drift/warning
-#                  (kind, id, arg, message; separated by \x1f) on stdout and nothing else.
+#                  (kind, id, arg, message, section; separated by \x1f) on stdout and nothing else.
 #   -h, --help     Show usage.
 #
 set -euo pipefail
@@ -57,8 +58,8 @@ Usage: check.sh [--no-color] [--health-json] [--fix [--dry-run]]
   Exit status: 0 = everything matches, 1 = drift found.
   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
   --health-json  Print only a JSON summary on stdout (Mac health values, drift and
-                 warning counts and messages) for the weekly health note. With --fix it
-                 also carries fixed[] and needs_paul[] (would_fix[] on a dry run).
+                 warning counts and messages, plus attention[]) for the weekly health note.
+                 With --fix it also carries fixed[] and needs_paul[] (would_fix[] on a dry run).
   --fix          Apply the SAFE fixes from lib/autofix.list for the drift found (reversible
                  preference writes only), re-check, and print Fixed / Needs Paul lists.
                  Exit status reflects the drift left after the fixes.
@@ -96,14 +97,24 @@ CHECKED=0; OKS=0; DRIFT=0; WARN=0; HAND=0
 DRIFT_MSGS=(); WARN_MSGS=()   # kept for --health-json
 # Every drift / warning is tagged with an issue id from lib/autofix.list (set by `fixid`
 # before the check; `hdr` resets it) so --fix knows which ones are SAFE to repair.
-US=$'\037'                    # field separator for FIX_ITEMS / --issues
+US=$'\037'                    # field separator for FIX_ITEMS / --issues / attention items
 FIX_ID=unclassified; FIX_ARG=''
 FIX_ITEMS=()                  # "kind US id US arg US message" per drift / warning
+SECTION=""
+# "kind US section US id US message" — collected in bad/warn, in check order. By-hand
+# info lines never land here. RECHECK_* is the same shape for what's still outstanding
+# after a real --fix re-check. ATTN_LINES is the plain bullet text (summary + JSON).
+ATTN_ITEMS=(); RECHECK_ITEMS=(); RECHECK_RAN=0; ATTN_LINES=()
 fixid() { FIX_ID="$1"; FIX_ARG="${2:-}"; }   # fixid ID [ARG] — tag the following lines
 record() { FIX_ITEMS+=("$1$US$FIX_ID$US$FIX_ARG$US${2//$US/ }"); }
+attn_push() { # kind message — alongside record, from bad/warn only
+  local msg="${2//$US/ }"
+  msg="${msg//$'\n'/ }"
+  ATTN_ITEMS+=("$1$US$SECTION$US$FIX_ID$US$msg")
+}
 pass() { OKS=$((OKS + 1));    printf '  %sok%s    %s\n'  "$C_OK"   "$C_OFF" "$1"; }
-bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); record drift "$1"; printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
-warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  record warn "$1";  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
+bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); record drift "$1"; attn_push drift "$1"; printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
+warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  record warn "$1";  attn_push warn "$1";  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
 info() { HAND=$((HAND + 1));   printf '  info  %s\n' "$1"; }   # check-by-hand item: not drift, not a warning
 note() { printf '  info  %s\n' "$1"; }                         # FYI line: not counted anywhere
 
@@ -113,7 +124,7 @@ with_timeout() {
   local secs="$1"; shift
   perl -e '$t = shift @ARGV; alarm $t; exec { $ARGV[0] } @ARGV or exit 127' "$secs" "$@"
 }
-hdr()  { fixid unclassified; printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
+hdr()  { SECTION="$1"; fixid unclassified; printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
 
 # Value-comparison helpers shared with macos.sh (same semantics, single source).
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
@@ -1593,8 +1604,17 @@ if [ "$FIX" = 1 ]; then
   if [ "$DRY_RUN" != 1 ] && [ "${#SAFE_ITEMS[@]}" -gt 0 ]; then
     RECHECK="$("$DOTDIR/check.sh" --issues 2>/dev/null)" || true
     AFTER_DRIFT=0; AFTER_WARN=0
-    while IFS="$US" read -r rk _ri _ra _rm; do
-      case "$rk" in drift) AFTER_DRIFT=$((AFTER_DRIFT + 1)) ;; warn) AFTER_WARN=$((AFTER_WARN + 1)) ;; esac
+    RECHECK_RAN=1
+    RECHECK_ITEMS=()
+    # --issues lines are kind, id, arg, message, section. Field 4 stays the message
+    # so the "still" match below keeps working; field 5 is the section for the bullets.
+    while IFS="$US" read -r rk ri _ra rm rsec; do
+      case "$rk" in
+        drift) AFTER_DRIFT=$((AFTER_DRIFT + 1)) ;;
+        warn)  AFTER_WARN=$((AFTER_WARN + 1)) ;;
+        *) continue ;;
+      esac
+      RECHECK_ITEMS+=("$rk$US${rsec:-}$US$ri$US$rm")
     done <<< "$RECHECK"
   fi
   i=0
@@ -1645,9 +1665,106 @@ if [ "$FIX" = 1 ]; then
 fi
 
 # ---- summary ------------------------------------------------------------
-# A few aligned lines, then a one-line verdict. Colour only on a tty (C_* are empty
-# under --no-color / NO_COLOR / when piped). Nothing parses this text: machines use
-# --health-json (unchanged).
+# A few aligned lines, then a one-line verdict. When something needs attention, the
+# verdict is followed by one indented bullet per outstanding drift or warning, built
+# from ATTN_ITEMS (recorded in bad/warn) — not by scraping the log. After a real
+# --fix re-check those bullets are RECHECK_ITEMS, i.e. what's still outstanding.
+# Colour only on a tty (C_* are empty under --no-color / NO_COLOR / when piped).
+# Nothing parses this text: machines use --health-json, whose attention[] is the
+# same bullet text.
+#
+# Bullet helpers live in this section so tests/check-summary.test.sh (which evals
+# from here down to --issues) covers them.
+
+# attn_trim MAX TEXT — shorten TEXT to MAX characters, ending in ...
+attn_trim() {
+  local max="$1" s="$2" keep
+  if [ "${#s}" -le "$max" ]; then
+    printf '%s' "$s"
+    return 0
+  fi
+  if [ "$max" -le 3 ]; then
+    printf '%s' "${s:0:$max}"
+    return 0
+  fi
+  keep=$((max - 3))
+  printf '%s...' "${s:0:$keep}"
+}
+
+attn_prepare() {
+  if type autofix_class >/dev/null 2>&1; then
+    return 0
+  fi
+  if [ -r "$DOTDIR/lib/autofix-lib.sh" ]; then
+    # shellcheck source=lib/autofix-lib.sh disable=SC1091
+    . "$DOTDIR/lib/autofix-lib.sh"
+  fi
+}
+
+# fix: <id> when --fix can repair it, "manual step" for those warnings, else Needs Paul.
+attn_hint() {
+  local id="$1" cls=""
+  if [ "$id" = manual-step ]; then
+    printf 'manual step'
+    return 0
+  fi
+  if type autofix_class >/dev/null 2>&1 && [ -r "$DOTDIR/lib/autofix.list" ]; then
+    cls="$(autofix_class "$DOTDIR/lib/autofix.list" "$id")"
+  fi
+  if [ "$cls" = SAFE ]; then
+    printf 'fix: %s' "$id"
+    return 0
+  fi
+  printf 'Needs Paul'
+}
+
+# One plain bullet body (no indent, no colour): "drift  Section: reason (hint)".
+# The whole printed line, including "    - ", stays within ATTN_COLS.
+attn_format() {
+  local kind="$1" sec="$2" id="$3" msg="$4"
+  local secpart="" hint overhead budget cols
+  cols="${ATTN_COLS:-100}"
+  sec="${sec%% (*}"
+  if [ "${#sec}" -gt 32 ]; then
+    sec="$(attn_trim 32 "$sec")"
+  fi
+  if [ -n "$sec" ]; then
+    secpart="$sec: "
+  fi
+  hint="$(attn_hint "$id")"
+  # "    - " (6) + kind (5) + two spaces + secpart + " (" + hint + ")"
+  overhead=$((6 + 5 + 2 + ${#secpart} + 3 + ${#hint}))
+  budget=$((cols - overhead))
+  if [ "$budget" -lt 20 ]; then
+    budget=20
+  fi
+  msg="$(attn_trim "$budget" "$msg")"
+  printf '%-5s  %s%s (%s)' "$kind" "$secpart" "$msg" "$hint"
+}
+
+attn_fill_from() {
+  local it ak asec aid amsg formatted
+  for it in "$@"; do
+    IFS="$US" read -r ak asec aid amsg <<< "$it"
+    if [ -z "$ak" ]; then
+      continue
+    fi
+    formatted="$(attn_format "$ak" "$asec" "$aid" "$amsg")"
+    ATTN_LINES+=("$formatted")
+  done
+}
+
+attn_print_lines() {
+  local line col
+  for line in "$@"; do
+    col="$C_WARN"
+    case "$line" in
+      drift*) col="$C_BAD" ;;
+    esac
+    printf '    %s- %s%s\n' "$col" "$line" "$C_OFF"
+  done
+}
+
 SUM_NW=${#CHECKED}                      # number column width = widest count
 for n in "$DRIFT" "$WARN" "$HAND" "${#FIXED[@]}" "${#NEEDS_PAUL[@]}" "${#WOULD_FIX[@]}"; do
   if [ "${#n}" -gt "$SUM_NW" ]; then SUM_NW=${#n}; fi
@@ -1707,10 +1824,31 @@ else
   fi
   printf '  %s%d %s attention%s (%s)\n' "$S_VCOL$C_HDR" "$S_ATTN" "$S_NEED" "$C_OFF" "$S_WHAT"
 fi
+# Outstanding drift and warnings only. By-hand info lines are not in these arrays,
+# and a clean run (S_ATTN = 0) prints nothing extra. ATTN_LINES is also attention[].
+ATTN_LINES=()
+if [ "$S_ATTN" -gt 0 ]; then
+  attn_prepare
+  if [ "${RECHECK_RAN:-0}" = 1 ]; then
+    attn_fill_from ${RECHECK_ITEMS[@]+"${RECHECK_ITEMS[@]}"}
+  else
+    attn_fill_from ${ATTN_ITEMS[@]+"${ATTN_ITEMS[@]}"}
+  fi
+  attn_print_lines ${ATTN_LINES[@]+"${ATTN_LINES[@]}"}
+fi
 
 # ---- --issues (internal; used by --fix to re-check) ----------------------
+# kind, id, arg, message (FIX_ITEMS), then the section recorded alongside it.
 if [ "$ISSUES" = 1 ]; then
-  for it in ${FIX_ITEMS[@]+"${FIX_ITEMS[@]}"}; do printf '%s\n' "$it"; done >&3
+  i=0
+  for it in ${FIX_ITEMS[@]+"${FIX_ITEMS[@]}"}; do
+    asec=""
+    if [ "$i" -lt "${#ATTN_ITEMS[@]}" ]; then
+      IFS="$US" read -r _ak asec _aid _amsg <<< "${ATTN_ITEMS[$i]}"
+    fi
+    printf '%s%s%s\n' "$it" "$US" "$asec" >&3
+    i=$((i + 1))
+  done
 fi
 
 # ---- --health-json -------------------------------------------------------
@@ -1795,7 +1933,8 @@ if [ "$HEALTH_JSON" = 1 ]; then
       printf '  "logout_needed": %s,\n' "$(json_arr ${LOGOUT_NEEDED[@]+"${LOGOUT_NEEDED[@]}"})"
     fi
     printf '  "drift_messages": %s,\n' "$(json_arr ${DRIFT_MSGS[@]+"${DRIFT_MSGS[@]}"})"
-    printf '  "warning_messages": %s\n' "$(json_arr ${WARN_MSGS[@]+"${WARN_MSGS[@]}"})"
+    printf '  "warning_messages": %s,\n' "$(json_arr ${WARN_MSGS[@]+"${WARN_MSGS[@]}"})"
+    printf '  "attention": %s\n' "$(json_arr ${ATTN_LINES[@]+"${ATTN_LINES[@]}"})"
     printf '}\n'
   } >&3
 fi
