@@ -113,6 +113,10 @@ jobs:
         run: |
           # The multi-line summary block from macconfig-check.sh, rendered with stub counts.
           ./tests/check-summary.test.sh
+      - name: Run check.sh shim and macconfig fish function tests
+        run: |
+          # The repo-root shim forwards args and exit status; the fish function file parses.
+          ./tests/macconfig.test.sh
       - name: Run hammerspoon/modes.lua tests
         run: |
           # modes.lua structure + the switcher's pure planning logic (plain Lua 5.4;

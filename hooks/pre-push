@@ -71,6 +71,10 @@ if [ -x ./tests/check-summary.test.sh ]; then
   echo "  unit tests (macconfig-check.sh summary block)"
   ./tests/check-summary.test.sh || status=1
 fi
+if [ -x ./tests/macconfig.test.sh ]; then
+  echo "  unit tests (check.sh shim and macconfig fish function)"
+  ./tests/macconfig.test.sh || status=1
+fi
 if [ -x ./tests/modes.test.sh ]; then
   echo "  unit tests (hammerspoon/modes.lua + mode switcher planning)"
   ./tests/modes.test.sh || status=1

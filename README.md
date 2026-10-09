@@ -14,7 +14,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `autofix-lib.sh`, `defaults-lib.sh`)
 - `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-quicknote-hotkey-190.sh`, `pin-finder-icon-view.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists (symlinked into `~/Library/LaunchAgents`)
-- Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `macconfig-check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
+- Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `macconfig-check.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `tests/`, `hooks/` — unit tests and pre-push lint/test gate
 - `SHORTCUTS.md` — keyboard-shortcut cheat-sheets
 
@@ -253,7 +253,7 @@ macconfig --fix           # also repair SAFE drift, re-check, list Fixed / Needs
 ~/.dotfiles-mac/macconfig-check.sh   # the same script, without fish
 ```
 
-`macconfig` is a fish function, installed with the others in `fish/functions/`. It runs `macconfig-check.sh` from any directory and passes every argument through (`macconfig --fix`, `macconfig --no-color`, and so on).
+`macconfig` is a fish function, installed with the others in `fish/functions/`. It runs `macconfig-check.sh` from any directory and passes every argument through (`macconfig --fix`, `macconfig --no-color`, and so on). `check.sh` at the repo root execs `macconfig-check.sh` with the same arguments, stdin, and exit status, so `~/.dotfiles-mac/check.sh --fix --no-color` still works.
 
 It ends with a short summary (coloured on a terminal: zero counts dimmed, drift red and warnings yellow when above zero; plain text with `--no-color` or when piped):
 
@@ -478,6 +478,7 @@ To enable Clipboard History:
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
 | `macconfig-check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. `--fix` (optionally with `--dry-run`) also applies the SAFE fixes from `lib/autofix.list`, re-checks, and lists Fixed / Needs Paul. Run any time (especially after a macOS update), or use the `macconfig` fish function. Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
+| `check.sh` | Shim that execs `macconfig-check.sh` with the same arguments, stdin, and exit status. Kept so existing callers (the scheduled `~/.dotfiles-mac/check.sh --fix --no-color`, plus muscle memory) stay valid. |
 | `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `macconfig-check.sh --fix` uses. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme defaults (`lib/url-handlers.list`) and Finder file defaults (`lib/file-handlers.list`, role `all`). `--dry-run` / `--list`. Idempotent; needs `duti`. |
@@ -493,7 +494,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `modes.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes
