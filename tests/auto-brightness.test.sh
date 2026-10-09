@@ -45,7 +45,7 @@ write_plist "$tmp/on.plist" '{
 }'
 out="$(run "$tmp/on.plist")"; rc=$?
 eq "on exits 0" 0 "$rc"
-eq "both on is drift" "bad||Automatically adjust brightness is on (CBAutoBrightnessEnabled=true, DisplayBrightnessAuto=1) — System Settings → Displays → turn it off. check.sh --fix does not change this (the CoreBrightness plist is root-owned; True Tone and Slightly dim the display on battery are left alone)" "$out"
+eq "both on is drift" "bad||Automatically adjust brightness is on (CBAutoBrightnessEnabled=true, DisplayBrightnessAuto=1) — System Settings → Displays → turn it off. macconfig-check.sh --fix does not change this (the CoreBrightness plist is root-owned; True Tone and Slightly dim the display on battery are left alone)" "$out"
 
 write_plist "$tmp/off.plist" '{
   "displays": [

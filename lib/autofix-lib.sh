@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 #
 # autofix-lib.sh — lookup helpers for lib/autofix.list (the safe / needs-Paul split
-# used by `check.sh --fix`). Sourced, not executed. Shared by check.sh and
+# used by `macconfig-check.sh --fix`). Sourced, not executed. Shared by macconfig-check.sh and
 # tests/autofix.test.sh so the classification is read the same way everywhere.
 
 # autofix_lookup LIST ID — print "class|fixer|why" for ID. An id that isn't listed is

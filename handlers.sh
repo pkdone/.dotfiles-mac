@@ -77,7 +77,7 @@ while IFS='|' read -r scheme bundle; do
   fi
 done < "$LIST"
 
-# File extensions share lib/file-handlers.py with check.sh --fix, so the
+# File extensions share lib/file-handlers.py with macconfig-check.sh --fix, so the
 # duti -x / duti -s rules can't drift between bootstrap and the drift check.
 apply_file_handlers() {
   local file_py file_out file_rc status ext msg

@@ -62,7 +62,7 @@ link() {  # src dst
 echo ""
 echo "🔗 Creating symlinks..."
 require_file "$DOTFILES/lib/links.list"
-# Static one-to-one links live in lib/links.list (shared with check.sh).
+# Static one-to-one links live in lib/links.list (shared with macconfig-check.sh).
 while IFS='|' read -r src tgt; do
   case "$src" in ''|'#'*) continue ;; esac
   link "$DOTFILES/$src" "${tgt//@HOME@/$HOME}"
@@ -82,7 +82,7 @@ echo "🚀 Loading login LaunchAgents (dictation 164, Quick Note 190)..."
 for LA_LABEL in com.pdone.pin-dictation-hotkey-164 com.pdone.pin-quicknote-hotkey-190; do
   LA_PLIST="$HOME/Library/LaunchAgents/${LA_LABEL}.plist"
   if [ -f "$LA_PLIST" ]; then
-    # Shared with `check.sh --fix`; --reload picks up plist changes on a re-run.
+    # Shared with `macconfig-check.sh --fix`; --reload picks up plist changes on a re-run.
     if "$DOTFILES/scripts/load-launchagent.sh" --reload "$LA_PLIST" >/dev/null; then
       echo "  loaded $LA_LABEL"
     else
@@ -115,7 +115,7 @@ git -C "$DOTFILES" config core.hooksPath hooks
 
 echo ""
 if [ "$bundle_ok" = 1 ]; then
-  echo "✅ Dotfiles are in place. Run ./check.sh any time to verify."
+  echo "✅ Dotfiles are in place. Run macconfig (or ./macconfig-check.sh) any time to verify."
 else
   echo "⚠️  Dotfiles are in place, but some Brewfile entries did not install"
   echo "    (commonly the App Store 'mas' app when not signed in). Fix the cause and"

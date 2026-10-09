@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# check.sh — verifier. By default read-only: reports drift between this machine and the
+# macconfig-check.sh — verifier. By default read-only: reports drift between this machine and the
 # repo's desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
 # it's usable in a pre-push hook or CI later. With --fix it also applies the SAFE fixes
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
@@ -53,7 +53,7 @@ for arg in "$@"; do
     --issues) ISSUES=1 ;;
     -h|--help)
       cat <<'USAGE'
-Usage: check.sh [--no-color] [--health-json] [--fix [--dry-run]]
+Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]]
   Default: read-only. Reports drift between this machine and the repo; writes nothing.
   Exit status: 0 = everything matches, 1 = drift found.
   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
@@ -71,7 +71,7 @@ USAGE
   esac
 done
 if [ "$DRY_RUN" = 1 ] && [ "$FIX" != 1 ]; then
-  echo "--dry-run only applies to --fix (check.sh is read-only without --fix)" >&2; exit 2
+  echo "--dry-run only applies to --fix (macconfig-check.sh is read-only without --fix)" >&2; exit 2
 fi
 if [ "$ISSUES" = 1 ]; then
   if [ "$FIX" = 1 ] || [ "$HEALTH_JSON" = 1 ]; then
@@ -190,7 +190,7 @@ else
     fi
   fi
   # Closed-set extras: anything brew bundle cleanup would remove (formulae, casks, MAS)
-  # that isn't in the Brewfile. Soft warning only — never auto-zap from check.sh.
+  # that isn't in the Brewfile. Soft warning only — never auto-zap from macconfig-check.sh.
   # Manual non-brew apps (Cursor Nightly, YouTube Music) never appear here.
   # MDM apps in lib/mdm-apps.list are expected leftovers — filter them out.
   CHECKED=$((CHECKED + 1))
@@ -634,7 +634,7 @@ fixid tooling   # helper / python problems below; the item checks are login-item
 BANNED_BUNDLES="com.openai.codex com.google.GeminiMacOS com.google.GeminiMacOS.launcher"
 BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
 # Prefer parsing the world-readable BTM db — `sfltool dumpbtm` pops an admin
-# password dialog on Tahoe and must never run from check.sh.
+# password dialog on Tahoe and must never run from macconfig-check.sh.
 BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
 if [ ! -r "$BTM_HELPER" ]; then
   warn "lib/btm-login-items.py missing — skip SMAppService login-item check"
@@ -1281,7 +1281,7 @@ done < "$DOTDIR/lib/links.list"
 fixid dotfiles-git
 # Dotfiles in sync: no uncommitted/untracked changes (gitignored .agent-logs etc. don't
 # count) and HEAD level with origin/main AS OF THE LAST FETCH/PUSH — no network here, so
-# check.sh stays offline and read-only (--no-optional-locks: don't even refresh the index).
+# macconfig-check.sh stays offline and read-only (--no-optional-locks: don't even refresh the index).
 CHECKED=$((CHECKED + 1))
 if ! git -C "$DOTDIR" rev-parse --git-dir >/dev/null 2>&1; then
   warn "dotfiles: $DOTDIR isn't a git repo"
@@ -1345,7 +1345,7 @@ fi
 # ---- 16. Manual steps (permissions, sign-ins, by-hand settings) -----------
 # lib/manual-steps.list is the single source of truth; scripts/manual-steps.sh runs the
 # read-only checks. A failed check is a soft warning (a manual step, not repo drift);
-# steps with no reliable check are info lines; steps marked @check.sh are verified by
+# steps with no reliable check are info lines; steps marked @macconfig-check.sh are verified by
 # their own section above, so they're not repeated here.
 hdr "Manual steps (lib/manual-steps.list)"
 fixid manual-step
@@ -1387,7 +1387,7 @@ if [ "$FIX" = 1 ]; then
     hdr "Fix — dry run (nothing is changed)"
   else
     hdr "Fix (SAFE fixes from lib/autofix.list)"
-    fix_log "check.sh --fix started ($DRIFT drift, $WARN warning(s))"
+    fix_log "macconfig-check.sh --fix started ($DRIFT drift, $WARN warning(s))"
   fi
 
   # Fixers. Each prints one line saying what it did (or would do) and returns 0 = done /
@@ -1602,7 +1602,7 @@ if [ "$FIX" = 1 ]; then
   # Report each SAFE item's outcome; on a real run, re-check to see what stuck.
   RECHECK=""
   if [ "$DRY_RUN" != 1 ] && [ "${#SAFE_ITEMS[@]}" -gt 0 ]; then
-    RECHECK="$("$DOTDIR/check.sh" --issues 2>/dev/null)" || true
+    RECHECK="$("$DOTDIR/macconfig-check.sh" --issues 2>/dev/null)" || true
     AFTER_DRIFT=0; AFTER_WARN=0
     RECHECK_RAN=1
     RECHECK_ITEMS=()
@@ -1660,7 +1660,7 @@ if [ "$FIX" = 1 ]; then
     printf '\n  Log out and back in to finish applying: %s\n' "$(printf '%s; ' "${LOGOUT_NEEDED[@]}" | sed 's/; $//')"
   fi
   if [ "$DRY_RUN" != 1 ]; then
-    fix_log "check.sh --fix done: ${#FIXED[@]} fixed, ${#NEEDS_PAUL[@]} need Paul; after: $AFTER_DRIFT drift, $AFTER_WARN warning(s)"
+    fix_log "macconfig-check.sh --fix done: ${#FIXED[@]} fixed, ${#NEEDS_PAUL[@]} need Paul; after: $AFTER_DRIFT drift, $AFTER_WARN warning(s)"
   fi
 fi
 
@@ -1807,7 +1807,7 @@ else
     done
   fi
   if [ "$S_SAFE" -gt 0 ]; then
-    printf '  %s→ run ./check.sh --fix to repair %d safe item(s)%s\n' "$C_OK" "$S_SAFE" "$C_OFF"
+    printf '  %s→ run ./macconfig-check.sh --fix to repair %d safe item(s)%s\n' "$C_OK" "$S_SAFE" "$C_OFF"
   fi
 fi
 S_ATTN=$((S_DRIFT + S_WARN))

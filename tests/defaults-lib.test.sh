@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Unit tests for lib/defaults-lib.sh — the value-comparison helpers shared by
-# macos.sh and check.sh. Plain bash + awk, no test framework or extra deps.
+# macos.sh and macconfig-check.sh. Plain bash + awk, no test framework or extra deps.
 # Run: ./tests/defaults-lib.test.sh   (exits non-zero if any assertion fails)
 #
 set -uo pipefail   # deliberately not -e: run every assertion, then tally failures

@@ -130,7 +130,7 @@ banner "Done"
 if [ "$DRYRUN" = 1 ]; then
   echo "Dry run only — nothing was changed. Re-run without --dry-run to apply."
 else
-  echo "Setup complete. Run ./check.sh to verify the machine matches the repo."
+  echo "Setup complete. Run macconfig (or ./macconfig-check.sh) to verify the machine matches the repo."
 fi
 
 # Manual steps (permissions, sign-ins, by-hand settings) from lib/manual-steps.list.

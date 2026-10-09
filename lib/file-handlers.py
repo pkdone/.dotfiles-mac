@@ -320,7 +320,7 @@ def main(argv: list[str] | None = None) -> int:
         args.apply = True
     try:
         rows = load_rows(args.list_path)
-    except Exception as exc:  # noqa: BLE001 - report, don't crash check.sh
+    except Exception as exc:  # noqa: BLE001 - report, don't crash macconfig-check.sh
         return report_bad_list(args.apply, exc)
     schemes = load_schemes(args.list_path)
     duti = duti_bin()

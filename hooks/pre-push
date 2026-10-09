@@ -68,7 +68,7 @@ if [ -x ./tests/logi-settings.test.sh ]; then
   ./tests/logi-settings.test.sh || status=1
 fi
 if [ -x ./tests/check-summary.test.sh ]; then
-  echo "  unit tests (check.sh summary block)"
+  echo "  unit tests (macconfig-check.sh summary block)"
   ./tests/check-summary.test.sh || status=1
 fi
 if [ -x ./tests/modes.test.sh ]; then

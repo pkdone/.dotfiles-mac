@@ -21,7 +21,7 @@
 --   hs -c "return loaded.mode_switcher.dryRun('WebConf')"     -- what it would do; changes nothing
 --   hs -c "loaded.mode_switcher.switch('Normal')"
 --
--- The first half of this file is pure Lua (no hs.*) so tests/modes.test.sh and check.sh
+-- The first half of this file is pure Lua (no hs.*) so tests/modes.test.sh and macconfig-check.sh
 -- can validate modes.lua and the planning logic without Hammerspoon.
 
 local M = {}
@@ -115,7 +115,7 @@ function M.validate(cfg)
   return #errs == 0, errs
 end
 
---- validateFile(path) -> 'ok' | 'error: ...'   (used by check.sh via `hs -c`)
+--- validateFile(path) -> 'ok' | 'error: ...'   (used by macconfig-check.sh via `hs -c`)
 function M.validateFile(path)
   local chunk, lerr = loadfile(path)
   if not chunk then return 'error: ' .. tostring(lerr) end
