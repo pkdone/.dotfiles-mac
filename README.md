@@ -521,7 +521,7 @@ dotpush "your message"
 | Function | Description |
 |------|------|
 | `macconfig` | Checks this Mac's config settings against the repo (`macconfig-check.sh`). Arguments pass through: `macconfig`, `macconfig --fix`, `macconfig --no-color` |
-| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile |
+| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile. Sets `HOMEBREW_NO_ASK` for that run only, so Homebrew 7 does not ask "Do you want to proceed?"; a hand-typed `brew upgrade` still asks |
 | `dotpush <message>` | Commits and pushes all dotfile changes to GitHub in one command |
 | `edit <file>` | Opens a file in CotEditor |
 
