@@ -77,6 +77,14 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Gemini mini chat | Control + Option + G |
 | Gemini full chat | Control + Option + Shift + G |
 
+#### Finder
+
+| Action | Shortcut |
+|------|------|
+| Copy selected item's full path (POSIX pathname) to the clipboard | Option + Command + C |
+
+Right-click the item, hold Option, choose "Copy <name> as Pathname". To copy a folder's own path, select it in its parent folder first (the path shown in the window title bar is display-only).
+
 #### Terminal and Shell Differences
 
 Terminal applications often use Linux/Emacs-style bindings, which override standard macOS behavior.
