@@ -38,7 +38,7 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Home | Fn + Left Arrow |
 | End | Fn + Right Arrow |
 
-#### Screenshot Actions
+#### Screenshot and Screen Recording Actions
 
 **Pro Tip:** Adding the **Control** key to any of the following shortcuts copies the image to the clipboard instead of saving a file.
 
@@ -47,7 +47,14 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Whole screen | Shift + Command + 3 | Control + Shift + Command + 3 |
 | Selected area | Shift + Command + 4 (+ drag) | Control + Shift + Command + 4 (+ drag) |
 | Selected window | Shift + Command + 4 + Space | Control + Shift + Command + 4 + Space |
-| Screen Copy Options panel | Shift + Command + 5 | N/A |
+| Screenshot / screen-recording toolbar (Record Entire Screen / Record Selected Portion) | Shift + Command + 5 | N/A (recordings always save as a .mov file) |
+| Stop recording | Menu-bar stop button OR Control + Command + Esc | N/A |
+
+**Recording tips:** In the Shift + Command + 5 toolbar, turn on **Options > Show Mouse Clicks** so clicks show up. Keep clips under a minute and record just the window.
+
+**No clipboard for recordings:** Adding Control only copies *screenshots* (e.g. Control + Shift + Command + 4). The toolbar's **Save to > Clipboard** option also only applies to screenshots.
+
+**Quick share:** After stopping, drag the thumbnail in the bottom-right corner straight into a chat (e.g. Grok Bot).
 
 #### System and Utility Actions
 
