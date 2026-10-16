@@ -128,3 +128,12 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 | Next search result | Command + G |
 | Previous search result | Command + Shift + G |
 | Reload config | Command + Shift + , |
+
+#### Slack
+
+| Action | Shortcut |
+|------|------|
+| Send message | Command + Enter |
+| New line in message | Enter |
+
+Set in Slack > Settings > Advanced > 'When writing a message, press Enter to...' > Start a new line.
