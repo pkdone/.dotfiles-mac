@@ -22,25 +22,17 @@ Personal macOS dotfiles and bootstrap setup.
 
 ### Bootstrap
 
-On a fresh machine, first install Homebrew (which also pulls in the Command Line Tools that provide `git`), then the GitHub CLI, and sign in — this is what lets the private repo be cloned over HTTPS:
+On a fresh Mac, paste this block. It installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon), installs the GitHub CLI, signs in when `gh auth status` is not already ok, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste it again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+command -v brew >/dev/null 2>&1 || {
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+}
 brew install gh
-gh auth login
-```
-
-Clone the repo:
-
-```bash
-git clone https://github.com/pkdone/.dotfiles-mac.git ~/.dotfiles-mac
-```
-
-Then run the guided bootstrap. It walks through every step in order (`install.sh` -> `shell.sh` -> `hostname.sh` -> `macos.sh` -> `dock.sh` -> `handlers.sh` -> `prune-apps.sh`), prompting before each, and is idempotent so it's safe to re-run:
-
-```bash
-~/.dotfiles-mac/bootstrap.sh --dry-run   # preview every step, change nothing
-~/.dotfiles-mac/bootstrap.sh             # run it (prompts before each; --yes skips prompts)
+gh auth status || gh auth login
+[ -d ~/.dotfiles-mac ] || gh repo clone pkdone/.dotfiles-mac ~/.dotfiles-mac
+~/.dotfiles-mac/bootstrap.sh
 ```
 
 ### Dotfiles & packages
