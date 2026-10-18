@@ -87,7 +87,8 @@ miss() {  # DESCRIPTION NEEDLE HAYSTACK
 }
 real_ids="$(grep -E '^[^#[:space:]]' "$LIST" | cut -d'|' -f1)"
 for gone in trackpad-tap-to-click trackpad-click-light trackpad-secondary-click \
-            trackpad-tracking-speed trackpad-three-finger-drag trackpad-lookup-force-click; do
+            trackpad-tracking-speed trackpad-three-finger-drag trackpad-lookup-force-click \
+            desktop-widgets; do
   miss "manual step $gone moved out" "$gone" "$real_ids"
 done
 steps_text="$(cat "$LIST")"

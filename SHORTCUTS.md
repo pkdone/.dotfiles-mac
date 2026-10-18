@@ -119,7 +119,7 @@ The four-corner Quarters layout has no keyboard shortcut. Globe + Control + Opti
 
 **Drag.** Drag a window to a screen edge (left, right, a corner, or the menu bar) and release when the highlighted area appears; the window tiles. Dragging to the menu bar fills the desktop. Hold Option while dragging toward an edge or corner and the window tiles immediately.
 
-This repo pins drag-to-left-or-right-edge On and tiled-window margins Off (`lib/macos-defaults.list`). The other Desktop & Dock window toggles stay as they are.
+This repo pins drag-to-left-or-right-edge On and tiled-window margins Off (`lib/macos-defaults.list`). Stage Manager is off and desktop widgets are hidden; those keys are in the same list. The other Desktop & Dock window toggles stay as they are.
 
 #### Finder
 
