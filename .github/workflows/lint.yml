@@ -140,3 +140,10 @@ jobs:
           # (no killall), and the SHORTCUTS.md section. Fake defaults; no live
           # WindowManager or Dock.
           ./tests/window-tiling.test.sh
+      - name: Run menu bar defaults tests
+        run: |
+          # Control Center Voice Control / Bluetooth / battery percentage rows,
+          # ControlCenter restart, the Karabiner menu bar flags, and the
+          # third-party allow-list manual step. Fake defaults; no live
+          # ControlCenter.
+          ./tests/menubar.test.sh

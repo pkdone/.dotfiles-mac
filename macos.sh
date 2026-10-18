@@ -63,8 +63,8 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --only ID    Apply only this item (repeatable): "domain|key" from
                lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
                @finder-recents, @finder-icon-view. Matching values are left alone.
-  --yes        Restart Dock/Finder/SystemUIServer without prompting (only if
-               something changed).
+  --yes        Restart Dock/Finder/SystemUIServer/ControlCenter without prompting
+               (only if something changed).
   -h, --help   Show this help.
 USAGE
       exit 0 ;;
@@ -573,5 +573,7 @@ Still manual (not scriptable / out of scope) — see README:
     wheel (Natural), buttons in Logi Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
   - Accessibility grants (TCC); notification mirroring; Spotlight result categories
     (per-app Allow Notifications is checked by macconfig-check.sh, never written)
+  - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
+    (leave Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents)
   - Set Hostname (requires sudo)
 MANUAL

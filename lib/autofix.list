@@ -6,8 +6,8 @@
 #           PAUL = report only, never automated (listed under "Needs Paul")
 #   fixer:  SAFE rows only — the macconfig-check.sh fix routine that reuses an existing setter:
 #             macos        macos.sh --only … (backs up the domain first; restarts Dock /
-#                          Finder / SystemUIServer only if a value changed; "logout" rows
-#                          are reported as needing a logout)
+#                          Finder / SystemUIServer / ControlCenter only if a value changed;
+#                          "logout" rows are reported as needing a logout)
 #             launchagent  scripts/load-launchagent.sh (bootstrap only if not loaded)
 #             symlink      ln -sfn to the repo source, ONLY if the target is a symlink or
 #                          missing — a real file is never overwritten
