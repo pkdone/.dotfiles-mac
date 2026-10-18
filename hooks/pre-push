@@ -67,6 +67,10 @@ if [ -x ./tests/logi-settings.test.sh ]; then
   echo "  unit tests (lib/logi-settings.py read-only Logi Options+ check)"
   ./tests/logi-settings.test.sh || status=1
 fi
+if [ -x ./tests/notification-prefs.test.sh ]; then
+  echo "  unit tests (lib/notification-prefs.py read-only notification check)"
+  ./tests/notification-prefs.test.sh || status=1
+fi
 if [ -x ./tests/check-summary.test.sh ]; then
   echo "  unit tests (macconfig-check.sh summary block)"
   ./tests/check-summary.test.sh || status=1

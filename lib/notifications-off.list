@@ -1,0 +1,21 @@
+# Apps whose Allow Notifications must be Off
+# (System Settings → Notifications → Application Notifications).
+# macconfig-check.sh reads the usernoted group plist via lib/notification-prefs.py
+# and warns (Needs Paul) when one of these has Allow Notifications on. It never
+# writes the store, and there is no --fix for this.
+#
+# One bundle id per line. Text after # is the display name (keep it in the
+# notifications-apps title in lib/manual-steps.list). Blank lines and lines
+# beginning with # are ignored.
+
+com.apple.iCal # Calendar
+co.anysphere.cursor.nightly # Cursor Nightly
+com.apple.FaceTime # FaceTime
+com.apple.gamecenter # Game Center
+com.apple.Home # Home
+com.apple.mail # Mail
+com.microsoft.teams2 # Microsoft Teams
+com.tinyspeck.slackmacgap # Slack
+com.spotify.client # Spotify
+com.apple.tips # Tips
+com.apple.Passbook # Wallet
