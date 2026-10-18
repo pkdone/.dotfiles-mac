@@ -27,7 +27,18 @@ com.apple.finder|_FXShowPosixPathInTitle|bool|true|Finder|Finder|Full POSIX path
 NSGlobalDomain|AppleShowAllExtensions|bool|true|Finder|Finder|Show all filename extensions|`true` (On)
 NSGlobalDomain|NSTableViewDefaultSizeMode|int|3||Appearance|Sidebar icon size|`3` (Large)
 com.apple.finder|ShowStatusBar|bool|true|Finder|Finder|Show Status Bar|`true` (On)
-com.apple.screencapture|location|string|@HOME@/Pictures|SystemUIServer|Screenshots|Save location|`~/Pictures`
+# Finder and Trash tidy. Finder restart so open windows pick the prefs up.
+# DSDontWriteNetworkStores: the domain may not exist yet; defaults write creates it.
+com.apple.finder|FXRemoveOldTrashItems|bool|true|Finder|Finder|Remove Trash items after 30 days|`true` (On)
+com.apple.finder|FXDefaultSearchScope|string|SCcf|Finder|Finder|Search scope|`SCcf` (current folder)
+com.apple.finder|_FXSortFoldersFirst|bool|true|Finder|Finder|Keep folders on top|`true` (On)
+com.apple.desktopservices|DSDontWriteNetworkStores|bool|true|Finder|Finder|No .DS_Store on network volumes|`true` (On)
+# Screenshots. @HOME@ expands to $HOME when applying and checking (never a hardcoded
+# /Users/… path). install.sh and macos.sh mkdir -p the folder before the location is
+# written. Existing screenshots are not moved. show-thumbnail keeps the floating thumbnail.
+# Both restart SystemUIServer.
+com.apple.screencapture|location|string|@HOME@/Pictures/Screenshots|SystemUIServer|Screenshots|Save location|`~/Pictures/Screenshots`
+com.apple.screencapture|show-thumbnail|bool|true|SystemUIServer|Screenshots|Floating thumbnail|`true` (On)
 com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer|Control Center|Clock — Show AM/PM|`true` (On)
 com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|Clock — Show day of week|`true` (On)
 com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock — Show date|`1` (On)

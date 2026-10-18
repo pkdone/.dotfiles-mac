@@ -138,6 +138,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 - **Menu bar (Tahoe):** Spotlight, Focus, Now Playing hidden (`@host/com.apple.controlcenter` = `8`) via `macos.sh` / `macconfig-check.sh`
 - **Finder sidebar Recents** Off, **icon view 72/13**, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `macconfig-check.sh`
+- **Finder and Trash tidy:** remove Trash items after 30 days (`FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and no `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`; the domain is created by the first write). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Finder
 - **Login Items:** `macconfig-check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
 
 Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
@@ -240,6 +241,8 @@ Safe to re-run: it reads and type-checks each setting first, then writes the des
 
 Trackpad rows in that list are tap to click (built-in trackpad, Bluetooth trackpad, and `com.apple.mouse.tapBehavior`), click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On (`ActuateDetents=1`, `ForceSuppressed=0`). Each one sets `restart` to `logout`. When a value changes, `macos.sh` reports that a logout/login may be needed before the trackpad follows it. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`.
 
+Finder and Trash tidy rows in that list remove Trash items after 30 days (`com.apple.finder FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and skip `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`). That domain may not exist until the first write; writing creates it. Those four set `restart` to `Finder`. Screenshots save to `~/Pictures/Screenshots` (`com.apple.screencapture location`, stored as `@HOME@/Pictures/Screenshots` so apply and check expand `$HOME`) and keep the floating thumbnail (`show-thumbnail` = true). Both screenshot keys set `restart` to `SystemUIServer`. `install.sh` creates `~/Pictures/Screenshots` with `mkdir -p`. `macos.sh` does the same before it writes the location, including when `macconfig --fix` repairs that key. Existing screenshots are left where they are.
+
 Run `macos.sh --list` to see the exact set of settings it manages (printed as a Markdown table).
 
 ### Verifying the setup
@@ -287,7 +290,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 
 | Issue | How it's fixed |
 |------|------|
-| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, menu bar, Trackpad, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings (including Trackpad) as "log out to finish" |
+| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, Trash, screenshots, menu bar, Trackpad, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, `mkdir -p`s `~/Pictures/Screenshots` before writing `com.apple.screencapture location`, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings (including Trackpad) as "log out to finish" |
 | Finder icon view 72/13, Finder sidebar Recents, CotEditor theme / font | `macos.sh --only @finder-icon-view` / `@finder-recents` / `@coteditor` (the existing `scripts/pin-finder-icon-view.sh` and `lib/finder-sidebar-recents.py`) |
 | Dictation hotkey 164 | `macos.sh --only @dictation-164`, which runs `scripts/pin-dictation-hotkey-164.sh` |
 | Quick Note hotkey 190 | `macos.sh --only @quicknote-190`, which runs `scripts/pin-quicknote-hotkey-190.sh` |
@@ -422,6 +425,14 @@ Per-window View Options and chrome (kept manual so folder views stay intentional
 5. **Show Status Bar** — managed by `macos.sh` / `macconfig-check.sh` (`com.apple.finder ShowStatusBar`); UI path: **View → Show Status Bar**
 6. **Show all filename extensions** — managed by `macos.sh` / `macconfig-check.sh` (`NSGlobalDomain AppleShowAllExtensions`); UI path: **Finder → Settings… → Advanced**
 
+These next ones are in `lib/macos-defaults.list`. `macos.sh` applies them, `macconfig-check.sh` checks them, and `macconfig --fix` repairs them through the `defaults` row in `lib/autofix.list`. A change restarts Finder. Screenshot keys restart SystemUIServer.
+
+7. **Remove items from the Trash after 30 days** — `com.apple.finder FXRemoveOldTrashItems` = true. UI: **Finder → Settings… → Advanced**
+8. **When performing a search** — search the current folder (`FXDefaultSearchScope` = `SCcf`). UI: **Finder → Settings… → Advanced**
+9. **Keep folders on top** — `com.apple.finder _FXSortFoldersFirst` = true. UI: **Finder → Settings… → Advanced**
+10. **No .DS_Store on network volumes** — `com.apple.desktopservices DSDontWriteNetworkStores` = true. The domain may not exist until the first write; writing creates it.
+11. **Screenshots** — `com.apple.screencapture location` = `~/Pictures/Screenshots` (`@HOME@` in the list, expanded to `$HOME` at runtime) and `show-thumbnail` = true, so the floating thumbnail stays. `install.sh` creates the folder. `macos.sh`, including `macconfig --fix`, runs `mkdir -p` on that path before setting the location. A missing folder is drift. Files already in `~/Pictures` are not moved.
+
 Re-check after a major macOS upgrade; View Options can reset per folder.
 
 #### Logi Options+
@@ -475,10 +486,10 @@ To enable Clipboard History:
 | Script | What it does, and when to run it |
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
-| `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Safe to re-run — repoints symlinks, backs up any real file in the way. |
+| `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Also `mkdir -p ~/Pictures/Screenshots` (the screenshot save location; existing files are not moved). Safe to re-run — repoints symlinks, backs up any real file in the way. |
 | `macconfig-check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. `--fix` (optionally with `--dry-run`) also applies the SAFE fixes from `lib/autofix.list`, re-checks, and lists Fixed / Needs Paul. Run any time (especially after a macOS update), or use the `macconfig` fish function. Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
 | `check.sh` | Shim that execs `macconfig-check.sh` with the same arguments, stdin, and exit status. Kept so existing callers (the scheduled `~/.dotfiles-mac/check.sh --fix --no-color`, plus muscle memory) stay valid. |
-| `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `macconfig-check.sh --fix` uses. Idempotent. |
+| `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `macconfig-check.sh --fix` uses. Creates `~/Pictures/Screenshots` with `mkdir -p` before writing `com.apple.screencapture location`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme defaults (`lib/url-handlers.list`) and Finder file defaults (`lib/file-handlers.list`, role `all`). `--dry-run` / `--list`. Idempotent; needs `duti`. |
 | `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie, Pages). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
@@ -493,7 +504,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes

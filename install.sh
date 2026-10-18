@@ -8,7 +8,8 @@
 #
 # Safe to re-run. Existing correct symlinks are repointed harmlessly; if a *real*
 # file is ever in the way of a symlink, it's moved into backups/pre-symlink-<ts>/
-# rather than clobbered.
+# rather than clobbered. Also mkdir -p ~/Pictures/Screenshots (screenshot save
+# location). Existing files are not moved.
 #
 set -euo pipefail
 
@@ -58,6 +59,14 @@ link() {  # src dst
   ln -sfn "$src" "$dst"
   echo "  linked $dst"
 }
+
+# Screenshot save location (com.apple.screencapture location). macos.sh mkdir -p's
+# the same folder again before writing the default, including from macconfig --fix.
+# Existing files are not moved.
+echo ""
+echo "📁 Screenshots folder..."
+mkdir -p "$HOME/Pictures/Screenshots"
+echo "  $HOME/Pictures/Screenshots"
 
 echo ""
 echo "🔗 Creating symlinks..."

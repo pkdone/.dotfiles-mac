@@ -123,3 +123,9 @@ jobs:
           # nothing Hammerspoon-specific runs).
           sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 >/dev/null
           ./tests/modes.test.sh
+      - name: Run Finder and Trash tidy tests
+        run: |
+          # macos-defaults.list rows, screenshot mkdir before the location write,
+          # and the macconfig-check.sh missing-folder drift. Fake defaults; no live
+          # Finder or SystemUIServer.
+          ./tests/finder-tidy.test.sh
