@@ -9,7 +9,10 @@
 #                          Finder / SystemUIServer / ControlCenter only if a value changed;
 #                          "logout" rows are reported as needing a logout). Dock rows, including
 #                          minimize-to-application and no-bouncing, use restart Dock.
-#             launchagent  scripts/load-launchagent.sh (bootstrap only if not loaded)
+#             launchagent  scripts/install-launchagent.sh (render @HOME@ -> $HOME),
+#                          then scripts/load-launchagent.sh. Bootstrap only if the
+#                          job isn't loaded. If the installed plist differs from
+#                          the rendered repo copy, rewrite it and bootout/bootstrap.
 #             symlink      ln -sfn to the repo source, ONLY if the target is a symlink or
 #                          missing — a real file is never overwritten
 #             hammerspoon  open -g -a Hammerspoon (only if installed and not running)
@@ -28,7 +31,7 @@ quicknote-190|SAFE|macos|Quick Note hotkey 190 (Globe/Fn+Q) disabled by scripts/
 finder-icon-view|SAFE|macos|Finder icon view 72/13 re-pinned by scripts/pin-finder-icon-view.sh
 finder-recents|SAFE|macos|Finder sidebar Recents hidden by lib/finder-sidebar-recents.py
 coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
-launchagent|SAFE|launchagent|repo LaunchAgent loaded with launchctl bootstrap
+launchagent|SAFE|launchagent|repo LaunchAgent rendered from launchagents/ (@HOME@ -> $HOME) and loaded; a plist that differs from the repo is rewritten and reloaded with launchctl bootout then bootstrap
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
 hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon)
 desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; restarts Dock)

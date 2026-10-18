@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Pin symbolic hotkey 164 ("Start Dictation") to Right Command twice so hold-Fn
-# never owns the mic. Idempotent. Used by macos.sh and a login LaunchAgent
-# (OS updates often reset AppleSymbolicHotKeys to the unbound default).
+# never owns the mic. Used by macos.sh and a LaunchAgent (OS updates often reset
+# AppleSymbolicHotKeys to the unbound default). Writes only when the hotkey
+# differs: a LaunchAgent WatchPaths on com.apple.symbolichotkeys.plist would
+# otherwise retrigger forever.
 set -euo pipefail
 
 LABEL='dictation hotkey 164'
@@ -27,19 +29,24 @@ log() {
   printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$LOG"
 }
 
+ok_state() {
+  [ "${ENABLED:-}" = 1 ] && [ "${PTYPE:-}" = modifier ] && [ "${P1:-}" = 1048592 ]
+}
+
 case "${1:-}" in
   -h|--help)
     cat <<'USAGE'
 Usage: pin-dictation-hotkey-164.sh [--check]
 
-  (default)  Write Right Command twice for hotkey 164 and activateSettings.
+  (default)  If hotkey 164 is not Right Command twice, write it and activateSettings.
+             If it already matches, do not write (safe under launchd WatchPaths).
   --check    Exit 0 if already correct; exit 1 and print current state otherwise.
 USAGE
     exit 0
     ;;
   --check)
     read_state
-    if [ "${ENABLED:-}" = 1 ] && [ "${PTYPE:-}" = modifier ] && [ "${P1:-}" = 1048592 ]; then
+    if ok_state; then
       echo "$LABEL ok (Right Command twice)"
       exit 0
     fi
@@ -49,15 +56,17 @@ USAGE
 esac
 
 read_state
+if ok_state; then
+  msg="$LABEL already Right Command twice (left alone)"
+  log "$msg"
+  echo "$msg"
+  exit 0
+fi
 defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 "$DESIRED"
 defaults read com.apple.symbolichotkeys >/dev/null 2>&1 || true
 if [ -x "$ACTIVATE" ]; then
   "$ACTIVATE" -u 2>/dev/null || true
 fi
-if [ "${ENABLED:-}" = 1 ] && [ "${PTYPE:-}" = modifier ] && [ "${P1:-}" = 1048592 ]; then
-  msg="$LABEL re-asserted (already Right Command twice)"
-else
-  msg="$LABEL pinned (was enabled=${ENABLED:-?} type=${PTYPE:-?} p1=${P1:-?})"
-fi
+msg="$LABEL pinned (was enabled=${ENABLED:-?} type=${PTYPE:-?} p1=${P1:-?})"
 log "$msg"
 echo "$msg"

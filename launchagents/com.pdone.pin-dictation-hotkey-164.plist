@@ -12,5 +12,14 @@
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
+	<!-- The WatchPaths entry is a placeholder replaced with the absolute home
+	     directory when this plist is installed. launchd does not expand a
+	     tilde or HOME, so those cannot be used here. -->
+	<key>WatchPaths</key>
+	<array>
+		<string>@HOME@/Library/Preferences/com.apple.symbolichotkeys.plist</string>
+	</array>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
 </dict>
 </plist>

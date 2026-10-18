@@ -9,7 +9,10 @@
 # Safe to re-run. Existing correct symlinks are repointed harmlessly; if a *real*
 # file is ever in the way of a symlink, it's moved into backups/pre-symlink-<ts>/
 # rather than clobbered. Also mkdir -p ~/Pictures/Screenshots (screenshot save
-# location). Existing files are not moved.
+# location). Existing files are not moved. Login LaunchAgents are rendered
+# (not symlinked): scripts/install-launchagent.sh replaces @HOME@ with $HOME
+# because launchd does not expand ~ or $HOME, then load-launchagent.sh --reload
+# bootout/bootstraps the job so WatchPaths is picked up.
 #
 set -euo pipefail
 
@@ -87,18 +90,22 @@ if [ -n "$BACKUP_DIR" ]; then
 fi
 
 echo ""
-echo "🚀 Loading login LaunchAgents (dictation 164, Quick Note 190)..."
-for LA_LABEL in com.pdone.pin-dictation-hotkey-164 com.pdone.pin-quicknote-hotkey-190; do
+echo "🚀 Installing login LaunchAgents (dictation 164, Quick Note 190)..."
+for LA_SRC in "$DOTFILES"/launchagents/*.plist; do
+  [ -f "$LA_SRC" ] || continue
+  LA_LABEL="$(basename "$LA_SRC" .plist)"
   LA_PLIST="$HOME/Library/LaunchAgents/${LA_LABEL}.plist"
-  if [ -f "$LA_PLIST" ]; then
-    # Shared with `macconfig-check.sh --fix`; --reload picks up plist changes on a re-run.
-    if "$DOTFILES/scripts/load-launchagent.sh" --reload "$LA_PLIST" >/dev/null; then
-      echo "  loaded $LA_LABEL"
-    else
-      echo "  ⚠️  could not bootstrap $LA_LABEL — run: launchctl bootstrap gui/$(id -u) $LA_PLIST"
-    fi
+  # Render @HOME@ -> $HOME, then bootout/bootstrap so WatchPaths takes effect.
+  # Shared with macconfig-check.sh --fix (that path reloads only when the
+  # installed plist differs, or bootstraps when the job isn't loaded).
+  if ! "$DOTFILES/scripts/install-launchagent.sh" --write "$LA_LABEL"; then
+    echo "  ⚠️  could not render $LA_LABEL"
+    continue
+  fi
+  if "$DOTFILES/scripts/load-launchagent.sh" --reload "$LA_PLIST" >/dev/null; then
+    echo "  loaded $LA_LABEL"
   else
-    echo "  ⚠️  $LA_PLIST missing after symlink step"
+    echo "  ⚠️  could not bootstrap $LA_LABEL — run: launchctl bootstrap gui/$(id -u) $LA_PLIST"
   fi
 done
 
