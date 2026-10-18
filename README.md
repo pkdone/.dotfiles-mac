@@ -136,7 +136,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **URL handlers** → Chrome (`handlers.sh` / `lib/url-handlers.list`)
 - **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
-- **Menu bar (Tahoe):** Spotlight, Focus, Now Playing hidden (`@host/com.apple.controlcenter` = `8`) via `macos.sh` / `macconfig-check.sh`
+- **Menu bar:** clock, mode icon, battery percentage, Wi-Fi, Bluetooth, Control Centre, and the third-party icons that stay (Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents). Spotlight, Focus, Now Playing and Voice Control are hidden (`@host/com.apple.controlcenter` = `8`, Don't Show). Bluetooth stays in the menu bar (`2`, Show in Menu Bar). Battery percentage is On (`BatteryShowPercentage`, boolean; `defaults read` prints `1`). `macos.sh` / `macconfig-check.sh` check those rows; `macconfig --fix` repairs them and restarts ControlCenter. Karabiner's own menu bar icon stays hidden. Raycast, Logi Options+ and Docker are Off under System Settings → Menu Bar → Allow in the Menu Bar (manual step `menubar-third-party-hide`; Raycast's own toggle isn't scriptable)
 - **Finder sidebar Recents** Off, **icon view 72/13**, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `macconfig-check.sh`
 - **Finder and Trash tidy:** remove Trash items after 30 days (`FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and no `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`; the domain is created by the first write). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Finder
 - **Window tiling (macOS 15+):** drag a window to the left or right edge to tile (`com.apple.WindowManager EnableTilingByEdgeDrag` = true; unset on this Mac, which is the system default On) and no gap between tiled windows (`EnableTiledWindowMargins` = false; `defaults read` prints `0`). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Shortcuts are in [SHORTCUTS.md](SHORTCUTS.md)
@@ -160,7 +160,8 @@ Universal Links like `https://music.apple.com` may still open Apple apps — use
 - While held: Fn+F → ⌃⌘F (fullscreen); Fn+F11 → Show Desktop; Fn+Delete → forward-delete; Fn+arrows → Home/End/PgUp/PgDn
 - Dictation/microphone consumer keys swallowed; Finder Forward Delete → Move to Trash
 - Top-row brightness/volume still work without Fn
-- `macconfig-check.sh` drifts if the dir symlink, Fn-kill rule, or Finder Trash rule is missing
+- Menu bar icon hidden: `global.show_in_menu_bar` and `show_profile_name_in_menu_bar` are both `false` in `karabiner/karabiner.json` (the directory symlink's `~/.config/karabiner/karabiner.json`). `macconfig-check.sh` reads that file with python3 and drifts if either is not false. Restore is git (`karabiner-rules` in `lib/autofix.list`); `--fix` does not rewrite it
+- `macconfig-check.sh` drifts if the dir symlink, Fn-kill rule, Finder Trash rule, or menu bar icon setting is missing
 
 **Manual once (TCC / DriverKit):** Driver Extensions + Device Control and Data Access (Karabiner-Core-Service) + Allow in the Background — see [Manual steps](#manual-steps) (`karabiner-*`; `macconfig-check.sh` verifies the driver and the Core-Service grant). Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
 
@@ -246,6 +247,8 @@ Finder and Trash tidy rows in that list remove Trash items after 30 days (`com.a
 
 Window tiling rows in that list turn on drag-to-edge tiling (`com.apple.WindowManager EnableTilingByEdgeDrag` = true) and turn tiled-window margins off (`EnableTiledWindowMargins` = false). On this Mac the edge-drag key is unset, which is the system default On, and margins read as `0` (boolean false). Both rows leave `restart` empty. WindowManager applies the domain live: writing the margins key moves windows that are already tiled, and the edge-drag key is read on the next drag, so `macos.sh` restarts no process for them. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`. Stage Manager (`GloballyEnabled`), HideDesktop, widgets, drag-to-menu-bar, and the Option-drag toggle stay out of the list. Desktop pins in `lib/desktop-bindings.list` stay as they are.
 
+Menu bar rows in that list hide Spotlight, Focus, Now Playing and Voice Control (`@host/com.apple.controlcenter` = `8`, Don't Show), keep Bluetooth in the menu bar (`Bluetooth` = `2`, Show in Menu Bar), and show the battery percentage (`BatteryShowPercentage` = true; `defaults read` prints `1` because the type is boolean). Each of those sets `restart` to `ControlCenter`, the same token Spotlight, Focus and Now Playing already use. `macos.sh` runs `killall ControlCenter` only when a value changed. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`. The intended menu bar is the clock, the mode icon, battery percentage, Wi-Fi, Bluetooth and Control Centre, plus Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents. Wi-Fi is already shown and is not pinned here. Raycast, Logi Options+ and Docker are turned off by hand (manual step `menubar-third-party-hide`). Karabiner-Elements stays out of the menu bar via `karabiner.json`.
+
 Run `macos.sh --list` to see the exact set of settings it manages (printed as a Markdown table).
 
 ### Verifying the setup
@@ -293,7 +296,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 
 | Issue | How it's fixed |
 |------|------|
-| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, Trash, screenshots, menu bar, Trackpad, window tiling, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, `mkdir -p`s `~/Pictures/Screenshots` before writing `com.apple.screencapture location`, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings (including Trackpad) as "log out to finish". Window tiling rows leave `restart` empty, so a repair restarts no process |
+| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, Trash, screenshots, menu bar, Trackpad, window tiling, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, `mkdir -p`s `~/Pictures/Screenshots` before writing `com.apple.screencapture location`, restarts Dock / Finder / SystemUIServer / ControlCenter only if a value actually changed, and reports `logout`-class settings (including Trackpad) as "log out to finish". Window tiling rows leave `restart` empty, so a repair restarts no process |
 | Finder icon view 72/13, Finder sidebar Recents, CotEditor theme / font | `macos.sh --only @finder-icon-view` / `@finder-recents` / `@coteditor` (the existing `scripts/pin-finder-icon-view.sh` and `lib/finder-sidebar-recents.py`) |
 | Dictation hotkey 164 | `macos.sh --only @dictation-164`, which runs `scripts/pin-dictation-hotkey-164.sh` |
 | Quick Note hotkey 190 | `macos.sh --only @quicknote-190`, which runs `scripts/pin-quicknote-hotkey-190.sh` |
@@ -360,7 +363,7 @@ To find which `defaults` key backs a System Settings toggle (so you can add it t
 
 > _Manual — no script can do these. `install.sh` and `bootstrap.sh` print this checklist when they finish and, on a terminal, offer to walk through it._
 
-Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't a single reliable `defaults` key (notifications, Spotlight, display scaling, mouse feel, Look up & data detectors, Accessibility trackpad dragging). **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it. Trackpad tap to click, click pressure, secondary click, three-finger drag, tracking speed, and Force Click are applied by `macos.sh` (see [macOS defaults](#macos-defaults)).
+Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't a single reliable `defaults` key (notifications, Spotlight, display scaling, mouse feel, Look up & data detectors, Accessibility trackpad dragging, and the Menu Bar allow-list for Raycast, Logi Options+ and Docker). **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it. Trackpad tap to click, click pressure, secondary click, three-finger drag, tracking speed, and Force Click are applied by `macos.sh` (see [macOS defaults](#macos-defaults)).
 
 ```bash
 ~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist
@@ -412,6 +415,7 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 | 38 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | macconfig-check.sh |
 | 39 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
 | 40 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
+| 41 | Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are. Raycast's own menu-bar toggle isn't scriptable | System Settings → Menu Bar → Allow in the Menu Bar | by hand |
 
 Trackpad tap to click, click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On are in `lib/macos-defaults.list` (`macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them). A change may need a logout/login before the trackpad follows it. Look up & data detectors stays in the table above: `ActuateDetents` and `ForceSuppressed` only cover Force Click and haptic feedback, both On. Use trackpad for dragging stays a check (`Dragging=1`, `DragLock=0`: On, without drag lock) because that Accessibility setting does not reliably follow `defaults write`.
 
@@ -507,7 +511,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`, `menubar.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes

@@ -6,7 +6,7 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
@@ -590,11 +590,13 @@ else
   bad "Finder icon view defaults drifted ($("$pin" --check 2>&1 || true)) — run macos.sh"
 fi
 
-# ---- 10. Karabiner Fn-kill ----------------------------------------------
+# ---- 10. Karabiner Fn-kill and menu bar icon ----------------------------
 # Config is symlinked via links.list (section 1). Here we also verify the
-# managed rule is still present in that JSON (UI edits can strip it). The DriverKit
-# extension and Accessibility grants are manual steps, checked in the "Manual steps"
-# section (scripts/manual-steps.sh ids karabiner-driver / karabiner-ax).
+# managed rule is still present in that JSON (UI edits can strip it), and that
+# the menu bar icon stays hidden (global show_in_menu_bar and
+# show_profile_name_in_menu_bar are false). Read-only: python3 json, never a write.
+# The DriverKit extension and Accessibility grants are manual steps, checked in
+# the "Manual steps" section (scripts/manual-steps.sh ids karabiner-driver / karabiner-ax).
 hdr "Karabiner Fn-kill"
 fixid karabiner-rules
 CHECKED=$((CHECKED + 1))
@@ -621,6 +623,47 @@ else
     pass "karabiner.json has Finder Forward Delete → Trash rule"
   else
     bad "karabiner.json missing Finder Forward Delete → Trash rule"
+  fi
+  CHECKED=$((CHECKED + 1))
+  if [ -z "$DOT_PYTHON" ]; then
+    fixid tooling
+    warn "python3 not found — can't check Karabiner menu bar icon"
+  else
+    kb_menu="$("$DOT_PYTHON" - "$kj" <<'PY' 2>/dev/null
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+except Exception:
+    print("unreadable")
+    raise SystemExit(0)
+g = data.get("global") if isinstance(data, dict) else None
+if not isinstance(g, dict):
+    print("missing-global")
+    raise SystemExit(0)
+keys = ("show_in_menu_bar", "show_profile_name_in_menu_bar")
+parts = []
+ok = True
+for name in keys:
+    if name not in g:
+        parts.append(name + "=missing")
+        ok = False
+    elif g[name] is False:
+        parts.append(name + "=false")
+    elif g[name] is True:
+        parts.append(name + "=true")
+        ok = False
+    else:
+        parts.append(name + "=other")
+        ok = False
+print("ok" if ok else " ".join(parts))
+PY
+)" || kb_menu="unreadable"
+    fixid karabiner-rules
+    if [ "$kb_menu" = ok ]; then
+      pass "karabiner.json hides the menu bar icon (show_in_menu_bar and show_profile_name_in_menu_bar are false)"
+    else
+      bad "karabiner.json menu bar icon not hidden (${kb_menu:-unreadable}; expected global show_in_menu_bar false and show_profile_name_in_menu_bar false)"
+    fi
   fi
 fi
 
