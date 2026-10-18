@@ -70,9 +70,6 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Toggle Full Screen | Fn + F (system-wide; Ghostty also uses Command + Enter) |
 | Mission Control / Desktop Overview | Control + Up Arrow OR 3-Finger Swipe Up OR F3 (Mission Control key) |
 | Show Desktop | Fn + F11 OR Click desktop space |
-| Tile window left/right (drag) | Drag title bar to left/right screen edge, **pause** until the half-screen highlight appears, then release |
-| Tile window left/right (menu) | Hold green traffic-light → Tile Window to Left/Right |
-| Tile window left/right (keys) | System Settings → Keyboard → Keyboard Shortcuts → Windows (often ⌃⌥←/→ on Tahoe — confirm there) |
 | Move Item to Trash | Command + Backspace (in Finder/Desktop) |
 | Forward Delete → Trash | Forward Delete (in Finder; mapped to Move to Trash) |
 | Paste file as a move (cut & paste) | Option + Command + V (in Finder, after Command + C) |
@@ -83,6 +80,46 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | ChatGPT | Option + Space (Raycast was moved off this — see README) |
 | Gemini mini chat | Control + Option + G |
 | Gemini full chat | Control + Option + Shift + G |
+
+#### Window Tiling
+
+Native window tiling on macOS Sequoia 15 and later. Apple's user guide writes the Globe key as Fn; on an Apple keyboard they are the same key. Shortcuts are from [Mac window tiling icons and keyboard shortcuts](https://support.apple.com/guide/mac-help/mac-window-tiling-icons-keyboard-shortcuts-mchl9674d0b0/mac). Dragging is from [Tile windows on Mac](https://support.apple.com/guide/mac-help/tile-app-windows-mchlef287e5d/mac).
+
+**Move and resize the active window**
+
+| Action | Shortcut |
+|------|------|
+| Tile left half | Globe + Control + Left Arrow |
+| Tile right half | Globe + Control + Right Arrow |
+| Tile top half | Globe + Control + Up Arrow |
+| Tile bottom half | Globe + Control + Down Arrow |
+| Fill the desktop | Globe + Control + F |
+| Center on the desktop | Globe + Control + C |
+| Return to previous size | Globe + Control + R |
+
+The top-left, top-right, bottom-left, and bottom-right quarter positions have no keyboard shortcut. Apple lists each one as n/a. Use the green button, or the Window menu, Move & Resize.
+
+**Arrange two windows.** Globe + Control + Shift + arrow places the active window and a second window. It does not tile one window into a quarter.
+
+| Action | Shortcut |
+|------|------|
+| Active window left, second window right | Globe + Control + Shift + Left Arrow |
+| Active window right, second window left | Globe + Control + Shift + Right Arrow |
+| Active window top, second window bottom | Globe + Control + Shift + Up Arrow |
+| Active window bottom, second window top | Globe + Control + Shift + Down Arrow |
+
+The four-corner Quarters layout has no keyboard shortcut. Globe + Control + Option + Shift + arrow is the documented half-plus-two-quarters arrange:
+
+| Action | Shortcut |
+|------|------|
+| Active window left half, second and third windows in the right quarters | Globe + Control + Option + Shift + Left Arrow |
+| Active window right half, second and third windows in the left quarters | Globe + Control + Option + Shift + Right Arrow |
+| Active window top half, second and third windows in the bottom quarters | Globe + Control + Option + Shift + Up Arrow |
+| Active window bottom half, second and third windows in the top quarters | Globe + Control + Option + Shift + Down Arrow |
+
+**Drag.** Drag a window to a screen edge (left, right, a corner, or the menu bar) and release when the highlighted area appears; the window tiles. Dragging to the menu bar fills the desktop. Hold Option while dragging toward an edge or corner and the window tiles immediately.
+
+This repo pins drag-to-left-or-right-edge On and tiled-window margins Off (`lib/macos-defaults.list`). The other Desktop & Dock window toggles stay as they are.
 
 #### Finder
 

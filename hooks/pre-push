@@ -83,6 +83,10 @@ if [ -x ./tests/finder-tidy.test.sh ]; then
   echo "  unit tests (Finder and Trash tidy defaults)"
   ./tests/finder-tidy.test.sh || status=1
 fi
+if [ -x ./tests/window-tiling.test.sh ]; then
+  echo "  unit tests (native window tiling defaults)"
+  ./tests/window-tiling.test.sh || status=1
+fi
 
 if [ "$status" -ne 0 ]; then
   echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2

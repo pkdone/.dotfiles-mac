@@ -129,3 +129,9 @@ jobs:
           # and the macconfig-check.sh missing-folder drift. Fake defaults; no live
           # Finder or SystemUIServer.
           ./tests/finder-tidy.test.sh
+      - name: Run window tiling defaults tests
+        run: |
+          # com.apple.WindowManager edge-drag and margins rows, empty restart
+          # (no killall), and the SHORTCUTS.md section. Fake defaults; no live
+          # WindowManager or Dock.
+          ./tests/window-tiling.test.sh
