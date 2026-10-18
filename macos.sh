@@ -17,14 +17,21 @@
 #   --list      Print the managed settings as a Markdown table and exit.
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
 #               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
-#               @finder-recents / @finder-icon-view. Values that already match are
-#               left alone (no re-assert write). Used by `macconfig-check.sh --fix`.
+#               @finder-recents / @finder-icon-view / @ac-sleep. Values that already
+#               match are left alone (no re-assert write). Used by `macconfig-check.sh --fix`.
 #   --yes       Run the deferred UI restarts without prompting (still only if
-#               something changed). Used by `macconfig-check.sh --fix`.
+#               something changed). Also skips the AC-sleep confirmation and goes
+#               straight to sudo when a terminal can ask for a password. Used by
+#               `macconfig-check.sh --fix` (that path never passes @ac-sleep).
 #   -h|--help   Show usage.
 #
 # Safety:
-#   - No sudo. sudo-only items (e.g. hostname, display auto-brightness) stay manual (see README).
+#   - One sudo command, and only for AC idle sleep: `sudo pmset -c sleep 0`.
+#     Skipped when sudo isn't available (no passwordless sudo and no terminal)
+#     or isn't wanted (--dry-run, or you answer no). An already-zero value
+#     does not call sudo. Display sleep, the lock screen, and the battery
+#     profile are not touched. Closing the lid still sleeps the Mac.
+#     Other sudo-only items (hostname, display auto-brightness) stay manual.
 #   - Before the first value-changing write, every affected domain is exported
 #     to backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
 #   - UI restarts (killall) are deferred to the end, run only if something
@@ -62,9 +69,12 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --list       Print the managed settings as a Markdown table and exit.
   --only ID    Apply only this item (repeatable): "domain|key" from
                lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
-               @finder-recents, @finder-icon-view. Matching values are left alone.
+               @finder-recents, @finder-icon-view, @ac-sleep. Matching values are
+               left alone.
   --yes        Restart Dock/Finder/SystemUIServer/ControlCenter without prompting
-               (only if something changed).
+               (only if something changed). Also accept the AC idle-sleep sudo
+               step without a separate confirmation (still skipped when sudo
+               cannot run).
   -h, --help   Show this help.
 USAGE
       exit 0 ;;
@@ -519,6 +529,85 @@ apply_finder_icon_view() {
 }
 if selected @finder-icon-view; then apply_finder_icon_view; fi
 
+# ---- AC idle sleep (pmset -c sleep 0; the one sudo command) -------------
+# Only the mains-power profile. displaysleep, the lock screen, and Battery
+# Power are left alone, so the display still turns off and the screen still
+# locks. Closing the lid still sleeps the Mac. lib/ac-sleep.py reads
+# `pmset -g custom` the same way macconfig-check.sh does. sudo runs only when
+# AC sleep is not already 0, and is skipped when it isn't available (no
+# passwordless sudo and no terminal) or isn't wanted (--dry-run, or no at the
+# prompt). --fix never selects @ac-sleep; the manual step is the fallback.
+apply_ac_sleep() {
+  local helper="$DOTDIR/lib/ac-sleep.py" custom line status msg reply
+  CONSIDERED=$((CONSIDERED + 1))
+  if ! command -v pmset >/dev/null 2>&1; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "pmset missing — skipped AC idle sleep (manual step: sudo pmset -c sleep 0)"
+    return 0
+  fi
+  if [ ! -r "$helper" ] || [ -z "$DOT_PYTHON" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "can't read AC sleep — skipped (manual step: sudo pmset -c sleep 0)"
+    return 0
+  fi
+  custom="$(pmset -g custom 2>/dev/null || true)"
+  if [ -z "$custom" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "pmset -g custom returned nothing — skipped AC idle sleep (manual step: sudo pmset -c sleep 0)"
+    return 0
+  fi
+  line="$(printf '%s\n' "$custom" | "$DOT_PYTHON" "$helper" || true)"
+  status="${line%%|*}"
+  msg="${line#*|}"; msg="${msg#*|}"
+  if [ "$status" = ok ]; then
+    say_ok "AC idle sleep already 0 (display sleep, lock screen, and battery unchanged)"
+    return 0
+  fi
+  if [ "$status" != bad ]; then
+    WARNINGS=$((WARNINGS + 1))
+    if [ -n "$msg" ]; then
+      say_warn "$msg"
+    else
+      say_warn "cannot tell if AC idle sleep is off — skipped (manual step: sudo pmset -c sleep 0)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "AC idle sleep -> 0 (dry-run: sudo pmset -c sleep 0)"
+    return 0
+  fi
+  # Passwordless sudo can run with no prompt. Otherwise a terminal is asked;
+  # no terminal means sudo isn't available (don't hang waiting for a password).
+  if ! sudo -n true 2>/dev/null; then
+    if [ ! -t 0 ] || [ ! -t 1 ]; then
+      WARNINGS=$((WARNINGS + 1))
+      say_warn "sudo not available — skipped AC idle sleep (manual step: sudo pmset -c sleep 0)"
+      return 0
+    fi
+    if [ "$YES" != 1 ]; then
+      printf '  Stop idle sleep on mains power? Runs: sudo pmset -c sleep 0  [y/N]\n'
+      read -r reply || reply=''
+      case "$reply" in
+        y|Y|yes|YES) ;;
+        *)
+          WARNINGS=$((WARNINGS + 1))
+          say_warn "skipped AC idle sleep — sudo not wanted (manual step: sudo pmset -c sleep 0)"
+          return 0
+          ;;
+      esac
+    fi
+  fi
+  if sudo pmset -c sleep 0; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "AC idle sleep -> 0 (sudo pmset -c sleep 0)"
+    return 0
+  fi
+  WARNINGS=$((WARNINGS + 1))
+  say_warn "sudo pmset -c sleep 0 failed — manual step ac-sleep"
+}
+if selected @ac-sleep; then apply_ac_sleep; fi
+
 # --only ids that matched nothing (typo, or a row removed from the list).
 if [ -n "$ONLY_IDS" ]; then
   while IFS= read -r oid; do
@@ -579,4 +668,7 @@ Still manual (not scriptable / out of scope) — see README:
   - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
     (leave Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents)
   - Set Hostname (requires sudo)
+  - AC idle sleep, if the sudo step above was skipped: sudo pmset -c sleep 0
+    (closing the lid still sleeps the Mac; battery, display sleep, and the
+    lock screen stay as they are)
 MANUAL

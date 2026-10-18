@@ -168,3 +168,8 @@ jobs:
           # More Space from synthetic system_profiler JSON. No system_profiler
           # and no displayplacer.
           ./tests/display-resolution.test.sh
+      - name: Run AC idle sleep tests
+        run: |
+          # AC Power sleep from a synthetic pmset -g custom dump, and the
+          # macos.sh sudo guard with fake pmset and sudo. No live pmset.
+          ./tests/ac-sleep.test.sh
