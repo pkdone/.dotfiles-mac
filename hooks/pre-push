@@ -103,6 +103,10 @@ if [ -x ./tests/pin-hotkey-launchagent.test.sh ]; then
   echo "  unit tests (hotkey LaunchAgents and pin scripts)"
   ./tests/pin-hotkey-launchagent.test.sh || status=1
 fi
+if [ -x ./tests/install-bundle.test.sh ]; then
+  echo "  unit tests (install.sh App Store retry)"
+  ./tests/install-bundle.test.sh || status=1
+fi
 
 if [ "$status" -ne 0 ]; then
   echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2
