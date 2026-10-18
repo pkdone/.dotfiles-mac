@@ -95,6 +95,10 @@ if [ -x ./tests/menubar.test.sh ]; then
   echo "  unit tests (menu bar defaults and Karabiner icon)"
   ./tests/menubar.test.sh || status=1
 fi
+if [ -x ./tests/dock-minimize.test.sh ]; then
+  echo "  unit tests (Dock minimize-into-app and no-bouncing)"
+  ./tests/dock-minimize.test.sh || status=1
+fi
 
 if [ "$status" -ne 0 ]; then
   echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2
