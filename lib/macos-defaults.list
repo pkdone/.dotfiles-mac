@@ -47,6 +47,12 @@ NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback
 @host/com.apple.controlcenter|FocusModes|int|8|ControlCenter|Menu Bar|Focus|`8` (Don't Show)
 com.apple.ImageCapture|disableHotPlug|bool|true||Photos|Open Photos for devices|`true` (Off — do not auto-open)
 @host/com.apple.controlcenter|NowPlaying|int|8|ControlCenter|Menu Bar|Now Playing|`8` (Don't Show)
+# Same ByHost domain and ControlCenter restart as Spotlight / Focus / Now Playing.
+# 8 = Don't Show in Menu Bar. 2 = Show in Menu Bar.
+# BatteryShowPercentage is a boolean. `defaults read` prints 1 for On.
+@host/com.apple.controlcenter|VoiceControl|int|8|ControlCenter|Menu Bar|Voice Control|`8` (Don't Show)
+@host/com.apple.controlcenter|Bluetooth|int|2|ControlCenter|Menu Bar|Bluetooth|`2` (Show in Menu Bar)
+@host/com.apple.controlcenter|BatteryShowPercentage|bool|true|ControlCenter|Menu Bar|Battery percentage|`true` (On)
 com.apple.HIToolbox|AppleFnUsageType|int|0||Keyboard|Press fn/Globe key to|`0` (Do Nothing)
 com.apple.assistant.support|Dictation Enabled|bool|false||Keyboard|Dictation|`false` (Off)
 org.hammerspoon.Hammerspoon|MJShowDockIconKey|bool|false||Hammerspoon|Dock icon|`false` (Off — menu-bar icon only)
