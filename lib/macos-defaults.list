@@ -40,3 +40,19 @@ com.apple.HIToolbox|AppleFnUsageType|int|0||Keyboard|Press fn/Globe key to|`0` (
 com.apple.assistant.support|Dictation Enabled|bool|false||Keyboard|Dictation|`false` (Off)
 org.hammerspoon.Hammerspoon|MJShowDockIconKey|bool|false||Hammerspoon|Dock icon|`false` (Off — menu-bar icon only)
 org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload crash data|`false` (Off)
+# Trackpad. Values match this Mac today, so applying them changes nothing until one drifts.
+# restart=logout: the trackpad may need a logout/login before it follows a new value.
+# Force Click and haptic feedback are On (ActuateDetents=1, ForceSuppressed=0).
+# Look up & data detectors is not one of these keys; it stays in lib/manual-steps.list.
+# Accessibility dragging (Dragging=1, DragLock=0) stays a check there too: defaults write
+# does not reliably drive System Settings → Accessibility → Pointer Control → Trackpad Options.
+com.apple.AppleMultitouchTrackpad|Clicking|int|1|logout|Trackpad|Tap to click|`1` (On)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking|int|1|logout|Trackpad|Tap to click (Bluetooth trackpad)|`1` (On)
+NSGlobalDomain|com.apple.mouse.tapBehavior|int|1|logout|Trackpad|Tap to click behavior|`1` (On)
+com.apple.AppleMultitouchTrackpad|FirstClickThreshold|int|0|logout|Trackpad|Click pressure|`0` (Light)
+com.apple.AppleMultitouchTrackpad|TrackpadCornerSecondaryClick|int|2|logout|Trackpad|Secondary click corner|`2` (bottom right)
+com.apple.AppleMultitouchTrackpad|TrackpadRightClick|int|0|logout|Trackpad|Secondary click on the right side|`0` (Off)
+com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerDrag|int|0|logout|Trackpad|Three-finger drag|`0` (Off)
+NSGlobalDomain|com.apple.trackpad.scaling|float|0.6875|logout|Trackpad|Tracking speed|`0.6875` (Slower)
+com.apple.AppleMultitouchTrackpad|ActuateDetents|int|1|logout|Trackpad|Force Click|`1` (On)
+com.apple.AppleMultitouchTrackpad|ForceSuppressed|int|0|logout|Trackpad|Haptic feedback|`0` (On)
