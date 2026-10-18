@@ -19,6 +19,10 @@ com.apple.dock|wvous-bl-corner|int|1|Dock|Dock|Hot Corner bottom-left|`1` (Disab
 com.apple.dock|wvous-bl-modifier|int|0|Dock|Dock|Hot Corner bottom-left modifier|`0` (none)
 com.apple.dock|wvous-br-corner|int|1|Dock|Dock|Hot Corner bottom-right|`1` (Disabled — was Quick Note)
 com.apple.dock|wvous-br-modifier|int|0|Dock|Dock|Hot Corner bottom-right modifier|`0` (none)
+# Minimize into the app icon, and no bounce when an app opens.
+# restart=Dock, same as the com.apple.dock rows above (killall Dock only if a value changed).
+com.apple.dock|minimize-to-application|bool|true|Dock|Dock|Minimize windows into application icon|`true` (On)
+com.apple.dock|no-bouncing|bool|true|Dock|Dock|Animate opening applications|`true` (Off — no bounce)
 com.apple.spaces|spans-displays|bool|false|logout|Dock|Displays have separate Spaces|`false` (separate Spaces On)
 com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)
 com.apple.finder|ShowHardDrivesOnDesktop|bool|false|Finder|Finder|Hard drives on Desktop|`false` (Off)

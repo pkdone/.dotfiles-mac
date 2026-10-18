@@ -142,3 +142,8 @@ jobs:
           # third-party allow-list manual step. Fake defaults; no live
           # ControlCenter.
           ./tests/menubar.test.sh
+      - name: Run Dock minimize and no-bouncing tests
+        run: |
+          # com.apple.dock minimize-to-application and no-bouncing, restart Dock,
+          # tilesize stays 28. Fake defaults; no live Dock.
+          ./tests/dock-minimize.test.sh
