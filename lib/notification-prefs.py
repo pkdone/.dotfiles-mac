@@ -15,6 +15,12 @@ decoder: change it if a macOS update moves the bit.
 
     ALLOW_NOTIFICATIONS_BIT = 25    # 1 << 25, set = allowed (not inverted)
 
+Alert style is two other bits of the same integer. Hammerspoon
+(org.hammerspoon.Hammerspoon) must be Alerts so the DeepWork end-of-session
+buttons show. This reports that style and never writes the store.
+
+    ALERT_STYLE_BIT = 4             # 1 << 4 set, bit 3 clear = Alerts
+
 Sources for bit 25, set = on:
 
 - Hush (macOS 26, this same usernoted plist): NotificationFlags.allowNotifications,
@@ -31,9 +37,25 @@ is reviewed, not required off.
 
 To recalibrate: toggle Allow Notifications for one app in System Settings,
 read that app's flags again, and set ALLOW_NOTIFICATIONS_BIT to the bit that
-flipped. Other bits (not decoded here) from the same Hush table: 0 Notification
-Center off, 1 badge, 2 sound, 3 banners, 4 alerts, 12 Lock Screen off,
-29 Time Sensitive, 34 Summarize off.
+flipped. Other bits from the same Hush table: 0 Notification Center off,
+1 badge, 2 sound, 12 Lock Screen off, 29 Time Sensitive, 34 Summarize off.
+
+Alert style (Hush AlertStyle, this same usernoted plist; ncmanager's older
+ncprefs store uses the same two bits):
+
+    bit 3 (1 << 3) set, bit 4 clear = Banners   Hush alertTemporary
+    bit 4 (1 << 4) set, bit 3 clear = Alerts    Hush alertPersistent
+    both clear, or both set         = None      Hush treats both-set as Off
+
+ncmanager names them style_banners = 1 << 3 and style_alerts = 1 << 4.
+https://github.com/Tembeon/hush/blob/master/Hush/Models/AlertStyle.swift
+https://github.com/Tembeon/hush/blob/master/Hush/Models/NotificationFlags.swift
+https://github.com/bilousoleksandr/ncmanager
+
+On this Mac, Hammerspoon flags 8396822 have bit 4 set and bit 3 clear (Alerts).
+To recalibrate ALERT_STYLE_BIT: set Hammerspoon to Banners, then back to
+Alerts, and set the constant to the bit that is set only for Alerts. Keep
+BANNER_STYLE_BIT on the other one. Then run ./tests/notification-prefs.test.sh.
 
 Output, one line per result, fields separated by `|`:
 
@@ -57,6 +79,13 @@ import sys
 # Set means System Settings → Notifications → Allow Notifications is on.
 # Not inverted. Recalibrate this and only this if the bit moves.
 ALLOW_NOTIFICATIONS_BIT = 25
+
+# Alert style. Alerts means ALERT_STYLE_BIT is set and BANNER_STYLE_BIT is clear.
+# Not inverted. Recalibrate these two if a macOS update moves the style bits
+# (see the module docstring). On this Mac, Hammerspoon flags 8396822 are Alerts.
+ALERT_STYLE_BIT = 4
+BANNER_STYLE_BIT = 3
+HAMMERSPOON_BUNDLE = "org.hammerspoon.Hammerspoon"
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_PLIST = os.path.expanduser(
@@ -99,6 +128,19 @@ def load_list(path: str) -> list[tuple[str, str]]:
             seen.add(bundle)
             rows.append((bundle, label))
     return rows
+
+
+def alert_style(flags: object) -> str | None:
+    """'Alerts', 'Banners', 'None', or None when flags are not an integer."""
+    if isinstance(flags, bool) or not isinstance(flags, int):
+        return None
+    alerts = ((flags >> ALERT_STYLE_BIT) & 1) == 1
+    banners = ((flags >> BANNER_STYLE_BIT) & 1) == 1
+    if alerts and not banners:
+        return "Alerts"
+    if banners and not alerts:
+        return "Banners"
+    return "None"
 
 
 def allow_bit_set(flags: object) -> bool | None:
@@ -208,6 +250,54 @@ def report(
             " — review it in System Settings → Notifications, then add the"
             " bundle id to one of those lists",
         )
+    report_hammerspoon_style(found)
+
+
+def report_hammerspoon_style(found: dict[str, list[object]]) -> None:
+    """Warn unless every readable Hammerspoon flags copy is Alerts."""
+    flags = found.get(HAMMERSPOON_BUNDLE)
+    where = (
+        " System Settings → Notifications → Hammerspoon → Alerts."
+        " macconfig-check.sh --fix does not change this"
+    )
+    if flags is None:
+        emit(
+            "warn",
+            HAMMERSPOON_BUNDLE,
+            f"Hammerspoon ({HAMMERSPOON_BUNDLE}): not in the notification store"
+            " — can't confirm notification style is Alerts."
+            + where,
+        )
+        return
+    styles = [alert_style(value) for value in flags]
+    shown = format_flags(flags)
+    readable = [style for style in styles if style is not None]
+    if readable and all(style == "Alerts" for style in readable):
+        emit(
+            "ok",
+            HAMMERSPOON_BUNDLE,
+            f"Hammerspoon ({HAMMERSPOON_BUNDLE}): notification style is Alerts"
+            f" (flags={shown}, bit {ALERT_STYLE_BIT} set, bit {BANNER_STYLE_BIT} clear)",
+        )
+        return
+    if not readable:
+        emit(
+            "warn",
+            HAMMERSPOON_BUNDLE,
+            f"Hammerspoon ({HAMMERSPOON_BUNDLE}): flags unreadable ({shown})"
+            " — can't confirm notification style is Alerts."
+            + where,
+        )
+        return
+    named = "/".join(style if style is not None else "?" for style in styles)
+    emit(
+        "warn",
+        HAMMERSPOON_BUNDLE,
+        f"Hammerspoon ({HAMMERSPOON_BUNDLE}): notification style is {named}"
+        f" (flags={shown}, bit {ALERT_STYLE_BIT} is Alerts when bit {BANNER_STYLE_BIT}"
+        " is clear) — want Alerts."
+        + where,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

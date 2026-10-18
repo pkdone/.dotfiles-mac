@@ -421,7 +421,7 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 | 35 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
 | 36 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through) | System Settings → Focus → Add Focus… → Custom | macconfig-check.sh |
 | 37 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | macconfig-check.sh |
-| 38 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
+| 38 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | macconfig-check.sh |
 | 39 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
 | 40 | Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are. Raycast's own menu-bar toggle isn't scriptable | System Settings → Menu Bar → Allow in the Menu Bar | by hand |
 
@@ -443,7 +443,11 @@ Allow Notifications is `flags` bit 25 (`1 << 25`), set = on. The constant is `AL
 
 To recalibrate after a macOS update: toggle Allow Notifications for one app, read that app's `flags` again, and set `ALLOW_NOTIFICATIONS_BIT` to the bit that flipped. Then run `./tests/notification-prefs.test.sh`.
 
-Notifications Off when mirroring, and Hammerspoon's Alerts style (`mode-hammerspoon-alerts`), stay by hand.
+**Hammerspoon's notification style** is checked in that same read (manual step `mode-hammerspoon-alerts`). Alerts is `flags` bit 4 set and bit 3 clear. Hush names those `alertPersistent` (`1 << 4`) and `alertTemporary` (`1 << 3`) on this usernoted plist; bit 3 alone is Banners, and both clear or both set is None (Hush treats both-set as Off). ncmanager's older ncprefs store uses the same two bits (`style_alerts`, `style_banners`). The constant is `ALERT_STYLE_BIT` (banner bit: `BANNER_STYLE_BIT`). On this Mac Hammerspoon's flags are `8396822`, which is Alerts. Anything else is a warning (**Needs Paul**). `--fix` does not write the store.
+
+To recalibrate the style bits: set Hammerspoon to Banners, then back to Alerts, and point `ALERT_STYLE_BIT` at the bit that is set only for Alerts. Then run `./tests/notification-prefs.test.sh`.
+
+Notifications Off when mirroring stays by hand.
 
 #### Finder
 
@@ -553,7 +557,7 @@ dotpush "your message"
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
 - **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; optional `unpinnable` or `uti:…`; role is always `all`), then run `macconfig-check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted. Do not add `html` — it switches the default browser. `.cfg`, `.env`, and `.list` stay `unpinnable`.
 - **Display auto-brightness:** Off. `macconfig-check.sh` reads it with `corebrightnessdiag status-info` (no sudo). Turn it off in System Settings → Displays. `--fix` does not write it. True Tone and Slightly dim the display on battery are left alone.
-- **Notifications:** apps that must have Allow Notifications off are `lib/notifications-off.list`. `macconfig-check.sh` reads the usernoted plist and never writes it. A third-party app you've already looked at goes in `lib/notifications-reviewed.list`. If the bit moves, change `ALLOW_NOTIFICATIONS_BIT` in `lib/notification-prefs.py` (see [Notifications](#notifications)).
+- **Notifications:** apps that must have Allow Notifications off are `lib/notifications-off.list`. `macconfig-check.sh` reads the usernoted plist and never writes it. A third-party app you've already looked at goes in `lib/notifications-reviewed.list`. If the bit moves, change `ALLOW_NOTIFICATIONS_BIT` in `lib/notification-prefs.py` (see [Notifications](#notifications)). Hammerspoon's Alerts style is the same read (`ALERT_STYLE_BIT`).
 - **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.
 - **Login LaunchAgents:** edit `launchagents/*.plist`. `WatchPaths` uses `@HOME@`, not `~` or `$HOME` (launchd expands neither). `install.sh` or `macconfig-check.sh --fix` renders the plist into `~/Library/LaunchAgents` and, when the installed file differs, reloads it with `launchctl bootout` then `bootstrap`. These are regular files, not symlinks.
 - **Manual steps:** add a row to `lib/manual-steps.list` (with a read-only check if one is reliable), then refresh the README table with `scripts/manual-steps.sh list --markdown`.
