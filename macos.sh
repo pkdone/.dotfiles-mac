@@ -29,6 +29,9 @@
 #     to backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
 #   - UI restarts (killall) are deferred to the end, run only if something
 #     changed, and only after you confirm at the prompt.
+#   - com.apple.screencapture location: mkdir -p ~/Pictures/Screenshots before
+#     the write (also when macconfig-check.sh --fix calls this with --only).
+#     Existing files are not moved. install.sh creates the same folder.
 #
 set -euo pipefail
 
@@ -174,10 +177,35 @@ write_default() {  # domain key type value
   esac
 }
 
+# Screenshot location names a directory. Create it before the write, and again
+# when the value already matches, so the default never points at a missing folder.
+# Dry-run creates nothing. Existing files are not moved. install.sh creates it too.
+# SCREENSHOT_DIR_ACTION is "" | created | would-create for the setting just prepared.
+# SCREENSHOT_DIR_SHOWN is that path with $HOME written as ~ (a literal tilde).
+SCREENSHOT_DIR_ACTION=""
+SCREENSHOT_DIR_SHOWN=""
+ensure_screenshot_dir() {  # domain key path
+  SCREENSHOT_DIR_ACTION=""
+  SCREENSHOT_DIR_SHOWN=""
+  [ "$1" = com.apple.screencapture ] && [ "$2" = location ] || return 0
+  local rest="${3#"$HOME"}"
+  SCREENSHOT_DIR_SHOWN="~${rest}"
+  [ -d "$3" ] && return 0
+  if [ "$DRY_RUN" = 1 ]; then
+    SCREENSHOT_DIR_ACTION=would-create
+    say_chg "screenshot folder $SCREENSHOT_DIR_SHOWN — would mkdir -p"
+    return 0
+  fi
+  mkdir -p "$3"
+  SCREENSHOT_DIR_ACTION=created
+  say_chg "screenshot folder $SCREENSHOT_DIR_SHOWN — created"
+}
+
 apply_setting() {  # domain key type desired restart tol
   local domain="$1" key="$2" etype="$3" desired="$4" restart="$5" tol="${6:-}"
   CONSIDERED=$((CONSIDERED + 1))
   desired="${desired//@HOME@/$HOME}"
+  ensure_screenshot_dir "$domain" "$key" "$desired"
   local cur curtype want_token
   want_token="$(type_token "$etype")"
 
@@ -199,7 +227,11 @@ apply_setting() {  # domain key type desired restart tol
       if [ "$DRY_RUN" = 1 ]; then
         say_ok "$domain $key — would re-assert (already set: $cur)"
       elif [ -n "$ONLY_IDS" ]; then
-        say_ok "$domain $key — already set: $cur (left alone)"
+        if [ "$SCREENSHOT_DIR_ACTION" = created ]; then
+          say_ok "$domain $key — already set: $cur (mkdir -p $SCREENSHOT_DIR_SHOWN)"
+        else
+          say_ok "$domain $key — already set: $cur (left alone)"
+        fi
       else
         write_default "$domain" "$key" "$etype" "$desired"
         say_ok "$domain $key — re-asserted (already set: $cur)"
