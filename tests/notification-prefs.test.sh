@@ -54,9 +54,15 @@ off_joined="$(printf '%s\n' "$off_names" | awk 'NR > 1 { printf ", " } { printf 
 eq "off-list names match the manual step" "$off_joined" "$title_names"
 eq "notifications-apps is checked by macconfig-check.sh" "@macconfig-check.sh" \
   "$(awk -F'|' '$1 == "notifications-apps" { print $6; exit }' "$STEPS")"
+eq "mode-hammerspoon-alerts is checked by macconfig-check.sh" "@macconfig-check.sh" \
+  "$(awk -F'|' '$1 == "mode-hammerspoon-alerts" { print $6; exit }' "$STEPS")"
 
 eq "allow bit constant is 25" "ALLOW_NOTIFICATIONS_BIT = 25" \
   "$(grep -E '^ALLOW_NOTIFICATIONS_BIT = ' "$HELPER")"
+eq "alert style bit constant is 4" "ALERT_STYLE_BIT = 4" \
+  "$(grep -E '^ALERT_STYLE_BIT = ' "$HELPER")"
+eq "banner style bit constant is 3" "BANNER_STYLE_BIT = 3" \
+  "$(grep -E '^BANNER_STYLE_BIT = ' "$HELPER")"
 has "helper default plist is the usernoted group store" \
   'group.com.apple.usernoted.plist' "$(cat "$HELPER")"
 miss "helper does not read the old ncprefs path as its store" \
@@ -103,6 +109,7 @@ ok|com.spotify.client|Spotify (com.spotify.client): Allow Notifications is off (
 ok|com.apple.tips|Tips (com.apple.tips): Allow Notifications is off (flags=294125584)
 ok|com.apple.Passbook|Wallet (com.apple.Passbook): Allow Notifications is off (flags=814219270)
 info|com.example.newapp|com.example.newapp: third-party app is not in lib/notifications-reviewed.list or lib/notifications-off.list (Allow Notifications is off (flags=1)) — review it in System Settings → Notifications, then add the bundle id to one of those lists
+ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=8396822, bit 4 set, bit 3 clear)
 EOF
 )" "$out"
 
@@ -124,8 +131,35 @@ write_plist "$tmp/slack-on.plist" "$SLACK_ON"
 out="$(run "$tmp/slack-on.plist" "$tmp/off.list" "$tmp/reviewed.list")"
 eq "bit 25 set is a warning" \
   "ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=814219286)
-warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is on (flags=310386702, bit 25 set) — System Settings → Notifications → turn it off. macconfig-check.sh --fix does not change this" \
+warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is on (flags=310386702, bit 25 set) — System Settings → Notifications → turn it off. macconfig-check.sh --fix does not change this
+warn|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): not in the notification store — can't confirm notification style is Alerts. System Settings → Notifications → Hammerspoon → Alerts. macconfig-check.sh --fix does not change this" \
   "$out"
+
+# Style bits. 8396822 is this Mac (bit 4 set, bit 3 clear = Alerts).
+# Bit 3 alone is Banners. Both clear, or both set, is None (Hush Off).
+style_plist() {  # flags
+  write_plist "$tmp/style.plist" "{\"apps\": [{\"bundle-id\": \"org.hammerspoon.Hammerspoon\", \"flags\": $1}]}"
+  run "$tmp/style.plist" "$tmp/off.list" "$tmp/reviewed.list"
+}
+out="$(style_plist 16)"
+has "bit 4 alone is Alerts" "ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=16, bit 4 set, bit 3 clear)" "$out"
+out="$(style_plist 8)"
+has "bit 3 alone is Banners" "notification style is Banners (flags=8, bit 4 is Alerts when bit 3 is clear)" "$out"
+has "Banners is a warning" "warn|org.hammerspoon.Hammerspoon|" "$out"
+out="$(style_plist 0)"
+has "both style bits clear is None" "notification style is None (flags=0," "$out"
+out="$(style_plist 24)"
+has "both style bits set is None" "notification style is None (flags=24," "$out"
+out="$(style_plist 8396822)"
+has "this Mac's Hammerspoon flags are Alerts" "notification style is Alerts (flags=8396822, bit 4 set, bit 3 clear)" "$out"
+write_plist "$tmp/style-mix.plist" '{
+  "apps": [
+    {"bundle-id": "org.hammerspoon.Hammerspoon", "flags": 16},
+    {"bundle-id": "org.hammerspoon.Hammerspoon", "flags": 8},
+  ]
+}'
+out="$(run "$tmp/style-mix.plist" "$tmp/off.list" "$tmp/reviewed.list")"
+has "a Banners copy keeps the style a warning" "notification style is Alerts/Banners (flags=16/8," "$out"
 
 # Any copy with the bit set counts, even if another copy is clear.
 write_plist "$tmp/dup.plist" '{

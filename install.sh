@@ -118,8 +118,31 @@ fi
 # Tolerate a partial failure (e.g. the 'mas' WhatsApp entry when not signed in to the
 # App Store): brew bundle attempts every entry, so we record the outcome and carry on
 # to mise trust + the summary rather than letting set -e abort the whole bootstrap.
+# On a terminal, a failed `brew bundle check` opens the App Store, asks Paul to sign
+# in, and retries `brew bundle install` once. Non-interactive runs keep the warning
+# below. Sign-in is the App Store UI; the mas CLI is not consulted.
 bundle_ok=1
 brew bundle --file "$DOTFILES/Brewfile" || bundle_ok=0
+if brew bundle check --file "$DOTFILES/Brewfile" >/dev/null 2>&1; then
+  bundle_ok=1
+elif [ -t 0 ]; then
+  echo ""
+  echo "⚠️  Some Brewfile entries are still missing (often App Store apps such as WhatsApp)."
+  brew bundle check --file "$DOTFILES/Brewfile" --verbose 2>&1 | sed 's/^/    /' || true
+  echo "    Opening the App Store. Sign in, then this retries the install once."
+  open 'macappstore://' || echo "    (couldn't open macappstore:// — open the App Store and sign in)"
+  printf 'Sign in to the App Store, then press Enter to retry brew bundle once: '
+  read -r _ || true
+  echo "Retrying brew bundle install once..."
+  brew bundle install --file "$DOTFILES/Brewfile" || true
+  if brew bundle check --file "$DOTFILES/Brewfile" >/dev/null 2>&1; then
+    bundle_ok=1
+  else
+    bundle_ok=0
+  fi
+else
+  bundle_ok=0
+fi
 
 echo ""
 echo "🔧 Trusting mise config..."

@@ -158,3 +158,13 @@ jobs:
           # installed plist differs, and pin scripts that write only on drift.
           # Fake defaults; no launchd and no live symbolichotkeys plist.
           ./tests/pin-hotkey-launchagent.test.sh
+      - name: Run install.sh Brewfile retry tests
+        run: |
+          # The App Store sign-in retry after a failed brew bundle check.
+          # Does not run install.sh (it exits off Darwin) and does not call mas.
+          ./tests/install-bundle.test.sh
+      - name: Run built-in display More Space tests
+        run: |
+          # More Space from synthetic system_profiler JSON. No system_profiler
+          # and no displayplacer.
+          ./tests/display-resolution.test.sh

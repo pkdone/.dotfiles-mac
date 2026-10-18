@@ -114,6 +114,19 @@ done
 miss "dragging is not written by macos.sh" '|Dragging|' "$(grep -v '^#' "$DEF")"
 miss "drag lock is not written by macos.sh" '|DragLock|' "$(grep -v '^#' "$DEF")"
 
+# Mouse tracking and scrolling are a check only (same idea as dragging).
+mouse_row="$(grep '^mouse-settings|' "$LIST")"
+has "mouse step checks tracking speed" "com.apple.mouse.scaling=1.5" "$mouse_row"
+has "mouse step checks scrolling speed" "com.apple.scrollwheel.scaling=0.5" "$mouse_row"
+has "mouse step still names double-click" "Double-click" "$mouse_row"
+has "mouse step still names secondary click" "secondary click" "$mouse_row"
+miss "mouse scaling is not written by macos.sh" 'com.apple.mouse.scaling' "$(grep -v '^#' "$DEF")"
+miss "scrollwheel scaling is not written by macos.sh" 'com.apple.scrollwheel.scaling' "$(grep -v '^#' "$DEF")"
+eq "mouse-settings is check-only Needs Paul" "PAUL|" \
+  "$(awk -F'|' '$1 == "mouse-settings" { print $2 "|" $3; exit }' "$DIR/../lib/autofix.list")"
+has "a mouse warn is tagged mouse-settings" 'mouse-settings) fixid mouse-settings' \
+  "$(cat "$DIR/../macconfig-check.sh")"
+
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \
   "$DIR/../README.md" "$LIST" "$DEF" "$DIR/../macos.sh" "$DIR/../lib/autofix.list" || true)"

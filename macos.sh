@@ -567,10 +567,13 @@ cat <<'MANUAL'
 
 Still manual (not scriptable / out of scope) — see README:
   - Apple Account sign-in; User & Groups account picture
-  - Displays "More Space"; Keyboard British input source
-  - Mouse speeds (System Settings); Trackpad Look up & data detectors; trackpad
-    dragging (Accessibility; checked only, Dragging=1 DragLock=0); MX Master 3S
-    wheel (Natural), buttons in Logi Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
+  - Keyboard British input source (built-in display More Space is checked by
+    macconfig-check.sh and never changed)
+  - Mouse double-click speed and secondary click (tracking 1.5 and scrolling 0.5
+    are checked only — defaults write is unreliable, so they are never written);
+    Trackpad Look up & data detectors; trackpad dragging (Accessibility; checked
+    only, Dragging=1 DragLock=0); MX Master 3S wheel (Natural), buttons in Logi
+    Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
   - Accessibility grants (TCC); notification mirroring; Spotlight result categories
     (per-app Allow Notifications is checked by macconfig-check.sh, never written)
   - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off

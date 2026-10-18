@@ -1,0 +1,9 @@
+# Built-in display UI resolution (More Space). macconfig-check.sh compares the
+# built-in panel's `_spdisplays_resolution` and warns when it does not start
+# with this prefix. No built-in panel (clamshell, external display only) is an
+# info skip. Read-only: no displayplacer, and --fix never changes the mode.
+#
+# This Color LCD is spdisplays_3024x1964Retina (_spdisplays_pixels 3600 x 2338).
+# More Space on that panel is the scaled mode 1800 x 1169.
+# Format: builtin | prefix
+builtin|1800 x 1169

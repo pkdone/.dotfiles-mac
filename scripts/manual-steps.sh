@@ -133,6 +133,14 @@ check_tcc() {  # service bundle-id
   esac
 }
 
+# Exact text first. A float may print as 1.5 or 1.500000; both satisfy a numeric want.
+defaults_value_match() {  # actual want
+  [ "$1" = "$2" ] && return 0
+  case "$1" in ''|*[!0-9.+-]*) return 1 ;; esac
+  case "$2" in ''|*[!0-9.+-]*) return 1 ;; esac
+  awk -v a="$1" -v w="$2" 'BEGIN { exit !(a+0 == w+0) }'
+}
+
 check_defaults() {  # domain k=v[,k=v]
   local domain="$1" pairs="$2" pair key want cur bad="" ok=""
   if ! defaults read "$domain" >/dev/null 2>&1; then
@@ -142,7 +150,7 @@ check_defaults() {  # domain k=v[,k=v]
   for pair in $pairs; do
     key="${pair%%=*}"; want="${pair#*=}"
     if cur="$(defaults read "$domain" "$key" 2>/dev/null)"; then
-      if [ "$cur" = "$want" ]; then ok="$ok $key=$cur"; else bad="$bad $key=$cur (want $want)"; fi
+      if defaults_value_match "$cur" "$want"; then ok="$ok $key=$cur"; else bad="$bad $key=$cur (want $want)"; fi
     else
       bad="$bad $key not set (want $want)"
     fi

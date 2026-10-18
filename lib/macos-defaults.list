@@ -67,6 +67,8 @@ org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload cra
 # Look up & data detectors is not one of these keys; it stays in lib/manual-steps.list.
 # Accessibility dragging (Dragging=1, DragLock=0) stays a check there too: defaults write
 # does not reliably drive System Settings → Accessibility → Pointer Control → Trackpad Options.
+# Mouse tracking (com.apple.mouse.scaling = 1.5) and scrolling (com.apple.scrollwheel.scaling = 0.5)
+# stay a check on manual step mouse-settings for the same reason. Do not add those keys here.
 com.apple.AppleMultitouchTrackpad|Clicking|int|1|logout|Trackpad|Tap to click|`1` (On)
 com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking|int|1|logout|Trackpad|Tap to click (Bluetooth trackpad)|`1` (On)
 NSGlobalDomain|com.apple.mouse.tapBehavior|int|1|logout|Trackpad|Tap to click behavior|`1` (On)

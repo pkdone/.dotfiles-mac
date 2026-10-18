@@ -64,12 +64,20 @@ trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off
 # change that pane, so this stays a check only. Paul wants dragging On, without drag lock.
 trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Without Drag Lock)|System Settings → Accessibility → Pointer Control → Trackpad Options|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0
 pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
-mouse-settings|Trackpad, mouse & pointer|Mouse (System Settings): tracking, double-click and scrolling speed faster; secondary click on right side (the wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh)|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|
+# Tracking speed and scrolling speed are readable, but defaults write does not
+# reliably drive System Settings → Mouse on recent macOS, so they stay a check
+# only (warn on drift; macconfig-check.sh --fix does not write them). The
+# double-click threshold key is unset on this Mac, and secondary click has no
+# separate reliable key, so those two stay in the step text.
+mouse-settings|Trackpad, mouse & pointer|Mouse: tracking speed 1.5 and scrolling speed 0.5 (checked only; writing them is unreliable). Double-click speed faster and secondary click on the right side stay by hand (the double-click threshold key is unset). The wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|defaults:NSGlobalDomain:com.apple.mouse.scaling=1.5,com.apple.scrollwheel.scaling=0.5
 logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling On (main wheel and thumb wheel)|Logi Options+ → MX Master 3S → Point & Scroll|app:logioptionsplus|logi:wheel-smooth,thumb-smooth
 logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup|Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices|app:logioptionsplus|
 
 # ---- Display, keyboard & desktop ----
-display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|
+# More Space on this Color LCD is _spdisplays_resolution starting with 1800 x 1169
+# (lib/display-resolution.list). macconfig-check.sh reads system_profiler and
+# never changes the mode. A clamshell Mac (no built-in panel) is an info skip.
+display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 # Desktop widgets and Stage Manager are lib/macos-defaults.list (StandardHideWidgets,
@@ -96,7 +104,7 @@ raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command
 # ---- Modes (Hammerspoon menu-bar switcher; see README "Modes") ----
 mode-focus-modes|Modes (menu-bar switcher)|Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through)|System Settings → Focus → Add Focus… → Custom|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig-check.sh
 mode-focus-shortcuts|Modes (menu-bar switcher)|Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off"|Shortcuts → + → search "Set Focus"|app:Shortcuts|@macconfig-check.sh
-mode-hammerspoon-alerts|Modes (menu-bar switcher)|Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show|System Settings → Notifications → Hammerspoon → Alerts|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
+mode-hammerspoon-alerts|Modes (menu-bar switcher)|Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show|System Settings → Notifications → Hammerspoon → Alerts|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
 mode-menubar-pin|Modes (menu-bar switcher)|Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind <<|Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain)||
 
 # ---- Menu bar (third-party allow list) ----
