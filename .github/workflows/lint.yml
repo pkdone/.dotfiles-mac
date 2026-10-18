@@ -152,3 +152,9 @@ jobs:
           # com.apple.dock minimize-to-application and no-bouncing, restart Dock,
           # tilesize stays 28. Fake defaults; no live Dock.
           ./tests/dock-minimize.test.sh
+      - name: Run hotkey LaunchAgent tests
+        run: |
+          # WatchPaths plists, @HOME@ rendering, bootout/bootstrap when the
+          # installed plist differs, and pin scripts that write only on drift.
+          # Fake defaults; no launchd and no live symbolichotkeys plist.
+          ./tests/pin-hotkey-launchagent.test.sh

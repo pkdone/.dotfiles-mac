@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # Load a per-user LaunchAgent plist into the gui/<uid> domain. Idempotent.
-# Used by install.sh (--reload: pick up plist changes) and `macconfig-check.sh --fix`
-# (default: bootstrap only if the agent isn't loaded; never unloads a loaded one).
+# Used by install.sh (--reload: bootout then bootstrap, so a new WatchPaths is
+# picked up) and `macconfig-check.sh --fix` (default: bootstrap only if the
+# agent isn't loaded; --reload when the installed plist differed from the
+# rendered repo copy). scripts/install-launchagent.sh writes that plist.
 set -euo pipefail
 
 usage() {
   cat <<'USAGE'
 Usage: load-launchagent.sh [--reload] [--check] PLIST
   (default)  Bootstrap PLIST into gui/<uid> if its label isn't loaded yet.
-  --reload   Boot out the loaded agent first, then bootstrap (install.sh).
+  --reload   Boot out the loaded agent first, then bootstrap.
+             install.sh always does this. macconfig-check.sh --fix does this
+             when the installed plist differed from the rendered repo copy.
   --check    Exit 0 if loaded, 1 if not; change nothing.
 The label is the plist's file name without .plist.
 USAGE

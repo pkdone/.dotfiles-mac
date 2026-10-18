@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Disable symbolic hotkey 190 ("Quick Note" = Globe/Fn+Q). Idempotent.
-# Used by macos.sh and a login LaunchAgent (OS updates often reset
-# AppleSymbolicHotKeys and restore the Fn+Q default).
+# Disable symbolic hotkey 190 ("Quick Note" = Globe/Fn+Q). Used by macos.sh and
+# a LaunchAgent (OS updates often reset AppleSymbolicHotKeys and restore the
+# Fn+Q default). Writes only when the hotkey differs: a LaunchAgent WatchPaths
+# on com.apple.symbolichotkeys.plist would otherwise retrigger forever.
 set -euo pipefail
 
 LABEL='Quick Note hotkey 190'
@@ -41,7 +42,8 @@ case "${1:-}" in
     cat <<'USAGE'
 Usage: pin-quicknote-hotkey-190.sh [--check]
 
-  (default)  Disable Quick Note (Globe/Fn+Q) for hotkey 190 and activateSettings.
+  (default)  If Quick Note (Globe/Fn+Q) is enabled, disable hotkey 190 and activateSettings.
+             If it is already disabled, do not write (safe under launchd WatchPaths).
   --check    Exit 0 if already disabled; exit 1 and print current state otherwise.
 USAGE
     exit 0
@@ -58,15 +60,17 @@ USAGE
 esac
 
 read_state
+if ok_state; then
+  msg="$LABEL already disabled (left alone)"
+  log "$msg"
+  echo "$msg"
+  exit 0
+fi
 defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 190 "$DESIRED"
 defaults read com.apple.symbolichotkeys >/dev/null 2>&1 || true
 if [ -x "$ACTIVATE" ]; then
   "$ACTIVATE" -u 2>/dev/null || true
 fi
-if ok_state; then
-  msg="$LABEL re-asserted (already disabled)"
-else
-  msg="$LABEL pinned disabled (was enabled=${ENABLED:-missing} type=${PTYPE:-?} p1=${P1:-?})"
-fi
+msg="$LABEL pinned disabled (was enabled=${ENABLED:-missing} type=${PTYPE:-?} p1=${P1:-?})"
 log "$msg"
 echo "$msg"

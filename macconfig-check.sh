@@ -493,6 +493,32 @@ else
   done < "$UNWANTED_LIST"
 fi
 
+# Repo LaunchAgents are regular files rendered by scripts/install-launchagent.sh
+# (@HOME@ -> $HOME). launchd does not expand ~ or $HOME, so a symlink to the
+# repo plist would watch the literal placeholder. Drift when the installed
+# bytes differ or the job isn't loaded.
+check_repo_launchagent() {  # label  loaded-ok-text
+  local label="$1" loaded_ok="$2" plist la_msg
+  plist="$HOME/Library/LaunchAgents/${label}.plist"
+  CHECKED=$((CHECKED + 1))
+  fixid launchagent "$label|$plist"
+  if [ ! -x "$DOTDIR/scripts/install-launchagent.sh" ]; then
+    fixid repo-file
+    bad "scripts/install-launchagent.sh missing"
+  elif la_msg="$("$DOTDIR/scripts/install-launchagent.sh" --check "$label")"; then
+    pass "LaunchAgent $label plist matches repo ($la_msg)"
+  else
+    bad "LaunchAgent $label ${la_msg:-plist check failed}"
+  fi
+  CHECKED=$((CHECKED + 1))
+  fixid launchagent "$label|$plist"
+  if launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1; then
+    pass "LaunchAgent $label loaded ($loaded_ok)"
+  else
+    bad "LaunchAgent $label not loaded — re-run install.sh or macconfig-check.sh --fix"
+  fi
+}
+
 # ---- 9. dictation shortcut -----------------------------------------------
 # Symbolic hotkey 164 is "Start Dictation". On this MacBook the default
 # "Press microphone" binding uses Fn/Globe and will start the mic on hold.
@@ -527,14 +553,11 @@ if [ -x "$DOTDIR/scripts/pin-dictation-hotkey-164.sh" ]; then
 else
   bad "scripts/pin-dictation-hotkey-164.sh missing"
 fi
-CHECKED=$((CHECKED + 1))
-LA_LABEL=com.pdone.pin-dictation-hotkey-164
-fixid launchagent "$LA_LABEL|$HOME/Library/LaunchAgents/$LA_LABEL.plist"
-if launchctl print "gui/$(id -u)/$LA_LABEL" >/dev/null 2>&1; then
-  pass "LaunchAgent $LA_LABEL loaded (re-pins 164 at login)"
-else
-  bad "LaunchAgent $LA_LABEL not loaded — re-run install.sh"
-fi
+# Rendered plist (not a symlink) plus loaded job. --fix rewrites a drifted
+# plist and bootout/bootstraps; a matching plist that isn't loaded is only
+# bootstrapped. Same arg for both so one fixer run covers both.
+check_repo_launchagent com.pdone.pin-dictation-hotkey-164 \
+  "re-pins 164 at login and when symbolichotkeys changes"
 
 # ---- 9a. Quick Note shortcut (Globe/Fn+Q) ---------------------------------
 # Symbolic hotkey 190 is "Quick Note". Default is enabled with Fn/Globe+Q.
@@ -568,14 +591,8 @@ if [ -x "$DOTDIR/scripts/pin-quicknote-hotkey-190.sh" ]; then
 else
   bad "scripts/pin-quicknote-hotkey-190.sh missing"
 fi
-CHECKED=$((CHECKED + 1))
-LA_LABEL=com.pdone.pin-quicknote-hotkey-190
-fixid launchagent "$LA_LABEL|$HOME/Library/LaunchAgents/$LA_LABEL.plist"
-if launchctl print "gui/$(id -u)/$LA_LABEL" >/dev/null 2>&1; then
-  pass "LaunchAgent $LA_LABEL loaded (re-disables 190 at login)"
-else
-  bad "LaunchAgent $LA_LABEL not loaded — re-run install.sh"
-fi
+check_repo_launchagent com.pdone.pin-quicknote-hotkey-190 \
+  "re-disables 190 at login and when symbolichotkeys changes"
 
 # ---- 9b. Finder icon-view defaults (72 / 13) ------------------------------
 hdr "Finder icon view defaults"
@@ -1373,22 +1390,26 @@ else
   fi
 fi
 
-# Background jobs: every LaunchAgent this repo installs (lib/links.list) is loaded and its
-# last run exited 0. The dictation agent's "loaded" state is drift-checked in its own
-# section above, so here it only gets the exit-status check. Hammerspoon "running" is the
-# Hammerspoon section's result (H_HS_RUNNING), reused for --health-json.
-while IFS='|' read -r _la_src la_tgt; do
-  case "$la_tgt" in */Library/LaunchAgents/*.plist) ;; *) continue ;; esac
-  la_label="$(basename "$la_tgt" .plist)"
+# Background jobs: every LaunchAgent this repo installs (launchagents/*.plist, rendered
+# into ~/Library/LaunchAgents) is loaded and its last run exited 0. The pin agents'
+# loaded state is already drift in their own sections, so a not-loaded pin agent is
+# not reported twice. Hammerspoon "running" is the Hammerspoon section's result
+# (H_HS_RUNNING), reused for --health-json.
+for la_src in "$DOTDIR"/launchagents/*.plist; do
+  [ -f "$la_src" ] || continue
+  la_label="$(basename "$la_src" .plist)"
   CHECKED=$((CHECKED + 1))
-  fixid launchagent "$la_label|${la_tgt//@HOME@/$HOME}"
+  fixid launchagent "$la_label|$HOME/Library/LaunchAgents/$la_label.plist"
   if ! la_out="$(with_timeout 5 launchctl print "gui/$(id -u)/$la_label" </dev/null 2>/dev/null)"; then
     H_JOBS+=("$la_label|no|")
-    if [ "$la_label" = "$LA_LABEL" ]; then
-      CHECKED=$((CHECKED - 1))   # already reported as drift in the Dictation section
-    else
-      H_JOBS_STATUS=warn; warn "LaunchAgent $la_label not loaded — re-run install.sh"
-    fi
+    case "$la_label" in
+      com.pdone.pin-dictation-hotkey-164|com.pdone.pin-quicknote-hotkey-190)
+        CHECKED=$((CHECKED - 1))   # already reported as drift in its own section
+        ;;
+      *)
+        H_JOBS_STATUS=warn; warn "LaunchAgent $la_label not loaded — re-run install.sh"
+        ;;
+    esac
     continue
   fi
   la_exit="$(printf '%s\n' "$la_out" | sed -nE 's/^[[:space:]]*last exit code = (.*)$/\1/p' | head -1)"
@@ -1398,7 +1419,7 @@ while IFS='|' read -r _la_src la_tgt; do
     *)                 H_JOBS+=("$la_label|yes|$la_exit"); H_JOBS_STATUS=warn; fixid launchagent-exit
                        warn "LaunchAgent $la_label last exit code $la_exit — check: launchctl print gui/$(id -u)/$la_label" ;;
   esac
-done < "$DOTDIR/lib/links.list"
+done
 
 fixid dotfiles-git
 # Dotfiles in sync: no uncommitted/untracked changes (gitignored .agent-logs etc. don't
@@ -1529,9 +1550,34 @@ if [ "$FIX" = 1 ]; then
     echo "ln -sfn failed for ${target/#$HOME/~}"; return 1
   }
   fix_launchagent() {  # "label|plist"
-    local label="${1%%|*}" plist="${1#*|}" out
+    local label="${1%%|*}" plist="${1#*|}" out wrote=0 src
+    src="$DOTDIR/launchagents/${label}.plist"
     if [ "$DRY_RUN" = 1 ]; then
-      echo "would load LaunchAgent $label (scripts/load-launchagent.sh)"; return 0
+      if [ -f "$src" ] && ! "$DOTDIR/scripts/install-launchagent.sh" --check "$label" >/dev/null 2>&1; then
+        echo "would rewrite LaunchAgent $label from repo and reload (bootout/bootstrap)"
+      else
+        echo "would load LaunchAgent $label (scripts/load-launchagent.sh)"
+      fi
+      return 0
+    fi
+    # Rewrite first, then reload, so bootstrap reads the new WatchPaths.
+    # A matching plist is left untouched; the job is bootstrapped only if
+    # it isn't already loaded (no bootout).
+    if [ -f "$src" ]; then
+      if ! out="$("$DOTDIR/scripts/install-launchagent.sh" --write "$label")"; then
+        echo "LaunchAgent $label: ${out:-render failed}"; return 1
+      fi
+      case "$out" in
+        updated) wrote=1 ;;
+        unchanged) ;;
+        *) echo "LaunchAgent $label: unexpected render result ($out)"; return 1 ;;
+      esac
+    fi
+    if [ "$wrote" = 1 ]; then
+      if out="$("$DOTDIR/scripts/load-launchagent.sh" --reload "$plist" 2>&1)"; then
+        echo "LaunchAgent $label reloaded (bootout/bootstrap): $out"; return 0
+      fi
+      echo "LaunchAgent $label: ${out:-reload failed}"; return 1
     fi
     if out="$("$DOTDIR/scripts/load-launchagent.sh" "$plist" 2>&1)"; then
       echo "LaunchAgent $out"; return 0
@@ -1577,11 +1623,12 @@ if [ "$FIX" = 1 ]; then
     fi
   done
 
-  # Run the fixers in dependency order: symlinks (a LaunchAgent plist may be one), then one
-  # batched macos.sh call (one backup, at most one restart per process), then one batched
+  # Run the fixers in dependency order: symlinks, then one batched macos.sh call
+  # (one backup, at most one restart per process), then one batched
   # desktop-bindings.py --apply (one backup, one Dock restart), then one batched
-  # file-handlers.py --apply (duti -s for each drifted extension), then LaunchAgents and
-  # Hammerspoon. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
+  # file-handlers.py --apply (duti -s for each drifted extension), then LaunchAgents
+  # (rewrite a drifted plist and bootout/bootstrap, or bootstrap only if it isn't
+  # loaded) and Hammerspoon. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
   FIX_RESULTS=()
   MACOS_OUT=""
   macos_line() {  # id arg — this item's chg / warn / ok line from the macos.sh output
