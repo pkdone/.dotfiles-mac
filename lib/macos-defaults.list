@@ -67,3 +67,15 @@ com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerDrag|int|0|logout|Trackpad|
 NSGlobalDomain|com.apple.trackpad.scaling|float|0.6875|logout|Trackpad|Tracking speed|`0.6875` (Slower)
 com.apple.AppleMultitouchTrackpad|ActuateDetents|int|1|logout|Trackpad|Force Click|`1` (On)
 com.apple.AppleMultitouchTrackpad|ForceSuppressed|int|0|logout|Trackpad|Haptic feedback|`0` (On)
+# Native window tiling (macOS 15+). System Settings → Desktop & Dock → Windows.
+# EnableTilingByEdgeDrag is unset on this Mac. Unset is the system default, On.
+# Pinning true makes a later Off into drift that macconfig --fix repairs.
+# EnableTiledWindowMargins reads as 0. That is boolean false (margins Off).
+# restart is empty. WindowManager applies this domain live: writing
+# EnableTiledWindowMargins moves windows that are already tiled, and
+# EnableTilingByEdgeDrag is read on the next edge drag. An empty restart
+# means macos.sh does not killall Dock (that reloads Spaces) or WindowManager.
+# Only these two keys. Leave GloballyEnabled (Stage Manager), HideDesktop,
+# widget keys, EnableTopTilingByEdgeDrag, and EnableTilingOptionAccelerator alone.
+com.apple.WindowManager|EnableTilingByEdgeDrag|bool|true||Window Tiling|Drag windows to left or right edge to tile|`true` (On)
+com.apple.WindowManager|EnableTiledWindowMargins|bool|false||Window Tiling|Tiled windows have margins|`false` (Off)

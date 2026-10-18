@@ -139,6 +139,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **Menu bar (Tahoe):** Spotlight, Focus, Now Playing hidden (`@host/com.apple.controlcenter` = `8`) via `macos.sh` / `macconfig-check.sh`
 - **Finder sidebar Recents** Off, **icon view 72/13**, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `macconfig-check.sh`
 - **Finder and Trash tidy:** remove Trash items after 30 days (`FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and no `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`; the domain is created by the first write). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Finder
+- **Window tiling (macOS 15+):** drag a window to the left or right edge to tile (`com.apple.WindowManager EnableTilingByEdgeDrag` = true; unset on this Mac, which is the system default On) and no gap between tiled windows (`EnableTiledWindowMargins` = false; `defaults read` prints `0`). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Shortcuts are in [SHORTCUTS.md](SHORTCUTS.md)
 - **Login Items:** `macconfig-check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
 
 Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
@@ -243,6 +244,8 @@ Trackpad rows in that list are tap to click (built-in trackpad, Bluetooth trackp
 
 Finder and Trash tidy rows in that list remove Trash items after 30 days (`com.apple.finder FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and skip `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`). That domain may not exist until the first write; writing creates it. Those four set `restart` to `Finder`. Screenshots save to `~/Pictures/Screenshots` (`com.apple.screencapture location`, stored as `@HOME@/Pictures/Screenshots` so apply and check expand `$HOME`) and keep the floating thumbnail (`show-thumbnail` = true). Both screenshot keys set `restart` to `SystemUIServer`. `install.sh` creates `~/Pictures/Screenshots` with `mkdir -p`. `macos.sh` does the same before it writes the location, including when `macconfig --fix` repairs that key. Existing screenshots are left where they are.
 
+Window tiling rows in that list turn on drag-to-edge tiling (`com.apple.WindowManager EnableTilingByEdgeDrag` = true) and turn tiled-window margins off (`EnableTiledWindowMargins` = false). On this Mac the edge-drag key is unset, which is the system default On, and margins read as `0` (boolean false). Both rows leave `restart` empty. WindowManager applies the domain live: writing the margins key moves windows that are already tiled, and the edge-drag key is read on the next drag, so `macos.sh` restarts no process for them. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`. Stage Manager (`GloballyEnabled`), HideDesktop, widgets, drag-to-menu-bar, and the Option-drag toggle stay out of the list. Desktop pins in `lib/desktop-bindings.list` stay as they are.
+
 Run `macos.sh --list` to see the exact set of settings it manages (printed as a Markdown table).
 
 ### Verifying the setup
@@ -290,7 +293,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 
 | Issue | How it's fixed |
 |------|------|
-| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, Trash, screenshots, menu bar, Trackpad, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, `mkdir -p`s `~/Pictures/Screenshots` before writing `com.apple.screencapture location`, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings (including Trackpad) as "log out to finish" |
+| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, Trash, screenshots, menu bar, Trackpad, window tiling, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, `mkdir -p`s `~/Pictures/Screenshots` before writing `com.apple.screencapture location`, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings (including Trackpad) as "log out to finish". Window tiling rows leave `restart` empty, so a repair restarts no process |
 | Finder icon view 72/13, Finder sidebar Recents, CotEditor theme / font | `macos.sh --only @finder-icon-view` / `@finder-recents` / `@coteditor` (the existing `scripts/pin-finder-icon-view.sh` and `lib/finder-sidebar-recents.py`) |
 | Dictation hotkey 164 | `macos.sh --only @dictation-164`, which runs `scripts/pin-dictation-hotkey-164.sh` |
 | Quick Note hotkey 190 | `macos.sh --only @quicknote-190`, which runs `scripts/pin-quicknote-hotkey-190.sh` |
@@ -504,7 +507,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes
