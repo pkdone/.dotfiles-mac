@@ -1498,10 +1498,18 @@ if [ ! -x "$MANUAL_STEPS" ]; then
   fixid repo-file; warn "scripts/manual-steps.sh missing or not executable — skipping manual steps"
 else
   ms_out="$(NO_COLOR=1 "$MANUAL_STEPS" check --porcelain 2>&1)" || true
-  while IFS='|' read -r ms_status ms_num _ms_id ms_title ms_detail; do
+  while IFS='|' read -r ms_status ms_num ms_id ms_title ms_detail; do
     case "$ms_status" in
       ok)      CHECKED=$((CHECKED + 1)); pass "$ms_num. $ms_title${ms_detail:+ — $ms_detail}" ;;
-      warn)    CHECKED=$((CHECKED + 1)); warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)" ;;
+      # mouse-settings is PAUL / check-only: tag that warning with its own id.
+      warn)
+        CHECKED=$((CHECKED + 1))
+        case "$ms_id" in
+          mouse-settings) fixid mouse-settings ;;
+          *) fixid manual-step ;;
+        esac
+        warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)"
+        ;;
       hand)    info "$ms_num. $ms_title — check by hand${ms_detail:+ ($ms_detail)}" ;;
       covered|'') : ;;
       *)       CHECKED=$((CHECKED + 1)); warn "manual-steps.sh: $ms_status${ms_num:+|$ms_num}" ;;

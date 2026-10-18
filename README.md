@@ -321,7 +321,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 - Login items and URL handlers (macOS may ask to confirm)
 - TCC permissions and the [manual steps](#manual-steps)
 - MDM, security settings, software updates, and Mac health signals
-- Hostname and login shell (they need sudo), display auto-brightness (System Settings → Displays; the CoreBrightness plist is root-owned and its keys move between macOS versions, so `--fix` does not write it), per-app Allow Notifications (read from the usernoted group plist; `--fix` never writes it), and anything else that needs sudo or deletes files
+- Hostname and login shell (they need sudo), display auto-brightness (System Settings → Displays; the CoreBrightness plist is root-owned and its keys move between macOS versions, so `--fix` does not write it), mouse tracking speed `1.5` and scrolling speed `0.5` (check-only; `defaults write` is unreliable, so `--fix` never writes them), per-app Allow Notifications (read from the usernoted group plist; `--fix` never writes it), and anything else that needs sudo or deletes files
 - Dotfiles git state (no automatic commits, pushes or pulls), including repo files such as `karabiner.json` or a missing script
 - Any issue whose id isn't in `lib/autofix.list` (unclassified means report only)
 
@@ -380,7 +380,7 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 ~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand (also the "Manual steps" section of macconfig-check.sh)
 ```
 
-`check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), pointer size, Accessibility trackpad dragging (`Dragging=1`, `DragLock=0`), the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, Logi Options+ values (from a temp copy of its settings database), `gh auth status` and `op whoami`. Steps marked `macconfig-check.sh` below are verified by their own `macconfig-check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and refresh this table with `scripts/manual-steps.sh list --markdown`.
+`check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), pointer size, Accessibility trackpad dragging (`Dragging=1`, `DragLock=0`), mouse tracking speed `1.5` and scrolling speed `0.5` (check only; `defaults write` does not reliably drive System Settings → Mouse), the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, Logi Options+ values (from a temp copy of its settings database), `gh auth status` and `op whoami`. Steps marked `macconfig-check.sh` below are verified by their own `macconfig-check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and refresh this table with `scripts/manual-steps.sh list --markdown`.
 
 | # | Step | Where | Checked |
 |---|------|------|------|
@@ -403,7 +403,7 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 | 17 | Trackpad: Look up & data detectors Off | System Settings → Trackpad → Point & Click | by hand |
 | 18 | Use trackpad for dragging On (Without Drag Lock) | System Settings → Accessibility → Pointer Control → Trackpad Options | auto |
 | 19 | Pointer size one notch above Normal | System Settings → Accessibility → Display → Pointer → Pointer size | auto |
-| 20 | Mouse (System Settings): tracking, double-click and scrolling speed faster; secondary click on right side (the wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh) | System Settings → Mouse | by hand |
+| 20 | Mouse: tracking speed 1.5 and scrolling speed 0.5 (checked only; writing them is unreliable). Double-click speed faster and secondary click on the right side stay by hand (the double-click threshold key is unset). The wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh | System Settings → Mouse | auto |
 | 21 | Logi Options+: Smooth scrolling On (main wheel and thumb wheel) | Logi Options+ → MX Master 3S → Point & Scroll | auto |
 | 22 | Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup | Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices | by hand |
 | 23 | Built-in display: More Space | System Settings → Displays | by hand |
@@ -426,6 +426,8 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 | 40 | Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are. Raycast's own menu-bar toggle isn't scriptable | System Settings → Menu Bar → Allow in the Menu Bar | by hand |
 
 Trackpad tap to click, click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On are in `lib/macos-defaults.list` (`macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them). A change may need a logout/login before the trackpad follows it. Look up & data detectors stays in the table above: `ActuateDetents` and `ForceSuppressed` only cover Force Click and haptic feedback, both On. Use trackpad for dragging stays a check (`Dragging=1`, `DragLock=0`: On, without drag lock) because that Accessibility setting does not reliably follow `defaults write`.
+
+Mouse tracking speed (`NSGlobalDomain` `com.apple.mouse.scaling` = `1.5`) and scrolling speed (`com.apple.scrollwheel.scaling` = `0.5`) are the same kind of check. `macconfig-check.sh` warns when they drift (`mouse-settings` in `lib/autofix.list`, Needs Paul). `--fix` does not write them: on recent macOS those System Settings → Mouse sliders do not reliably follow `defaults write`. Double-click speed and secondary click on the right side stay in that step. The double-click threshold key is unset on this Mac, so it cannot be checked. Wheel direction (Natural) stays in Logi Options+.
 
 Desktop widgets and Stage Manager are in `lib/macos-defaults.list` too (`StandardHideWidgets` and `StageManagerHideWidgets` = true, `GloballyEnabled` = false). `macos.sh` applies them and `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Click wallpaper to reveal desktop is not pinned.
 

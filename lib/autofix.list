@@ -58,6 +58,7 @@ repo-file|PAUL||a repo script is missing — restore it from git (dotfiles git s
 login-items|PAUL||login items — System Settings → General → Login Items & Extensions
 tcc|PAUL||privacy permission (TCC) — System Settings → Privacy & Security
 manual-step|PAUL||manual step (permission / sign-in) — scripts/manual-steps.sh open
+mouse-settings|PAUL||Mouse tracking speed (NSGlobalDomain com.apple.mouse.scaling = 1.5) and scrolling speed (com.apple.scrollwheel.scaling = 0.5) — System Settings → Mouse. Check-only: writing these is unreliable on recent macOS, so --fix never writes them. Double-click and secondary click stay in the manual step
 mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
 security|PAUL||security setting — never changed automatically
 software-update|PAUL||software updates — System Settings → General → Software Update
