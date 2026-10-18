@@ -85,7 +85,20 @@ com.apple.AppleMultitouchTrackpad|ForceSuppressed|int|0|logout|Trackpad|Haptic f
 # EnableTiledWindowMargins moves windows that are already tiled, and
 # EnableTilingByEdgeDrag is read on the next edge drag. An empty restart
 # means macos.sh does not killall Dock (that reloads Spaces) or WindowManager.
-# Only these two keys. Leave GloballyEnabled (Stage Manager), HideDesktop,
-# widget keys, EnableTopTilingByEdgeDrag, and EnableTilingOptionAccelerator alone.
+# Only these two tiling keys. Leave HideDesktop, EnableTopTilingByEdgeDrag,
+# EnableTilingOptionAccelerator, and EnableStandardClickToShowDesktop alone.
 com.apple.WindowManager|EnableTilingByEdgeDrag|bool|true||Window Tiling|Drag windows to left or right edge to tile|`true` (On)
 com.apple.WindowManager|EnableTiledWindowMargins|bool|false||Window Tiling|Tiled windows have margins|`false` (Off)
+# Desktop widgets and Stage Manager. Same domain. System Settings → Desktop & Dock.
+# StandardHideWidgets true hides widgets on the desktop (Widgets → Show Widgets →
+# On Desktop off). StageManagerHideWidgets true hides them while Stage Manager is
+# on (Show Widgets → In Stage Manager off). GloballyEnabled false turns Stage
+# Manager off (Desktop & Stage Manager → Stage Manager). These three replace the
+# desktop-widgets manual step. restart is empty, same as the tiling rows:
+# WindowManager applies the domain live (Stage Manager togglers and widget
+# togglers write these keys and the desktop updates with no killall), so macos.sh
+# does not killall Dock (that reloads Spaces) or WindowManager.
+# Do not pin EnableStandardClickToShowDesktop (Click wallpaper to reveal desktop).
+com.apple.WindowManager|StandardHideWidgets|bool|true||Desktop|Show widgets on Desktop|`true` (Off — hidden)
+com.apple.WindowManager|StageManagerHideWidgets|bool|true||Desktop|Show widgets in Stage Manager|`true` (Off — hidden)
+com.apple.WindowManager|GloballyEnabled|bool|false||Desktop|Stage Manager|`false` (Off)

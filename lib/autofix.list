@@ -22,7 +22,7 @@
 # Blank lines and lines beginning with # are ignored.
 
 # ---- SAFE: applied automatically by --fix ----
-defaults|SAFE|macos|macOS default from lib/macos-defaults.list (Dock icon size / recents / minimize into app / no bouncing — restart Dock, Finder, Trash, Screenshots, Spaces, menu bar, Trackpad, window tiling, …)
+defaults|SAFE|macos|macOS default from lib/macos-defaults.list (Dock icon size / recents / minimize into app / no bouncing — restart Dock, Finder, Trash, Screenshots, Spaces, menu bar, Trackpad, window tiling, Stage Manager, desktop widgets, …)
 dictation-164|SAFE|macos|dictation hotkey 164 re-pinned by scripts/pin-dictation-hotkey-164.sh
 quicknote-190|SAFE|macos|Quick Note hotkey 190 (Globe/Fn+Q) disabled by scripts/pin-quicknote-hotkey-190.sh
 finder-icon-view|SAFE|macos|Finder icon view 72/13 re-pinned by scripts/pin-finder-icon-view.sh

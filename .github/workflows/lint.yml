@@ -136,9 +136,9 @@ jobs:
           ./tests/finder-tidy.test.sh
       - name: Run window tiling defaults tests
         run: |
-          # com.apple.WindowManager edge-drag and margins rows, empty restart
-          # (no killall), and the SHORTCUTS.md section. Fake defaults; no live
-          # WindowManager or Dock.
+          # com.apple.WindowManager edge-drag, margins, hidden widgets, and
+          # Stage Manager off. Empty restart (no killall), plus the SHORTCUTS.md
+          # section. Fake defaults; no live WindowManager or Dock.
           ./tests/window-tiling.test.sh
       - name: Run menu bar defaults tests
         run: |

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# Native window tiling: the two com.apple.WindowManager rows in
-# lib/macos-defaults.list, an empty restart (no killall of Dock or
-# WindowManager), and the Window Tiling section of SHORTCUTS.md.
+# Native window tiling plus desktop widgets and Stage Manager: the
+# com.apple.WindowManager rows in lib/macos-defaults.list, an empty restart
+# (no killall of Dock or WindowManager), and the Window Tiling section of
+# SHORTCUTS.md.
 # macos.sh is driven with a fake `defaults` and `killall` so this runs on
 # Linux CI and never touches a live WindowManager. Run: ./tests/window-tiling.test.sh
 #
@@ -38,22 +39,35 @@ field() {  # domain key field-number (1-based)
 # ---- list rows (the single source macos.sh and macconfig-check.sh share) ----
 for row in \
   'com.apple.WindowManager|EnableTilingByEdgeDrag|bool|true||Window Tiling|Drag windows to left or right edge to tile|' \
-  'com.apple.WindowManager|EnableTiledWindowMargins|bool|false||Window Tiling|Tiled windows have margins|'
+  'com.apple.WindowManager|EnableTiledWindowMargins|bool|false||Window Tiling|Tiled windows have margins|' \
+  'com.apple.WindowManager|StandardHideWidgets|bool|true||Desktop|Show widgets on Desktop|' \
+  'com.apple.WindowManager|StageManagerHideWidgets|bool|true||Desktop|Show widgets in Stage Manager|' \
+  'com.apple.WindowManager|GloballyEnabled|bool|false||Desktop|Stage Manager|'
 do
   has "defaults row $(printf '%s' "$row" | cut -d'|' -f1-2)" "$row" "$rows"
 done
 
 eq "edge drag is bool true" true "$(field com.apple.WindowManager EnableTilingByEdgeDrag 4)"
 eq "margins is bool false" false "$(field com.apple.WindowManager EnableTiledWindowMargins 4)"
+eq "desktop widgets hidden" true "$(field com.apple.WindowManager StandardHideWidgets 4)"
+eq "stage manager widgets hidden" true "$(field com.apple.WindowManager StageManagerHideWidgets 4)"
+eq "stage manager is bool false" false "$(field com.apple.WindowManager GloballyEnabled 4)"
 eq "edge drag type is bool" bool "$(field com.apple.WindowManager EnableTilingByEdgeDrag 3)"
 eq "margins type is bool" bool "$(field com.apple.WindowManager EnableTiledWindowMargins 3)"
+eq "desktop widgets type is bool" bool "$(field com.apple.WindowManager StandardHideWidgets 3)"
+eq "stage manager widgets type is bool" bool "$(field com.apple.WindowManager StageManagerHideWidgets 3)"
+eq "stage manager type is bool" bool "$(field com.apple.WindowManager GloballyEnabled 3)"
 eq "edge drag restart is empty" "" "$(field com.apple.WindowManager EnableTilingByEdgeDrag 5)"
 eq "margins restart is empty" "" "$(field com.apple.WindowManager EnableTiledWindowMargins 5)"
-eq "exactly two WindowManager keys" $'EnableTiledWindowMargins\nEnableTilingByEdgeDrag' \
+eq "desktop widgets restart is empty" "" "$(field com.apple.WindowManager StandardHideWidgets 5)"
+eq "stage manager widgets restart is empty" "" "$(field com.apple.WindowManager StageManagerHideWidgets 5)"
+eq "stage manager restart is empty" "" "$(field com.apple.WindowManager GloballyEnabled 5)"
+eq "exactly five WindowManager keys" \
+  $'EnableTiledWindowMargins\nEnableTilingByEdgeDrag\nGloballyEnabled\nStageManagerHideWidgets\nStandardHideWidgets' \
   "$(awk -F'|' '$1=="com.apple.WindowManager" { print $2 }' "$LIST" | sort)"
 
-for banned in GloballyEnabled HideDesktop EnableTopTilingByEdgeDrag EnableTilingOptionAccelerator \
-  StandardHideWidgets StageManagerHideWidgets AppWindowGroupingBehavior EnableStandardClickToShowDesktop
+for banned in HideDesktop EnableTopTilingByEdgeDrag EnableTilingOptionAccelerator \
+  AppWindowGroupingBehavior EnableStandardClickToShowDesktop
 do
   eq "list does not pin $banned" "" "$(awk -F'|' -v k="$banned" '$2 == k { print; exit }' "$LIST")"
 done
@@ -62,8 +76,14 @@ has "autofix defaults row covers window tiling" "window tiling" \
   "$(awk -F'|' '$1=="defaults" { print; exit }' "$DIR/lib/autofix.list")"
 has "readme names the edge-drag key" "EnableTilingByEdgeDrag" "$(cat "$DIR/README.md")"
 has "readme names the margins key" "EnableTiledWindowMargins" "$(cat "$DIR/README.md")"
+has "readme names desktop widgets" "StandardHideWidgets" "$(cat "$DIR/README.md")"
+has "readme names stage manager widgets" "StageManagerHideWidgets" "$(cat "$DIR/README.md")"
+has "readme names stage manager" "GloballyEnabled" "$(cat "$DIR/README.md")"
+has "readme leaves click-to-show-desktop out" "EnableStandardClickToShowDesktop" "$(cat "$DIR/README.md")"
 # shellcheck disable=SC2016  # needle is source text, compared literally
 has "readme records the empty restart" 'Both rows leave `restart` empty.' "$(cat "$DIR/README.md")"
+# shellcheck disable=SC2016  # needle is source text, compared literally
+has "readme records widget restart empty" 'Those rows leave `restart` empty too.' "$(cat "$DIR/README.md")"
 
 # Desktop pins and Hammerspoon stay out of this change.
 miss "desktop pins do not name WindowManager" "WindowManager" "$(cat "$PINS")"
@@ -107,6 +127,18 @@ has "list prints edge drag" \
 # shellcheck disable=SC2016  # needle is Markdown from macos.sh --list, compared literally
 has "list prints margins" \
   '| Window Tiling | Tiled windows have margins | `com.apple.WindowManager EnableTiledWindowMargins` | `false` (Off) |' \
+  "$list_out"
+# shellcheck disable=SC2016  # needle is Markdown from macos.sh --list, compared literally
+has "list prints desktop widgets" \
+  '| Desktop | Show widgets on Desktop | `com.apple.WindowManager StandardHideWidgets` | `true` (Off — hidden) |' \
+  "$list_out"
+# shellcheck disable=SC2016  # needle is Markdown from macos.sh --list, compared literally
+has "list prints stage manager widgets" \
+  '| Desktop | Show widgets in Stage Manager | `com.apple.WindowManager StageManagerHideWidgets` | `true` (Off — hidden) |' \
+  "$list_out"
+# shellcheck disable=SC2016  # needle is Markdown from macos.sh --list, compared literally
+has "list prints stage manager" \
+  '| Desktop | Stage Manager | `com.apple.WindowManager GloballyEnabled` | `false` (Off) |' \
   "$list_out"
 
 # ---- macos.sh with a fake defaults / killall ----------------------------
@@ -255,6 +287,48 @@ has "integer 0 is a type mismatch" \
   "com.apple.WindowManager EnableTiledWindowMargins — type mismatch (expected boolean, found integer); skipping" "$out"
 eq "type mismatch writes no margins value" "" "$(writes | grep EnableTiledWindowMargins || true)"
 eq "type mismatch restarts nothing" "" "$(cat "$klog")"
+
+# Hidden widgets and Stage Manager off are repaired with no process restart.
+# Boolean 0 is widgets showing. Boolean 1 is Stage Manager on.
+HIDE='com.apple.WindowManager|StandardHideWidgets'
+SMHIDE='com.apple.WindowManager|StageManagerHideWidgets'
+STAGE='com.apple.WindowManager|GloballyEnabled'
+printf 'com.apple.WindowManager|StandardHideWidgets|bool|0\ncom.apple.WindowManager|StageManagerHideWidgets|bool|0\ncom.apple.WindowManager|GloballyEnabled|bool|1\n' > "$state"
+: > "$dlog"
+: > "$klog"
+out="$(PATH="$bin:$PATH" DEFAULTS_LOG="$dlog" DEFAULTS_STATE="$state" KILLALL_LOG="$klog" \
+  "$MACOS" --no-color --yes --only "$HIDE" --only "$SMHIDE" --only "$STAGE")"
+rc=$?
+eq "widget and stage drift exits 0" 0 "$rc"
+has "desktop widgets change 0 to true" \
+  "com.apple.WindowManager StandardHideWidgets — changed: 0 -> true" "$out"
+has "stage manager widgets change 0 to true" \
+  "com.apple.WindowManager StageManagerHideWidgets — changed: 0 -> true" "$out"
+has "stage manager changes 1 to false" \
+  "com.apple.WindowManager GloballyEnabled — changed: 1 -> false" "$out"
+eq "widget and stage writes" \
+  $'W|com.apple.WindowManager|StandardHideWidgets|-bool|true\nW|com.apple.WindowManager|StageManagerHideWidgets|-bool|true\nW|com.apple.WindowManager|GloballyEnabled|-bool|false' \
+  "$(writes)"
+eq "widget and stage repair restarts nothing" "" "$(cat "$klog")"
+miss "widget repair does not restart Dock" "Dock" "$(cat "$klog")"
+miss "widget repair does not name killall WindowManager" "WindowManager" "$(cat "$klog")"
+
+# Boolean 1 is already hidden. Boolean 0 is Stage Manager already off.
+printf 'com.apple.WindowManager|StandardHideWidgets|bool|1\ncom.apple.WindowManager|StageManagerHideWidgets|bool|1\ncom.apple.WindowManager|GloballyEnabled|bool|0\n' > "$state"
+: > "$dlog"
+: > "$klog"
+out="$(PATH="$bin:$PATH" DEFAULTS_LOG="$dlog" DEFAULTS_STATE="$state" KILLALL_LOG="$klog" \
+  "$MACOS" --no-color --yes --only "$HIDE" --only "$SMHIDE" --only "$STAGE")"
+rc=$?
+eq "already-hidden widgets exit 0" 0 "$rc"
+has "desktop widgets 1 are already true" \
+  "com.apple.WindowManager StandardHideWidgets — already set: 1 (left alone)" "$out"
+has "stage manager widgets 1 are already true" \
+  "com.apple.WindowManager StageManagerHideWidgets — already set: 1 (left alone)" "$out"
+has "stage manager 0 is already false" \
+  "com.apple.WindowManager GloballyEnabled — already set: 0 (left alone)" "$out"
+eq "already-hidden widgets write nothing" "" "$(writes)"
+eq "already-off stage manager restarts nothing" "" "$(cat "$klog")"
 
 eq "desktop pin files unchanged" "$pins_before" "$(cksum "$PINS" "$PINS_PY")"
 
