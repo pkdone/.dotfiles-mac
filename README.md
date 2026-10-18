@@ -11,7 +11,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua` and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `autofix-lib.sh`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `ac-sleep.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `autofix-lib.sh`, `defaults-lib.sh`)
 - `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-quicknote-hotkey-190.sh`, `pin-finder-icon-view.sh`, `install-launchagent.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists. Installed as regular files in `~/Library/LaunchAgents` (`@HOME@` in `WatchPaths` is replaced with `$HOME`; launchd does not expand `~` or `$HOME`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `macconfig-check.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
@@ -229,7 +229,7 @@ Raycast's supported backup is **Export Settings & Data**, a passphrase-encrypted
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
 
-A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents):
+A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotkey 164, CotEditor theme/font, Finder sidebar Recents, and AC idle sleep):
 
 ```bash
 ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothing
@@ -237,6 +237,8 @@ A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotke
 ```
 
 Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/`. UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
+
+AC idle sleep is the one `macos.sh` step that uses sudo: `sudo pmset -c sleep 0` (the `-c` profile is mains power only). It is skipped when sudo isn't available (no passwordless sudo and no terminal) or isn't wanted (`--dry-run`, or you answer no at the prompt). A value that is already 0 does not call sudo. `--yes` skips that confirmation and still will not hang waiting for a password when there is no terminal.
 
 Trackpad rows in that list are tap to click (built-in trackpad, Bluetooth trackpad, and `com.apple.mouse.tapBehavior`), click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On (`ActuateDetents=1`, `ForceSuppressed=0`). Each one sets `restart` to `logout`. When a value changes, `macos.sh` reports that a logout/login may be needed before the trackpad follows it. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`.
 
@@ -313,7 +315,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 - Login items and URL handlers (macOS may ask to confirm)
 - TCC permissions and the [manual steps](#manual-steps)
 - MDM, security settings, software updates, and Mac health signals
-- Hostname and login shell (they need sudo), display auto-brightness (System Settings → Displays; the CoreBrightness plist is root-owned and its keys move between macOS versions, so `--fix` does not write it), mouse tracking speed `1.5` and scrolling speed `0.5` (check-only; `defaults write` is unreliable, so `--fix` never writes them), built-in display More Space (read from `system_profiler`; `--fix` never changes the display mode), per-app Allow Notifications (read from the usernoted group plist; `--fix` never writes it), and anything else that needs sudo or deletes files
+- Hostname and login shell (they need sudo), display auto-brightness (System Settings → Displays; the CoreBrightness plist is root-owned and its keys move between macOS versions, so `--fix` does not write it), AC idle sleep (`sudo pmset -c sleep 0`; `macos.sh` runs it and skips when sudo isn't available or isn't wanted, and `--fix` does not run sudo), mouse tracking speed `1.5` and scrolling speed `0.5` (check-only; `defaults write` is unreliable, so `--fix` never writes them), built-in display More Space (read from `system_profiler`; `--fix` never changes the display mode), per-app Allow Notifications (read from the usernoted group plist; `--fix` never writes it), and anything else that needs sudo or deletes files
 - Dotfiles git state (no automatic commits, pushes or pulls), including repo files such as `karabiner.json` or a missing script
 - Any issue whose id isn't in `lib/autofix.list` (unclassified means report only)
 
@@ -400,22 +402,23 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 | 22 | Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup | Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices | by hand |
 | 23 | Built-in display: More Space | System Settings → Displays | macconfig-check.sh |
 | 24 | Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are) | System Settings → Displays | macconfig-check.sh |
-| 25 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
-| 26 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
-| 27 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
-| 28 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | System Settings → Notifications → Application Notifications | macconfig-check.sh |
-| 29 | Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | System Settings → Spotlight → Results from Apps | by hand |
-| 30 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | macconfig-check.sh |
-| 31 | Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT) | Gemini → Settings → Shortcuts | by hand |
-| 32 | Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings) | Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup) | by hand |
-| 33 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
-| 34 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
-| 35 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
-| 36 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through) | System Settings → Focus → Add Focus… → Custom | macconfig-check.sh |
-| 37 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | macconfig-check.sh |
-| 38 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | macconfig-check.sh |
-| 39 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
-| 40 | Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are. Raycast's own menu-bar toggle isn't scriptable | System Settings → Menu Bar → Allow in the Menu Bar | by hand |
+| 25 | On mains power, stop the Mac sleeping on its own. Closing the lid still sleeps the Mac, and battery is unchanged. The display still turns off and the screen still locks | Terminal: sudo pmset -c sleep 0 | macconfig-check.sh |
+| 26 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
+| 27 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
+| 28 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
+| 29 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | System Settings → Notifications → Application Notifications | macconfig-check.sh |
+| 30 | Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | System Settings → Spotlight → Results from Apps | by hand |
+| 31 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | macconfig-check.sh |
+| 32 | Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT) | Gemini → Settings → Shortcuts | by hand |
+| 33 | Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings) | Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup) | by hand |
+| 34 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
+| 35 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
+| 36 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
+| 37 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through) | System Settings → Focus → Add Focus… → Custom | macconfig-check.sh |
+| 38 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | macconfig-check.sh |
+| 39 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | macconfig-check.sh |
+| 40 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
+| 41 | Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are. Raycast's own menu-bar toggle isn't scriptable | System Settings → Menu Bar → Allow in the Menu Bar | by hand |
 
 Trackpad tap to click, click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On are in `lib/macos-defaults.list` (`macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them). A change may need a logout/login before the trackpad follows it. Look up & data detectors stays in the table above: `ActuateDetents` and `ForceSuppressed` only cover Force Click and haptic feedback, both On. Use trackpad for dragging stays a check (`Dragging=1`, `DragLock=0`: On, without drag lock) because that Accessibility setting does not reliably follow `defaults write`.
 
@@ -424,6 +427,8 @@ Mouse tracking speed (`NSGlobalDomain` `com.apple.mouse.scaling` = `1.5`) and sc
 Desktop widgets and Stage Manager are in `lib/macos-defaults.list` too (`StandardHideWidgets` and `StageManagerHideWidgets` = true, `GloballyEnabled` = false). `macos.sh` applies them and `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Click wallpaper to reveal desktop is not pinned.
 
 Built-in display **More Space** is checked by the **Display (More Space)** section of `macconfig-check.sh`. The expected prefix is `lib/display-resolution.list` (`1800 x 1169` on this Color LCD). The check reads `system_profiler SPDisplaysDataType -json` and warns when the built-in panel's `_spdisplays_resolution` does not start with that prefix (`1800 x 1169 @ 120.00Hz` is More Space on this panel). No built-in panel, such as a clamshell Mac, is an info line. `--fix` does not change the display mode.
+
+AC idle sleep on mains power is `sudo pmset -c sleep 0` (manual step `ac-sleep`). Closing the lid still sleeps the Mac, and battery is unchanged. The display still turns off and the screen still locks. `macconfig-check.sh` reads only the `AC Power:` section of `pmset -g custom` and warns if `sleep` isn't 0. `--fix` does not run the command, because it needs sudo.
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
@@ -518,7 +523,7 @@ To enable Clipboard History:
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, rendered login LaunchAgents, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). If `brew bundle check` fails and stdin is a terminal, it opens the App Store, asks you to sign in, and retries `brew bundle install` once; a non-interactive run keeps the warning. Also `mkdir -p ~/Pictures/Screenshots` (the screenshot save location; existing files are not moved). Renders `launchagents/*.plist` into `~/Library/LaunchAgents` (`@HOME@` → `$HOME`) and bootout/bootstraps each job. Safe to re-run — repoints symlinks, backs up any real file in the way of a symlink. |
 | `macconfig-check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. `--fix` (optionally with `--dry-run`) also applies the SAFE fixes from `lib/autofix.list`, re-checks, and lists Fixed / Needs Paul. Run any time (especially after a macOS update), or use the `macconfig` fish function. Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
 | `check.sh` | Shim that execs `macconfig-check.sh` with the same arguments, stdin, and exit status. Kept so existing callers (the scheduled `~/.dotfiles-mac/check.sh --fix --no-color`, plus muscle memory) stay valid. |
-| `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, and Finder sidebar Recents. `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `macconfig-check.sh --fix` uses. Creates `~/Pictures/Screenshots` with `mkdir -p` before writing `com.apple.screencapture location`. Idempotent. |
+| `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, Finder sidebar Recents, and AC idle sleep (`sudo pmset -c sleep 0`, skipped when sudo isn't available or isn't wanted). `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `macconfig-check.sh --fix` uses. Creates `~/Pictures/Screenshots` with `mkdir -p` before writing `com.apple.screencapture location`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme defaults (`lib/url-handlers.list`) and Finder file defaults (`lib/file-handlers.list`, role `all`). `--dry-run` / `--list`. Idempotent; needs `duti`. |
 | `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie, Pages). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
@@ -533,7 +538,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `notification-prefs.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`, `menubar.test.sh`, `dock-minimize.test.sh`, `pin-hotkey-launchagent.test.sh`, `install-bundle.test.sh`, `display-resolution.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `notification-prefs.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`, `menubar.test.sh`, `dock-minimize.test.sh`, `pin-hotkey-launchagent.test.sh`, `install-bundle.test.sh`, `display-resolution.test.sh`, `ac-sleep.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes
@@ -551,6 +556,7 @@ dotpush "your message"
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
 - **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; optional `unpinnable` or `uti:…`; role is always `all`), then run `macconfig-check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted. Do not add `html` — it switches the default browser. `.cfg`, `.env`, and `.list` stay `unpinnable`.
 - **Display auto-brightness:** Off. `macconfig-check.sh` reads it with `corebrightnessdiag status-info` (no sudo). Turn it off in System Settings → Displays. `--fix` does not write it. True Tone and Slightly dim the display on battery are left alone.
+- **AC idle sleep:** Off while on mains power (`sudo pmset -c sleep 0`). Closing the lid still sleeps the Mac, and battery is unchanged. The display still turns off and the screen still locks. `macos.sh` runs the command and skips it when sudo isn't available or isn't wanted. `macconfig-check.sh` reads the `AC Power:` section of `pmset -g custom` and warns if `sleep` isn't 0. `--fix` does not change it.
 - **Built-in display More Space:** the expected `_spdisplays_resolution` prefix is `lib/display-resolution.list` (`1800 x 1169` on this Color LCD). `macconfig-check.sh` reads `system_profiler SPDisplaysDataType -json` and warns on a mismatch. No built-in panel (clamshell) is an info line. `--fix` does not change the display mode.
 - **Notifications:** apps that must have Allow Notifications off are `lib/notifications-off.list`. `macconfig-check.sh` reads the usernoted plist and never writes it. A third-party app you've already looked at goes in `lib/notifications-reviewed.list`. If the bit moves, change `ALLOW_NOTIFICATIONS_BIT` in `lib/notification-prefs.py` (see [Notifications](#notifications)). Hammerspoon's Alerts style is the same read (`ALERT_STYLE_BIT`).
 - **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.

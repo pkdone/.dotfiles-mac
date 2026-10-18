@@ -111,6 +111,10 @@ if [ -x ./tests/display-resolution.test.sh ]; then
   echo "  unit tests (built-in display More Space)"
   ./tests/display-resolution.test.sh || status=1
 fi
+if [ -x ./tests/ac-sleep.test.sh ]; then
+  echo "  unit tests (AC idle sleep on mains power)"
+  ./tests/ac-sleep.test.sh || status=1
+fi
 
 if [ "$status" -ne 0 ]; then
   echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2

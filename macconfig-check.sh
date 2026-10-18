@@ -6,8 +6,8 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
-# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list and lib/defaults-lib.sh
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
 #
@@ -464,6 +464,42 @@ else
         fixid tooling
         warn "${disp_msg:-display resolution check failed}"
         ;;
+    esac
+  fi
+fi
+
+# ---- 6d. AC idle sleep (check-only) -------------------------------------
+# pmset -g custom needs no sudo. lib/ac-sleep.py reads only the 'AC Power:'
+# sleep key, so displaysleep, the lock screen, and Battery Power are ignored.
+# A value other than 0 is a warning, not drift: setting it is
+# `sudo pmset -c sleep 0` (manual step ac-sleep). --fix does not run sudo.
+# Closing the lid still sleeps the Mac.
+hdr "AC idle sleep"
+fixid ac-sleep
+CHECKED=$((CHECKED + 1))
+AC_HELPER="$DOTDIR/lib/ac-sleep.py"
+if ! command -v pmset >/dev/null 2>&1; then
+  fixid tooling
+  warn "pmset missing — can't check AC idle sleep"
+elif [ ! -r "$AC_HELPER" ]; then
+  fixid repo-file
+  warn "lib/ac-sleep.py missing — can't check AC idle sleep"
+elif [ -z "$DOT_PYTHON" ]; then
+  fixid tooling
+  warn "no python3 — can't check AC idle sleep"
+else
+  ac_custom="$(with_timeout 15 pmset -g custom 2>/dev/null || true)"
+  if [ -z "$ac_custom" ]; then
+    fixid tooling
+    warn "pmset -g custom returned nothing — can't check AC idle sleep"
+  else
+    ac_line="$(printf '%s\n' "$ac_custom" | "$DOT_PYTHON" "$AC_HELPER" || true)"
+    ac_status="${ac_line%%|*}"
+    ac_msg="${ac_line#*|}"; ac_msg="${ac_msg#*|}"
+    case "$ac_status" in
+      ok)  pass "$ac_msg" ;;
+      bad) warn "$ac_msg" ;;
+      *)   fixid tooling; warn "${ac_msg:-AC idle sleep check failed}" ;;
     esac
   fi
 fi

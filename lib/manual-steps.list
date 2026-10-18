@@ -79,6 +79,12 @@ logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on c
 # never changes the mode. A clamshell Mac (no built-in panel) is an info skip.
 display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
+# Idle sleep on the AC profile only. Display sleep and the lock screen are
+# other settings, so the display still turns off and the screen still locks.
+# Closing the lid still sleeps the Mac. Battery Power is not changed.
+# macconfig-check.sh reads the AC Power section of `pmset -g custom` and warns;
+# --fix does not run sudo.
+ac-sleep|Display, keyboard & desktop|On mains power, stop the Mac sleeping on its own. Closing the lid still sleeps the Mac, and battery is unchanged. The display still turns off and the screen still locks|Terminal: sudo pmset -c sleep 0||@macconfig-check.sh
 input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 # Desktop widgets and Stage Manager are lib/macos-defaults.list (StandardHideWidgets,
 # StageManagerHideWidgets, GloballyEnabled). Click wallpaper to reveal desktop stays out.
