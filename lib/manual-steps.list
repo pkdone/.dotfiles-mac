@@ -77,7 +77,9 @@ user-picture|Display, keyboard & desktop|Set your user picture to the Dog|System
 
 # ---- Notifications & Spotlight ----
 notifications-mirroring|Notifications & Spotlight|Notifications Off when mirroring or sharing the display|System Settings → Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
-notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
+# Bundle ids live in lib/notifications-off.list. macconfig-check.sh reads the
+# usernoted plist and never writes it. Mirroring stays the row above.
+notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
 spotlight-results|Notifications & Spotlight|Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|
 
 # ---- Login Items & Finder ----

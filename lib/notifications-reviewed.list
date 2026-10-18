@@ -1,0 +1,19 @@
+# Third-party apps already reviewed on this Mac (the macOS 27 snapshot).
+# macconfig-check.sh prints an info line for a bundle id that appears in the
+# usernoted store, is not com.apple.* or _SYSTEM_CENTER_*, and is in neither
+# this file nor lib/notifications-off.list. That is how a newly appeared app
+# gets flagged. Add the id here once you've decided to leave its notifications
+# as they are, or to lib/notifications-off.list if Allow Notifications must be Off.
+#
+# One bundle id per line. Text after # is a comment. Blank lines and lines
+# beginning with # are ignored.
+#
+# Ids also listed in lib/notifications-off.list are included so this file is the
+# full third-party snapshot. The Off list still wins: those apps must be off.
+
+com.tinyspeck.slackmacgap # Slack (must be Off: lib/notifications-off.list)
+com.spotify.client # Spotify (must be Off: lib/notifications-off.list)
+com.microsoft.teams2 # Microsoft Teams (must be Off: lib/notifications-off.list)
+co.anysphere.cursor.nightly # Cursor Nightly (must be Off: lib/notifications-off.list)
+com.google.Chrome # Chrome (flags 41951246; bit 25 set in the snapshot)
+org.hammerspoon.Hammerspoon # Hammerspoon (alert style stays manual step mode-hammerspoon-alerts)

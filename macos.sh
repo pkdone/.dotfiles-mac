@@ -571,7 +571,8 @@ Still manual (not scriptable / out of scope) — see README:
   - Mouse speeds (System Settings); Trackpad Look up & data detectors; trackpad
     dragging (Accessibility; checked only, Dragging=1 DragLock=0); MX Master 3S
     wheel (Natural), buttons in Logi Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
-  - Accessibility grants (TCC); Notifications; Spotlight result categories
+  - Accessibility grants (TCC); notification mirroring; Spotlight result categories
+    (per-app Allow Notifications is checked by macconfig-check.sh, never written)
   - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
     (leave Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents)
   - Set Hostname (requires sudo)
