@@ -567,7 +567,8 @@ cat <<'MANUAL'
 
 Still manual (not scriptable / out of scope) — see README:
   - Apple Account sign-in; User & Groups account picture
-  - Displays "More Space"; Keyboard British input source
+  - Keyboard British input source (built-in display More Space is checked by
+    macconfig-check.sh and never changed)
   - Mouse double-click speed and secondary click (tracking 1.5 and scrolling 0.5
     are checked only — defaults write is unreliable, so they are never written);
     Trackpad Look up & data detectors; trackpad dragging (Accessibility; checked

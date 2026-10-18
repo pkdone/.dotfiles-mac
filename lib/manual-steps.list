@@ -74,7 +74,10 @@ logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling 
 logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup|Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices|app:logioptionsplus|
 
 # ---- Display, keyboard & desktop ----
-display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|
+# More Space on this Color LCD is _spdisplays_resolution starting with 1800 x 1169
+# (lib/display-resolution.list). macconfig-check.sh reads system_profiler and
+# never changes the mode. A clamshell Mac (no built-in panel) is an info skip.
+display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 # Desktop widgets and Stage Manager are lib/macos-defaults.list (StandardHideWidgets,

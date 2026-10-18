@@ -107,6 +107,10 @@ if [ -x ./tests/install-bundle.test.sh ]; then
   echo "  unit tests (install.sh App Store retry)"
   ./tests/install-bundle.test.sh || status=1
 fi
+if [ -x ./tests/display-resolution.test.sh ]; then
+  echo "  unit tests (built-in display More Space)"
+  ./tests/display-resolution.test.sh || status=1
+fi
 
 if [ "$status" -ne 0 ]; then
   echo "pre-push: checks FAILED — push aborted. Override with: git push --no-verify" >&2

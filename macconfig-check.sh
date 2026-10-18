@@ -6,8 +6,8 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
-# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py and lib/defaults-lib.sh
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
 #
@@ -417,6 +417,53 @@ else
       ok)  pass "$ab_msg" ;;
       bad) bad "$ab_msg" ;;
       *)   fixid tooling; warn "${ab_msg:-auto-brightness check failed}" ;;
+    esac
+  fi
+fi
+
+# ---- 6c. Built-in display More Space (check-only) -----------------------
+# system_profiler SPDisplaysDataType -json. The expected prefix lives in
+# lib/display-resolution.list (More Space on this Color LCD is 1800 x 1169).
+# No built-in panel is an info skip (clamshell). --fix never changes the
+# display mode. Manual step display-more-space points here.
+hdr "Display (More Space)"
+fixid display-more-space
+CHECKED=$((CHECKED + 1))
+DISP_HELPER="$DOTDIR/lib/display-resolution.py"
+DISP_LIST="$DOTDIR/lib/display-resolution.list"
+if ! command -v system_profiler >/dev/null 2>&1; then
+  fixid tooling
+  warn "system_profiler not available — can't check More Space"
+elif [ ! -r "$DISP_HELPER" ] || [ ! -r "$DISP_LIST" ]; then
+  fixid repo-file
+  warn "display resolution check files missing — can't check More Space"
+elif [ -z "$DOT_PYTHON" ]; then
+  fixid tooling
+  warn "no python3 — can't check More Space"
+else
+  if disp_json="$(with_timeout 30 system_profiler SPDisplaysDataType -json </dev/null 2>/dev/null)"; then
+    disp_rc=0
+  else
+    disp_rc=$?
+  fi
+  if [ "$disp_rc" -ne 0 ] || [ -z "$disp_json" ]; then
+    fixid tooling
+    warn "system_profiler SPDisplaysDataType failed — can't check More Space"
+  else
+    disp_line="$(printf '%s\n' "$disp_json" | "$DOT_PYTHON" "$DISP_HELPER" --list "$DISP_LIST" || true)"
+    disp_status="${disp_line%%|*}"
+    disp_msg="${disp_line#*|}"; disp_msg="${disp_msg#*|}"
+    case "$disp_status" in
+      ok)   pass "$disp_msg" ;;
+      info) info "$disp_msg" ;;
+      warn)
+        fixid display-more-space
+        warn "$disp_msg"
+        ;;
+      *)
+        fixid tooling
+        warn "${disp_msg:-display resolution check failed}"
+        ;;
     esac
   fi
 fi

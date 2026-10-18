@@ -11,7 +11,7 @@ Personal macOS dotfiles and bootstrap setup.
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua` and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `autofix-lib.sh`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `autofix-lib.sh`, `defaults-lib.sh`)
 - `scripts/` — helpers (`manual-steps.sh`, `pin-dictation-hotkey-164.sh`, `pin-quicknote-hotkey-190.sh`, `pin-finder-icon-view.sh`, `install-launchagent.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists. Installed as regular files in `~/Library/LaunchAgents` (`@HOME@` in `WatchPaths` is replaced with `$HOME`; launchd does not expand `~` or `$HOME`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `macconfig-check.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
@@ -313,7 +313,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 - Login items and URL handlers (macOS may ask to confirm)
 - TCC permissions and the [manual steps](#manual-steps)
 - MDM, security settings, software updates, and Mac health signals
-- Hostname and login shell (they need sudo), display auto-brightness (System Settings → Displays; the CoreBrightness plist is root-owned and its keys move between macOS versions, so `--fix` does not write it), mouse tracking speed `1.5` and scrolling speed `0.5` (check-only; `defaults write` is unreliable, so `--fix` never writes them), per-app Allow Notifications (read from the usernoted group plist; `--fix` never writes it), and anything else that needs sudo or deletes files
+- Hostname and login shell (they need sudo), display auto-brightness (System Settings → Displays; the CoreBrightness plist is root-owned and its keys move between macOS versions, so `--fix` does not write it), mouse tracking speed `1.5` and scrolling speed `0.5` (check-only; `defaults write` is unreliable, so `--fix` never writes them), built-in display More Space (read from `system_profiler`; `--fix` never changes the display mode), per-app Allow Notifications (read from the usernoted group plist; `--fix` never writes it), and anything else that needs sudo or deletes files
 - Dotfiles git state (no automatic commits, pushes or pulls), including repo files such as `karabiner.json` or a missing script
 - Any issue whose id isn't in `lib/autofix.list` (unclassified means report only)
 
@@ -364,7 +364,7 @@ To find which `defaults` key backs a System Settings toggle (so you can add it t
 
 > _Manual — no script can do these. `install.sh` and `bootstrap.sh` print this checklist when they finish and, on a terminal, offer to walk through it._
 
-Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't a single reliable `defaults` key (notification mirroring, Spotlight, display scaling, mouse feel, Look up & data detectors, Accessibility trackpad dragging, and the Menu Bar allow-list for Raycast, Logi Options+ and Docker). **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it. Per-app Allow Notifications is checked by `macconfig-check.sh` (see [Notifications](#notifications)). Trackpad tap to click, click pressure, secondary click, three-finger drag, tracking speed, and Force Click are applied by `macos.sh` (see [macOS defaults](#macos-defaults)).
+Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't a single reliable `defaults` key (notification mirroring, Spotlight, mouse double-click and secondary click, Look up & data detectors, Accessibility trackpad dragging, and the Menu Bar allow-list for Raycast, Logi Options+ and Docker). **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it. Per-app Allow Notifications is checked by `macconfig-check.sh` (see [Notifications](#notifications)). Built-in display More Space is checked from `system_profiler` (see below). Trackpad tap to click, click pressure, secondary click, three-finger drag, tracking speed, and Force Click are applied by `macos.sh` (see [macOS defaults](#macos-defaults)).
 
 ```bash
 ~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist
@@ -398,7 +398,7 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 | 20 | Mouse: tracking speed 1.5 and scrolling speed 0.5 (checked only; writing them is unreliable). Double-click speed faster and secondary click on the right side stay by hand (the double-click threshold key is unset). The wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh | System Settings → Mouse | auto |
 | 21 | Logi Options+: Smooth scrolling On (main wheel and thumb wheel) | Logi Options+ → MX Master 3S → Point & Scroll | auto |
 | 22 | Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup | Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices | by hand |
-| 23 | Built-in display: More Space | System Settings → Displays | by hand |
+| 23 | Built-in display: More Space | System Settings → Displays | macconfig-check.sh |
 | 24 | Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are) | System Settings → Displays | macconfig-check.sh |
 | 25 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
 | 26 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
@@ -422,6 +422,8 @@ Trackpad tap to click, click pressure Light, secondary click in the bottom right
 Mouse tracking speed (`NSGlobalDomain` `com.apple.mouse.scaling` = `1.5`) and scrolling speed (`com.apple.scrollwheel.scaling` = `0.5`) are the same kind of check. `macconfig-check.sh` warns when they drift (`mouse-settings` in `lib/autofix.list`, Needs Paul). `--fix` does not write them: on recent macOS those System Settings → Mouse sliders do not reliably follow `defaults write`. Double-click speed and secondary click on the right side stay in that step. The double-click threshold key is unset on this Mac, so it cannot be checked. Wheel direction (Natural) stays in Logi Options+.
 
 Desktop widgets and Stage Manager are in `lib/macos-defaults.list` too (`StandardHideWidgets` and `StageManagerHideWidgets` = true, `GloballyEnabled` = false). `macos.sh` applies them and `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Click wallpaper to reveal desktop is not pinned.
+
+Built-in display **More Space** is checked by the **Display (More Space)** section of `macconfig-check.sh`. The expected prefix is `lib/display-resolution.list` (`1800 x 1169` on this Color LCD). The check reads `system_profiler SPDisplaysDataType -json` and warns when the built-in panel's `_spdisplays_resolution` does not start with that prefix (`1800 x 1169 @ 120.00Hz` is More Space on this panel). No built-in panel, such as a clamshell Mac, is an info line. `--fix` does not change the display mode.
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
@@ -531,7 +533,7 @@ All scripts accept `-h`/`--help`.
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
 via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `notification-prefs.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`, `menubar.test.sh`, `dock-minimize.test.sh`, `pin-hotkey-launchagent.test.sh`, `install-bundle.test.sh`). A missing
+on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `notification-prefs.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`, `menubar.test.sh`, `dock-minimize.test.sh`, `pin-hotkey-launchagent.test.sh`, `install-bundle.test.sh`, `display-resolution.test.sh`). A missing
 tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
 
 ### Making changes
@@ -549,6 +551,7 @@ dotpush "your message"
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
 - **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; optional `unpinnable` or `uti:…`; role is always `all`), then run `macconfig-check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted. Do not add `html` — it switches the default browser. `.cfg`, `.env`, and `.list` stay `unpinnable`.
 - **Display auto-brightness:** Off. `macconfig-check.sh` reads it with `corebrightnessdiag status-info` (no sudo). Turn it off in System Settings → Displays. `--fix` does not write it. True Tone and Slightly dim the display on battery are left alone.
+- **Built-in display More Space:** the expected `_spdisplays_resolution` prefix is `lib/display-resolution.list` (`1800 x 1169` on this Color LCD). `macconfig-check.sh` reads `system_profiler SPDisplaysDataType -json` and warns on a mismatch. No built-in panel (clamshell) is an info line. `--fix` does not change the display mode.
 - **Notifications:** apps that must have Allow Notifications off are `lib/notifications-off.list`. `macconfig-check.sh` reads the usernoted plist and never writes it. A third-party app you've already looked at goes in `lib/notifications-reviewed.list`. If the bit moves, change `ALLOW_NOTIFICATIONS_BIT` in `lib/notification-prefs.py` (see [Notifications](#notifications)). Hammerspoon's Alerts style is the same read (`ALERT_STYLE_BIT`).
 - **Unwanted apps:** edit `lib/unwanted-apps.list`, then run `prune-apps.sh`.
 - **Login LaunchAgents:** edit `launchagents/*.plist`. `WatchPaths` uses `@HOME@`, not `~` or `$HOME` (launchd expands neither). `install.sh` or `macconfig-check.sh --fix` renders the plist into `~/Library/LaunchAgents` and, when the installed file differs, reloads it with `launchctl bootout` then `bootstrap`. These are regular files, not symlinks.
