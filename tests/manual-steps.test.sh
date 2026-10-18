@@ -78,5 +78,45 @@ has "split group"       "group 'Group A' is split" "$out"
 good="$(MANUAL_STEPS_LIST="$tmp" "$MS" list 2>/dev/null | grep -cE '^ +[0-9]+\. ')"
 eq "list skips rows with missing/extra fields" 10 "$good"
 
+# ---- trackpad preferences moved to lib/macos-defaults.list ---------------
+DEF="$DIR/../lib/macos-defaults.list"
+miss() {  # DESCRIPTION NEEDLE HAYSTACK
+  case "$3" in *"$2"*) fail=$((fail + 1)); printf 'FAIL: %s\n  unexpected: [%s]\n' "$1" "$2" ;;
+    *) pass=$((pass + 1)) ;;
+  esac
+}
+real_ids="$(grep -E '^[^#[:space:]]' "$LIST" | cut -d'|' -f1)"
+for gone in trackpad-tap-to-click trackpad-click-light trackpad-secondary-click \
+            trackpad-tracking-speed trackpad-three-finger-drag trackpad-lookup-force-click; do
+  miss "manual step $gone moved out" "$gone" "$real_ids"
+done
+steps_text="$(cat "$LIST")"
+has "look up stays a manual note" "trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off|" "$steps_text"
+has "dragging stays a check" "defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0" "$steps_text"
+miss "look up note does not mention Force Click" "Force Click" "$(grep '^trackpad-lookup|' "$LIST")"
+
+# Exact rows macos.sh applies and macconfig-check.sh checks. restart=logout.
+for row in \
+  'com.apple.AppleMultitouchTrackpad|Clicking|int|1|logout|Trackpad|Tap to click|' \
+  'com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking|int|1|logout|Trackpad|Tap to click (Bluetooth trackpad)|' \
+  'NSGlobalDomain|com.apple.mouse.tapBehavior|int|1|logout|Trackpad|Tap to click behavior|' \
+  'com.apple.AppleMultitouchTrackpad|FirstClickThreshold|int|0|logout|Trackpad|Click pressure|' \
+  'com.apple.AppleMultitouchTrackpad|TrackpadCornerSecondaryClick|int|2|logout|Trackpad|Secondary click corner|' \
+  'com.apple.AppleMultitouchTrackpad|TrackpadRightClick|int|0|logout|Trackpad|Secondary click on the right side|' \
+  'com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerDrag|int|0|logout|Trackpad|Three-finger drag|' \
+  'NSGlobalDomain|com.apple.trackpad.scaling|float|0.6875|logout|Trackpad|Tracking speed|' \
+  'com.apple.AppleMultitouchTrackpad|ActuateDetents|int|1|logout|Trackpad|Force Click|' \
+  'com.apple.AppleMultitouchTrackpad|ForceSuppressed|int|0|logout|Trackpad|Haptic feedback|'
+do
+  has "defaults row ${row%%|*}" "$row" "$(grep -v '^#' "$DEF")"
+done
+miss "dragging is not written by macos.sh" '|Dragging|' "$(grep -v '^#' "$DEF")"
+miss "drag lock is not written by macos.sh" '|DragLock|' "$(grep -v '^#' "$DEF")"
+
+# Docs that used to say Force Click Off now say On.
+force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \
+  "$DIR/../README.md" "$LIST" "$DEF" "$DIR/../macos.sh" "$DIR/../lib/autofix.list" || true)"
+eq "no doc still says Force Click Off" "" "$force_off"
+
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

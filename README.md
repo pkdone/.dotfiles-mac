@@ -238,6 +238,8 @@ A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotke
 
 Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/`. UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
 
+Trackpad rows in that list are tap to click (built-in trackpad, Bluetooth trackpad, and `com.apple.mouse.tapBehavior`), click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On (`ActuateDetents=1`, `ForceSuppressed=0`). Each one sets `restart` to `logout`. When a value changes, `macos.sh` reports that a logout/login may be needed before the trackpad follows it. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`.
+
 Run `macos.sh --list` to see the exact set of settings it manages (printed as a Markdown table).
 
 ### Verifying the setup
@@ -285,7 +287,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 
 | Issue | How it's fixed |
 |------|------|
-| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, menu bar, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings as "log out to finish" |
+| A `lib/macos-defaults.list` value (Dock size / recents / Spaces, Finder views, menu bar, Trackpad, …) | `macos.sh --only <domain\|key> --yes`: backs the domain up to `backups/` first, restarts Dock / Finder / SystemUIServer only if a value actually changed, and reports `logout`-class settings (including Trackpad) as "log out to finish" |
 | Finder icon view 72/13, Finder sidebar Recents, CotEditor theme / font | `macos.sh --only @finder-icon-view` / `@finder-recents` / `@coteditor` (the existing `scripts/pin-finder-icon-view.sh` and `lib/finder-sidebar-recents.py`) |
 | Dictation hotkey 164 | `macos.sh --only @dictation-164`, which runs `scripts/pin-dictation-hotkey-164.sh` |
 | Quick Note hotkey 190 | `macos.sh --only @quicknote-190`, which runs `scripts/pin-quicknote-hotkey-190.sh` |
@@ -352,7 +354,7 @@ To find which `defaults` key backs a System Settings toggle (so you can add it t
 
 > _Manual — no script can do these. `install.sh` and `bootstrap.sh` print this checklist when they finish and, on a terminal, offer to walk through it._
 
-Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't exposed via `defaults`, are SIP-protected, device-specific or fragile to write (notifications, Spotlight, display scaling, trackpad/mouse feel). **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it:
+Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't a single reliable `defaults` key (notifications, Spotlight, display scaling, mouse feel, Look up & data detectors, Accessibility trackpad dragging). **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it. Trackpad tap to click, click pressure, secondary click, three-finger drag, tracking speed, and Force Click are applied by `macos.sh` (see [macOS defaults](#macos-defaults)).
 
 ```bash
 ~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist
@@ -360,7 +362,7 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 ~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand (also the "Manual steps" section of macconfig-check.sh)
 ```
 
-`check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), trackpad and pointer `defaults`, the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, Logi Options+ values (from a temp copy of its settings database), `gh auth status` and `op whoami`. Steps marked `macconfig-check.sh` below are verified by their own `macconfig-check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and refresh this table with `scripts/manual-steps.sh list --markdown`.
+`check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), pointer size, Accessibility trackpad dragging (`Dragging=1`, `DragLock=0`), the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, Logi Options+ values (from a temp copy of its settings database), `gh auth status` and `op whoami`. Steps marked `macconfig-check.sh` below are verified by their own `macconfig-check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and refresh this table with `scripts/manual-steps.sh list --markdown`.
 
 | # | Step | Where | Checked |
 |---|------|------|------|
@@ -380,35 +382,32 @@ Some setup can't be scripted: privacy permissions (TCC / DriverKit), sign-ins, c
 | 14 | Allow Raycast (needed for Clipboard History) | System Settings → Privacy & Security → Device Control and Data Access → Raycast | auto |
 | 15 | Give Ghostty Full Disk Access (lets macconfig-check.sh read Login Items and Finder Recents) | System Settings → Privacy & Security → Full Disk Access → Ghostty | auto |
 | 16 | Give Grok Bot Full Disk Access (for its unattended macconfig-check.sh runs) | System Settings → Privacy & Security → Full Disk Access → Grok Bot | auto |
-| 17 | Trackpad: Tap to click On | System Settings → Trackpad → Point & Click | auto |
-| 18 | Trackpad: Click pressure Light | System Settings → Trackpad → Point & Click → Click | auto |
-| 19 | Trackpad: Secondary click = Click in bottom right corner | System Settings → Trackpad → Point & Click → Secondary click | auto |
-| 20 | Trackpad: Look up & data detectors Off; Force Click and haptic feedback Off | System Settings → Trackpad → Point & Click | by hand |
-| 21 | Trackpad: Tracking speed Slower | System Settings → Trackpad → Point & Click → Tracking speed | by hand |
-| 22 | Trackpad: Three-finger drag Off | System Settings → Trackpad → More Gestures | auto |
-| 23 | Use trackpad for dragging On (Without Drag Lock) | System Settings → Accessibility → Pointer Control → Trackpad Options | auto |
-| 24 | Pointer size one notch above Normal | System Settings → Accessibility → Display → Pointer → Pointer size | auto |
-| 25 | Mouse (System Settings): tracking, double-click and scrolling speed faster; secondary click on right side (the wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh) | System Settings → Mouse | by hand |
-| 26 | Logi Options+: Smooth scrolling On (main wheel and thumb wheel) | Logi Options+ → MX Master 3S → Point & Scroll | auto |
-| 27 | Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup | Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices | by hand |
-| 28 | Built-in display: More Space | System Settings → Displays | by hand |
-| 29 | Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are) | System Settings → Displays | macconfig-check.sh |
-| 30 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
-| 31 | Remove all desktop widgets | Desktop: right-click each widget → Remove Widget (System Settings → Desktop & Dock → Widgets) | by hand |
-| 32 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
-| 33 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
-| 34 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | System Settings → Notifications → Application Notifications | by hand |
-| 35 | Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | System Settings → Spotlight → Results from Apps | by hand |
-| 36 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | macconfig-check.sh |
-| 37 | Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT) | Gemini → Settings → Shortcuts | by hand |
-| 38 | Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings) | Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup) | by hand |
-| 39 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
-| 40 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
-| 41 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
-| 42 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through) | System Settings → Focus → Add Focus… → Custom | macconfig-check.sh |
-| 43 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | macconfig-check.sh |
-| 44 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
-| 45 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
+| 17 | Trackpad: Look up & data detectors Off | System Settings → Trackpad → Point & Click | by hand |
+| 18 | Use trackpad for dragging On (Without Drag Lock) | System Settings → Accessibility → Pointer Control → Trackpad Options | auto |
+| 19 | Pointer size one notch above Normal | System Settings → Accessibility → Display → Pointer → Pointer size | auto |
+| 20 | Mouse (System Settings): tracking, double-click and scrolling speed faster; secondary click on right side (the wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh) | System Settings → Mouse | by hand |
+| 21 | Logi Options+: Smooth scrolling On (main wheel and thumb wheel) | Logi Options+ → MX Master 3S → Point & Scroll | auto |
+| 22 | Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup | Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices | by hand |
+| 23 | Built-in display: More Space | System Settings → Displays | by hand |
+| 24 | Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are) | System Settings → Displays | macconfig-check.sh |
+| 25 | Keyboard input source: British | System Settings → Keyboard → Text Input → Input Sources | auto |
+| 26 | Remove all desktop widgets | Desktop: right-click each widget → Remove Widget (System Settings → Desktop & Dock → Widgets) | by hand |
+| 27 | Set your user picture to the Dog | System Settings → Users & Groups → your account picture | by hand |
+| 28 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
+| 29 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet | System Settings → Notifications → Application Notifications | by hand |
+| 30 | Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos | System Settings → Spotlight → Results from Apps | by hand |
+| 31 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | macconfig-check.sh |
+| 32 | Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT) | Gemini → Settings → Shortcuts | by hand |
+| 33 | Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings) | Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup) | by hand |
+| 34 | Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT) | Raycast → Settings → General → Raycast Hotkey | auto |
+| 35 | Raycast: Finder hotkey Shift+Control+Command+F | Raycast → type Finder → Command+K → Configure Application… → Record Hotkey | by hand |
+| 36 | Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari | Raycast → Settings → Extensions → Clipboard History | by hand |
+| 37 | Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through) | System Settings → Focus → Add Focus… → Custom | macconfig-check.sh |
+| 38 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off" | Shortcuts → + → search "Set Focus" | macconfig-check.sh |
+| 39 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | by hand |
+| 40 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
+
+Trackpad tap to click, click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On are in `lib/macos-defaults.list` (`macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them). A change may need a logout/login before the trackpad follows it. Look up & data detectors stays in the table above: `ActuateDetents` and `ForceSuppressed` only cover Force Click and haptic feedback, both On. Use trackpad for dragging stays a check (`Dragging=1`, `DragLock=0`: On, without drag lock) because that Accessibility setting does not reliably follow `defaults write`.
 
 Notes: Passwords in iCloud = iCloud Keychain, so don't turn it Off casually. Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see below). The Finder, Logi Options+, Gemini and Raycast subsections below have the click-by-click detail.
 
