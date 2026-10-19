@@ -198,7 +198,9 @@ has "write saw the folder already" "location-dir-present" "$(cat "$dlog")"
 miss "write did not race ahead of mkdir" "location-dir-MISSING" "$(cat "$dlog")"
 eq "write is -string to the expanded path" "W|com.apple.screencapture|location|-string|$home/Pictures/Screenshots" \
   "$(grep '^W|' "$dlog")"
-miss "write value is not a hardcoded home" "/Users/pdone" "$(cat "$dlog")"
+# Only the write lines: export lines carry the backup path under $DIR, which
+# is legitimately /Users/pdone/... when the repo is cloned in the real home.
+miss "write value is not a hardcoded home" "/Users/pdone" "$(grep -E '^(W\||write )' "$dlog" || true)"
 eq "location restarts SystemUIServer" SystemUIServer "$(cat "$klog")"
 eq "existing picture is not moved" keep "$(cat "$home/Pictures/already.png")"
 eq "existing picture is not copied into Screenshots" "" "$(find "$home/Pictures/Screenshots" -type f -print)"
