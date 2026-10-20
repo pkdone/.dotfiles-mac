@@ -21,11 +21,11 @@ gh auth status || gh auth login
 ~/.dotfiles-mac/bootstrap.sh
 ```
 
-The walkthrough after that paste (dotfiles, the apps Homebrew can't install, shell, hostname, Dock, file handlers and the checks) is in [Setup](docs/setup.md).
+What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md).
 
 ### 2. Manual steps
 
-Nearly 50 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
+Nearly 50 settings can't be scripted: privacy permissions, sign-ins, company-managed apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
 
 These are three ways to use the same checklist. You don't need to run all of them. Most of the time, `manualsteps open` is the only one you need.
 
@@ -41,7 +41,7 @@ The full checklist, and how to add a step, is in [Manual steps](docs/manual-step
 
 ### macconfig
 
-`macconfig` checks this Mac against the repo, and puts settings back when they no longer match and the fix is safe. Run it when you want that check, and after a macOS update.
+`macconfig` checks this Mac against the repo, and can put back settings that have drifted. Run it when you want that check, and after a macOS update.
 
 ```bash
 macconfig          # check this Mac against the repo (read-only, changes nothing)
@@ -67,6 +67,6 @@ brewsync           # install, upgrade and clean up Homebrew packages from the Br
 - [Setup](docs/setup.md) — full setup walkthrough
 - [Settings](docs/settings.md) — what each managed setting does and why
 - [Manual steps](docs/manual-steps.md) — by-hand checklist (`lib/manual-steps.list`)
-- [Troubleshooting](docs/troubleshooting.md) — after a software update, hotkey pins, AC sleep
+- [Troubleshooting](docs/troubleshooting.md) — after a software update, hotkey pins, sleep on mains power
 - [Modes](docs/modes.md) — Hammerspoon modes
 - [Shortcuts](SHORTCUTS.md) — keyboard-shortcut cheat-sheets
