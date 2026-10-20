@@ -30,7 +30,7 @@ About 35 settings can't be scripted: privacy permissions, sign-ins, company MDM 
 These are three ways to use the same checklist. You don't need to run all of them. Most of the time, `manualsteps open` is the only one you need.
 
 ```bash
-manualsteps        # see which steps are done: ok, warn, or check by hand. Changes nothing.
+manualsteps        # check each step and report whether it is done (ok), needs attention (warn), or must be checked by hand. Changes nothing.
 manualsteps open   # go through each step not yet done, opening the right settings page for you
 manualsteps list   # just print the full numbered checklist
 ```
@@ -38,6 +38,8 @@ manualsteps list   # just print the full numbered checklist
 The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
 
 ## Everyday commands
+
+### macconfig
 
 `macconfig` checks this Mac against the repo, and puts settings back when they no longer match and the fix is safe. Run it when you want that check, and after a macOS update.
 
@@ -51,6 +53,8 @@ macconfig --fix    # check, fix anything that's safe to fix automatically, then 
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).
 
 `manualsteps` is worth running again after a macOS update, or whenever `macconfig` shows a manual step as warn.
+
+### brewsync
 
 `brewsync` installs, upgrades and cleans up Homebrew packages from the Brewfile. Run it after you change the Brewfile, or when a package is out of date.
 
