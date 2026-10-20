@@ -16,14 +16,11 @@ jobs:
       - uses: actions/checkout@v5
       - name: Run shellcheck on all .sh scripts
         run: |
-          # ubuntu-latest ships with shellcheck preinstalled.
+          # Same runner as the pre-push hook. CI checks every script; the hook
+          # checks only the .sh files changed versus the remote. ubuntu-latest
+          # ships with shellcheck. Fish files are the fish-syntax job.
           shellcheck --version
-          # Lint every .sh file in the repo (bash/sh only — fish files are
-          # checked in the fish-syntax job; shellcheck can't parse fish).
-          mapfile -t scripts < <(find . -type f -name '*.sh' -not -path './.git/*' | sort)
-          printf 'Linting %d script(s):\n' "${#scripts[@]}"
-          printf '  %s\n' "${scripts[@]}"
-          shellcheck "${scripts[@]}"
+          ./tests/run-all.sh --shellcheck all --no-tests
 
   brewfile:
     name: Brewfile (parses)
@@ -74,103 +71,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Run lib/defaults-lib.sh unit tests
+      - name: Run the shell unit tests
         run: |
-          # Plain-bash assertions for the shared value-comparison helpers
-          # (norm_bool, values_equal, type_token). No framework — bash + awk only.
-          ./tests/defaults-lib.test.sh
-      - name: Run scripts/manual-steps.sh list-parser tests
-        run: |
-          # Validates lib/manual-steps.list, the parser's error reporting,
-          # and that docs/manual-steps.md matches scripts/render-manual-steps-doc.sh
-          # (list/validate/--check only; the macOS checks never run on Linux).
-          ./tests/manual-steps.test.sh
-      - name: Run lib/autofix.list classification tests
-        run: |
-          # The safe / needs-Paul split for macconfig-check.sh --fix: list format, the
-          # required classes, and agreement with macconfig-check.sh's fixid tags.
-          ./tests/autofix.test.sh
-      - name: Run lib/desktop-bindings.py tests
-        run: |
-          # Dock Assign To check + apply against synthetic plists and a fake
-          # defaults/killall. No live Dock and no com.apple.spaces writes.
-          ./tests/desktop-bindings.test.sh
-      - name: Run lib/file-handlers.py tests
-        run: |
-          # Finder double-click defaults: check + apply against a fake duti.
-          # No live Launch Services database.
-          ./tests/file-handlers.test.sh
-      - name: Run lib/auto-brightness.py tests
-        run: |
-          # Automatically adjust brightness, from a synthetic status-info plist.
-          # No corebrightnessdiag and no root plist.
-          ./tests/auto-brightness.test.sh
-      - name: Run lib/logi-settings.py tests
-        run: |
-          # The read-only Logi Options+ check against a synthetic settings.db:
-          # ok / drift / warn, model lookup, tolerance, missing or unreadable DB.
-          ./tests/logi-settings.test.sh
-      - name: Run lib/notification-prefs.py tests
-        run: |
-          # Per-app Allow Notifications from a synthetic usernoted plist.
-          # No live store, and the helper never writes.
-          ./tests/notification-prefs.test.sh
-      - name: Run macconfig-check.sh summary tests
-        run: |
-          # The multi-line summary block from macconfig-check.sh, rendered with stub counts.
-          ./tests/check-summary.test.sh
-      - name: Run check.sh shim and macconfig fish function tests
-        run: |
-          # The repo-root shim forwards args and exit status; the fish function file parses.
-          ./tests/macconfig.test.sh
-      - name: Run hammerspoon/modes.lua tests
-        run: |
-          # modes.lua structure + the switcher's pure planning logic (plain Lua 5.4;
-          # nothing Hammerspoon-specific runs).
+          # tests/run-all.sh discovers tests/*.test.sh and runs them in parallel.
+          # That includes manual-steps.test.sh, which checks that
+          # docs/manual-steps.md matches scripts/render-manual-steps-doc.sh.
+          # modes.test.sh needs Lua; without it that suite skips.
           sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 >/dev/null
-          ./tests/modes.test.sh
-      - name: Run Finder and Trash tidy tests
+          ./tests/run-all.sh
+
+  mac-style-home:
+    name: tests under a Mac-like home
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run the suite from a /Users home
         run: |
-          # macos-defaults.list rows, screenshot mkdir before the location write,
-          # and the macconfig-check.sh missing-folder drift. Fake defaults; no live
-          # Finder or SystemUIServer.
-          ./tests/finder-tidy.test.sh
-      - name: Run window tiling defaults tests
-        run: |
-          # com.apple.WindowManager edge-drag, margins, hidden widgets, and
-          # Stage Manager off. Empty restart (no killall), plus the SHORTCUTS.md
-          # section. Fake defaults; no live WindowManager or Dock.
-          ./tests/window-tiling.test.sh
-      - name: Run menu bar defaults tests
-        run: |
-          # Control Center Voice Control / Bluetooth / battery percentage rows,
-          # ControlCenter restart, the Karabiner menu bar flags, and the
-          # third-party allow-list manual step. Fake defaults; no live
-          # ControlCenter.
-          ./tests/menubar.test.sh
-      - name: Run Dock minimize and no-bouncing tests
-        run: |
-          # com.apple.dock minimize-to-application and no-bouncing, restart Dock,
-          # tilesize stays 28. Fake defaults; no live Dock.
-          ./tests/dock-minimize.test.sh
-      - name: Run hotkey LaunchAgent tests
-        run: |
-          # WatchPaths plists, @HOME@ rendering, bootout/bootstrap when the
-          # installed plist differs, and pin scripts that write only on drift.
-          # Fake defaults; no launchd and no live symbolichotkeys plist.
-          ./tests/pin-hotkey-launchagent.test.sh
-      - name: Run install.sh Brewfile retry tests
-        run: |
-          # The App Store sign-in retry after a failed brew bundle check.
-          # Does not run install.sh (it exits off Darwin) and does not call mas.
-          ./tests/install-bundle.test.sh
-      - name: Run built-in display More Space tests
-        run: |
-          # More Space from synthetic system_profiler JSON. No system_profiler
-          # and no displayplacer.
-          ./tests/display-resolution.test.sh
-      - name: Run AC idle sleep tests
-        run: |
-          # AC Power sleep from a synthetic pmset -g custom dump, and the
-          # macos.sh sudo guard with fake pmset and sudo. No live pmset.
-          ./tests/ac-sleep.test.sh
+          # The unit tests run on Linux. A checkout whose path is a Mac home
+          # used to pass here and fail locally. Copy the tree under
+          # /Users/<name>/.dotfiles-mac-style, set HOME, and run the same
+          # runner. The macOS runner is only used for the Brewfile job.
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 >/dev/null
+          ./tests/run-all.sh --mac-home

@@ -14,7 +14,9 @@
 	helper = osxkeychain
 [credential "https://origin.cursor.com/git"]
 	helper = 
-	helper = !/Users/pdone/.local/bin/origin credential-helper
+	# ! helpers are a shell command, so $HOME expands. An absolute home path does not.
+	helper = !$HOME/.local/bin/origin credential-helper
 [credential "https://origin.cursor.com"]
 	helper = 
-	helper = !/Users/pdone/.local/bin/origin credential-helper
+	# ! helpers are a shell command, so $HOME expands. An absolute home path does not.
+	helper = !$HOME/.local/bin/origin credential-helper

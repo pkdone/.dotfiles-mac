@@ -27,7 +27,9 @@
 #                                           lib/logi-settings.py; never written)
 #            @macconfig-check.sh                      verified by its own macconfig-check.sh section (not repeated here)
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
-#                                           named checks implemented in scripts/manual-steps.sh
+#                                           named checks. pointer-size, input-british, op-cli
+#                                           and gh-auth live in lib/session-checks.sh (also the
+#                                           macconfig-check.sh section; warn only, never --fix)
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Sign-ins ----

@@ -13,6 +13,10 @@ LIST="$DIR/lib/macos-defaults.list"
 MACOS="$DIR/macos.sh"
 INSTALL="$DIR/install.sh"
 CHECK="$DIR/macconfig-check.sh"
+# Built so this file does not contain a literal personal home path. Export
+# lines under $DIR include that path when the repo is cloned there; the
+# assertions below still reject it on the rows and on the write itself.
+HOME_MARK="$(printf '%s%s' '/Users/' 'pdone')"
 
 pass=0
 fail=0
@@ -65,8 +69,8 @@ eq "dock tilesize stays 28" 'com.apple.dock|tilesize|float|28|Dock|' \
 # shellcheck disable=SC2016  # the pattern is a fixed string, not a shell expansion
 untidy="$(grep -nE 'Downloads|\$HOME/tmp|~/tmp' "$LIST" "$MACOS" "$INSTALL" "$CHECK" || true)"
 eq "no Downloads cleanup or ~/tmp moves" "" "$untidy"
-hardcoded="$(grep -n '/Users/pdone' "$LIST" "$MACOS" "$INSTALL" "$CHECK" || true)"
-eq "checks expand @HOME@ / \$HOME and do not hardcode /Users/pdone" "" "$hardcoded"
+hardcoded="$(grep -n -F "$HOME_MARK" "$LIST" "$MACOS" "$INSTALL" "$CHECK" || true)"
+eq "checks expand @HOME@ / \$HOME and do not hardcode a personal home path" "" "$hardcoded"
 
 # shellcheck disable=SC2016  # needles are source text, compared literally
 has "install.sh mkdir -p screenshots" 'mkdir -p "$HOME/Pictures/Screenshots"' "$(cat "$INSTALL")"
@@ -181,7 +185,7 @@ rc=$?
 eq "dry-run exits 0" 0 "$rc"
 has "dry-run would mkdir" "screenshot folder ~/Pictures/Screenshots — would mkdir -p" "$out"
 has "dry-run would set the expanded path" "would set (was unset) -> $home/Pictures/Screenshots" "$out"
-miss "dry-run output has no hardcoded home" "/Users/pdone" "$out"
+miss "dry-run output has no hardcoded home" "$HOME_MARK" "$out"
 eq "dry-run does not create the folder" no "$(is_dir "$home/Pictures/Screenshots")"
 eq "dry-run does not write" "" "$(grep '^W|' "$dlog" || true)"
 eq "dry-run does not restart" "" "$(cat "$klog")"
@@ -199,8 +203,8 @@ miss "write did not race ahead of mkdir" "location-dir-MISSING" "$(cat "$dlog")"
 eq "write is -string to the expanded path" "W|com.apple.screencapture|location|-string|$home/Pictures/Screenshots" \
   "$(grep '^W|' "$dlog")"
 # Only the write lines: export lines carry the backup path under $DIR, which
-# is legitimately /Users/pdone/... when the repo is cloned in the real home.
-miss "write value is not a hardcoded home" "/Users/pdone" "$(grep -E '^(W\||write )' "$dlog" || true)"
+# includes HOME_MARK when the repo is cloned under that home.
+miss "write value is not a hardcoded home" "$HOME_MARK" "$(grep -E '^(W\||write )' "$dlog" || true)"
 eq "location restarts SystemUIServer" SystemUIServer "$(cat "$klog")"
 eq "existing picture is not moved" keep "$(cat "$home/Pictures/already.png")"
 eq "existing picture is not copied into Screenshots" "" "$(find "$home/Pictures/Screenshots" -type f -print)"

@@ -114,6 +114,10 @@ check_spec_ok() {
 R_STATUS=""; R_DETAIL=""
 res() { R_STATUS="$1"; R_DETAIL="$2"; }
 
+# British input, pointer size, gh auth, and op whoami. Shared with macconfig-check.sh.
+# shellcheck source=../lib/session-checks.sh disable=SC1091
+. "$DOTDIR/lib/session-checks.sh"
+
 # Allowed in the system TCC database? Reading it needs Full Disk Access for whatever
 # runs this (Ghostty / Grok Bot); without it, fall back to check by hand.
 check_tcc() {  # service bundle-id
@@ -180,54 +184,6 @@ check_karabiner_driver() {
     res ok "activated and enabled"
   else
     res warn "not activated and enabled"
-  fi
-}
-
-# Normal is 1.0; "one notch above" lands around 1.4, so accept 1.2-2.0.
-check_pointer_size() {
-  local v
-  if ! defaults read com.apple.universalaccess >/dev/null 2>&1; then res hand "can't read com.apple.universalaccess"; return; fi
-  if ! v="$(defaults read com.apple.universalaccess mouseDriverCursorSize 2>/dev/null)"; then
-    res warn "Normal (not set; want one notch above)"; return
-  fi
-  if awk -v v="$v" 'BEGIN { exit !(v >= 1.2 && v <= 2.0) }'; then
-    res ok "size $(printf '%.2f' "$v")"
-  else
-    res warn "size $(printf '%.2f' "$v") (want about 1.4: one notch above Normal)"
-  fi
-}
-
-check_input_british() {
-  local src
-  if ! src="$(defaults read com.apple.HIToolbox AppleEnabledInputSources 2>/dev/null)"; then
-    res hand "can't read input sources"; return
-  fi
-  if printf '%s\n' "$src" | grep -Eq '"KeyboardLayout Name" = British;'; then
-    res ok "British enabled"
-  else
-    res warn "British layout not enabled"
-  fi
-}
-
-# `op whoami` never prompts: with the app integration it only reports an account this
-# terminal session has already authorised. Success proves the integration works;
-# failure just means "not authorised here", so that's check by hand, not a warning.
-check_op_cli() {
-  if [ ! -d /Applications/1Password.app ]; then res warn "1Password.app not installed (Iru Self Service)"; return; fi
-  if ! command -v op >/dev/null 2>&1; then res warn "op CLI not installed (brew bundle)"; return; fi
-  if with_timeout 8 op whoami </dev/null >/dev/null 2>&1; then
-    res ok "op whoami works through the app"
-  else
-    res hand "not authorised in this session; run op whoami in a terminal to confirm"
-  fi
-}
-
-check_gh_auth() {
-  if ! command -v gh >/dev/null 2>&1; then res warn "gh not installed (brew install gh)"; return; fi
-  if with_timeout 15 gh auth status --hostname github.com </dev/null >/dev/null 2>&1; then
-    res ok "signed in to github.com"
-  else
-    res warn "not signed in (or GitHub unreachable): gh auth login"
   fi
 }
 
@@ -353,7 +309,12 @@ cmd_check() {
   i=0
   while [ "$i" -lt "$N" ]; do
     num=$((i + 1))
-    run_check "${S_CHECK[$i]}"
+    # macconfig-check.sh reports these in their own section and sets this so
+    # they are not printed twice. Standalone `check` leaves it unset.
+    case " ${MANUAL_STEPS_COVERED:-} " in
+      *" ${S_ID[$i]} "*) res covered "verified by macconfig-check.sh" ;;
+      *) run_check "${S_CHECK[$i]}" ;;
+    esac
     case "$R_STATUS" in
       ok)      oks=$((oks + 1));         label="ok";       colour="$C_OK" ;;
       warn)    warns=$((warns + 1));     label="warn";     colour="$C_WARN" ;;
