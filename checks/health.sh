@@ -13,6 +13,15 @@ disk_space_level() {
   fi
 }
 
+# True when the hotkeys section already reported this LaunchAgent. --only health
+# leaves the list empty, so an unloaded pin agent is still a warning.
+health_pin_already_reported() {
+  case " ${LAUNCHAGENT_CHECKED:-} " in
+    *" $1 "*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
   return 0
 fi
@@ -295,10 +304,11 @@ else
 fi
 
 # Background jobs: every LaunchAgent this repo installs (launchagents/*.plist, rendered
-# into ~/Library/LaunchAgents) is loaded and its last run exited 0. The pin agents'
-# loaded state is already drift in their own sections, so a not-loaded pin agent is
-# not reported twice. Hammerspoon "running" is the Hammerspoon section's result
-# (H_HS_RUNNING), reused for --health-json.
+# into ~/Library/LaunchAgents) is loaded and its last run exited 0. A pin agent the
+# hotkeys section already reported (LAUNCHAGENT_CHECKED) is not reported twice.
+# --only health did not run that section, so an unloaded pin agent is still a warning.
+# Hammerspoon "running" is the Hammerspoon section's result (H_HS_RUNNING), reused
+# for --health-json.
 for la_src in "$DOTDIR"/launchagents/*.plist; do
   [ -f "$la_src" ] || continue
   la_label="$(basename "$la_src" .plist)"
@@ -306,14 +316,11 @@ for la_src in "$DOTDIR"/launchagents/*.plist; do
   fixid launchagent "$la_label|$HOME/Library/LaunchAgents/$la_label.plist"
   if ! la_out="$(with_timeout 5 launchctl print "gui/$(id -u)/$la_label" </dev/null 2>/dev/null)"; then
     H_JOBS+=("$la_label|no|")
-    case "$la_label" in
-      com.pdone.pin-dictation-hotkey-164|com.pdone.pin-quicknote-hotkey-190)
-        CHECKED=$((CHECKED - 1))   # already reported as drift in its own section
-        ;;
-      *)
-        H_JOBS_STATUS=warn; warn "LaunchAgent $la_label not loaded — re-run install.sh"
-        ;;
-    esac
+    if health_pin_already_reported "$la_label"; then
+      CHECKED=$((CHECKED - 1))   # already reported as drift in its own section
+    else
+      H_JOBS_STATUS=warn; warn "LaunchAgent $la_label not loaded — re-run install.sh"
+    fi
     continue
   fi
   la_exit="$(printf '%s\n' "$la_out" | sed -nE 's/^[[:space:]]*last exit code = (.*)$/\1/p' | head -1)"

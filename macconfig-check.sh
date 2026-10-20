@@ -225,6 +225,7 @@ H_LI_STATUS=unknown; H_LI_ENABLED=0; H_LI_ALLOW=0; H_LI_MDM=0; H_LI_UNKNOWN=(); 
 BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
 SESSION_COVERED=""
 LAUNCHAGENT_CHECKED=""
+MANAGED_LINKS=""
 
 # ---- sections (checks/<area>.sh), in report order -----------------------
 # Sourced in this shell. A failing command still stops the run.

@@ -12,6 +12,16 @@ norm_path() {
   fi
 }
 
+# Managed links (links.list and fish functions) are recorded by check_link.
+# A broken one is already drift there, and --fix can relink it. The extra scan
+# skips those paths so they are not also a Needs Paul warning.
+record_managed_link() {
+  MANAGED_LINKS="${MANAGED_LINKS:-}"$'\n'"$1"
+}
+managed_link_seen() {
+  printf '%s\n' "${MANAGED_LINKS:-}" | grep -Fxq "$1"
+}
+
 # broken_repo_symlinks HOME — print broken symlink paths that point into the
 # dotfiles repo. A line "TIMEOUT" means find was killed. Read-only.
 broken_repo_symlinks() {
@@ -72,6 +82,9 @@ check_broken_dotfiles_symlinks() {
   while IFS= read -r link; do
     [ -n "$link" ] || continue
     [ "$link" = TIMEOUT ] && continue
+    if managed_link_seen "$link"; then
+      continue
+    fi
     n=$((n + 1))
     CHECKED=$((CHECKED + 1))
     shown="$link"
@@ -97,6 +110,7 @@ fi
 hdr "Symlinks"
 check_link() {  # target  expected-source
   local target="$1" expected="$2"
+  record_managed_link "$target"
   CHECKED=$((CHECKED + 1))
   fixid symlink "$target|$expected"
   if [ ! -L "$target" ]; then

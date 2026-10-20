@@ -237,6 +237,68 @@ rm -f "$hs_repo/hammerspoon/init.lua"
 missing_lua="$(DOTDIR="$hs_repo" H_HS_RUNNING=no hammerspoon_config_line)"
 eq "missing init.lua warns" warn "$(printf '%s\n' "$missing_lua" | cut -d'|' -f1)"
 
+# hs runs Lua inside Hammerspoon, which does not see the CLI's environment.
+# The path has to be in the code sent over IPC.
+hs_code="$(hs_loadfile_code "$hs_repo/hammerspoon/init.lua")"
+has "hs code embeds the config path" "$hs_repo/hammerspoon/init.lua" "$hs_code"
+miss "hs code does not read HS_CONFIG" "os.getenv" "$hs_code"
+cat > "$bin/hs" <<'EOF'
+#!/bin/sh
+prev=""
+code=""
+for a in "$@"; do
+  if [ "$prev" = "-c" ]; then
+    code="$a"
+  fi
+  prev="$a"
+done
+printf '%s\n' "$code" > "${HS_LOG:?}"
+case "$code" in
+  *loadfile*'"'"${HS_EXPECT:?}"'"'*) echo ok; exit 0 ;;
+  *os.getenv*) echo "error: nil path"; exit 0 ;;
+  *) echo "ipc failed"; exit 1 ;;
+esac
+EOF
+chmod +x "$bin/hs"
+printf 'return {}\n' > "$hs_repo/hammerspoon/init.lua"
+hs_log="$tmp/hs.log"
+: > "$hs_log"
+live="$(DOTDIR="$hs_repo" H_HS_RUNNING=yes PATH="$bin:$PATH" HS_LOG="$hs_log" HS_EXPECT="$hs_repo/hammerspoon/init.lua" hammerspoon_config_line)"
+eq "running Hammerspoon compiles via embedded path" ok "$(printf '%s\n' "$live" | cut -d'|' -f1)"
+has "hs was given the path" "$hs_repo/hammerspoon/init.lua" "$(cat "$hs_log")"
+miss "hs command did not use getenv" "os.getenv" "$(cat "$hs_log")"
+
+# A managed link is already drift. The extra scan must not warn about it again.
+record_managed_link "$home/.config/bad"
+CHECKED=0
+FIX_ID=""
+fixid() { FIX_ID="$1"; }
+pass() { printf 'PASS %s\n' "$1"; }
+warn() { printf 'WARN %s %s\n' "$FIX_ID" "$1"; }
+managed_out="$(DOTDIR="$repo" HOME="$home" check_broken_dotfiles_symlinks)"
+# shellcheck disable=SC2088  # the report prints a literal tilde, not this home
+miss "managed broken link is not warned again" "~/.config/bad" "$managed_out"
+has "unmanaged broken link is still warned" "broken-symlink" "$managed_out"
+has "unmanaged launchagent link is still warned" "LaunchAgents/stale" "$managed_out"
+
+# --only health did not run the hotkeys section, so an unloaded pin agent
+# is not already reported.
+if LAUNCHAGENT_CHECKED="" health_pin_already_reported com.pdone.pin-dictation-hotkey-164; then
+  eq "unloaded pin with no hotkeys section is not already reported" no yes
+else
+  eq "unloaded pin with no hotkeys section is not already reported" no no
+fi
+if LAUNCHAGENT_CHECKED="com.pdone.pin-dictation-hotkey-164" health_pin_already_reported com.pdone.pin-dictation-hotkey-164; then
+  eq "pin already checked by hotkeys is skipped" yes yes
+else
+  eq "pin already checked by hotkeys is skipped" yes no
+fi
+if LAUNCHAGENT_CHECKED="com.pdone.pin-dictation-hotkey-164" health_pin_already_reported com.pdone.pin-quicknote-hotkey-190; then
+  eq "the other pin is not skipped" no yes
+else
+  eq "the other pin is not skipped" no no
+fi
+
 # com.pdone LaunchAgents. Fake --check compares the rendered template.
 la_repo="$tmp/larepo"
 mkdir -p "$la_repo/scripts" "$la_repo/launchagents" "$tmp/lahome/Library/LaunchAgents"
