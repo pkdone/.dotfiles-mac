@@ -9,7 +9,6 @@ set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIB="$DIR/lib/session-checks.sh"
-CHECK="$DIR/macconfig-check.sh"
 MS="$DIR/scripts/manual-steps.sh"
 LIST="$DIR/lib/manual-steps.list"
 AUTO="$DIR/lib/autofix.list"
@@ -148,7 +147,9 @@ run_check check_gh_auth
 eq "gh auth status failure is a warning" warn "$R_STATUS"
 has "gh failure points at gh auth login" "gh auth login" "$R_DETAIL"
 
-CHECK_PATH="/usr/bin:/bin" run_check check_gh_auth
+mkdir -p "$tmp/empty-bin"
+# An empty PATH, not /usr/bin: some machines ship gh there, and this case is "gh missing".
+CHECK_PATH="$tmp/empty-bin" run_check check_gh_auth
 eq "missing gh is a warning" warn "$R_STATUS"
 unset CHECK_PATH
 
@@ -179,7 +180,7 @@ miss "session checks do not defaults write" 'defaults write' "$lib_code"
 miss "session checks do not touch the notification store" 'usernoted' "$lib_code"
 
 # ---- macconfig-check.sh section ------------------------------------------
-section="$(awk '/^# ---- 15c\. British input/,/^# ---- 16\. Manual steps/' "$CHECK")"
+section="$(cat "$DIR/checks/session.sh")"
 code="$(printf '%s\n' "$section" | grep -v '^[[:space:]]*#')"
 has "section sources the shared checks" 'lib/session-checks.sh' "$section"
 has "section tags pointer-size" 'fixid pointer-size' "$section"
@@ -198,7 +199,7 @@ miss "section does not defaults write" 'defaults write' "$code"
 miss "section does not touch the notification store" 'usernoted' "$code"
 # shellcheck disable=SC2016  # needle is source text, compared literally
 has "covered ids are passed into the manual-steps section" \
-  'MANUAL_STEPS_COVERED="${SESSION_COVERED:-}"' "$(cat "$CHECK")"
+  'MANUAL_STEPS_COVERED="${SESSION_COVERED:-}"' "$(cat "$DIR/checks/manual.sh")"
 
 for id in pointer-size input-british gh-auth 1password-cli; do
   eq "$id is Needs Paul with no fixer" "PAUL|" \
@@ -233,8 +234,8 @@ run_section() {
     warn() { printf 'WARN %s %s\n' "$FIX_ID" "$1"; }
     info() { printf 'INFO %s %s\n' "$FIX_ID" "$1"; }
     bad() { printf 'DRIFT %s %s\n' "$FIX_ID" "$1"; }
-    # shellcheck disable=SC1090
-    eval "$section"
+    # shellcheck disable=SC1091
+    . "$DIR/checks/session.sh"
     printf 'COVERED %s\n' "$SESSION_COVERED"
   )
 }

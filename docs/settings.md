@@ -75,7 +75,7 @@ A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotke
 
 Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/`. UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
 
-AC idle sleep is the one `macos.sh` step that uses sudo: `sudo pmset -c sleep 0` (the `-c` profile is mains power only). It is skipped when sudo isn't available (no passwordless sudo and no terminal) or isn't wanted (`--dry-run`, or you answer no at the prompt). A value that is already 0 does not call sudo. `--yes` skips that confirmation and still will not hang waiting for a password when there is no terminal. The check, and why `--fix` does not run it, is in [Troubleshooting](troubleshooting.md#ac-idle-sleep).
+AC idle sleep is the one `macos.sh` step that uses sudo: `sudo pmset -c sleep 0` (the `-c` profile is mains power only). It is skipped when sudo isn't available (no passwordless sudo and no terminal) or isn't wanted (`--dry-run`, or you answer no at the prompt). A value that is already 0 does not call sudo. `--yes` skips that confirmation and still will not hang waiting for a password when there is no terminal. The check warns when mains-power sleep is no longer 0, which is what a company MDM reset (Kandji) often does. `--fix` does not run the command. See [Troubleshooting](troubleshooting.md#ac-idle-sleep).
 
 Trackpad rows in that list are tap to click (built-in trackpad, Bluetooth trackpad, and `com.apple.mouse.tapBehavior`), click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On (`ActuateDetents=1`, `ForceSuppressed=0`). Each one sets `restart` to `logout`. When a value changes, `macos.sh` reports that a logout/login may be needed before the trackpad follows it. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`.
 
@@ -171,3 +171,39 @@ To enable Clipboard History:
    - Avoid `Command + Shift + V` (paste without formatting) and `Command + Option + V` (Finder paste-as-move).
 4. Set **Keep History For** to 1 Day
 5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari
+
+## Running one part of the check
+
+`macconfig`, `check.sh`, and `macconfig-check.sh` are the same check. Any arguments you pass to `macconfig` or `check.sh` are handed straight through, including `--only`.
+
+```bash
+macconfig --only dock
+./macconfig-check.sh --only dock,power
+./check.sh --only security --no-color
+```
+
+`--only` runs just those areas, in the usual order, not the order you type them. `--only hostname,shell` still prints Login shell before Hostname. `macconfig --help` lists the area names. `finder` covers both Finder sections (icon view, then sidebar Recents). The summary, the exit status, `--fix`, `--no-color`, and `--health-json` work the same way on a subset: exit status is still 1 when that subset has drift, and `--fix` only repairs SAFE items from the areas you asked for.
+
+## Checks that only warn
+
+These read the Mac. They never change it. They do not use sudo, they do not write the notification store, and `macconfig --fix` does not "fix" them. If a command is slow, it is cut off.
+
+**FileVault.** `fdesetup status` should say FileVault is On. If it doesn't, or if the command fails, you get a warning under Security hygiene.
+
+**Firewall stealth mode.** `socketfilterfw --getstealthmode` should say stealth mode is on. The check never turns it on.
+
+**Automatic security updates.** The check reads `CriticalUpdateInstall`, `ConfigDataInstall`, and `AutomaticallyInstallMacOSUpdates` from the Software Update preferences and prints the values it saw. A missing or off value is a warning.
+
+**A macOS update that has been waiting.** The check does not phone Apple. It reads `RecommendedUpdates` and `LastSuccessfulDate` from the local Software Update preferences (the system file if it is readable, otherwise yours). No recommended update is fine. A recommended update whose last successful check is more than 7 days ago is a warning. A newer pending update is an info line, not a warning.
+
+**Free disk space.** Mac health warns when the Data volume is under 15% free, and also when it is under 50 GB free. One warning covers either case.
+
+**SSH and commit signing.** `ssh-add -l` should show a key in the agent. `~/.ssh` should be mode 700, and private keys mode 600. If `git config --global commit.gpgsign` is on and `gpg.format` is `ssh`, a dry `ssh-keygen -Y sign` must succeed. If signing is not configured, that is an info line, not a warning. Nothing here writes a commit or a key.
+
+**Broken dotfiles links.** Symlinks under `~/.config`, `~/Library/LaunchAgents`, and the dotfiles in your home directory are checked. A link that points into the dotfiles repo (or `~/.dotfiles-mac`) and whose target is missing is a warning. The check does not relink it. Ordinary managed links are still the Symlinks section, which `--fix` can repair.
+
+**Default browser.** Besides the `duti` URL-handler check, the LaunchServices handler list is read for `http` and `https`. Both should be Chrome (`com.google.chrome`). The check does not change the default browser.
+
+**Hammerspoon's config.** The app should be running. If the `hs` command can talk to it, the repo `hammerspoon/init.lua` is compiled in that process (`loadfile` only, so the config is not run a second time). If `hs` isn't available, the process check stands and `luac` or `lua` syntax-checks the same file. A compile error is a warning. `--fix` can still start Hammerspoon when it isn't running; it does not rewrite the config.
+
+**com.pdone LaunchAgents.** Every `com.pdone.*` file in `~/Library/LaunchAgents` is compared with the repo template after `@HOME@` is replaced with your home directory. An installed plist with no template is stale or unknown and is a warning. The two pin agents are still reported in the Dictation and Quick Note sections, and `--fix` can still rewrite those. This extra sweep only reports; it does not write a plist.

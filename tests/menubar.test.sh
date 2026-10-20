@@ -13,8 +13,6 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="$DIR/lib/macos-defaults.list"
 MACOS="$DIR/macos.sh"
 KJ="$DIR/karabiner/karabiner.json"
-CHECK="$DIR/macconfig-check.sh"
-
 pass=0
 fail=0
 eq() {  # description expected actual
@@ -82,8 +80,8 @@ print("ok" if show is False and profile is False else "bad")
 PY
 )"
 eq "repo karabiner.json hides the menu bar icon" ok "$kb"
-has "check reads the menu bar flags with python json" "show_profile_name_in_menu_bar" "$(cat "$CHECK")"
-has "check passes a hidden karabiner icon" "karabiner.json hides the menu bar icon" "$(cat "$CHECK")"
+has "check reads the menu bar flags with python json" "show_profile_name_in_menu_bar" "$(cat "$DIR/checks/karabiner.sh")"
+has "check passes a hidden karabiner icon" "karabiner.json hides the menu bar icon" "$(cat "$DIR/checks/karabiner.sh")"
 
 # ---- macos.sh --list ----------------------------------------------------
 list_out="$("$MACOS" --list)"

@@ -9,7 +9,6 @@ set -uo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HELPER="$DIR/lib/display-resolution.py"
 LIST="$DIR/lib/display-resolution.list"
-CHECK="$DIR/macconfig-check.sh"
 STEPS="$DIR/lib/manual-steps.list"
 PY="$(command -v python3 || true)"
 if [ -z "$PY" ]; then echo "display-resolution tests: python3 not found, skipped"; exit 0; fi
@@ -208,7 +207,7 @@ has "a different list prefix is what gets checked" "starts with 1512 x 982" "$ou
 stdin_out="$("$PY" "$HELPER" --list "$LIST" < "$tmp/more-space.json")"
 eq "stdin matches --json" "$(run "$tmp/more-space.json")" "$stdin_out"
 
-section="$(awk '/^# ---- 6c\. Built-in display/,/^# ---- 7\. URL handlers/' "$CHECK")"
+section="$(cat "$DIR/checks/display.sh")"
 has "section calls the helper" 'lib/display-resolution.py' "$section"
 has "section reads the list" 'lib/display-resolution.list' "$section"
 has "section tags display-more-space" 'fixid display-more-space' "$section"

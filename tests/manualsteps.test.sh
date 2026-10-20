@@ -38,7 +38,7 @@ if grep -F -q 'set args check' "$FISH_FN"; then pass=$((pass + 1)); else
 # Installed by the same glob as macconfig, not a one-off symlink.
 if grep -F -q 'fish/functions/*.fish' "$DIR/install.sh"; then pass=$((pass + 1)); else
   fail=$((fail + 1)); printf 'FAIL: install.sh symlinks fish/functions/*.fish\n'; fi
-if grep -F -q 'fish/functions/*.fish' "$DIR/macconfig-check.sh"; then pass=$((pass + 1)); else
+if grep -F -q 'fish/functions/*.fish' "$DIR/checks/symlinks.sh"; then pass=$((pass + 1)); else
   fail=$((fail + 1)); printf 'FAIL: macconfig-check.sh checks fish/functions/*.fish links\n'; fi
 
 if command -v fish >/dev/null 2>&1; then
