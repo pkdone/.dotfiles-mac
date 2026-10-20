@@ -253,7 +253,7 @@ eq "unreadable profile does not invoke sudo" "" "$(cat "$tmp/sudo.log")"
 # A terminal, answering no: sudo isn't wanted. Passwordless sudo is off, so
 # the script asks instead of hanging on a password prompt.
 # The child gets its own controlling terminal (the test runner often has
-# none). The reply is written when the prompt appears. There is no timer:
+# none:. The reply is written when the prompt appears. There is no timer:
 # under run-all.sh a busy machine can be slow to reach the question, and a
 # deadline would kill the script before it asks.
 : > "$tmp/pmset.log"
@@ -270,7 +270,7 @@ env = os.environ.copy()
 pid, master = pty.fork()
 if pid == 0:
     # Replace this process. If exec fails, exit so the child does not fall
-    # through into the parent's read loop.
+    # through into the parent read loop.
     try:
         os.execvpe(macos, [macos, "--no-color", "--only", "@ac-sleep"], env)
     finally:
