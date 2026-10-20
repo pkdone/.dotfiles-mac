@@ -61,12 +61,12 @@ has "autofix defaults row covers no bouncing" "no bouncing" "$defaults_row"
 has "autofix defaults row names the Dock restart" "restart Dock" "$defaults_row"
 has "autofix still covers window tiling" "window tiling" "$defaults_row"
 
-has "readme names minimize-to-application" "minimize-to-application" "$(cat "$DIR/README.md")"
-has "readme names no-bouncing" "no-bouncing" "$(cat "$DIR/README.md")"
-# shellcheck disable=SC2016  # needle is Markdown from the README, compared literally
-has "readme records the Dock restart" 'Both set `restart` to `Dock`' "$(cat "$DIR/README.md")"
-# shellcheck disable=SC2016  # needle is Markdown from the README, compared literally
-has "readme keeps icon size at 28" 'Icon size stays exactly `28`' "$(cat "$DIR/README.md")"
+has "settings names minimize-to-application" "minimize-to-application" "$(cat "$DIR/docs/settings.md")"
+has "settings names no-bouncing" "no-bouncing" "$(cat "$DIR/docs/settings.md")"
+# shellcheck disable=SC2016  # needle is Markdown from docs/settings.md, compared literally
+has "settings records the Dock restart" 'Both set `restart` to `Dock`' "$(cat "$DIR/docs/settings.md")"
+# shellcheck disable=SC2016  # needle is Markdown from docs/settings.md, compared literally
+has "settings keeps icon size at 28" 'Icon size stays exactly `28`' "$(cat "$DIR/docs/settings.md")"
 
 # ---- macos.sh --list ----------------------------------------------------
 list_out="$("$MACOS" --list)"

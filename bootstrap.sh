@@ -60,7 +60,7 @@ confirm() {  # prompt -> 0 to proceed, 1 to skip
 }
 
 # Before the Dock step, flag any app in lib/dock-apps.list that isn't installed yet
-# (e.g. the manual installs under README "Apps not in the Brewfile"). dock.sh already
+# (e.g. the manual installs under docs/setup.md "Apps not in the Brewfile"). dock.sh already
 # skips a missing app, so this just surfaces it before the confirm below — install them
 # first and answer N, or proceed and re-run dock.sh later. Mirrors dock.sh's own parsing.
 precheck_dock() {
@@ -79,7 +79,7 @@ precheck_dock() {
   if [ "${#missing[@]}" -gt 0 ]; then
     echo "  ⚠️  Not installed yet — dock.sh will skip these:"
     for name in "${missing[@]}"; do echo "        - $name"; done
-    echo '      Install them first (README → "Apps not in the Brewfile"), then answer N below'
+    echo '      Install them first (docs/setup.md → "Apps not in the Brewfile"), then answer N below'
     echo "      and re-run dock.sh afterwards (or proceed now and re-run later)."
   fi
   return 0

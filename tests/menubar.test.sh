@@ -67,10 +67,10 @@ has "manual step keeps the other icons" "Leave Tailscale, 1Password, Granola, Ha
   "$(grep '^menubar-third-party-hide|' "$DIR/lib/manual-steps.list")"
 eq "manual step is by hand" "" "$(awk -F'|' '$1=="menubar-third-party-hide" { print $6 }' "$DIR/lib/manual-steps.list")"
 
-readme="$(cat "$DIR/README.md")"
-has "readme names the intended menu bar" \
-  "clock, the mode icon, battery percentage, Wi-Fi, Bluetooth and Control Centre" "$readme"
-has "readme names kept third-party icons" "Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents" "$readme"
+settings="$(cat "$DIR/docs/settings.md")"
+has "settings names the intended menu bar" \
+  "clock, the mode icon, battery percentage, Wi-Fi, Bluetooth and Control Centre" "$settings"
+has "settings names kept third-party icons" "Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents" "$settings"
 
 # ---- repo karabiner.json (the file the directory symlink installs) ----
 kb="$(python3 - "$KJ" <<'PY'

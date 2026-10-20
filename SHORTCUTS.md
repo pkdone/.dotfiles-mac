@@ -1,6 +1,6 @@
 # Keyboard shortcuts & macOS reference
 
-Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md](README.md).
+Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md](README.md) and [docs/](docs/setup.md).
 
 ### macOS Shortcuts
 
@@ -77,7 +77,7 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Ghostty Quick Launcher | Command + ` |
 | Claude Browser | Command + E (in Chrome) |
 | Claude Chat | Option, Option (double-tap) |
-| ChatGPT | Option + Space (Raycast was moved off this — see README) |
+| ChatGPT | Option + Space (Raycast was moved off this — see [Settings](docs/settings.md#raycast)) |
 | Gemini mini chat | Control + Option + G |
 | Gemini full chat | Control + Option + Shift + G |
 

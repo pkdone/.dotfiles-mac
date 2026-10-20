@@ -1,0 +1,173 @@
+# Settings
+
+See [README.md](../README.md).
+
+This is what each managed setting does, and why. Applying them is the [setup walkthrough](setup.md). The by-hand list is [Manual steps](manual-steps.md). After a software update, hotkey pins, and AC sleep are in [Troubleshooting](troubleshooting.md).
+
+## Quiet Apple apps (containment)
+
+System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contains them where scripting is reliable:
+
+- **URL handlers** → Chrome (`handlers.sh` / `lib/url-handlers.list`)
+- **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
+- **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
+- **Menu bar:** clock, mode icon, battery percentage, Wi-Fi, Bluetooth, Control Centre, and the third-party icons that stay (Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents). Spotlight, Focus, Now Playing and Voice Control are hidden (`@host/com.apple.controlcenter` = `8`, Don't Show). Bluetooth stays in the menu bar (`2`, Show in Menu Bar). Battery percentage is On (`BatteryShowPercentage`, boolean; `defaults read` prints `1`). `macos.sh` / `macconfig-check.sh` check those rows; `macconfig --fix` repairs them and restarts ControlCenter. Karabiner's own menu bar icon stays hidden. Raycast, Logi Options+ and Docker are Off under System Settings → Menu Bar → Allow in the Menu Bar (manual step `menubar-third-party-hide`; Raycast's own toggle isn't scriptable)
+- **Dock minimize and bounce:** windows minimize into the application icon (`com.apple.dock minimize-to-application` = true) and opening an app does not bounce the icon (`no-bouncing` = true). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Dock
+- **Finder sidebar Recents** Off, **icon view 72/13**, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `macconfig-check.sh`
+- **Finder and Trash tidy:** remove Trash items after 30 days (`FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and no `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`; the domain is created by the first write). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Finder
+- **Window tiling (macOS 15+):** drag a window to the left or right edge to tile (`com.apple.WindowManager EnableTilingByEdgeDrag` = true; unset on this Mac, which is the system default On) and no gap between tiled windows (`EnableTiledWindowMargins` = false; `defaults read` prints `0`). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Shortcuts are in [SHORTCUTS.md](../SHORTCUTS.md)
+- **Desktop widgets and Stage Manager:** widgets hidden on the desktop and in Stage Manager (`StandardHideWidgets` and `StageManagerHideWidgets` = true; Show Widgets → On Desktop and In Stage Manager off) and Stage Manager off (`GloballyEnabled` = false). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them through the `defaults` row in `lib/autofix.list`. `restart` is empty, so a repair restarts no process. Click wallpaper to reveal desktop (`EnableStandardClickToShowDesktop`) is not pinned
+- **Login Items:** `macconfig-check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
+
+Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
+
+## Keyboard / Dictation / Fn
+
+**Goal:** hold-Fn/Globe must never start the mic (Dictation / Apple Intelligence).
+
+**Scripted + checked** (`macos.sh` / `macconfig-check.sh`):
+- Fn/Globe → **Do Nothing** (`AppleFnUsageType` = `0`)
+- Dictation **Off**
+- Symbolic hotkey 164 ("Start Dictation") pinned to **Right Command twice** — a *dummy* unused combo so Press 🎙️ / Fn never owns it. Do **not** use Right Command twice yourself; it would fire dictation if Dictation were on.
+- Symbolic hotkey 190 ("Quick Note") disabled so Globe/Fn+Q does not open Notes (`enabled=0`, `type=standard`, unbound parameters).
+
+What a macOS Software Update does to these hotkeys, and how to reload a LaunchAgent on this Mac, is in [Troubleshooting](troubleshooting.md#after-a-macos-software-update).
+
+**Karabiner** (Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` as a **directory** symlink — Karabiner won't watch a file symlink):
+- Fn/Globe only sets internal variable `pdone_fn` (never sent to macOS)
+- While held: Fn+F → ⌃⌘F (fullscreen); Fn+F11 → Show Desktop; Fn+Delete → forward-delete; Fn+arrows → Home/End/PgUp/PgDn
+- Dictation/microphone consumer keys swallowed; Finder Forward Delete → Move to Trash
+- Top-row brightness/volume still work without Fn
+- Menu bar icon hidden: `global.show_in_menu_bar` and `show_profile_name_in_menu_bar` are both `false` in `karabiner/karabiner.json` (the directory symlink's `~/.config/karabiner/karabiner.json`). `macconfig-check.sh` reads that file with python3 and drifts if either is not false. Restore is git (`karabiner-rules` in `lib/autofix.list`); `--fix` does not rewrite it
+- `macconfig-check.sh` drifts if the dir symlink, Fn-kill rule, Finder Trash rule, or menu bar icon setting is missing
+
+**Manual once (TCC / DriverKit):** Driver Extensions + Device Control and Data Access (Karabiner-Core-Service) + Allow in the Background — see [Manual steps](manual-steps.md) (`karabiner-*`; `macconfig-check.sh` verifies the driver and the Core-Service grant). Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
+
+## App settings as code (Ghostty, Raycast)
+
+**Ghostty: fully in the repo.** `ghostty/config` is symlinked to `~/.config/ghostty/config` (`lib/links.list`). `macconfig-check.sh` (the **Ghostty config** section) checks four things:
+
+- the link
+- that the repo file is valid (`ghostty +validate-config`)
+- that no other file Ghostty loads overrides it (`~/Library/Application Support/com.mitchellh.ghostty/config` or `config.ghostty`, and `~/.config/ghostty/config.ghostty`)
+- that Ghostty's effective config (`ghostty +show-config`) is exactly what the repo file alone produces
+
+A broken link is restored by `macconfig-check.sh --fix`. An override file is reported but never deleted automatically.
+
+**Raycast: partly readable.** Raycast keeps almost everything in an encrypted database (`~/Library/Application Support/com.raycast.macos/raycast-enc.sqlite`). The only setting readable from `defaults` is the launcher hotkey: `com.raycast.macos raycastGlobalHotkey` = `Shift-Control-Command-15`, where key code 15 is R. The manual-steps check for that step reads it automatically.
+
+The Finder hotkey (Shift+Control+Command+F) and the Clipboard History settings (Control+Command+V, 1-day history, 1Password and 1Password for Safari excluded) live only in the encrypted database, so they stay **by hand**.
+
+Raycast's supported backup is **Export Settings & Data**, a passphrase-encrypted `.rayconfig` file (Raycast → Settings → Advanced → Export, or Scheduled Backup). Restoring it is a GUI step: Import Settings & Data, then tick **Settings, Aliases & Hotkeys**. The export also holds clipboard history, AI chats, notes, MCP servers and extension settings (which can include tokens), so it is **never stored in this repo**. `*.rayconfig` is gitignored. Keep it in a synced folder via Scheduled Backup instead. Writing the hotkey back with `defaults write` isn't a supported restore (Raycast holds it in memory and in its database), so the step stays manual (`raycast-import` / `raycast-hotkey` in [Manual steps](manual-steps.md)).
+
+**Logi Options+: checked, never written.** Logi Options+ keeps its settings as JSON inside a private SQLite database (`~/Library/Application Support/LogiOptionsPlus/settings.db`; the agent caches it and syncs it to the mouse). `lib/logi-settings.py` copies the database (plus its `-wal` / `-shm`) to a temp dir, reads the copy read-only, deletes it, and compares the MX Master 3S values (found by model `2b034`, not serial number) with `lib/logi-expected.list`: main wheel Natural + smooth + SmartShift, thumb wheel horizontal scroll + smooth, gesture button window navigation, pointer speed 0.12. The **Logi Options+** section of `macconfig-check.sh` reports drift as **Needs Paul** (`logi-settings` in `lib/autofix.list`; `--fix` never touches it), and a missing app, missing database or unreadable format as a warning (`logi-unreadable`), never a failure of the run. Restore is by hand in the app or from Logi's cloud backup (manual step `logi-cloud-backup`). Cloud backup itself stays **by hand**: the **Automatically backup all devices** toggle and the last-backup time aren't in any readable local file (the per-device `settings_backup_state_v2` flags in `settings.db` stay false with backup on), so there's nothing reliable to check. Manual step `logi-smooth-scrolling` uses the same helper (`logi:<id>` check).
+
+## macOS defaults
+
+> _Run by `bootstrap.sh`; the commands below run only this step._
+
+A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotkey 164, CotEditor theme/font, Finder sidebar Recents, and AC idle sleep):
+
+```bash
+~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothing
+~/.dotfiles-mac/macos.sh             # apply
+```
+
+Safe to re-run: it reads and type-checks each setting first, then writes the desired value (re-asserting even when it already matches), skips any key whose stored type is unexpected (with a warning), and sets missing keys. Before the first actual change it backs up each affected domain to `backups/defaults-<timestamp>/`. UI restarts (Dock, Finder, menu bar) happen at the end only when something actually changed, after you confirm.
+
+AC idle sleep is the one `macos.sh` step that uses sudo: `sudo pmset -c sleep 0` (the `-c` profile is mains power only). It is skipped when sudo isn't available (no passwordless sudo and no terminal) or isn't wanted (`--dry-run`, or you answer no at the prompt). A value that is already 0 does not call sudo. `--yes` skips that confirmation and still will not hang waiting for a password when there is no terminal. The check, and why `--fix` does not run it, is in [Troubleshooting](troubleshooting.md#ac-idle-sleep).
+
+Trackpad rows in that list are tap to click (built-in trackpad, Bluetooth trackpad, and `com.apple.mouse.tapBehavior`), click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, and Force Click and haptic feedback On (`ActuateDetents=1`, `ForceSuppressed=0`). Each one sets `restart` to `logout`. When a value changes, `macos.sh` reports that a logout/login may be needed before the trackpad follows it. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`.
+
+Finder and Trash tidy rows in that list remove Trash items after 30 days (`com.apple.finder FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and skip `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`). That domain may not exist until the first write; writing creates it. Those four set `restart` to `Finder`. Screenshots save to `~/Pictures/Screenshots` (`com.apple.screencapture location`, stored as `@HOME@/Pictures/Screenshots` so apply and check expand `$HOME`) and keep the floating thumbnail (`show-thumbnail` = true). Both screenshot keys set `restart` to `SystemUIServer`. `install.sh` creates `~/Pictures/Screenshots` with `mkdir -p`. `macos.sh` does the same before it writes the location, including when `macconfig --fix` repairs that key. Existing screenshots are left where they are.
+
+Window tiling rows in that list turn on drag-to-edge tiling (`com.apple.WindowManager EnableTilingByEdgeDrag` = true) and turn tiled-window margins off (`EnableTiledWindowMargins` = false). On this Mac the edge-drag key is unset, which is the system default On, and margins read as `0` (boolean false). Both rows leave `restart` empty. WindowManager applies the domain live: writing the margins key moves windows that are already tiled, and the edge-drag key is read on the next drag, so `macos.sh` restarts no process for them. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`. HideDesktop, drag-to-menu-bar, the Option-drag toggle, and Click wallpaper to reveal desktop (`EnableStandardClickToShowDesktop`) stay out of the list. Desktop pins in `lib/desktop-bindings.list` stay as they are.
+
+Stage Manager and desktop widgets are three more `com.apple.WindowManager` rows. `StandardHideWidgets` = true and `StageManagerHideWidgets` = true hide widgets (System Settings → Desktop & Dock → Widgets → Show Widgets: On Desktop off, and In Stage Manager off). `GloballyEnabled` = false turns Stage Manager off. Those rows leave `restart` empty too. WindowManager applies the domain live, so `macos.sh` does not `killall Dock` (that reloads Spaces) or WindowManager. `macconfig --fix` repairs them through the same `defaults` row in `lib/autofix.list`.
+
+Menu bar rows in that list hide Spotlight, Focus, Now Playing and Voice Control (`@host/com.apple.controlcenter` = `8`, Don't Show), keep Bluetooth in the menu bar (`Bluetooth` = `2`, Show in Menu Bar), and show the battery percentage (`BatteryShowPercentage` = true; `defaults read` prints `1` because the type is boolean). Each of those sets `restart` to `ControlCenter`, the same token Spotlight, Focus and Now Playing already use. `macos.sh` runs `killall ControlCenter` only when a value changed. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`. The intended menu bar is the clock, the mode icon, battery percentage, Wi-Fi, Bluetooth and Control Centre, plus Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents. Wi-Fi is already shown and is not pinned here. Raycast, Logi Options+ and Docker are turned off by hand (manual step `menubar-third-party-hide`). Karabiner-Elements stays out of the menu bar via `karabiner.json`.
+
+Dock behavior rows in that list minimize windows into the application icon (`com.apple.dock minimize-to-application` = true) and turn off the bounce when an app opens (`no-bouncing` = true; System Settings → Desktop & Dock → Animate opening applications Off). Both set `restart` to `Dock`, the same as icon size, recent apps, and Hot Corners. Icon size stays exactly `28`. A change restarts Dock. `macconfig-check.sh` reads the same list, and `macconfig --fix` repairs drift through the `defaults` row in `lib/autofix.list`. App order stays in `lib/dock-apps.list`.
+
+Run `macos.sh --list` to see the exact set of settings it manages (printed as a Markdown table).
+
+## Notifications
+
+Per-app **Allow Notifications** is checked by the **Notifications** section of `macconfig-check.sh`. An app in `lib/notifications-off.list` whose Allow Notifications is on is a warning (**Needs Paul**). A third-party app (`com.apple.*` and `_SYSTEM_CENTER_*` excluded) that isn't in that list or `lib/notifications-reviewed.list` is an `info` line, so a newly appeared app gets flagged. A missing store or a plist that doesn't parse is a warning; the check does not crash.
+
+On macOS 27 the store is `~/Library/Group Containers/group.com.apple.usernoted/Library/Preferences/group.com.apple.usernoted.plist` (binary plist, key `apps`). `~/Library/Preferences/com.apple.ncprefs.plist` is not used. `lib/notification-prefs.py` reads it with `python3` `plistlib` and never writes it. `--fix` does not change it.
+
+Allow Notifications is `flags` bit 25 (`1 << 25`), set = on. The constant is `ALLOW_NOTIFICATIONS_BIT` in `lib/notification-prefs.py`. That is the bit Hush uses for this same plist on macOS 26, and the bit ncmanager used for the older ncprefs store. On this Mac every Off-list app has the bit clear, and Chrome (`com.google.Chrome`, flags `41951246`) is the sample that has it set.
+
+To recalibrate after a macOS update, see [Troubleshooting](troubleshooting.md#recalibrating-notification-bits).
+
+**Hammerspoon's notification style** is checked in that same read (manual step `mode-hammerspoon-alerts`). Alerts is `flags` bit 4 set and bit 3 clear. Hush names those `alertPersistent` (`1 << 4`) and `alertTemporary` (`1 << 3`) on this usernoted plist; bit 3 alone is Banners, and both clear or both set is None (Hush treats both-set as Off). ncmanager's older ncprefs store uses the same two bits (`style_alerts`, `style_banners`). The constant is `ALERT_STYLE_BIT` (banner bit: `BANNER_STYLE_BIT`). On this Mac Hammerspoon's flags are `8396822`, which is Alerts. Anything else is a warning (**Needs Paul**). `--fix` does not write the store.
+
+To recalibrate the style bits, see [Troubleshooting](troubleshooting.md#recalibrating-notification-bits).
+
+Notifications Off when mirroring stays by hand.
+
+## Finder
+
+Per-window View Options and chrome (kept manual so folder views stay intentional; the default icon view 72/13 is pinned by `macos.sh` and checked by `macconfig-check.sh`):
+
+1. Open any Finder window → **View → Show View Options** (`Command + J`)
+2. Set **Icon size** to **72×72**
+3. Set **Text size** to **13**
+4. Optionally tick **Use as Defaults** if you want new icon-view windows to inherit these sizes
+5. **Show Status Bar** — managed by `macos.sh` / `macconfig-check.sh` (`com.apple.finder ShowStatusBar`); UI path: **View → Show Status Bar**
+6. **Show all filename extensions** — managed by `macos.sh` / `macconfig-check.sh` (`NSGlobalDomain AppleShowAllExtensions`); UI path: **Finder → Settings… → Advanced**
+
+These next ones are in `lib/macos-defaults.list`. `macos.sh` applies them, `macconfig-check.sh` checks them, and `macconfig --fix` repairs them through the `defaults` row in `lib/autofix.list`. A change restarts Finder. Screenshot keys restart SystemUIServer.
+
+7. **Remove items from the Trash after 30 days** — `com.apple.finder FXRemoveOldTrashItems` = true. UI: **Finder → Settings… → Advanced**
+8. **When performing a search** — search the current folder (`FXDefaultSearchScope` = `SCcf`). UI: **Finder → Settings… → Advanced**
+9. **Keep folders on top** — `com.apple.finder _FXSortFoldersFirst` = true. UI: **Finder → Settings… → Advanced**
+10. **No .DS_Store on network volumes** — `com.apple.desktopservices DSDontWriteNetworkStores` = true. The domain may not exist until the first write; writing creates it.
+11. **Screenshots** — `com.apple.screencapture location` = `~/Pictures/Screenshots` (`@HOME@` in the list, expanded to `$HOME` at runtime) and `show-thumbnail` = true, so the floating thumbnail stays. `install.sh` creates the folder. `macos.sh`, including `macconfig --fix`, runs `mkdir -p` on that path before setting the location. A missing folder is drift. Files already in `~/Pictures` are not moved.
+
+Re-check after a major macOS upgrade; View Options can reset per folder.
+
+## Logi Options+
+
+MX Master 3S settings, all checked read-only by the **Logi Options+** section of `macconfig-check.sh` (expected values: `lib/logi-expected.list`):
+
+| Area | Setting | Value |
+|------|------|------|
+| Point & Scroll → Scroll wheel | Scroll direction | Natural |
+| Point & Scroll → Scroll wheel | Smooth scrolling | On |
+| Point & Scroll → Scroll wheel | SmartShift | On |
+| Point & Scroll → Thumb wheel | Smooth scrolling | On |
+| Buttons → Thumb wheel | Action | Horizontal scroll |
+| Buttons → Gesture button | Action | Window navigation |
+| Point & Scroll → Pointer speed | Speed | 0.12 (±0.02) |
+
+Cloud backup: sign in to a Logi account in the app, then **MX Master 3S → Settings → Other** and turn on **Automatically backup all devices**; it shows **Last backup on …** underneath. Not readable locally, so manual step `logi-cloud-backup` is by hand.
+
+## Gemini
+
+Default Gemini shortcuts (`Option + Space` / `Option + Shift + Space`) clash with ChatGPT. Set via Gemini Settings → Shortcuts:
+
+| Action | Shortcut |
+|------|------|
+| Mini chat | `Control + Option + G` |
+| Full chat | `Control + Option + Shift + G` |
+
+## Raycast
+
+Move Raycast off `Option + Space` (clashes with ChatGPT): Settings → General → Raycast Hotkey → `Shift + Control + Command + R`.
+
+To bind a global hotkey for activating Finder from anywhere:
+1. Open Raycast (`Shift + Control + Command + R`)
+2. Type **Finder** until "Finder" appears as a command result
+3. Highlight it and press `Command + K` (Actions menu)
+4. Choose **Configure Application…**
+5. Click the **Record Hotkey** field and press `Shift + Control + Command + F`
+
+To enable Clipboard History:
+1. Open Raycast and run the **Clipboard History** command once
+2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) → enable Raycast)
+3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard", then in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V`.
+   - Avoid `Command + Shift + V` (paste without formatting) and `Command + Option + V` (Finder paste-as-move).
+4. Set **Keep History For** to 1 Day
+5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari

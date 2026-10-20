@@ -74,16 +74,16 @@ done
 
 has "autofix defaults row covers window tiling" "window tiling" \
   "$(awk -F'|' '$1=="defaults" { print; exit }' "$DIR/lib/autofix.list")"
-has "readme names the edge-drag key" "EnableTilingByEdgeDrag" "$(cat "$DIR/README.md")"
-has "readme names the margins key" "EnableTiledWindowMargins" "$(cat "$DIR/README.md")"
-has "readme names desktop widgets" "StandardHideWidgets" "$(cat "$DIR/README.md")"
-has "readme names stage manager widgets" "StageManagerHideWidgets" "$(cat "$DIR/README.md")"
-has "readme names stage manager" "GloballyEnabled" "$(cat "$DIR/README.md")"
-has "readme leaves click-to-show-desktop out" "EnableStandardClickToShowDesktop" "$(cat "$DIR/README.md")"
+has "settings names the edge-drag key" "EnableTilingByEdgeDrag" "$(cat "$DIR/docs/settings.md")"
+has "settings names the margins key" "EnableTiledWindowMargins" "$(cat "$DIR/docs/settings.md")"
+has "settings names desktop widgets" "StandardHideWidgets" "$(cat "$DIR/docs/settings.md")"
+has "settings names stage manager widgets" "StageManagerHideWidgets" "$(cat "$DIR/docs/settings.md")"
+has "settings names stage manager" "GloballyEnabled" "$(cat "$DIR/docs/settings.md")"
+has "settings leaves click-to-show-desktop out" "EnableStandardClickToShowDesktop" "$(cat "$DIR/docs/settings.md")"
 # shellcheck disable=SC2016  # needle is source text, compared literally
-has "readme records the empty restart" 'Both rows leave `restart` empty.' "$(cat "$DIR/README.md")"
+has "settings records the empty restart" 'Both rows leave `restart` empty.' "$(cat "$DIR/docs/settings.md")"
 # shellcheck disable=SC2016  # needle is source text, compared literally
-has "readme records widget restart empty" 'Those rows leave `restart` empty too.' "$(cat "$DIR/README.md")"
+has "settings records widget restart empty" 'Those rows leave `restart` empty too.' "$(cat "$DIR/docs/settings.md")"
 
 # Desktop pins and Hammerspoon stay out of this change.
 miss "desktop pins do not name WindowManager" "WindowManager" "$(cat "$PINS")"

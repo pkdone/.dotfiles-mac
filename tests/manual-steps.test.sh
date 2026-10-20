@@ -39,10 +39,15 @@ eq "numbering is 1..N with no gaps" "$(seq 1 "$rows" | tr '\n' ' ')" "$nums"
 md_rows="$("$MS" list --markdown | grep -cE '^\| [0-9]+ \|')"
 eq "markdown has one row per step" "$rows" "$md_rows"
 
-# README's table must match the list (refresh: scripts/manual-steps.sh list --markdown).
-readme_rows="$(grep -E '^\| [0-9]+ \|' "$DIR/../README.md")"
-eq "README manual-steps table matches lib/manual-steps.list" \
-  "$("$MS" list --markdown | grep -E '^\| [0-9]+ \|')" "$readme_rows"
+# docs/manual-steps.md is generated (refresh: scripts/render-manual-steps-doc.sh).
+RENDER="$DIR/../scripts/render-manual-steps-doc.sh"
+out="$("$RENDER" --check 2>&1)"; rc=$?
+eq "docs/manual-steps.md matches lib/manual-steps.list" 0 "$rc"
+[ "$rc" -eq 0 ] || printf '%s\n' "$out"
+
+doc_rows="$(grep -E '^\| [0-9]+ \|' "$DIR/../docs/manual-steps.md")"
+eq "docs/manual-steps.md table matches lib/manual-steps.list" \
+  "$("$MS" list --markdown | grep -E '^\| [0-9]+ \|')" "$doc_rows"
 
 # ---- malformed rows are reported ------------------------------------------
 tmp="$(mktemp)"
@@ -129,7 +134,7 @@ has "a mouse warn is tagged mouse-settings" 'mouse-settings) fixid mouse-setting
 
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \
-  "$DIR/../README.md" "$LIST" "$DEF" "$DIR/../macos.sh" "$DIR/../lib/autofix.list" || true)"
+  "$DIR/../README.md" "$DIR"/../docs/*.md "$LIST" "$DEF" "$DIR/../macos.sh" "$DIR/../lib/autofix.list" || true)"
 eq "no doc still says Force Click Off" "" "$force_off"
 
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"

@@ -27,7 +27,7 @@ return {
   order = { 'Normal', 'WebConf', 'DeepWork' },
 
   -- Focus can't be set directly on macOS, so each Focus is toggled by a Shortcut that
-  -- you create once (see README "Modes" / scripts/manual-steps.sh). macconfig-check.sh verifies
+  -- you create once (see docs/modes.md / scripts/manual-steps.sh). macconfig-check.sh verifies
   -- they exist (`shortcuts list`). A missing Shortcut doesn't stop the mode: everything
   -- else still runs, the menu offers a clickable Fix, and the switch names the Shortcut.
   focus = {

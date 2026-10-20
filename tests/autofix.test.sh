@@ -48,9 +48,9 @@ done
 unscriptable="$(grep -n -e "can't be scripted" -e "no reliable way to script" \
   "$DIR/lib/autofix.list" "$DIR/lib/desktop-bindings.list" || true)"
 readme_claim="$(grep -n -e "no reliable way to script" -e "desktop assignments (macOS can't" \
-  "$DIR/README.md" || true)"
+  "$DIR/README.md" "$DIR"/docs/*.md || true)"
 eq "list files don't call assignments unscriptable" "" "$unscriptable"
-eq "README doesn't call assignments unscriptable" "" "$readme_claim"
+eq "docs don't call assignments unscriptable" "" "$readme_claim"
 
 # ---- lookup semantics ----
 eq "SAFE lookup returns class|fixer|why" "SAFE|symlink" "$(autofix_lookup "$LIST" symlink | cut -d'|' -f1-2)"
