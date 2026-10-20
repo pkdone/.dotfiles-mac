@@ -4,7 +4,7 @@ Personal macOS dotfiles and bootstrap setup.
 
 ## Setup
 
-On a fresh Mac, paste this block. It installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon), installs the GitHub CLI, signs in when `gh auth status` is not already ok, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste it again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
+On a fresh Mac, paste this block. It installs Homebrew and the GitHub CLI, signs you in to GitHub, clones this repo to `~/.dotfiles-mac`, and then runs the guided setup, which asks before each step. It's safe to paste again later, because it skips anything that's already done.
 
 ```bash
 command -v brew >/dev/null 2>&1 || {
@@ -19,22 +19,17 @@ gh auth status || gh auth login
 
 The walkthrough after that paste — dotfiles, the apps Homebrew can't install, shell, hostname, Dock, handlers, and the checks — is in [Setup](docs/setup.md).
 
-## Commands
-
-| Command | What it does |
-|------|------|
-| `macconfig` | Checks this Mac's config settings against the repo (`macconfig-check.sh`). Arguments pass through: `macconfig`, `macconfig --fix`, `macconfig --no-color` |
-| `check.sh` | Shim that execs `macconfig-check.sh` with the same arguments, stdin, and exit status. Kept so existing callers (the scheduled `~/.dotfiles-mac/check.sh --fix --no-color`, plus muscle memory) stay valid. |
-| `--fix` | `macconfig-check.sh` on its own never changes anything. `--fix` repairs only the drift that is classed SAFE, re-checks, and lists Fixed / Needs Paul. |
-| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile. Sets `HOMEBREW_NO_ASK` for that run only, so Homebrew 7 does not ask "Do you want to proceed?"; a hand-typed `brew upgrade` still asks |
+## Everyday commands
 
 ```bash
-macconfig          # check this Mac against the repo (read-only)
-macconfig --fix    # check, repair safe drift, then re-check
+macconfig          # check this Mac against the repo (read-only, changes nothing)
+macconfig --fix    # check, fix anything that's safe to fix automatically, then check again
 brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile
 ```
 
-The summary, the SAFE / Needs Paul split, and the Mac health signals are in [Setup](docs/setup.md#verifying-the-setup).
+`macconfig --fix` only changes settings it can safely put back on its own. Anything else is listed under "Needs Paul" for you to do by hand. `check.sh` is an older name for `macconfig`, kept because the scheduled morning check still calls it.
+
+What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).
 
 ## Manual steps
 
