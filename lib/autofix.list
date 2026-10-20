@@ -1,5 +1,5 @@
-# What `macconfig-check.sh --fix` may repair on its own. One row per issue id; macconfig-check.sh tags every
-# drift / warning with one of these ids (`fixid <id>` in macconfig-check.sh). The single place the
+# What `macconfig-check.sh --fix` may repair on its own. One row per issue id; the checks tag every
+# drift / warning with one of these ids (`fixid <id>` in checks/*.sh). The single place the
 # safe / needs-Paul split lives — tests/autofix.test.sh keeps it in sync with macconfig-check.sh.
 # Format (pipe-delimited): id | class | fixer | what it covers / why
 #   class:  SAFE = reversible preference write, applied automatically by --fix
@@ -66,8 +66,11 @@ input-british|PAUL||British keyboard input source (com.apple.HIToolbox AppleEnab
 gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Check-only: --fix never runs gh auth login
 1password-cli|PAUL||1Password CLI (op whoami) — manual step 1password-cli. Missing app or CLI is a warning. Installed but not signed in (needs an unlock) is info, not a warning. --fix never runs op
 mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
-security|PAUL||security setting — never changed automatically
-software-update|PAUL||software updates — System Settings → General → Software Update
+security|PAUL||security setting (FileVault, firewall stealth mode, automatic security updates, SSH agent and ~/.ssh modes, git commit signing) — never changed automatically
+software-update|PAUL||a pending macOS update has been waiting more than 7 days — System Settings → General → Software Update. The check reads the local Software Update plist and does not call softwareupdate
+broken-symlink|PAUL||a symlink under ~/.config, ~/Library/LaunchAgents, or a home dotfile points into the dotfiles repo but the target is missing — restore it from git or re-run install.sh. --fix does not relink these
+hammerspoon-config|PAUL||Hammerspoon's repo config did not compile — fix the Lua under hammerspoon/. --fix does not reload or rewrite it
+launchagent-template|PAUL||a com.pdone.* LaunchAgent does not match its repo template once @HOME@ is expanded, or an installed plist is stale or unknown. This sweep only reports. The pin agents' own drift is still the SAFE launchagent fixer
 delete-files|PAUL||deleting files is never automated
 dotfiles-git|PAUL||dotfiles git state — no automatic commits / pushes / pulls (dotpush)
 launchagent-exit|PAUL||a LaunchAgent's last run failed — read its log

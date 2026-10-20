@@ -14,9 +14,17 @@ The dictation and Quick Note pin values, and the Karabiner rules, are in [Settin
 
 ## AC idle sleep
 
-AC idle sleep on mains power is `sudo pmset -c sleep 0` (manual step `ac-sleep`). Closing the lid still sleeps the Mac, and battery is unchanged. The display still turns off and the screen still locks. `macconfig-check.sh` reads only the `AC Power:` section of `pmset -g custom` and warns if `sleep` isn't 0. `--fix` does not run the command, because it needs sudo.
+AC idle sleep on mains power is `sudo pmset -c sleep 0` (manual step `ac-sleep`). Closing the lid still sleeps the Mac, and battery is unchanged. The display still turns off and the screen still locks. `macconfig-check.sh` reads only the `AC Power:` section of `pmset -g custom` and warns if `sleep` isn't 0. The warning says mains-power sleep is no longer 0. That is a common result of a company MDM (Kandji) reset, which puts the sleep timer back. `--fix` does not run the command, because it needs sudo. Run the manual step again in a terminal.
 
 The `macos.sh` step that runs the same command is in [Settings](settings.md#macos-defaults).
+
+## Software Update, LaunchAgents, and broken links
+
+The security check does not run `softwareupdate`, so it does not sit on the network. It reads the Software Update preferences already on disk: whether automatic security updates are on, and whether a recommended update has been sitting since a successful check more than 7 days ago. Install the update in System Settings when that warning appears.
+
+A `com.pdone.*` file in `~/Library/LaunchAgents` that does not match the repo, or that has no repo template, is a warning. `--fix` still repairs the two pin agents (dictation and Quick Note) when those sections report drift. It does not delete an unknown plist. Remove that file yourself, or add a template under `launchagents/`, then re-run install.
+
+A symlink under `~/.config`, `~/Library/LaunchAgents`, or a home dotfile that points into this repo but whose target is gone is a warning. `--fix` does not recreate it. Restore the file from git, or run `install.sh` again for the links it manages.
 
 ## Recalibrating notification bits
 

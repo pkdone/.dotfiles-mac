@@ -68,7 +68,7 @@ has "helper default plist is the usernoted group store" \
 miss "helper does not read the old ncprefs path as its store" \
   'com.apple.ncprefs.plist"' "$(cat "$HELPER")"
 writers="$(grep -nE 'defaults write|PlistBuddy|killall usernoted|plistlib.dump|subprocess' \
-  "$CHECK" "$HELPER" || true)"
+  "$CHECK" "$DIR/checks/notifications.sh" "$HELPER" || true)"
 eq "check and helper never write the notification store" "" "$writers"
 
 # Sample flags from this Mac (macOS 27). Bit 25 is clear on every Off-list app
@@ -224,7 +224,7 @@ has "duplicate off-list id is an error" "duplicate bundle id com.apple.iCal" "$o
 
 # The macconfig-check.sh section reports helper warnings as warnings (Needs Paul
 # via the PAUL row), and unknown apps as info. It has no writer.
-section="$(awk '/^# ---- 13e\. Notifications/,/^# ---- 14\. Leftover/' "$CHECK")"
+section="$(cat "$DIR/checks/notifications.sh")"
 has "section calls the helper" 'lib/notification-prefs.py' "$section"
 # shellcheck disable=SC2016  # needles are source text, compared literally
 has "section warns" 'warn "$n_msg"' "$section"

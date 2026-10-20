@@ -6,10 +6,13 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault / softwareupdate), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), British input source, GitHub CLI sign-in, 1Password CLI, pointer size (check-only; manual steps input-british / gh-auth / 1password-cli / pointer-size), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH and signing), Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), British input source, GitHub CLI sign-in, 1Password CLI, pointer size (check-only; manual steps input-british / gh-auth / 1password-cli / pointer-size), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py, lib/session-checks.sh and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
+#
+# Each section is a checks/<area>.sh file sourced below, in this order, so the
+# report, the summary, and the exit status stay the same. --only runs a subset.
 #
 # Flags:
 #   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
@@ -24,6 +27,8 @@
 #   --dry-run      With --fix: show what would be fixed; change nothing.
 #   --issues       Internal (used by --fix to re-check): print one line per drift/warning
 #                  (kind, id, arg, message, section; separated by \x1f) on stdout and nothing else.
+#   --only AREA[,AREA]
+#                  Run only those areas, in the usual order. check.sh and macconfig pass it through.
 #   -h, --help     Show usage.
 #
 set -euo pipefail
@@ -44,16 +49,78 @@ FIX=0
 DRY_RUN=0
 ISSUES=0
 
-for arg in "$@"; do
-  case "$arg" in
-    --no-color) NO_COLOR_OPT=1 ;;
-    --health-json) HEALTH_JSON=1 ;;
-    --fix) FIX=1 ;;
-    --dry-run) DRY_RUN=1 ;;
-    --issues) ISSUES=1 ;;
+# Area names match checks/<area>.sh. finder is one area with two sections.
+KNOWN_AREAS=" symlinks brew mdm defaults dock desktops shell hostname display power handlers files apps hotkeys finder karabiner hammerspoon login-items coteditor ghostty logi modes notifications backups security health session manual "
+ONLY_RAW=""
+ONLY_SET=0
+ONLY_NORM=""
+
+area_selected() {
+  if [ -z "$ONLY_NORM" ]; then
+    return 0
+  fi
+  case "$ONLY_NORM" in
+    *",$1,"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+normalize_only() {
+  local rest="$1" area
+  ONLY_NORM=","
+  while [ -n "$rest" ]; do
+    area="${rest%%,*}"
+    if [ "$area" = "$rest" ]; then
+      rest=""
+    else
+      rest="${rest#*,}"
+    fi
+    area="${area#"${area%%[![:space:]]*}"}"
+    area="${area%"${area##*[![:space:]]}"}"
+    [ -n "$area" ] || continue
+    case "$KNOWN_AREAS" in
+      *" $area "*) ;;
+      *)
+        echo "Unknown area: $area" >&2
+        echo "Areas:${KNOWN_AREAS}" >&2
+        exit 2
+        ;;
+    esac
+    case "$ONLY_NORM" in
+      *",$area,"*) ;;
+      *) ONLY_NORM="${ONLY_NORM}${area}," ;;
+    esac
+  done
+  if [ "$ONLY_NORM" = "," ]; then
+    echo "--only needs at least one area (for example: --only dock,power)" >&2
+    exit 2
+  fi
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --no-color) NO_COLOR_OPT=1; shift ;;
+    --health-json) HEALTH_JSON=1; shift ;;
+    --fix) FIX=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    --issues) ISSUES=1; shift ;;
+    --only)
+      if [ $# -lt 2 ] || [ "${2#--}" != "$2" ]; then
+        echo "--only needs an area list, for example: --only dock,power (try --help)" >&2
+        exit 2
+      fi
+      ONLY_SET=1
+      ONLY_RAW="${ONLY_RAW:+$ONLY_RAW,}$2"
+      shift 2
+      ;;
+    --only=*)
+      ONLY_SET=1
+      ONLY_RAW="${ONLY_RAW:+$ONLY_RAW,}${1#--only=}"
+      shift
+      ;;
     -h|--help)
-      cat <<'USAGE'
-Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]]
+      cat <<EOF
+Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]] [--only AREA[,AREA]]
   Default: read-only. Reports drift between this machine and the repo; writes nothing.
   Exit status: 0 = everything matches, 1 = drift found.
   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
@@ -64,12 +131,20 @@ Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]]
                  preference writes only), re-check, and print Fixed / Needs Paul lists.
                  Exit status reflects the drift left after the fixes.
   --dry-run      With --fix: show what would be fixed; change nothing.
+  --only AREA[,AREA]
+                 Run only these areas, in the usual order (not the order you type).
+                 Areas:${KNOWN_AREAS}
+                 finder is both Finder sections. Repeat --only to add areas.
+                 check.sh and the macconfig fish function pass this flag through.
   -h, --help     Show this help.
-USAGE
+EOF
       exit 0 ;;
-    *) echo "Unknown argument: $arg (try --help)" >&2; exit 2 ;;
+    *) echo "Unknown argument: $1 (try --help)" >&2; exit 2 ;;
   esac
 done
+if [ "$ONLY_SET" = 1 ]; then
+  normalize_only "$ONLY_RAW"
+fi
 if [ "$DRY_RUN" = 1 ] && [ "$FIX" != 1 ]; then
   echo "--dry-run only applies to --fix (macconfig-check.sh is read-only without --fix)" >&2; exit 2
 fi
@@ -131,1545 +206,181 @@ hdr()  { SECTION="$1"; fixid unclassified; printf '\n%s%s%s\n' "$C_HDR" "$1" "$C
 . "$DOTDIR/lib/defaults-lib.sh"
 DOT_PYTHON="$(dot_python || true)"
 
-# ---- 1. symlinks --------------------------------------------------------
-hdr "Symlinks"
-check_link() {  # target  expected-source
-  local target="$1" expected="$2"
-  CHECKED=$((CHECKED + 1))
-  fixid symlink "$target|$expected"
-  if [ ! -L "$target" ]; then
-    if [ -e "$target" ]; then
-      bad "${target/#$HOME/~} — exists but is not a symlink"
-    else
-      bad "${target/#$HOME/~} — missing"
-    fi
-    return 0
-  fi
-  local actual; actual="$(readlink "$target")"
-  if [ "$actual" != "$expected" ]; then
-    bad "${target/#$HOME/~} -> $actual (expected $expected)"
-  elif [ ! -e "$target" ]; then
-    bad "${target/#$HOME/~} -> $expected (broken: source missing)"
-  else
-    pass "${target/#$HOME/~} -> repo"
-  fi
-}
-
-# Static one-to-one links from lib/links.list (shared with install.sh).
-while IFS='|' read -r src tgt; do
-  case "$src" in ''|'#'*) continue ;; esac
-  check_link "${tgt//@HOME@/$HOME}" "$DOTDIR/$src"
-done < "$DOTDIR/lib/links.list"
-# Fish functions: one-dir-to-many glob, handled as a special case.
-for f in "$DOTDIR"/fish/functions/*.fish; do
-  check_link "$HOME/.config/fish/functions/$(basename "$f")" "$f"
-done
-
-# ---- 2. Homebrew --------------------------------------------------------
-hdr "Homebrew (Brewfile)"
-fixid brew
-CHECKED=$((CHECKED + 1))
-if ! command -v brew >/dev/null 2>&1; then
-  warn "brew not installed — skipping Brewfile check"
-else
-  bf_names="$(sed -nE 's/^(brew|cask) "([^"]+)".*/\2/p' "$DOTDIR/Brewfile" | sed -E 's#.*/##' | sort -u)"
-  if ! brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" >/dev/null 2>&1; then
-    # --no-upgrade => fail only on genuinely MISSING entries, not merely outdated ones.
-    bad "Brewfile not satisfied — missing entries:"
-    brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" --verbose 2>&1 | sed 's/^/          /' || true
-  else
-    # The Brewfile pins names, not versions, so a *managed* package being merely
-    # outdated is a soft warning (run brewsync), not drift. Match brewsync's env
-    # (HOMEBREW_NO_UPGRADE_AUTO_UPDATES_CASKS=1) so self-updating casks it would never
-    # upgrade (Cursor, VS Code, Slack, Gemini, ...) aren't flagged as actionable here.
-    outdated="$(HOMEBREW_NO_UPGRADE_AUTO_UPDATES_CASKS=1 brew outdated --quiet 2>/dev/null | grep -Fxf <(printf '%s\n' "$bf_names") || true)"
-    if [ -n "$outdated" ]; then
-      warn "all installed; outdated (run brewsync to update): $(printf '%s' "$outdated" | tr '\n' ' ')"
-    else
-      pass "Brewfile satisfied (all installed and current)"
-    fi
-  fi
-  # Closed-set extras: anything brew bundle cleanup would remove (formulae, casks, MAS)
-  # that isn't in the Brewfile. Soft warning only — never auto-zap from macconfig-check.sh.
-  # Manual non-brew apps (Cursor Nightly, YouTube Music) never appear here.
-  # MDM apps in lib/mdm-apps.list are expected leftovers — filter them out.
-  CHECKED=$((CHECKED + 1))
-  cleanup="$(brew bundle cleanup --file "$DOTDIR/Brewfile" 2>/dev/null || true)"
-  mdm_names=""
-  if [ -r "$DOTDIR/lib/mdm-apps.list" ]; then
-    mdm_names="$(awk -F'|' '$1 !~ /^#/ && NF {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1); print $1}' "$DOTDIR/lib/mdm-apps.list")"
-  fi
-  if printf '%s\n' "$cleanup" | rg -q 'Would (uninstall|remove)'; then
-    extras="$(printf '%s\n' "$cleanup" | MDM_NAMES="$mdm_names" awk '
-      BEGIN { mdm=ENVIRON["MDM_NAMES"]; n=split(mdm, a, "\n"); for (i=1;i<=n;i++) if (a[i]!="") skip[a[i]]=1 }
-      /^Would / {grab=1; next}
-      /^Run / {grab=0}
-      grab && NF {
-        line=$0; gsub(/^[[:space:]]+/, "", line)
-        name=line; sub(/ \(.*/, "", name)
-        if (!(name in skip)) print line
-      }
-    ' | tr '\n' ',' | sed 's/,$//; s/,/, /g')"
-    if [ -n "$extras" ]; then
-      warn "Brewfile extras (add to Brewfile or uninstall): $extras"
-    else
-      pass "no undeclared brew/cask/mas extras (MDM apps ignored)"
-    fi
-  else
-    pass "no undeclared brew/cask/mas extras"
-  fi
-fi
-
-# ---- 2b. MDM / company apps (present, not Brewfile-managed) ----
-if [ -r "$DOTDIR/lib/mdm-apps.list" ]; then
-  hdr "MDM / company apps"
-  fixid mdm
-  while IFS='|' read -r name path _mas_id; do
-    name="$(printf '%s' "$name" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-    path="$(printf '%s' "$path" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-    case "$name" in ''|\#*) continue ;; esac
-    CHECKED=$((CHECKED + 1))
-    if [ -d "$path" ]; then
-      pass "$name present (MDM-managed; not in Brewfile)"
-    else
-      warn "$name missing at $path — install via company MDM / App Store"
-    fi
-  done < "$DOTDIR/lib/mdm-apps.list"
-fi
-
-# Domains may be prefixed with @host/ to use `defaults -currentHost` (ByHost plists).
-defaults_read() {  # domain key
-  case "$1" in
-    @host/*) defaults -currentHost read "${1#@host/}" "$2" ;;
-    *)       defaults read "$1" "$2" ;;
-  esac
-}
-defaults_read_type() {  # domain key
-  case "$1" in
-    @host/*) defaults -currentHost read-type "${1#@host/}" "$2" ;;
-    *)       defaults read-type "$1" "$2" ;;
-  esac
-}
-
-# ---- 3. macOS defaults --------------------------------------------------
-hdr "macOS defaults"
-while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; do
-  case "$domain" in ''|'#'*) continue ;; esac
-  CHECKED=$((CHECKED + 1))
-  fixid defaults "$domain|$key"
-  desired="${desired//@HOME@/$HOME}"
-  want_token="$(type_token "$etype")"
-  # location is @HOME@/Pictures/Screenshots. A missing folder is drift so --fix
-  # (macos.sh) mkdir -p's it before writing. The message uses a literal ~, not a
-  # hardcoded home.
-  shot_dir_missing=0
-  shot_shown="$desired"
-  case "$desired" in
-    "$HOME"|"$HOME"/*) shot_shown="~${desired#"$HOME"}" ;;
-  esac
-  if [ "$domain" = com.apple.screencapture ] && [ "$key" = location ] && [ ! -d "$desired" ]; then
-    shot_dir_missing=1
-  fi
-  shot_dir_msg="$domain $key — directory $shot_shown missing (mkdir -p before setting it)"
-  if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
-    curtype="$(defaults_read_type "$domain" "$key" 2>/dev/null || true)"
-    curtype="${curtype##* }"
-    if [ "$curtype" != "$want_token" ]; then
-      bad "$domain $key — type mismatch (expected $want_token, found ${curtype:-none})"
-      if [ "$shot_dir_missing" = 1 ]; then bad "$shot_dir_msg"; fi
-    elif values_match "$etype" "$cur" "$desired" "$tol"; then
-      if [ "$shot_dir_missing" = 1 ]; then
-        bad "$shot_dir_msg"
-      elif [ -n "$tol" ] && [ "$tol" != 0 ] && ! values_equal "$etype" "$cur" "$desired"; then
-        pass "$domain $key = $cur (within ±$tol of $desired)"
-      else
-        pass "$domain $key = $cur"
-      fi
-    else
-      bad "$domain $key = $cur (expected $desired)"
-      if [ "$shot_dir_missing" = 1 ]; then bad "$shot_dir_msg"; fi
-    fi
-  else
-    bad "$domain $key — not set (expected $desired)"
-    if [ "$shot_dir_missing" = 1 ]; then bad "$shot_dir_msg"; fi
-  fi
-done < "$DOTDIR/lib/macos-defaults.list"
-
-# ---- 4. Dock ------------------------------------------------------------
-hdr "Dock"
-fixid dock-apps
-if ! command -v dockutil >/dev/null 2>&1; then
-  fixid tooling
-  warn "dockutil not installed — skipping Dock check"
-else
-  # dockutil --list is tab-separated: label \t file://URL \t section \t plist \t bundle-id
-  # We compare by PATH (mirrors how dock.sh pins apps). Only %20 needs decoding for our
-  # paths; WhatsApp's invisible U+200E mark stays encoded and is absorbed by the * glob.
-  url_to_path() { local p="${1#file://}"; p="${p%/}"; printf '%s' "${p//%20/ }"; }
-
-  expected_paths=(); expected_names=()
-  while IFS='|' read -r name path; do
-    case "$name" in ''|'#'*) continue ;; esac
-    expected_names+=("$name"); expected_paths+=("${path/@HOME@/$HOME}")
-  done < "$DOTDIR/lib/dock-apps.list"
-
-  actual_paths=()
-  while IFS=$'\t' read -r _label url _rest; do
-    [ -z "$url" ] && continue
-    actual_paths+=("$(url_to_path "$url")")
-  done < <(dockutil --list)
-
-  CHECKED=$((CHECKED + 1))
-  mism=0
-  if [ "${#actual_paths[@]}" -ne "${#expected_paths[@]}" ]; then
-    bad "Dock has ${#actual_paths[@]} app(s), expected ${#expected_paths[@]}"
-    mism=$((mism + 1))
-  fi
-  n=${#expected_paths[@]}
-  if [ "${#actual_paths[@]}" -lt "$n" ]; then n=${#actual_paths[@]}; fi
-  i=0
-  while [ "$i" -lt "$n" ]; do
-    exp="${expected_paths[$i]}"; act="${actual_paths[$i]}"
-    # shellcheck disable=SC2254  # $exp is an intentional glob pattern (WhatsApp uses *)
-    case "$act" in
-      $exp) : ;;
-      *) bad "Dock #$((i + 1)): $act (expected ${expected_names[$i]} ~ $exp)"; mism=$((mism + 1)) ;;
-    esac
-    i=$((i + 1))
-  done
-  if [ "$mism" -eq 0 ]; then
-    pass "Dock matches lib/dock-apps.list (${#expected_paths[@]} apps, in order)"
-  fi
-fi
-
-# ---- 4b. Dock "Assign To" desktop pins ----------------------------------
-# Read-only here. --fix writes the drifted bundles back (same Desktop N → Space
-# UUID map) via the desktop fixer below.
-hdr "Desktop assignments (Dock → Options → Assign To)"
-fixid desktop-assign
-if PY="$(dot_python)"; then
-  while IFS='|' read -r status bundle msg; do
-    [ -z "$status" ] && continue
-    CHECKED=$((CHECKED + 1))
-    case "$status" in
-      ok)  pass "$msg" ;;
-      bad) fixid desktop-assign "$bundle"; bad "$msg" ;;
-      *)   fixid tooling; warn "${msg:-$bundle}" ;;
-    esac
-  done < <("$PY" "$DOTDIR/lib/desktop-bindings.py" "$DOTDIR/lib/desktop-bindings.list")
-else
-  CHECKED=$((CHECKED + 1))
-  fixid tooling; warn "no python3 — skipping desktop assignment check"
-fi
-
-# ---- 5. login shell -----------------------------------------------------
-hdr "Login shell"
-fixid login-shell
-CHECKED=$((CHECKED + 1))
-FISH="$(brew --prefix 2>/dev/null)/bin/fish"
-cur_shell="$(dscl . -read "/Users/$USER" UserShell 2>/dev/null | awk '{print $2}')"
-if [ "$cur_shell" = "$FISH" ]; then
-  pass "login shell = $cur_shell"
-else
-  bad "login shell = ${cur_shell:-unknown} (expected $FISH)"
-fi
-
-# ---- 6. hostname --------------------------------------------------------
-hdr "Hostname"
-fixid hostname
-for which in HostName LocalHostName ComputerName; do
-  CHECKED=$((CHECKED + 1))
-  cur="$(scutil --get "$which" 2>/dev/null || true)"
-  if [ "$cur" = "$EXPECTED_HOST" ]; then
-    pass "$which = $cur"
-  else
-    bad "$which = ${cur:-unset} (expected $EXPECTED_HOST)"
-  fi
-done
-
-# ---- 6b. Display auto-brightness ----------------------------------------
-# Read-only. corebrightnessdiag status-info needs no sudo. The saved value is
-# the root-owned CoreBrightness plist, and published writers also change True
-# Tone, so this is not applied here or by --fix.
-hdr "Display auto-brightness"
-fixid auto-brightness
-CHECKED=$((CHECKED + 1))
-if [ ! -x /usr/libexec/corebrightnessdiag ]; then
-  fixid tooling
-  warn "corebrightnessdiag missing — can't check Automatically adjust brightness"
-elif [ ! -r "$DOTDIR/lib/auto-brightness.py" ]; then
-  fixid repo-file
-  warn "lib/auto-brightness.py missing — can't check Automatically adjust brightness"
-elif ! PY="$(dot_python)"; then
-  fixid tooling
-  warn "no python3 — can't check Automatically adjust brightness"
-else
-  diag_out="$(with_timeout 15 /usr/libexec/corebrightnessdiag status-info 2>/dev/null || true)"
-  if [ -z "$diag_out" ]; then
-    fixid tooling
-    warn "corebrightnessdiag status-info returned nothing — can't check Automatically adjust brightness"
-  else
-    ab_line="$(printf '%s\n' "$diag_out" | "$PY" "$DOTDIR/lib/auto-brightness.py" || true)"
-    ab_status="${ab_line%%|*}"
-    ab_msg="${ab_line#*|}"
-    ab_msg="${ab_msg#*|}"
-    case "$ab_status" in
-      ok)  pass "$ab_msg" ;;
-      bad) bad "$ab_msg" ;;
-      *)   fixid tooling; warn "${ab_msg:-auto-brightness check failed}" ;;
-    esac
-  fi
-fi
-
-# ---- 6c. Built-in display More Space (check-only) -----------------------
-# system_profiler SPDisplaysDataType -json. The expected prefix lives in
-# lib/display-resolution.list (More Space on this Color LCD is 1800 x 1169).
-# No built-in panel is an info skip (clamshell). --fix never changes the
-# display mode. Manual step display-more-space points here.
-hdr "Display (More Space)"
-fixid display-more-space
-CHECKED=$((CHECKED + 1))
-DISP_HELPER="$DOTDIR/lib/display-resolution.py"
-DISP_LIST="$DOTDIR/lib/display-resolution.list"
-if ! command -v system_profiler >/dev/null 2>&1; then
-  fixid tooling
-  warn "system_profiler not available — can't check More Space"
-elif [ ! -r "$DISP_HELPER" ] || [ ! -r "$DISP_LIST" ]; then
-  fixid repo-file
-  warn "display resolution check files missing — can't check More Space"
-elif [ -z "$DOT_PYTHON" ]; then
-  fixid tooling
-  warn "no python3 — can't check More Space"
-else
-  if disp_json="$(with_timeout 30 system_profiler SPDisplaysDataType -json </dev/null 2>/dev/null)"; then
-    disp_rc=0
-  else
-    disp_rc=$?
-  fi
-  if [ "$disp_rc" -ne 0 ] || [ -z "$disp_json" ]; then
-    fixid tooling
-    warn "system_profiler SPDisplaysDataType failed — can't check More Space"
-  else
-    disp_line="$(printf '%s\n' "$disp_json" | "$DOT_PYTHON" "$DISP_HELPER" --list "$DISP_LIST" || true)"
-    disp_status="${disp_line%%|*}"
-    disp_msg="${disp_line#*|}"; disp_msg="${disp_msg#*|}"
-    case "$disp_status" in
-      ok)   pass "$disp_msg" ;;
-      info) info "$disp_msg" ;;
-      warn)
-        fixid display-more-space
-        warn "$disp_msg"
-        ;;
-      *)
-        fixid tooling
-        warn "${disp_msg:-display resolution check failed}"
-        ;;
-    esac
-  fi
-fi
-
-# ---- 6d. AC idle sleep (check-only) -------------------------------------
-# pmset -g custom needs no sudo. lib/ac-sleep.py reads only the 'AC Power:'
-# sleep key, so displaysleep, the lock screen, and Battery Power are ignored.
-# A value other than 0 is a warning, not drift: setting it is
-# `sudo pmset -c sleep 0` (manual step ac-sleep). --fix does not run sudo.
-# Closing the lid still sleeps the Mac.
-hdr "AC idle sleep"
-fixid ac-sleep
-CHECKED=$((CHECKED + 1))
-AC_HELPER="$DOTDIR/lib/ac-sleep.py"
-if ! command -v pmset >/dev/null 2>&1; then
-  fixid tooling
-  warn "pmset missing — can't check AC idle sleep"
-elif [ ! -r "$AC_HELPER" ]; then
-  fixid repo-file
-  warn "lib/ac-sleep.py missing — can't check AC idle sleep"
-elif [ -z "$DOT_PYTHON" ]; then
-  fixid tooling
-  warn "no python3 — can't check AC idle sleep"
-else
-  ac_custom="$(with_timeout 15 pmset -g custom 2>/dev/null || true)"
-  if [ -z "$ac_custom" ]; then
-    fixid tooling
-    warn "pmset -g custom returned nothing — can't check AC idle sleep"
-  else
-    ac_line="$(printf '%s\n' "$ac_custom" | "$DOT_PYTHON" "$AC_HELPER" || true)"
-    ac_status="${ac_line%%|*}"
-    ac_msg="${ac_line#*|}"; ac_msg="${ac_msg#*|}"
-    case "$ac_status" in
-      ok)  pass "$ac_msg" ;;
-      bad) warn "$ac_msg" ;;
-      *)   fixid tooling; warn "${ac_msg:-AC idle sleep check failed}" ;;
-    esac
-  fi
-fi
-
-# ---- 7. URL handlers ----------------------------------------------------
-hdr "URL handlers"
-fixid url-handler
-HANDLERS_LIST="$DOTDIR/lib/url-handlers.list"
-if [ ! -r "$HANDLERS_LIST" ]; then
-  fixid repo-file; warn "lib/url-handlers.list missing — skipping URL handlers check"
-elif ! command -v duti >/dev/null 2>&1; then
-  fixid tooling; warn "duti not installed — skipping URL handlers check"
-else
-  while IFS='|' read -r scheme bundle; do
-    case "$scheme" in ''|'#'*) continue ;; esac
-    scheme="$(printf '%s' "$scheme" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-    bundle="$(printf '%s' "$bundle" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-    [ -n "$scheme" ] || continue
-    [ -n "$bundle" ] || continue
-    CHECKED=$((CHECKED + 1))
-    cur="$(duti -d "$scheme" 2>/dev/null || true)"
-    if [ "$cur" = "$bundle" ]; then
-      pass "$scheme -> $bundle"
-    else
-      bad "$scheme -> ${cur:-unset} (expected $bundle)"
-    fi
-  done < "$HANDLERS_LIST"
-fi
-
-# ---- 7b. Finder file handlers -------------------------------------------
-# Read-only here. lib/file-handlers.py runs `duti -x <ext>` (bundle id is the
-# last line). --fix sets drifted extensions with `duti -s <bundle> .<ext> all`
-# via the fileext fixer below.
-hdr "File handlers"
-fixid file-handler
-FILE_HANDLERS_LIST="$DOTDIR/lib/file-handlers.list"
-if [ ! -r "$FILE_HANDLERS_LIST" ]; then
-  fixid repo-file; warn "lib/file-handlers.list missing — skipping file handlers check"
-elif ! command -v duti >/dev/null 2>&1; then
-  fixid tooling; warn "duti not installed — skipping file handlers check"
-elif ! PY="$(dot_python)"; then
-  fixid tooling; warn "no python3 — skipping file handlers check"
-else
-  while IFS='|' read -r status ext msg; do
-    [ -z "$status" ] && continue
-    case "$status" in
-      ok)   CHECKED=$((CHECKED + 1)); fixid file-handler "$ext"; pass "$msg" ;;
-      bad)  CHECKED=$((CHECKED + 1)); fixid file-handler "$ext"; bad "$msg" ;;
-      info) note "$msg" ;;
-      *)    CHECKED=$((CHECKED + 1)); fixid tooling; warn "${msg:-$ext}" ;;
-    esac
-  done < <("$PY" "$DOTDIR/lib/file-handlers.py" "$FILE_HANDLERS_LIST")
-fi
-
-# ---- 8. unwanted apps ---------------------------------------------------
-hdr "Unwanted apps"
-fixid unwanted-app
-UNWANTED_LIST="$DOTDIR/lib/unwanted-apps.list"
-if [ ! -r "$UNWANTED_LIST" ]; then
-  fixid repo-file; warn "lib/unwanted-apps.list missing — skipping unwanted apps check"
-else
-  while IFS="|" read -r name path _mas_id; do
-    case "$name" in ""|"#"*) continue ;; esac
-    name="$(printf "%s" "$name" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//")"
-    path="$(printf "%s" "$path" | sed "s/^[[:space:]]*//;s/[[:space:]]*$//")"
-    [ -n "$name" ] || continue
-    [ -n "$path" ] || continue
-    CHECKED=$((CHECKED + 1))
-    if [ -e "$path" ]; then
-      bad "$name still installed at $path (run prune-apps.sh)"
-    else
-      pass "$name absent"
-    fi
-  done < "$UNWANTED_LIST"
-fi
-
-# Repo LaunchAgents are regular files rendered by scripts/install-launchagent.sh
-# (@HOME@ -> $HOME). launchd does not expand ~ or $HOME, so a symlink to the
-# repo plist would watch the literal placeholder. Drift when the installed
-# bytes differ or the job isn't loaded.
-check_repo_launchagent() {  # label  loaded-ok-text
-  local label="$1" loaded_ok="$2" plist la_msg
-  plist="$HOME/Library/LaunchAgents/${label}.plist"
-  CHECKED=$((CHECKED + 1))
-  fixid launchagent "$label|$plist"
-  if [ ! -x "$DOTDIR/scripts/install-launchagent.sh" ]; then
-    fixid repo-file
-    bad "scripts/install-launchagent.sh missing"
-  elif la_msg="$("$DOTDIR/scripts/install-launchagent.sh" --check "$label")"; then
-    pass "LaunchAgent $label plist matches repo ($la_msg)"
-  else
-    bad "LaunchAgent $label ${la_msg:-plist check failed}"
-  fi
-  CHECKED=$((CHECKED + 1))
-  fixid launchagent "$label|$plist"
-  if launchctl print "gui/$(id -u)/$label" >/dev/null 2>&1; then
-    pass "LaunchAgent $label loaded ($loaded_ok)"
-  else
-    bad "LaunchAgent $label not loaded — re-run install.sh or macconfig-check.sh --fix"
-  fi
-}
-
-# ---- 9. dictation shortcut -----------------------------------------------
-# Symbolic hotkey 164 is "Start Dictation". On this MacBook the default
-# "Press microphone" binding uses Fn/Globe and will start the mic on hold.
-# Desired: enabled, type=modifier, first parameter = 1048592 (Right Command twice)
-# — an unused combo so Fn never owns dictation. Nested plist, not a macos-defaults row.
-hdr "Dictation shortcut"
-fixid dictation-164
-CHECKED=$((CHECKED + 1))
-hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
-if [ -z "$hk" ]; then
-  bad "symbolichotkeys not readable"
-else
-  # Extract the 164 = { ... }; block (enabled + type + first parameter).
-  blk="$(printf '%s\n' "$hk" | awk '
-    $0 ~ /^[[:space:]]*164 =/ {grab=1}
-    grab {print}
-    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
-  ')"
-  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
-  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
-  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
-  if [ "$enabled" = "1" ] && [ "$ptype" = "modifier" ] && [ "$p1" = "1048592" ]; then
-    pass "dictation hotkey 164 = Right Command twice (not Fn/mic)"
-  else
-    bad "dictation hotkey 164 enabled=$enabled type=${ptype:-?} p1=${p1:-?} (expected enabled=1 type=modifier p1=1048592 Right Command twice)"
-  fi
-fi
-CHECKED=$((CHECKED + 1))
-fixid repo-file
-if [ -x "$DOTDIR/scripts/pin-dictation-hotkey-164.sh" ]; then
-  pass "scripts/pin-dictation-hotkey-164.sh present"
-else
-  bad "scripts/pin-dictation-hotkey-164.sh missing"
-fi
-# Rendered plist (not a symlink) plus loaded job. --fix rewrites a drifted
-# plist and bootout/bootstraps; a matching plist that isn't loaded is only
-# bootstrapped. Same arg for both so one fixer run covers both.
-check_repo_launchagent com.pdone.pin-dictation-hotkey-164 \
-  "re-pins 164 at login and when symbolichotkeys changes"
-
-# ---- 9a. Quick Note shortcut (Globe/Fn+Q) ---------------------------------
-# Symbolic hotkey 190 is "Quick Note". Default is enabled with Fn/Globe+Q.
-# Desired: disabled (enabled=0, type=standard, parameters unbound).
-hdr "Quick Note shortcut"
-fixid quicknote-190
-CHECKED=$((CHECKED + 1))
-hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
-if [ -z "$hk" ]; then
-  bad "symbolichotkeys not readable"
-else
-  blk="$(printf '%s\n' "$hk" | awk '
-    $0 ~ /^[[:space:]]*190 =/ {grab=1}
-    grab {print}
-    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
-  ')"
-  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
-  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
-  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
-  case "${enabled:-}" in 0|false|False) en_ok=1 ;; *) en_ok=0 ;; esac
-  if [ "$en_ok" = 1 ] && [ "${ptype:-}" = "standard" ] && [ "${p1:-}" = "65535" ]; then
-    pass "Quick Note hotkey 190 = disabled (not Globe/Fn+Q)"
-  else
-    bad "Quick Note hotkey 190 enabled=${enabled:-missing} type=${ptype:-?} p1=${p1:-?} (expected enabled=0 type=standard p1=65535)"
-  fi
-fi
-CHECKED=$((CHECKED + 1))
-fixid repo-file
-if [ -x "$DOTDIR/scripts/pin-quicknote-hotkey-190.sh" ]; then
-  pass "scripts/pin-quicknote-hotkey-190.sh present"
-else
-  bad "scripts/pin-quicknote-hotkey-190.sh missing"
-fi
-check_repo_launchagent com.pdone.pin-quicknote-hotkey-190 \
-  "re-disables 190 at login and when symbolichotkeys changes"
-
-# ---- 9b. Finder icon-view defaults (72 / 13) ------------------------------
-hdr "Finder icon view defaults"
-fixid finder-icon-view
-CHECKED=$((CHECKED + 1))
-pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
-if [ ! -x "$pin" ]; then
-  fixid repo-file; bad "scripts/pin-finder-icon-view.sh missing"
-elif "$pin" --check >/dev/null 2>&1; then
-  pass "Finder icon view defaults iconSize=72 textSize=13"
-else
-  bad "Finder icon view defaults drifted ($("$pin" --check 2>&1 || true)) — run macos.sh"
-fi
-
-# ---- 10. Karabiner Fn-kill and menu bar icon ----------------------------
-# Config is symlinked via links.list (section 1). Here we also verify the
-# managed rule is still present in that JSON (UI edits can strip it), and that
-# the menu bar icon stays hidden (global show_in_menu_bar and
-# show_profile_name_in_menu_bar are false). Read-only: python3 json, never a write.
-# The DriverKit extension and Accessibility grants are manual steps, checked in
-# the "Manual steps" section (scripts/manual-steps.sh ids karabiner-driver / karabiner-ax).
-hdr "Karabiner Fn-kill"
-fixid karabiner-rules
-CHECKED=$((CHECKED + 1))
-kj="$HOME/.config/karabiner/karabiner.json"
-if [ ! -r "$kj" ]; then
-  bad "$HOME/.config/karabiner/karabiner.json missing/unreadable"
-else
-  if rg -q 'Never start Dictation/Siri from Fn/Globe' "$kj" \
-    && rg -q 'pdone_fn' "$kj" \
-    && rg -q '"set_variable"' "$kj" \
-    && rg -q '"consumer_key_code": "dictation"' "$kj" \
-    && rg -q '"key_code": "f"' "$kj" \
-    && rg -q '"key_code": "f11"' "$kj" \
-    && rg -q 'left_command' "$kj"; then
-    pass "karabiner.json has Fn-kill rule (variable layer; Fn+F fullscreen; Fn+F11 Show Desktop)"
-  else
-    bad "karabiner.json missing expected Fn-kill rule (restore from repo karabiner/karabiner.json)"
-  fi
-  CHECKED=$((CHECKED + 1))
-  if rg -q 'Finder: Forward Delete' "$kj" \
-    && rg -q 'delete_forward' "$kj" \
-    && rg -q 'frontmost_application_if' "$kj" \
-    && rg -q 'com\\\\.apple\\\\.finder' "$kj"; then
-    pass "karabiner.json has Finder Forward Delete → Trash rule"
-  else
-    bad "karabiner.json missing Finder Forward Delete → Trash rule"
-  fi
-  CHECKED=$((CHECKED + 1))
-  if [ -z "$DOT_PYTHON" ]; then
-    fixid tooling
-    warn "python3 not found — can't check Karabiner menu bar icon"
-  else
-    kb_menu="$("$DOT_PYTHON" - "$kj" <<'PY' 2>/dev/null
-import json, sys
-try:
-    data = json.load(open(sys.argv[1]))
-except Exception:
-    print("unreadable")
-    raise SystemExit(0)
-g = data.get("global") if isinstance(data, dict) else None
-if not isinstance(g, dict):
-    print("missing-global")
-    raise SystemExit(0)
-keys = ("show_in_menu_bar", "show_profile_name_in_menu_bar")
-parts = []
-ok = True
-for name in keys:
-    if name not in g:
-        parts.append(name + "=missing")
-        ok = False
-    elif g[name] is False:
-        parts.append(name + "=false")
-    elif g[name] is True:
-        parts.append(name + "=true")
-        ok = False
-    else:
-        parts.append(name + "=other")
-        ok = False
-print("ok" if ok else " ".join(parts))
-PY
-)" || kb_menu="unreadable"
-    fixid karabiner-rules
-    if [ "$kb_menu" = ok ]; then
-      pass "karabiner.json hides the menu bar icon (show_in_menu_bar and show_profile_name_in_menu_bar are false)"
-    else
-      bad "karabiner.json menu bar icon not hidden (${kb_menu:-unreadable}; expected global show_in_menu_bar false and show_profile_name_in_menu_bar false)"
-    fi
-  fi
-fi
-
-# ---- 10b. Hammerspoon (Sidecar -> Slack automation) ----------------------
-# The ~/.hammerspoon dir symlink is checked in section 1 (links.list) and the cask in
-# section 2 (Brewfile). Here: soft-warn if the app isn't running. Its Accessibility
-# grant is a manual step, checked in the "Manual steps" section (id hammerspoon-ax).
-# Never launches or changes anything.
-hdr "Hammerspoon"
-fixid hammerspoon
-CHECKED=$((CHECKED + 1))
-H_HS_RUNNING=no   # reused by the Mac health JSON (background jobs)
-if [ ! -d /Applications/Hammerspoon.app ]; then
-  H_HS_RUNNING=not_installed
-  fixid app-install
-  warn "Hammerspoon.app not installed — brew bundle (cask \"hammerspoon\")"
-elif ! pgrep -xq Hammerspoon; then
-  warn "Hammerspoon not running — open -a Hammerspoon (then it starts at login)"
-else
-  H_HS_RUNNING=yes
-  pass "Hammerspoon running"
-fi
-
-# ---- 11. Login Items guard (ChatGPT / Gemini / launcher must stay Off) ----
-# SMAppService login items aren't safely disable-able from CLI; check only.
-hdr "Login Items (banned open-at-login)"
-fixid tooling   # helper / python problems below; the item checks are login-items
-BANNED_BUNDLES="com.openai.codex com.google.GeminiMacOS com.google.GeminiMacOS.launcher"
-BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
-# Prefer parsing the world-readable BTM db — `sfltool dumpbtm` pops an admin
-# password dialog on Tahoe and must never run from macconfig-check.sh.
-BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
-if [ ! -r "$BTM_HELPER" ]; then
-  warn "lib/btm-login-items.py missing — skip SMAppService login-item check"
-elif [ -z "$DOT_PYTHON" ]; then
-  warn "python3 not found — skip SMAppService login-item check"
-else
-  # shellcheck disable=SC2206  # intentional split of space-separated bundle ids
-  btm_bundles=($BANNED_BUNDLES)
-  btm_raw="$("$DOT_PYTHON" "$BTM_HELPER" "${btm_bundles[@]}" 2>&1)" && btm_rc=0 || btm_rc=$?
-  # bundle ids contain a dot; ignore helper keys like btm= / tcc=
-  btm_status="$(printf '%s\n' "$btm_raw" | awk -F= 'NF==2 && $1 ~ /\./ && $2 ~ /^(missing|disabled|enabled|unknown)$/ {print}')"
-  btm_err="$(printf '%s\n' "$btm_raw" | awk -F= '!(NF==2 && $1 ~ /\./ && $2 ~ /^(missing|disabled|enabled|unknown)$/) {print}' | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
-  if [ "$btm_rc" = 3 ] || printf '%s\n' "$btm_raw" | rg -q 'tcc=denied|Operation not permitted'; then
-    fixid tcc; warn "BTM unreadable (Full Disk Access) via $DOT_PYTHON — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
-  elif [ "$btm_rc" -ne 0 ] || [ -z "$btm_status" ]; then
-    warn "BTM helper failed (rc=$btm_rc${btm_err:+; $btm_err}) via $DOT_PYTHON — check Login Items manually"
-  else
-    fixid login-items
-    for bundle in "${btm_bundles[@]}"; do
-      CHECKED=$((CHECKED + 1))
-      st="$(printf '%s\n' "$btm_status" | awk -F= -v b="$bundle" '$1==b {print $2; exit}')"
-      case "$st" in
-        missing)  pass "$bundle not in Background Task Management (ok)" ;;
-        disabled) pass "$bundle login item disabled" ;;
-        enabled)  bad "$bundle is enabled at login — System Settings → General → Login Items → Off" ;;
-        *)        warn "$bundle BTM status unknown (${st:-empty}) — check Login Items manually" ;;
-      esac
-    done
-  fi
-fi
-# Classic login items (System Events) — rare for these apps but cheap to check.
-fixid login-items
-classic="$(osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null || true)"
-for name in $BANNED_NAMES; do
-  CHECKED=$((CHECKED + 1))
-  if printf '%s\n' "$classic" | rg -q "(^|, )${name}(,|$)"; then
-    bad "classic login item '$name' present — remove in System Settings → Login Items"
-  else
-    pass "classic login item '$name' absent"
-  fi
-done
-
-# ---- 12. Finder sidebar Recents ----
-hdr "Finder sidebar Recents"
-fixid finder-recents
-CHECKED=$((CHECKED + 1))
-helper="$DOTDIR/lib/finder-sidebar-recents.py"
-if [ ! -r "$helper" ]; then
-  fixid tooling; warn "lib/finder-sidebar-recents.py missing — skip"
-elif [ -z "$DOT_PYTHON" ]; then
-  fixid tooling; warn "python3 not found — skip Finder Recents"
-else
-  # Guard exit status: with set -e, a failing $(...) aborts before rc= is set.
-  out="$("$DOT_PYTHON" "$helper" 2>&1)" && rc=0 || rc=$?
-  if [ "$rc" = 3 ] || printf '%s\n' "$out" | rg -q 'tcc=denied|Operation not permitted|PermissionError'; then
-    fixid tcc; warn "Finder Recents unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
-  elif [ "$rc" = 0 ]; then
-    pass "Finder sidebar Recents hidden"
-  else
-    bad "Finder sidebar Recents not hidden ($out) — run macos.sh"
-  fi
-fi
-
-# ---- 13. CotEditor theme + font ----
-hdr "CotEditor"
-fixid coteditor
-CHECKED=$((CHECKED + 1))
-cot_theme="$(defaults read com.coteditor.CotEditor defaultTheme 2>/dev/null || true)"
-cot_font="$(defaults export com.coteditor.CotEditor - 2>/dev/null | plutil -extract modes.general.fontType raw - 2>/dev/null || true)"
-if [ "$cot_theme" = "Anura (Dark)" ] && [ "$cot_font" = "monospaced" ]; then
-  pass "CotEditor theme=Anura (Dark) fontType=monospaced"
-else
-  bad "CotEditor theme=${cot_theme:-unset} fontType=${cot_font:-unset} (expected Anura (Dark) / monospaced)"
-fi
-
-# ---- 13b. Ghostty config (app settings as code) --------------------------
-# ghostty/config is symlinked into ~/.config/ghostty/config (section 1). Here: the repo
-# file is valid, no other config file Ghostty loads overrides it, and what Ghostty
-# actually loads equals the repo file alone (+show-config with only the repo copy vs the
-# real one). Read-only: the comparison copy lives in a temp dir that's removed after.
-hdr "Ghostty config"
-fixid app-config
-GHOSTTY_BIN=/Applications/Ghostty.app/Contents/MacOS/ghostty
-G_REPO="$DOTDIR/ghostty/config"
-if [ ! -x "$GHOSTTY_BIN" ]; then
-  CHECKED=$((CHECKED + 1))
-  fixid app-install; warn "Ghostty.app not installed — brew bundle (cask \"ghostty\")"
-else
-  CHECKED=$((CHECKED + 1))
-  if g_val="$(with_timeout 10 "$GHOSTTY_BIN" +validate-config --config-file="$G_REPO" </dev/null 2>&1)"; then
-    pass "ghostty/config is valid (ghostty +validate-config)"
-  else
-    bad "ghostty/config has errors: $(printf '%s' "$g_val" | tr '\n' ' ' | sed 's/[[:space:]]*$//') — fix the repo file"
-  fi
-  # Ghostty also reads these (Application Support is loaded after ~/.config and wins).
-  CHECKED=$((CHECKED + 1))
-  g_over=""
-  for g_f in "$HOME/Library/Application Support/com.mitchellh.ghostty/config" \
-             "$HOME/Library/Application Support/com.mitchellh.ghostty/config.ghostty" \
-             "$HOME/.config/ghostty/config.ghostty"; do
-    if [ -f "$g_f" ] && grep -Eq '^[[:space:]]*[^#[:space:]]' "$g_f"; then g_over="$g_over ${g_f/#$HOME/~};"; fi
-  done
-  if [ -n "$g_over" ]; then
-    bad "Ghostty also loads${g_over%;} — it overrides the repo config; merge it into ghostty/config, then remove it"
-  else
-    pass "no other Ghostty config file overrides the repo one"
-  fi
-  CHECKED=$((CHECKED + 1))
-  g_tmp="$(mktemp -d)"
-  mkdir -p "$g_tmp/ghostty" && cp "$G_REPO" "$g_tmp/ghostty/config"
-  g_eff="$(with_timeout 10 "$GHOSTTY_BIN" +show-config </dev/null 2>/dev/null || true)"
-  g_want="$(XDG_CONFIG_HOME="$g_tmp" with_timeout 10 "$GHOSTTY_BIN" +show-config </dev/null 2>/dev/null || true)"
-  rm -rf "$g_tmp"
-  if [ -z "$g_want" ]; then
-    fixid tooling; warn "ghostty +show-config printed nothing — can't compare the effective config"
-  elif [ "$g_eff" = "$g_want" ]; then
-    pass "Ghostty's effective config = ghostty/config ($(printf '%s\n' "$g_eff" | grep -c .) resolved settings)"
-  else
-    g_diff="$(diff <(printf '%s\n' "$g_want") <(printf '%s\n' "$g_eff") | grep -E '^[<>]' | head -3 | tr '\n' ' ')"
-    bad "Ghostty's effective config differs from ghostty/config (< repo, > loaded): ${g_diff% } — check the symlink and override files"
-  fi
-fi
-
-# ---- 13c. Logi Options+ (MX Master 3S settings, check-only) ---------------
-# lib/logi-settings.py reads a temporary copy of Logi Options+'s settings.db (deleted
-# afterwards) and compares it with lib/logi-expected.list; the device is found by model,
-# not serial. Never writes the database: any drift is restored by hand in the app.
-# Cloud backup can't be read locally, so it's the by-hand manual step logi-cloud-backup.
-hdr "Logi Options+"
-LOGI_APP=/Applications/logioptionsplus.app
-LOGI_HELPER="$DOTDIR/lib/logi-settings.py"
-CHECKED=$((CHECKED + 1))
-if [ ! -d "$LOGI_APP" ]; then
-  fixid app-install; warn "Logi Options+ not installed — brew bundle (cask \"logi-options+\")"
-elif [ -z "$DOT_PYTHON" ] || [ ! -r "$LOGI_HELPER" ]; then
-  fixid tooling; warn "can't check Logi Options+ settings (python3 or lib/logi-settings.py missing)"
-else
-  logi_ids="$(grep -Ev '^[[:space:]]*(#|$|model\|)' "$DOTDIR/lib/logi-expected.list" 2>/dev/null \
-    | cut -d'|' -f1 | tr '\n' ',' | sed 's/,$//')"
-  if logi_out="$(with_timeout 20 "$DOT_PYTHON" "$LOGI_HELPER" --only "$logi_ids" </dev/null 2>&1)"; then logi_rc=0; else logi_rc=$?; fi
-  logi_n=0
-  while IFS='|' read -r l_st _ l_msg; do
-    [ -n "$l_st" ] || continue
-    case "$l_st" in
-      ok)    logi_n=$((logi_n + 1)); [ "$logi_n" -eq 1 ] || CHECKED=$((CHECKED + 1)); pass "$l_msg" ;;
-      drift) logi_n=$((logi_n + 1)); [ "$logi_n" -eq 1 ] || CHECKED=$((CHECKED + 1))
-             fixid logi-settings; bad "$l_msg — set it back in Logi Options+ (MX Master 3S)" ;;
-      warn)  logi_n=$((logi_n + 1)); [ "$logi_n" -eq 1 ] || CHECKED=$((CHECKED + 1))
-             fixid logi-settings; warn "$l_msg" ;;
-      note)  note "$l_msg" ;;
-      *)     fixid logi-unreadable; warn "Logi Options+: ${l_msg:-$l_st}" ;;
-    esac
-  done <<LOGI_EOF
-$logi_out
-LOGI_EOF
-  case "$logi_rc" in
-    0|1|2|3) ;;
-    *) fixid logi-unreadable; warn "Logi Options+ check failed or timed out (rc=$logi_rc) — settings not verified" ;;
-  esac
-  if [ "$logi_n" -eq 0 ] && [ "$logi_rc" -le 1 ]; then
-    fixid logi-unreadable; warn "Logi Options+ check printed no results — settings not verified"
-  fi
-fi
-
-# ---- 13d. Modes (Hammerspoon menu-bar switcher) ----------------------------
-# hammerspoon/modes.lua must be valid (the same validator the switcher uses: a Lua
-# interpreter if there is one, else the running Hammerspoon via `hs`; `luac -p` only
-# checks syntax). The Focus Shortcuts and Focus modes it names should exist (report
-# only: a mode still runs without them). A non-Normal mode left on for more than
-# HEALTH_MODE_MAX_HOURS is a warning. Apps a mode quit or hid on purpose are listed as
-# info, never drift. Read-only: never switches a mode or touches state.json.
-hdr "Modes (Hammerspoon)"
-HEALTH_MODE_MAX_HOURS="${HEALTH_MODE_MAX_HOURS:-4}"
-MODES_CFG="$DOTDIR/hammerspoon/modes.lua"
-MODES_ENGINE="$DOTDIR/hammerspoon/mode_switcher.lua"
-MODES_STATE="$HOME/Library/Application Support/pdone-modes/state.json"
-CHECKED=$((CHECKED + 1))
-fixid modes-config
-modes_lua=""
-for c in lua5.4 lua54 lua; do
-  if command -v "$c" >/dev/null 2>&1; then modes_lua="$c"; break; fi
-done
-modes_val=""
-if [ ! -r "$MODES_CFG" ] || [ ! -r "$MODES_ENGINE" ]; then
-  fixid repo-file; bad "hammerspoon/modes.lua or mode_switcher.lua missing — restore it from git"
-else
-  if [ -n "$modes_lua" ]; then
-    modes_val="$(with_timeout 10 "$modes_lua" -e "local ms = dofile(arg[1]); io.write(ms.validateFile(arg[2]))" "$MODES_ENGINE" "$MODES_CFG" </dev/null 2>&1 || true)"
-    modes_how="$modes_lua"
-  elif command -v hs >/dev/null 2>&1 && pgrep -xq Hammerspoon; then
-    # hs reads stdin unless it's /dev/null; dofile (not require) = the repo file as it is now
-    modes_val="$(with_timeout 15 hs -q -t 10 -c "return dofile('$MODES_ENGINE').validateFile('$MODES_CFG')" </dev/null 2>&1 | grep -v '^-- Loading' || true)"
-    modes_how="Hammerspoon (hs)"
-  elif command -v luac >/dev/null 2>&1; then
-    if modes_err="$(luac -p "$MODES_CFG" 2>&1)"; then modes_val="ok"; else modes_val="error: $modes_err"; fi
-    modes_how="luac -p (syntax only)"
-  fi
-  case "$modes_val" in
-    ok)       pass "hammerspoon/modes.lua is valid ($modes_how)" ;;
-    error:*)  bad "hammerspoon/modes.lua: ${modes_val#error: } — fix it, then reload Hammerspoon" ;;
-    "")       fixid tooling; warn "can't validate hammerspoon/modes.lua (no lua / luac, and Hammerspoon isn't running)" ;;
-    *)        fixid tooling; warn "hammerspoon/modes.lua: unexpected validator output: $(printf '%s' "$modes_val" | head -c 200)" ;;
-  esac
-
-  # Shortcuts named in modes.lua (Focus on/off only)
-  fixid modes-setup
-  CHECKED=$((CHECKED + 1))
-  modes_need="$(grep -oE "(on|off)[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/^[a-z]+[[:space:]]*=[[:space:]]*'//; s/'\$//" | sort -u)"
-  if ! command -v shortcuts >/dev/null 2>&1; then
-    fixid tooling; warn "shortcuts CLI not found — can't check the Focus Shortcuts"
-  elif ! modes_have="$(with_timeout 15 shortcuts list </dev/null 2>/dev/null)"; then
-    fixid tooling; warn "shortcuts list failed — can't check the Focus Shortcuts"
-  else
-    modes_missing=""
-    while IFS= read -r s; do
-      [ -n "$s" ] || continue
-      if ! printf '%s\n' "$modes_have" | grep -Fxq "$s"; then modes_missing="$modes_missing '$s',"; fi
-    done <<< "$modes_need"
-    if [ -n "$modes_missing" ]; then
-      warn "Shortcuts missing:${modes_missing%,} — create them (manual step mode-focus-shortcuts); modes still run, without the Focus"
-    else
-      pass "Focus Shortcuts exist ($(printf '%s\n' "$modes_need" | grep -c .))"
-    fi
-  fi
-
-  # Focus modes named in modes.lua (focus = '<name>'), from the Focus database
-  CHECKED=$((CHECKED + 1))
-  modes_focus="$(grep -oE "^[[:space:]]+focus[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/.*'([^']+)'/\1/" | sort -u)"
-  modes_fdb="$HOME/Library/DoNotDisturb/DB/ModeConfigurations.json"
-  if [ -z "$DOT_PYTHON" ]; then
-    fixid tooling; warn "python3 missing — can't check the Focus modes"
-  elif ! modes_fnames="$("$DOT_PYTHON" - "$modes_fdb" <<'PY' 2>/dev/null
-import json, sys
-def walk(o):
-    if isinstance(o, dict):
-        for k, v in o.items():
-            if k == "name" and isinstance(v, str):
-                print(v)
-            walk(v)
-    elif isinstance(o, list):
-        for v in o:
-            walk(v)
-walk(json.load(open(sys.argv[1])))
-PY
-)"; then
-    note "Focus modes not readable (needs Full Disk Access) — check System Settings → Focus for:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
-  else
-    modes_fmiss=""
-    for f in $modes_focus; do
-      if ! printf '%s\n' "$modes_fnames" | grep -Fxq "$f"; then modes_fmiss="$modes_fmiss $f"; fi
-    done
-    if [ -n "$modes_fmiss" ]; then
-      warn "Focus modes missing:$modes_fmiss — System Settings → Focus → Add Focus… (manual step mode-focus-modes)"
-    else
-      pass "Focus modes exist:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
-    fi
-  fi
-fi
-
-# Current mode (state.json is written by the switcher; absent = Normal)
-CHECKED=$((CHECKED + 1))
-fixid mode-long
-if [ ! -f "$MODES_STATE" ]; then
-  pass "mode: Normal (no state.json yet)"
-elif [ -z "$DOT_PYTHON" ]; then
-  fixid tooling; warn "python3 missing — can't read the mode state"
-else
-  modes_st="$("$DOT_PYTHON" - "$MODES_STATE" <<'PY' 2>/dev/null
-import json, sys, time
-s = json.load(open(sys.argv[1]))
-ch = s.get("changes") or {}
-if not isinstance(ch, dict):
-    ch = {}
-def names(key):
-    return ", ".join((x.get("name") or x.get("bundle") or "?").replace("\u200e", "") for x in ch.get(key) or [] if isinstance(x, dict))
-hours = (time.time() - float(s.get("since") or time.time())) / 3600
-print("\t".join([str(s.get("mode") or "?"), "%.1f" % hours, str(s.get("phase") or ""), names("quit"), names("hidden")]))
-PY
-)" || modes_st=""
-  if [ -z "$modes_st" ]; then
-    fixid modes-config; warn "state.json unreadable ($MODES_STATE) — switch to Normal from the menu bar to rewrite it"
-  else
-    IFS=$'\t' read -r st_mode st_hours st_phase st_quit st_hidden <<< "$modes_st"
-    if [ "$st_mode" = "Normal" ]; then
-      pass "mode: Normal"
-    else
-      if [ -n "$st_quit" ]; then note "quit by $st_mode on purpose (not drift; Normal reopens them): $st_quit"; fi
-      if [ -n "$st_hidden" ]; then note "hidden by $st_mode on purpose (not drift; Normal unhides them): $st_hidden"; fi
-      if awk -v h="$st_hours" -v max="$HEALTH_MODE_MAX_HOURS" 'BEGIN { exit !(h > max) }'; then
-        warn "mode $st_mode has been on for ${st_hours}h (> ${HEALTH_MODE_MAX_HOURS}h) — switch back to Normal from the menu bar if you're done"
-      else
-        pass "mode: $st_mode for ${st_hours}h${st_phase:+ ($st_phase)}"
-      fi
-    fi
-  fi
-fi
-
-# ---- 13e. Notifications (per-app Allow Notifications, check-only) ---------
-# macOS 27 keeps per-app settings in the usernoted group plist. com.apple.ncprefs
-# is gone. lib/notification-prefs.py reads that plist with plistlib and never
-# writes it. Allow Notifications is flags bit ALLOW_NOTIFICATIONS_BIT in the
-# helper. Apps that must be Off are lib/notifications-off.list (a warning, Needs
-# Paul). A third-party bundle id that isn't there or in lib/notifications-reviewed.list
-# is an info line. The same read reports org.hammerspoon.Hammerspoon's alert
-# style (Alerts = ALERT_STYLE_BIT set and the banner bit clear). --fix does not
-# touch this store. Manual step mode-hammerspoon-alerts points here.
-hdr "Notifications"
-NOTIF_HELPER="$DOTDIR/lib/notification-prefs.py"
-CHECKED=$((CHECKED + 1))
-fixid notifications
-if [ ! -r "$NOTIF_HELPER" ]; then
-  fixid repo-file
-  warn "lib/notification-prefs.py missing — can't check notification settings"
-elif [ ! -r "$DOTDIR/lib/notifications-off.list" ] || [ ! -r "$DOTDIR/lib/notifications-reviewed.list" ]; then
-  fixid repo-file
-  warn "notification lists missing — can't check Allow Notifications"
-elif [ -z "$DOT_PYTHON" ]; then
-  fixid tooling
-  warn "no python3 — can't check notification settings"
-else
-  if notif_out="$(with_timeout 20 "$DOT_PYTHON" "$NOTIF_HELPER" </dev/null 2>&1)"; then
-    notif_rc=0
-  else
-    notif_rc=$?
-  fi
-  notif_n=0
-  while IFS='|' read -r n_st _ n_msg; do
-    [ -n "$n_st" ] || continue
-    case "$n_st" in
-      ok)
-        notif_n=$((notif_n + 1))
-        [ "$notif_n" -eq 1 ] || CHECKED=$((CHECKED + 1))
-        pass "$n_msg"
-        ;;
-      warn)
-        notif_n=$((notif_n + 1))
-        [ "$notif_n" -eq 1 ] || CHECKED=$((CHECKED + 1))
-        fixid notifications
-        warn "$n_msg"
-        ;;
-      info) info "$n_msg" ;;
-      *)
-        fixid tooling
-        warn "${n_msg:-$n_st}"
-        ;;
-    esac
-  done <<NOTIF_EOF
-$notif_out
-NOTIF_EOF
-  case "$notif_rc" in
-    0|1) ;;
-    *) fixid tooling; warn "notification check failed or timed out (rc=$notif_rc) — settings not verified" ;;
-  esac
-  if [ "$notif_n" -eq 0 ] && [ "$notif_rc" -le 1 ]; then
-    case "$notif_out" in
-      error\|*) ;;
-      *) fixid tooling; warn "notification check printed no results — settings not verified" ;;
-    esac
-  fi
-fi
-
-# ---- 14. Leftover *.app.back in /Applications ----
-hdr "Leftover app backups"
-fixid delete-files
-CHECKED=$((CHECKED + 1))
-shopt -s nullglob
-backs=(/Applications/*.app.back)
-shopt -u nullglob
-if [ ${#backs[@]} -eq 0 ]; then
-  pass "no /Applications/*.app.back leftovers"
-else
-  for f in "${backs[@]}"; do
-    warn "leftover $f (safe to trash; leftover from an in-place app update)"
-  done
-fi
-
-
-# ---- 15. Security hygiene (soft — warn only) ----------------------------
-hdr "Security hygiene"
-fixid security
-CHECKED=$((CHECKED + 1))
-fv="$(fdesetup status 2>/dev/null || true)"
-if printf '%s\n' "$fv" | rg -qi 'FileVault is On'; then
-  pass "FileVault On"
-elif [ -z "$fv" ]; then
-  warn "FileVault status unknown (fdesetup failed)"
-else
-  warn "FileVault not On — $fv"
-fi
-
-CHECKED=$((CHECKED + 1))
-fixid software-update
-# softwareupdate -l talks to Apple; keep it soft and tolerant of transient failures.
-su_out="$(softwareupdate -l 2>&1)" || true
-if printf '%s\n' "$su_out" | rg -qi 'No new software available'; then
-  pass "no pending software updates"
-elif printf '%s\n' "$su_out" | rg -q 'Label:'; then
-  titles="$(printf '%s\n' "$su_out" | awk -F'Title: ' '/Title:/{print $2}' | sed 's/, Version:.*//; s/[[:space:]]*$//' | paste -sd '; ' -)"
-  warn "pending software updates: ${titles:-see softwareupdate -l}"
-else
-  warn "could not list software updates (softwareupdate -l failed or unexpected output)"
-fi
-
-# ---- 15b. Mac health (soft — warn only, never drift) ---------------------
-# Read-only and timeout-guarded. Values are also kept in H_* for --health-json.
-# Anything that can't be read without sudo / Full Disk Access is an info (by-hand) line.
-hdr "Mac health"
-fixid health
-
-# Thresholds: the one place to tune the health warnings.
-HEALTH_BATTERY_MIN_PCT=80        # battery maximum capacity
-HEALTH_DISK_MIN_GB=50            # free space on the Data volume …
-HEALTH_DISK_MIN_PCT=15           # … warn when below either
-HEALTH_UPTIME_MAX_DAYS=14
-HEALTH_SWAP_MAX_GB=8             # swap in use
-HEALTH_CRASH_DAYS=7              # look-back window for panics / crashes
-HEALTH_CRASH_SAME_APP=3          # warn at this many crashes of one app in the window
-HEALTH_CACHES_MAX_GB=20          # ~/Library/Caches
-HEALTH_DOCKER_MAX_GB=60          # Docker Desktop disk image (allocated size)
-HEALTH_BREW_CACHE_MAX_GB=5       # brew --cache
-HEALTH_DERIVED_DATA_MAX_GB=20    # Xcode DerivedData
-
+# Defaults for --health-json when a section is skipped by --only. The health
+# and Hammerspoon sections overwrite the values they measure.
 H_BAT_STATUS=none; H_BAT_COND=""; H_BAT_MAX=""; H_BAT_CYCLES=""
 H_DISK_STATUS=unknown; H_DISK_FREE_GB=""; H_DISK_FREE_PCT=""; H_DISK_TOTAL_GB=""
 H_UP_STATUS=unknown; H_UP_DAYS=""
-H_MEM_STATUS=unknown; H_MEM_SWAP_GB=""; H_MEM_PRESSURE=unknown; H_MEM_FREE_PCT=""
+H_MEM_STATUS=unknown; H_MEM_PRESSURE=unknown; H_MEM_FREE_PCT=""; H_MEM_SWAP_GB=""
 H_STO_STATUS=ok; H_STO_CACHES=""; H_STO_DOCKER=""; H_STO_BREW=""; H_STO_DERIVED=""
 H_SEC_STATUS=ok; H_SEC_FIREWALL=unknown; H_SEC_GATEKEEPER=unknown; H_SEC_SIP=unknown
 H_SEC_SSH=unknown; H_SEC_SCREENSHARING=unknown; H_SEC_FILESHARING=unknown; H_SEC_SCREENLOCK=unknown
 H_MDM_STATUS=unknown; H_MDM_ENROLLED=unknown; H_MDM_AGENT=unknown
 H_CR_STATUS=unknown; H_CR_PANICS=""; H_CR_CRASHES=""; H_CR_FAULTS=""; H_CR_APPS=(); H_CR_PANIC_FILES=()
+HEALTH_CRASH_DAYS=7
 H_JOBS_STATUS=ok; H_JOBS=()
+H_HS_RUNNING=unknown
 H_GIT_STATUS=unknown; H_GIT_DIRTY=""; H_GIT_AHEAD=""; H_GIT_BEHIND=""; H_GIT_FETCHED=""
 H_LI_STATUS=unknown; H_LI_ENABLED=0; H_LI_ALLOW=0; H_LI_MDM=0; H_LI_UNKNOWN=(); H_LI_STALE=()
-
-kb_to_gb() { awk -v k="$1" 'BEGIN { printf "%.1f", k / 1048576 }'; }   # KiB -> GiB, 1 dp
-gb_over() { awk -v v="$1" -v m="$2" 'BEGIN { exit !(v > m) }'; }       # gb_over VALUE MAX
-# du_kb PATH... — allocated KiB (sparse Docker.raw counts real use), empty if unreadable.
-du_kb() { with_timeout 60 du -sk "$@" 2>/dev/null | awk '{ s += $1 } END { if (NR) print s }'; }
-
-# Battery: condition, maximum capacity and cycle count.
-CHECKED=$((CHECKED + 1))
-sp_power="$(with_timeout 20 system_profiler SPPowerDataType 2>/dev/null || true)"
-H_BAT_COND="$(printf '%s\n' "$sp_power" | awk -F': ' '/^ *Condition:/ {print $2; exit}')"
-H_BAT_MAX="$(printf '%s\n' "$sp_power" | awk -F': ' '/^ *Maximum Capacity:/ {gsub(/%/, "", $2); print $2; exit}')"
-H_BAT_CYCLES="$(printf '%s\n' "$sp_power" | awk -F': ' '/^ *Cycle Count:/ {print $2; exit}')"
-if [ -z "$H_BAT_MAX" ] || [ -z "$H_BAT_CYCLES" ]; then
-  # Fallback: raw battery registry (NominalChargeCapacity / DesignCapacity).
-  bat_io="$(with_timeout 10 ioreg -rn AppleSmartBattery 2>/dev/null || true)"
-  if [ -z "$H_BAT_CYCLES" ]; then
-    H_BAT_CYCLES="$(printf '%s\n' "$bat_io" | sed -nE 's/^ *"CycleCount" = ([0-9]+).*/\1/p' | head -1)"
-  fi
-  if [ -z "$H_BAT_MAX" ]; then
-    bat_nom="$(printf '%s\n' "$bat_io" | sed -nE 's/.*"NominalChargeCapacity"=([0-9]+).*/\1/p' | head -1)"
-    bat_des="$(printf '%s\n' "$bat_io" | sed -nE 's/.*"DesignCapacity"=([0-9]+).*/\1/p' | head -1)"
-    if [ -n "$bat_nom" ] && [ -n "$bat_des" ] && [ "$bat_des" -gt 0 ]; then
-      H_BAT_MAX=$(( (bat_nom * 100 + bat_des / 2) / bat_des ))
-    fi
-  fi
-fi
-case "$H_BAT_MAX" in *[!0-9]*) H_BAT_MAX="" ;; esac
-case "$H_BAT_CYCLES" in *[!0-9]*) H_BAT_CYCLES="" ;; esac
-if [ -z "$H_BAT_COND$H_BAT_MAX$H_BAT_CYCLES" ]; then
-  note "battery: none found (desktop Mac?) — skipped"
-  CHECKED=$((CHECKED - 1))
-elif [ -n "$H_BAT_COND" ] && [ "$H_BAT_COND" != Normal ]; then
-  H_BAT_STATUS=warn
-  warn "battery condition ${H_BAT_COND} (max capacity ${H_BAT_MAX:-?}%, ${H_BAT_CYCLES:-?} cycles) — System Settings → Battery → Battery Health"
-elif [ -n "$H_BAT_MAX" ] && [ "$H_BAT_MAX" -lt "$HEALTH_BATTERY_MIN_PCT" ]; then
-  H_BAT_STATUS=warn
-  warn "battery max capacity ${H_BAT_MAX}% (< ${HEALTH_BATTERY_MIN_PCT}%; ${H_BAT_CYCLES:-?} cycles) — consider a service"
-else
-  H_BAT_STATUS=ok
-  pass "battery ${H_BAT_COND:-condition unknown}, max capacity ${H_BAT_MAX:-?}%, ${H_BAT_CYCLES:-?} cycles"
-fi
-
-# Disk: free space on the Data volume; warn below either threshold.
-CHECKED=$((CHECKED + 1))
-disk_vol=/System/Volumes/Data
-[ -d "$disk_vol" ] || disk_vol=/
-read -r disk_total_k disk_avail_k < <(with_timeout 10 df -k "$disk_vol" 2>/dev/null | awk 'NR==2 {print $2, $4}') || true
-if [ -n "${disk_total_k:-}" ] && [ -n "${disk_avail_k:-}" ] && [ "$disk_total_k" -gt 0 ]; then
-  H_DISK_FREE_GB=$(( disk_avail_k * 1024 / 1000000000 ))
-  H_DISK_TOTAL_GB=$(( disk_total_k * 1024 / 1000000000 ))
-  H_DISK_FREE_PCT=$(( disk_avail_k * 100 / disk_total_k ))
-  if [ "$H_DISK_FREE_PCT" -lt "$HEALTH_DISK_MIN_PCT" ] || [ "$H_DISK_FREE_GB" -lt "$HEALTH_DISK_MIN_GB" ]; then
-    H_DISK_STATUS=warn
-    warn "disk: only ${H_DISK_FREE_GB} GB free (${H_DISK_FREE_PCT}%) on $disk_vol — want ≥ ${HEALTH_DISK_MIN_GB} GB and ≥ ${HEALTH_DISK_MIN_PCT}%"
-  else
-    H_DISK_STATUS=ok
-    pass "disk: ${H_DISK_FREE_GB} GB free of ${H_DISK_TOTAL_GB} GB (${H_DISK_FREE_PCT}%)"
-  fi
-else
-  warn "disk: couldn't read free space for $disk_vol (df failed)"
-fi
-
-# Uptime: a reboot every couple of weeks lets updates and long-running leaks settle.
-CHECKED=$((CHECKED + 1))
-boot_sec="$(sysctl -n kern.boottime 2>/dev/null | sed -nE 's/.*[{] sec = ([0-9]+),.*/\1/p')"
-if [ -n "$boot_sec" ]; then
-  H_UP_DAYS=$(( ($(date +%s) - boot_sec) / 86400 ))
-  if [ "$H_UP_DAYS" -gt "$HEALTH_UPTIME_MAX_DAYS" ]; then
-    H_UP_STATUS=warn
-    warn "uptime ${H_UP_DAYS} days (> ${HEALTH_UPTIME_MAX_DAYS}) — restart when convenient"
-  else
-    H_UP_STATUS=ok
-    pass "uptime ${H_UP_DAYS} day(s)"
-  fi
-else
-  warn "uptime unknown (sysctl kern.boottime failed)"
-fi
-
-# Memory: swap in use and the kernel's memory-pressure level (1 normal, 2 warn, 4 critical).
-CHECKED=$((CHECKED + 1))
-swap_mb="$(sysctl -n vm.swapusage 2>/dev/null | sed -nE 's/.*used = ([0-9.]+)M.*/\1/p')"
-[ -n "$swap_mb" ] && H_MEM_SWAP_GB="$(awk -v m="$swap_mb" 'BEGIN { printf "%.1f", m / 1024 }')"
-case "$(sysctl -n kern.memorystatus_vm_pressure_level 2>/dev/null)" in
-  1) H_MEM_PRESSURE=normal ;; 2) H_MEM_PRESSURE=warn ;; 4) H_MEM_PRESSURE=critical ;; *) H_MEM_PRESSURE=unknown ;;
-esac
-H_MEM_FREE_PCT="$(with_timeout 10 memory_pressure -Q 2>/dev/null | sed -nE 's/.*free percentage: ([0-9]+)%.*/\1/p')"
-if [ -z "$H_MEM_SWAP_GB" ] && [ "$H_MEM_PRESSURE" = unknown ]; then
-  warn "memory: couldn't read swap or memory pressure"
-elif [ "$H_MEM_PRESSURE" = critical ] || { [ -n "$H_MEM_SWAP_GB" ] && gb_over "$H_MEM_SWAP_GB" "$HEALTH_SWAP_MAX_GB"; }; then
-  H_MEM_STATUS=warn
-  warn "memory: pressure $H_MEM_PRESSURE, swap ${H_MEM_SWAP_GB:-?} GB used (> ${HEALTH_SWAP_MAX_GB} GB or critical) — quit heavy apps (Activity Monitor → Memory) or restart"
-else
-  H_MEM_STATUS=ok
-  pass "memory: pressure $H_MEM_PRESSURE, ${H_MEM_FREE_PCT:-?}% free, swap ${H_MEM_SWAP_GB:-?} GB used"
-fi
-
-# Storage hogs: allocated sizes, each against its own threshold, with the usual fix.
-sto_check() {  # label KiB max_gb fix -> sets sto_gb
-  sto_gb=""
-  [ -n "$2" ] || return 0
-  CHECKED=$((CHECKED + 1))
-  sto_gb="$(kb_to_gb "$2")"
-  if gb_over "$sto_gb" "$3"; then
-    H_STO_STATUS=warn
-    warn "$1: ${sto_gb} GB (> $3 GB) — $4"
-  else
-    pass "$1: ${sto_gb} GB"
-  fi
-}
-sto_check "User caches (~/Library/Caches)" "$(du_kb "$HOME/Library/Caches")" "$HEALTH_CACHES_MAX_GB" \
-  "see du -sh ~/Library/Caches/* | sort -h and clear the biggest app caches (quit the app first)"
-H_STO_CACHES="$sto_gb"
-shopt -s nullglob
-docker_raw=("$HOME"/Library/Containers/com.docker.docker/Data/vms/*/data/Docker.raw)
-shopt -u nullglob
-if [ "${#docker_raw[@]}" -gt 0 ]; then
-  sto_check "Docker disk image" "$(du_kb "${docker_raw[@]}")" "$HEALTH_DOCKER_MAX_GB" \
-    "docker system prune -a (or Docker Desktop → Troubleshoot → Clean / Purge data)"
-  H_STO_DOCKER="$sto_gb"
-fi
-brew_cache="$(with_timeout 10 brew --cache 2>/dev/null || true)"
-if [ -n "$brew_cache" ] && [ -d "$brew_cache" ]; then
-  sto_check "Homebrew cache" "$(du_kb "$brew_cache")" "$HEALTH_BREW_CACHE_MAX_GB" "brew cleanup --prune=all"
-  H_STO_BREW="$sto_gb"
-fi
-if [ -d "$HOME/Library/Developer/Xcode/DerivedData" ]; then
-  sto_check "Xcode DerivedData" "$(du_kb "$HOME/Library/Developer/Xcode/DerivedData")" "$HEALTH_DERIVED_DATA_MAX_GB" \
-    "delete ~/Library/Developer/Xcode/DerivedData (Xcode rebuilds it)"
-  H_STO_DERIVED="$sto_gb"
-fi
-
-fixid security
-# Security basics. MDM may manage some of these; unreadable ones are by-hand info lines.
-sec_on() {  # label value(on|off|unknown) want(on|off) fix-hint -> echoes nothing
-  case "$2" in
-    unknown) info "$1: couldn't read — check by hand ($4)" ;;
-    "$3")    CHECKED=$((CHECKED + 1)); pass "$1 $2" ;;
-    *)       CHECKED=$((CHECKED + 1)); H_SEC_STATUS=warn; warn "$1 $2 (want $3) — $4" ;;
-  esac
-}
-fw="$(with_timeout 5 /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate </dev/null 2>/dev/null || true)"
-case "$fw" in
-  *"State = 1"*|*"State = 2"*) H_SEC_FIREWALL=on ;;
-  *"State = 0"*) H_SEC_FIREWALL=off ;;
-esac
-sec_on "Application Firewall" "$H_SEC_FIREWALL" on "System Settings → Network → Firewall (may be MDM-managed)"
-case "$(with_timeout 5 spctl --status </dev/null 2>&1 || true)" in
-  *"assessments enabled"*)  H_SEC_GATEKEEPER=on ;;
-  *"assessments disabled"*) H_SEC_GATEKEEPER=off ;;
-esac
-sec_on "Gatekeeper" "$H_SEC_GATEKEEPER" on "sudo spctl --global-enable"
-case "$(with_timeout 5 csrutil status </dev/null 2>&1 || true)" in
-  *"status: enabled"*)  H_SEC_SIP=on ;;
-  *"status: disabled"*) H_SEC_SIP=off ;;
-esac
-sec_on "System Integrity Protection" "$H_SEC_SIP" on "re-enable from Recovery: csrutil enable"
-# Sharing services, without sudo: a launchd job that's loaded, or a listening port.
-listen_ports="$(with_timeout 5 netstat -anp tcp 2>/dev/null | awk '$6 == "LISTEN" {print $4}' || true)"
-svc_state() {  # launchd-label port -> on|off
-  if with_timeout 5 launchctl print "system/$1" </dev/null >/dev/null 2>&1; then echo on; return; fi
-  if printf '%s\n' "$listen_ports" | grep -Eq "[.:]$2\$"; then echo on; return; fi
-  echo off
-}
-H_SEC_SSH="$(svc_state com.openssh.sshd 22)"
-sec_on "Remote Login (SSH)" "$H_SEC_SSH" off "System Settings → General → Sharing → Remote Login"
-H_SEC_SCREENSHARING="$(svc_state com.apple.screensharing 5900)"
-sec_on "Screen Sharing" "$H_SEC_SCREENSHARING" off "System Settings → General → Sharing → Screen Sharing"
-H_SEC_FILESHARING="$(svc_state com.apple.smbd 445)"
-sec_on "File Sharing" "$H_SEC_FILESHARING" off "System Settings → General → Sharing → File Sharing"
-# Password after sleep/screen saver (often MDM-managed). sysadminctl reports on stderr.
-sl="$(with_timeout 5 sysadminctl -screenLock status </dev/null 2>&1 || true)"
-case "$sl" in
-  *"delay is immediate"*) H_SEC_SCREENLOCK=immediate ;;
-  *"screenLock is off"*)  H_SEC_SCREENLOCK=off ;;
-  *"delay is "*)          H_SEC_SCREENLOCK="$(printf '%s\n' "$sl" | sed -nE 's/.*delay is (.*)$/\1/p' | head -1)" ;;
-esac
-case "$H_SEC_SCREENLOCK" in
-  immediate) CHECKED=$((CHECKED + 1)); pass "password required immediately after sleep / screen saver" ;;
-  unknown)   info "screen lock: couldn't read — check by hand (System Settings → Lock Screen; may be MDM-managed)" ;;
-  *)         CHECKED=$((CHECKED + 1)); H_SEC_STATUS=warn
-             warn "screen lock: password required after '$H_SEC_SCREENLOCK' (want immediately) — System Settings → Lock Screen (may be MDM-managed)" ;;
-esac
-
-fixid mdm
-# MDM: enrolment (non-sudo `profiles status`) and the Kandji / Iru agent daemons.
-prof="$(with_timeout 10 profiles status -type enrollment </dev/null 2>&1 || true)"
-case "$prof" in
-  *"MDM enrollment: Yes"*) H_MDM_ENROLLED=yes ;;
-  *"MDM enrollment: No"*)  H_MDM_ENROLLED=no ;;
-esac
-mdm_down=""
-for mdm_label in io.kandji.kandji-daemon io.kandji.kandji-agent; do
-  if ! with_timeout 5 launchctl print "system/$mdm_label" </dev/null 2>/dev/null | grep -q 'state = running'; then
-    mdm_down="$mdm_down $mdm_label"
-  fi
-done
-if [ -z "$mdm_down" ]; then H_MDM_AGENT=yes; else H_MDM_AGENT=no; fi
-if [ "$H_MDM_ENROLLED" = unknown ]; then
-  info "MDM enrolment: couldn't read (profiles status) — check by hand"
-  H_MDM_STATUS=unknown
-fi
-CHECKED=$((CHECKED + 1))
-if [ "$H_MDM_ENROLLED" = no ] || [ "$H_MDM_AGENT" = no ]; then
-  H_MDM_STATUS=warn
-  warn "MDM: enrolled=$H_MDM_ENROLLED, Iru (Kandji) agent not running:${mdm_down:- none} — open Iru Self Service or contact IT"
-else
-  [ "$H_MDM_ENROLLED" = yes ] && H_MDM_STATUS=ok
-  pass "MDM: enrolled=${H_MDM_ENROLLED}, Iru (Kandji) daemon + agent running"
-fi
-
-fixid health
-# Crashes: kernel panics and app crash reports in the window (lib/crash-reports.py).
-CRASH_HELPER="$DOTDIR/lib/crash-reports.py"
-if [ -z "$DOT_PYTHON" ] || [ ! -r "$CRASH_HELPER" ]; then
-  info "crash reports: needs python3 and lib/crash-reports.py — check by hand (Console → Crash Reports)"
-else
-  CHECKED=$((CHECKED + 1))
-  cr_raw="$(with_timeout 20 "$DOT_PYTHON" "$CRASH_HELPER" "$HEALTH_CRASH_DAYS" 2>/dev/null || true)"
-  cr_many=""
-  while IFS='|' read -r cr_kind cr_a cr_b cr_c _cr_d; do
-    case "$cr_kind" in
-      panic)  H_CR_PANIC_FILES+=("$cr_a") ;;
-      crash)  H_CR_APPS+=("$cr_a|$cr_b")
-              if [ "$cr_b" -ge "$HEALTH_CRASH_SAME_APP" ]; then cr_many="$cr_many, $cr_a ×$cr_b"; fi ;;
-      totals) H_CR_PANICS="$cr_a"; H_CR_CRASHES="$cr_b"; H_CR_FAULTS="$cr_c" ;;
-    esac
-  done <<< "$cr_raw"
-  cr_list=""
-  for x in ${H_CR_APPS[@]+"${H_CR_APPS[@]}"}; do cr_list="$cr_list, ${x%%|*} ×${x##*|}"; done
-  if [ -z "$H_CR_PANICS" ]; then
-    H_CR_STATUS=unknown
-    warn "crash reports: helper failed — check Console → Crash Reports by hand"
-  elif [ "$H_CR_PANICS" -gt 0 ] || [ -n "$cr_many" ]; then
-    H_CR_STATUS=warn
-    if [ "$H_CR_PANICS" -gt 0 ]; then
-      warn "$H_CR_PANICS kernel panic(s) in the last $HEALTH_CRASH_DAYS days: ${H_CR_PANIC_FILES[*]} — see /Library/Logs/DiagnosticReports"
-    fi
-    if [ -n "$cr_many" ]; then
-      warn "apps crashing repeatedly (≥ $HEALTH_CRASH_SAME_APP in $HEALTH_CRASH_DAYS days): ${cr_many#, } — update or reinstall them"
-    fi
-  else
-    H_CR_STATUS=ok
-    pass "no kernel panics; $H_CR_CRASHES app crash(es) in $HEALTH_CRASH_DAYS days${cr_list:+ (${cr_list#, })}"
-  fi
-fi
-
-# Background jobs: every LaunchAgent this repo installs (launchagents/*.plist, rendered
-# into ~/Library/LaunchAgents) is loaded and its last run exited 0. The pin agents'
-# loaded state is already drift in their own sections, so a not-loaded pin agent is
-# not reported twice. Hammerspoon "running" is the Hammerspoon section's result
-# (H_HS_RUNNING), reused for --health-json.
-for la_src in "$DOTDIR"/launchagents/*.plist; do
-  [ -f "$la_src" ] || continue
-  la_label="$(basename "$la_src" .plist)"
-  CHECKED=$((CHECKED + 1))
-  fixid launchagent "$la_label|$HOME/Library/LaunchAgents/$la_label.plist"
-  if ! la_out="$(with_timeout 5 launchctl print "gui/$(id -u)/$la_label" </dev/null 2>/dev/null)"; then
-    H_JOBS+=("$la_label|no|")
-    case "$la_label" in
-      com.pdone.pin-dictation-hotkey-164|com.pdone.pin-quicknote-hotkey-190)
-        CHECKED=$((CHECKED - 1))   # already reported as drift in its own section
-        ;;
-      *)
-        H_JOBS_STATUS=warn; warn "LaunchAgent $la_label not loaded — re-run install.sh"
-        ;;
-    esac
-    continue
-  fi
-  la_exit="$(printf '%s\n' "$la_out" | sed -nE 's/^[[:space:]]*last exit code = (.*)$/\1/p' | head -1)"
-  case "$la_exit" in
-    0)                 H_JOBS+=("$la_label|yes|0"); pass "LaunchAgent $la_label loaded, last exit 0" ;;
-    ''|*never*)        H_JOBS+=("$la_label|yes|"); pass "LaunchAgent $la_label loaded (hasn't run yet)" ;;
-    *)                 H_JOBS+=("$la_label|yes|$la_exit"); H_JOBS_STATUS=warn; fixid launchagent-exit
-                       warn "LaunchAgent $la_label last exit code $la_exit — check: launchctl print gui/$(id -u)/$la_label" ;;
-  esac
-done
-
-fixid dotfiles-git
-# Dotfiles in sync: no uncommitted/untracked changes (gitignored .agent-logs etc. don't
-# count) and HEAD level with origin/main AS OF THE LAST FETCH/PUSH — no network here, so
-# macconfig-check.sh stays offline and read-only (--no-optional-locks: don't even refresh the index).
-CHECKED=$((CHECKED + 1))
-if ! git -C "$DOTDIR" rev-parse --git-dir >/dev/null 2>&1; then
-  warn "dotfiles: $DOTDIR isn't a git repo"
-else
-  H_GIT_DIRTY="$(with_timeout 10 git --no-optional-locks -C "$DOTDIR" status --porcelain -- . ':(exclude).agent-logs' 2>/dev/null | grep -c . || true)"
-  read -r H_GIT_AHEAD H_GIT_BEHIND < <(with_timeout 10 git -C "$DOTDIR" rev-list --left-right --count HEAD...origin/main 2>/dev/null) || true
-  fetch_head="$(git -C "$DOTDIR" rev-parse --git-path FETCH_HEAD 2>/dev/null)"
-  case "$fetch_head" in /*) ;; *) fetch_head="$DOTDIR/$fetch_head" ;; esac
-  [ -f "$fetch_head" ] && H_GIT_FETCHED="$(date -r "$fetch_head" '+%Y-%m-%d %H:%M %Z')"
-  git_issues=""
-  [ "${H_GIT_DIRTY:-0}" -gt 0 ] && git_issues="$git_issues; $H_GIT_DIRTY uncommitted/untracked change(s) (dotpush)"
-  [ "${H_GIT_AHEAD:-0}" -gt 0 ] && git_issues="$git_issues; $H_GIT_AHEAD commit(s) not pushed (git push)"
-  [ "${H_GIT_BEHIND:-0}" -gt 0 ] && git_issues="$git_issues; $H_GIT_BEHIND commit(s) behind origin/main (git pull)"
-  if [ -z "${H_GIT_AHEAD:-}" ]; then
-    H_GIT_STATUS=warn; warn "dotfiles: no origin/main to compare with${git_issues:+$git_issues}"
-  elif [ -n "$git_issues" ]; then
-    H_GIT_STATUS=warn; warn "dotfiles out of sync: ${git_issues#; }"
-  else
-    H_GIT_STATUS=ok
-    pass "dotfiles clean and level with origin/main (as of last fetch/push${H_GIT_FETCHED:+; last fetch $H_GIT_FETCHED})"
-  fi
-fi
-
-fixid login-items
-# Login / background items: every ENABLED item must be on lib/login-items-allow.list or
-# approved by an MDM Service Management rule; stale items (app gone) are flagged too.
-# Reuses lib/btm-login-items.py (same BTM store as the banned-item guard above).
-CHECKED=$((CHECKED + 1))
-ALLOW_LIST="$DOTDIR/lib/login-items-allow.list"
-if [ ! -r "$BTM_HELPER" ] || [ ! -r "$ALLOW_LIST" ] || [ -z "$DOT_PYTHON" ]; then
-  fixid tooling; warn "login-item audit skipped (needs python3, lib/btm-login-items.py and lib/login-items-allow.list)"
-else
-  if li_raw="$(with_timeout 20 "$DOT_PYTHON" "$BTM_HELPER" --audit "$ALLOW_LIST" 2>&1)"; then li_rc=0; else li_rc=$?; fi
-  if [ "$li_rc" = 3 ] || printf '%s\n' "$li_raw" | grep -q 'tcc=denied'; then
-    fixid tcc; warn "login-item audit: BTM unreadable (Full Disk Access) — System Settings → Privacy & Security → Full Disk Access → enable Ghostty"
-  elif [ "$li_rc" -ne 0 ]; then
-    warn "login-item audit failed (rc=$li_rc) — check Login Items by hand"
-  else
-    while IFS='|' read -r li_class li_kind li_name li_dev li_team li_id li_detail; do
-      case "$li_class" in
-        allow)   H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_ALLOW=$((H_LI_ALLOW + 1)) ;;
-        mdm)     H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_MDM=$((H_LI_MDM + 1)) ;;
-        unknown)
-          H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_UNKNOWN+=("$li_name ($li_kind, $li_id)")
-          warn "unexpected login item: $li_name ($li_kind; ${li_dev:-unknown developer}${li_team:+, team $li_team}; $li_id) — turn it Off in System Settings → General → Login Items & Extensions, or add it to lib/login-items-allow.list" ;;
-        stale)
-          H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_STALE+=("$li_name ($li_id): $li_detail")
-          warn "stale login item: $li_name ($li_id) $li_detail — remove it in System Settings → General → Login Items & Extensions (re-add the app if you still want it at login)" ;;
-        allowlist:*) warn "lib/login-items-allow.list: ${li_class#allowlist: }" ;;
-      esac
-    done <<< "$li_raw"
-    if [ "${#H_LI_UNKNOWN[@]}" -eq 0 ] && [ "${#H_LI_STALE[@]}" -eq 0 ]; then
-      H_LI_STATUS=ok
-      pass "login items: all $H_LI_ENABLED enabled items expected ($H_LI_ALLOW allow-listed, $H_LI_MDM MDM-approved)"
-    else
-      H_LI_STATUS=warn
-    fi
-  fi
-fi
-
-# ---- 15c. British input, sign-ins, pointer (check-only) -----------------
-# Warn only: never drift, never --fix, no sudo, and the notification store is
-# not opened. lib/session-checks.sh is the same code scripts/manual-steps.sh
-# runs. A 1Password CLI that is installed but not signed in (it needs an
-# unlock) is info, not a warning. Pointer size runs only when the manual-steps
-# list has a pointer-size row. Those rows are not repeated in section 16
-# (MANUAL_STEPS_COVERED). MANUAL_STEPS_LIST overrides the list, same as
-# scripts/manual-steps.sh.
-hdr "Sign-ins, keyboard, and pointer"
+BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
 SESSION_COVERED=""
-emit_manual_check() { # step-id — R_STATUS/R_DETAIL set; caller sets FIX_ID first
-  local step="$1" title msg
-  title="$(awk -F'|' -v id="$step" '$1 == id { print $3; exit }' "$steps_list")"
-  if [ -n "$title" ]; then
-    msg="$title — ${R_DETAIL:-$R_STATUS} (manual step $step)"
-  else
-    msg="${R_DETAIL:-$R_STATUS} (manual step $step)"
-  fi
-  CHECKED=$((CHECKED + 1))
-  case "$R_STATUS" in
-    ok)   pass "$msg" ;;
-    warn) warn "$msg" ;;
-    *)    info "$msg" ;;
-  esac
-}
-cover_step() { # step-id — remember it so section 16 does not print it again
-  local step="$1"
-  if awk -F'|' -v id="$step" '$1 == id { found = 1 } END { exit !found }' "$steps_list"; then
-    SESSION_COVERED="${SESSION_COVERED:+$SESSION_COVERED }$step"
-  fi
-}
-steps_list="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
-if [ ! -r "$DOTDIR/lib/session-checks.sh" ]; then
-  CHECKED=$((CHECKED + 1))
-  fixid repo-file
-  warn "lib/session-checks.sh missing — can't check British input, GitHub CLI, 1Password CLI, or pointer size"
-else
-  # shellcheck source=lib/session-checks.sh disable=SC1091
-  . "$DOTDIR/lib/session-checks.sh"
-  if awk -F'|' '$1 == "pointer-size" { found = 1 } END { exit !found }' "$steps_list"; then
-    R_STATUS=""; R_DETAIL=""
-    check_pointer_size
-    fixid pointer-size
-    emit_manual_check pointer-size
-    cover_step pointer-size
-  fi
-  R_STATUS=""; R_DETAIL=""
-  check_input_british
-  fixid input-british
-  emit_manual_check input-british
-  cover_step input-british
-  R_STATUS=""; R_DETAIL=""
-  check_gh_auth
-  fixid gh-auth
-  emit_manual_check gh-auth
-  cover_step gh-auth
-  R_STATUS=""; R_DETAIL=""
-  check_op_cli
-  fixid 1password-cli
-  emit_manual_check 1password-cli
-  cover_step 1password-cli
+LAUNCHAGENT_CHECKED=""
+MANAGED_LINKS=""
+
+# ---- sections (checks/<area>.sh), in report order -----------------------
+# Sourced in this shell. A failing command still stops the run.
+# Tests source a section with this set so they can call its functions without
+# running the section. A normal run always clears it.
+unset MACCONFIG_CHECKS_DEFINE_ONLY
+if area_selected symlinks; then
+  # shellcheck source=checks/symlinks.sh
+  . "$DOTDIR/checks/symlinks.sh"
 fi
 
-# ---- 16. Manual steps (permissions, sign-ins, by-hand settings) -----------
-# lib/manual-steps.list is the single source of truth; scripts/manual-steps.sh runs the
-# read-only checks. A failed check is a soft warning (a manual step, not repo drift);
-# steps with no reliable check are info lines; steps marked @macconfig-check.sh are verified by
-# their own section above, so they're not repeated here.
-hdr "Manual steps (lib/manual-steps.list)"
-fixid manual-step
-MANUAL_STEPS="$DOTDIR/scripts/manual-steps.sh"
-if [ ! -x "$MANUAL_STEPS" ]; then
-  CHECKED=$((CHECKED + 1))
-  fixid repo-file; warn "scripts/manual-steps.sh missing or not executable — skipping manual steps"
-else
-  ms_out="$(NO_COLOR=1 MANUAL_STEPS_COVERED="${SESSION_COVERED:-}" "$MANUAL_STEPS" check --porcelain 2>&1)" || true
-  while IFS='|' read -r ms_status ms_num ms_id ms_title ms_detail; do
-    case "$ms_status" in
-      ok)      CHECKED=$((CHECKED + 1)); pass "$ms_num. $ms_title${ms_detail:+ — $ms_detail}" ;;
-      # Check-only rows get their own PAUL id (never --fix). The sign-in /
-      # pointer ids are usually covered by section 15c; this tags a warning
-      # if that section did not run.
-      warn)
-        CHECKED=$((CHECKED + 1))
-        case "$ms_id" in
-          mouse-settings) fixid mouse-settings ;;
-          pointer-size) fixid pointer-size ;;
-          input-british) fixid input-british ;;
-          gh-auth) fixid gh-auth ;;
-          1password-cli) fixid 1password-cli ;;
-          *) fixid manual-step ;;
-        esac
-        warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)"
-        ;;
-      hand)    info "$ms_num. $ms_title — check by hand${ms_detail:+ ($ms_detail)}" ;;
-      covered|'') : ;;
-      *)       CHECKED=$((CHECKED + 1)); warn "manual-steps.sh: $ms_status${ms_num:+|$ms_num}" ;;
-    esac
-  done <<< "$ms_out"
+if area_selected brew; then
+  # shellcheck source=checks/brew.sh
+  . "$DOTDIR/checks/brew.sh"
 fi
+
+if area_selected mdm; then
+  # shellcheck source=checks/mdm.sh
+  . "$DOTDIR/checks/mdm.sh"
+fi
+
+if area_selected defaults; then
+  # shellcheck source=checks/defaults.sh
+  . "$DOTDIR/checks/defaults.sh"
+fi
+
+if area_selected dock; then
+  # shellcheck source=checks/dock.sh
+  . "$DOTDIR/checks/dock.sh"
+fi
+
+if area_selected desktops; then
+  # shellcheck source=checks/desktops.sh
+  . "$DOTDIR/checks/desktops.sh"
+fi
+
+if area_selected shell; then
+  # shellcheck source=checks/shell.sh
+  . "$DOTDIR/checks/shell.sh"
+fi
+
+if area_selected hostname; then
+  # shellcheck source=checks/hostname.sh
+  . "$DOTDIR/checks/hostname.sh"
+fi
+
+if area_selected display; then
+  # shellcheck source=checks/display.sh
+  . "$DOTDIR/checks/display.sh"
+fi
+
+if area_selected power; then
+  # shellcheck source=checks/power.sh
+  . "$DOTDIR/checks/power.sh"
+fi
+
+if area_selected handlers; then
+  # shellcheck source=checks/handlers.sh
+  . "$DOTDIR/checks/handlers.sh"
+fi
+
+if area_selected files; then
+  # shellcheck source=checks/files.sh
+  . "$DOTDIR/checks/files.sh"
+fi
+
+if area_selected apps; then
+  # shellcheck source=checks/apps.sh
+  . "$DOTDIR/checks/apps.sh"
+fi
+
+if area_selected hotkeys; then
+  # shellcheck source=checks/hotkeys.sh
+  . "$DOTDIR/checks/hotkeys.sh"
+fi
+
+if area_selected finder; then
+  CHECK_PART=icon
+  # shellcheck source=checks/finder.sh
+  . "$DOTDIR/checks/finder.sh"
+  unset CHECK_PART
+fi
+
+if area_selected karabiner; then
+  # shellcheck source=checks/karabiner.sh
+  . "$DOTDIR/checks/karabiner.sh"
+fi
+
+if area_selected hammerspoon; then
+  # shellcheck source=checks/hammerspoon.sh
+  . "$DOTDIR/checks/hammerspoon.sh"
+fi
+
+if area_selected login-items; then
+  # shellcheck source=checks/login-items.sh
+  . "$DOTDIR/checks/login-items.sh"
+fi
+
+if area_selected finder; then
+  CHECK_PART=recents
+  # shellcheck source=checks/finder.sh
+  . "$DOTDIR/checks/finder.sh"
+  unset CHECK_PART
+fi
+
+if area_selected coteditor; then
+  # shellcheck source=checks/coteditor.sh
+  . "$DOTDIR/checks/coteditor.sh"
+fi
+
+if area_selected ghostty; then
+  # shellcheck source=checks/ghostty.sh
+  . "$DOTDIR/checks/ghostty.sh"
+fi
+
+if area_selected logi; then
+  # shellcheck source=checks/logi.sh
+  . "$DOTDIR/checks/logi.sh"
+fi
+
+if area_selected modes; then
+  # shellcheck source=checks/modes.sh
+  . "$DOTDIR/checks/modes.sh"
+fi
+
+if area_selected notifications; then
+  # shellcheck source=checks/notifications.sh
+  . "$DOTDIR/checks/notifications.sh"
+fi
+
+if area_selected backups; then
+  # shellcheck source=checks/backups.sh
+  . "$DOTDIR/checks/backups.sh"
+fi
+
+if area_selected security; then
+  # shellcheck source=checks/security.sh
+  . "$DOTDIR/checks/security.sh"
+fi
+
+if area_selected health; then
+  # shellcheck source=checks/health.sh
+  . "$DOTDIR/checks/health.sh"
+fi
+
+if area_selected session; then
+  # shellcheck source=checks/session.sh
+  . "$DOTDIR/checks/session.sh"
+fi
+
+if area_selected manual; then
+  # shellcheck source=checks/manual.sh
+  . "$DOTDIR/checks/manual.sh"
+fi
+
 
 # ---- --fix: apply the SAFE fixes, re-check, report ------------------------
 # lib/autofix.list is the one place that says what's SAFE (reversible preference writes,
@@ -1933,7 +644,13 @@ if [ "$FIX" = 1 ]; then
   # Report each SAFE item's outcome; on a real run, re-check to see what stuck.
   RECHECK=""
   if [ "$DRY_RUN" != 1 ] && [ "${#SAFE_ITEMS[@]}" -gt 0 ]; then
-    RECHECK="$("$DOTDIR/macconfig-check.sh" --issues 2>/dev/null)" || true
+    recheck_cmd=("$DOTDIR/macconfig-check.sh" --issues)
+    if [ -n "${ONLY_NORM:-}" ]; then
+      only_arg="${ONLY_NORM#,}"
+      only_arg="${only_arg%,}"
+      recheck_cmd+=(--only "$only_arg")
+    fi
+    RECHECK="$("${recheck_cmd[@]}" 2>/dev/null)" || true
     AFTER_DRIFT=0; AFTER_WARN=0
     RECHECK_RAN=1
     RECHECK_ITEMS=()

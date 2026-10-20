@@ -130,7 +130,7 @@ miss "scrollwheel scaling is not written by macos.sh" 'com.apple.scrollwheel.sca
 eq "mouse-settings is check-only Needs Paul" "PAUL|" \
   "$(awk -F'|' '$1 == "mouse-settings" { print $2 "|" $3; exit }' "$DIR/../lib/autofix.list")"
 has "a mouse warn is tagged mouse-settings" 'mouse-settings) fixid mouse-settings' \
-  "$(cat "$DIR/../macconfig-check.sh")"
+  "$(cat "$DIR/../checks/manual.sh")"
 
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \

@@ -9,7 +9,6 @@ set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HELPER="$DIR/lib/ac-sleep.py"
-CHECK="$DIR/macconfig-check.sh"
 MACOS="$DIR/macos.sh"
 STEPS="$DIR/lib/manual-steps.list"
 PY="$(command -v python3 || true)"
@@ -36,7 +35,7 @@ chmod +x "$HELPER"
 
 OK_MSG="ok||AC idle sleep is off (sleep 0). The display still turns off and the screen still locks. Closing the lid still sleeps the Mac, and battery is unchanged"
 bad_msg() {
-  printf 'bad||AC idle sleep is %s (want 0) — the Mac can sleep on its own while on mains power. Run sudo pmset -c sleep 0 (manual step ac-sleep). macconfig-check.sh --fix does not change this (it needs sudo). The display still turns off and the screen still locks. Closing the lid still sleeps the Mac, and battery is unchanged' "$1"
+  printf 'bad||AC idle sleep is %s (want 0) — mains-power sleep is no longer 0, so the Mac can sleep on its own while plugged in. This often happens after an MDM (Kandji) reset. Run sudo pmset -c sleep 0 (manual step ac-sleep). macconfig-check.sh --fix does not change this (it needs sudo). The display still turns off and the screen still locks. Closing the lid still sleeps the Mac, and battery is unchanged' "$1"
 }
 
 # Battery block first, the usual pmset -g custom order. AC sleep is the only
@@ -159,7 +158,7 @@ has "manual step says battery is unchanged" "battery is unchanged" "$title"
 eq "ac-sleep is Needs Paul with no fixer" "PAUL|" \
   "$(awk -F'|' '$1 == "ac-sleep" { print $2 "|" $3; exit }' "$DIR/lib/autofix.list")"
 
-section="$(awk '/^# ---- 6d\. AC idle sleep/,/^# ---- 7\. URL handlers/' "$CHECK")"
+section="$(cat "$DIR/checks/power.sh")"
 has "section calls the helper" 'lib/ac-sleep.py' "$section"
 has "section tags ac-sleep" 'fixid ac-sleep' "$section"
 # shellcheck disable=SC2016

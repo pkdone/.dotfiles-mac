@@ -98,6 +98,12 @@ EOF
   eq "macconfig passes args and returns the script status" "--fix --no-color
 STATUS:7" "$fish_out"
   eq "macconfig leaves the working directory alone" "/tmp" "$(cat "$pwd_out")"
+  only_out="$(
+    HOME="$fake" MACCONFIG_PWD_OUT="$pwd_out" MACCONFIG_EXIT=3 \
+      fish --no-config -c "source \"$FISH_FN\"; macconfig --only dock,brew; echo STATUS:\$status"
+  )"
+  eq "macconfig passes --only through" "--only dock,brew
+STATUS:3" "$only_out"
   rm -rf "$fake" "$pwd_out"
 else
   echo "fish not installed — skipped fish -n (CI fish-syntax job still parses *.fish)"

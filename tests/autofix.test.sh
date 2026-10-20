@@ -42,7 +42,7 @@ eq "desktop-assign fixer is desktop" desktop "$(autofix_lookup "$LIST" desktop-a
 eq "file-handler fixer is fileext" fileext "$(autofix_lookup "$LIST" file-handler | cut -d'|' -f2)"
 for id in brew app-install unwanted-app dock-apps login-shell hostname auto-brightness ac-sleep notifications url-handler \
           login-items tcc manual-step mouse-settings pointer-size input-british gh-auth 1password-cli display-more-space mdm security software-update delete-files dotfiles-git \
-          karabiner-rules repo-file launchagent-exit health tooling; do
+          karabiner-rules repo-file launchagent-exit health tooling broken-symlink hammerspoon-config launchagent-template; do
   eq "$id needs Paul" PAUL "$(autofix_class "$LIST" "$id")"
 done
 unscriptable="$(grep -n -e "can't be scripted" -e "no reliable way to script" \
@@ -65,7 +65,7 @@ eq "missing list file -> PAUL" PAUL "$(autofix_class "$tmp.missing" hs)"
 rm -f "$tmp"
 
 # ---- the list and macconfig-check.sh agree ----
-used="$(grep -oE '(^|[;[:space:]])fixid [a-z0-9-]+' "$DIR/macconfig-check.sh" | awk '{print $NF}' | grep -vx unclassified | sort -u)"
+used="$(grep -h -oE '(^|[;[:space:]])fixid [a-z0-9-]+' "$DIR/macconfig-check.sh" "$DIR"/checks/*.sh | awk '{print $NF}' | grep -vx unclassified | sort -u)"
 listed="$(rows | cut -d'|' -f1 | sort -u)"
 eq "every id macconfig-check.sh tags is in lib/autofix.list" "" "$(comm -23 <(printf '%s\n' "$used") <(printf '%s\n' "$listed"))"
 eq "every id in lib/autofix.list is used by macconfig-check.sh" "" "$(comm -13 <(printf '%s\n' "$used") <(printf '%s\n' "$listed"))"

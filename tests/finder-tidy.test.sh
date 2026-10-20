@@ -67,9 +67,9 @@ eq "dock tilesize stays 28" 'com.apple.dock|tilesize|float|28|Dock|' \
 
 # No Downloads cleanup and no periodic move into ~/tmp.
 # shellcheck disable=SC2016  # the pattern is a fixed string, not a shell expansion
-untidy="$(grep -nE 'Downloads|\$HOME/tmp|~/tmp' "$LIST" "$MACOS" "$INSTALL" "$CHECK" || true)"
+untidy="$(grep -nE 'Downloads|\$HOME/tmp|~/tmp' "$LIST" "$MACOS" "$INSTALL" "$CHECK" "$DIR"/checks/*.sh || true)"
 eq "no Downloads cleanup or ~/tmp moves" "" "$untidy"
-hardcoded="$(grep -n -F "$HOME_MARK" "$LIST" "$MACOS" "$INSTALL" "$CHECK" || true)"
+hardcoded="$(grep -n -F "$HOME_MARK" "$LIST" "$MACOS" "$INSTALL" "$CHECK" "$DIR"/checks/*.sh || true)"
 eq "checks expand @HOME@ / \$HOME and do not hardcode a personal home path" "" "$hardcoded"
 
 # shellcheck disable=SC2016  # needles are source text, compared literally
@@ -77,10 +77,10 @@ has "install.sh mkdir -p screenshots" 'mkdir -p "$HOME/Pictures/Screenshots"' "$
 # shellcheck disable=SC2016
 has "macos.sh prepares the screenshot dir before apply" 'ensure_screenshot_dir "$domain" "$key" "$desired"' "$(cat "$MACOS")"
 has "check drifts when the screenshot folder is missing" \
-  'missing (mkdir -p before setting it)' "$(cat "$CHECK")"
+  'missing (mkdir -p before setting it)' "$(cat "$DIR/checks/defaults.sh")"
 # shellcheck disable=SC2016  # needle is source text, compared literally
 has "check displays the screenshot path with a literal tilde" \
-  'shot_shown="~${desired#"$HOME"}"' "$(cat "$CHECK")"
+  'shot_shown="~${desired#"$HOME"}"' "$(cat "$DIR/checks/defaults.sh")"
 has "defaults stay SAFE via macos.sh" 'defaults|SAFE|macos|' "$(grep -v '^#' "$DIR/lib/autofix.list")"
 
 # ---- macos.sh with a fake defaults / killall ----------------------------

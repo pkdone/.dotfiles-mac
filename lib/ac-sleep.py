@@ -93,8 +93,9 @@ def judge(text: str) -> tuple[str, str]:
         )
     return (
         "bad",
-        f"AC idle sleep is {token} (want 0) — the Mac can sleep on its own"
-        " while on mains power. Run sudo pmset -c sleep 0 (manual step"
+        f"AC idle sleep is {token} (want 0) — mains-power sleep is no longer 0,"
+        " so the Mac can sleep on its own while plugged in. This often happens"
+        " after an MDM (Kandji) reset. Run sudo pmset -c sleep 0 (manual step"
         " ac-sleep). macconfig-check.sh --fix does not change this (it needs"
         " sudo). The display still turns off and the screen still locks."
         " Closing the lid still sleeps the Mac, and battery is unchanged",
