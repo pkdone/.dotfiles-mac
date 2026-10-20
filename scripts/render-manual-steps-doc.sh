@@ -47,6 +47,8 @@ This file is generated from `lib/manual-steps.list`. Edit the list, then run `sc
 
 `check` never writes a setting or prompts, and wraps every slow call in a timeout. It verifies what it can reliably read: privacy grants from the system TCC database (needs Full Disk Access for the terminal or agent running it, otherwise those become "by hand"), pointer size, Accessibility trackpad dragging (`Dragging=1`, `DragLock=0`), mouse tracking speed `1.5` and scrolling speed `0.5` (check only; `defaults write` does not reliably drive System Settings → Mouse), the Karabiner driver, the Hammerspoon grant (live via `hs`), installed apps, Logi Options+ values (from a temp copy of its settings database), `gh auth status` and `op whoami`. Steps marked `macconfig-check.sh` below are verified by their own `macconfig-check.sh` section. To add a step, add a row to `lib/manual-steps.list` (format in its header) and regenerate this file with `scripts/render-manual-steps-doc.sh` (the table is `scripts/manual-steps.sh list --markdown`).
 
+`macconfig-check.sh` also reports four of those in **Sign-ins, keyboard, and pointer**, each linked to its row: British input (`com.apple.HIToolbox` `AppleEnabledInputSources`, manual step `input-british`), pointer size (manual step `pointer-size`, and only when that row exists), `gh auth status` (manual step `gh-auth`), and `op whoami` (manual step `1password-cli`). A miss is a warning, never drift. `--fix` does not change them. There is no sudo, and the notification store is not written. `op whoami` failing because 1Password is installed but locked or not signed in is info, not a warning. The Manual steps section does not repeat those four rows.
+
 EOF
   "$MS" list --markdown
   cat <<'EOF'

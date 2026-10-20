@@ -61,6 +61,10 @@ login-items|PAUL||login items — System Settings → General → Login Items & 
 tcc|PAUL||privacy permission (TCC) — System Settings → Privacy & Security
 manual-step|PAUL||manual step (permission / sign-in) — scripts/manual-steps.sh open
 mouse-settings|PAUL||Mouse tracking speed (NSGlobalDomain com.apple.mouse.scaling = 1.5) and scrolling speed (com.apple.scrollwheel.scaling = 0.5) — System Settings → Mouse. Check-only: writing these is unreliable on recent macOS, so --fix never writes them. Double-click and secondary click stay in the manual step
+pointer-size|PAUL||Pointer size one notch above Normal (com.apple.universalaccess mouseDriverCursorSize, about 1.4; accept 1.2-2.0) — System Settings → Accessibility → Display → Pointer. Check-only (manual step pointer-size): --fix never writes it
+input-british|PAUL||British keyboard input source (com.apple.HIToolbox AppleEnabledInputSources) — System Settings → Keyboard → Text Input → Input Sources. Check-only (manual step input-british): --fix never writes defaults
+gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Check-only: --fix never runs gh auth login
+1password-cli|PAUL||1Password CLI (op whoami) — manual step 1password-cli. Missing app or CLI is a warning. Installed but not signed in (needs an unlock) is info, not a warning. --fix never runs op
 mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
 security|PAUL||security setting — never changed automatically
 software-update|PAUL||software updates — System Settings → General → Software Update

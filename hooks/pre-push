@@ -4,7 +4,8 @@
 # before they reach GitHub. Version-controlled under hooks/ and activated by
 # `git config core.hooksPath hooks` (done by install.sh / bootstrap.sh).
 #
-# Runs shellcheck on *.sh, fish -n on *.fish, and the lib unit tests. A missing
+# Runs fish -n on *.fish, then tests/run-all.sh (every tests/*.test.sh, in
+# parallel, plus shellcheck of the .sh files this push changes). A missing
 # tool is skipped with a notice rather than blocking. Bypass with: git push --no-verify
 #
 set -uo pipefail
@@ -14,19 +15,6 @@ cd "$repo" || exit 1
 status=0
 
 echo "pre-push: running local lint/test gates..."
-
-# --- shellcheck on bash scripts (bash 3.2-safe: array via while-read, no mapfile) ---
-if command -v shellcheck >/dev/null 2>&1; then
-  sh_files=()
-  while IFS= read -r f; do sh_files+=("$f"); done \
-    < <(find . -type f -name '*.sh' -not -path './.git/*')
-  if [ "${#sh_files[@]}" -gt 0 ]; then
-    echo "  shellcheck (${#sh_files[@]} script(s))"
-    shellcheck "${sh_files[@]}" || status=1
-  fi
-else
-  echo "  shellcheck not installed — skipping (it's in the Brewfile)"
-fi
 
 # --- fish syntax check ---
 if command -v fish >/dev/null 2>&1; then
@@ -38,82 +26,14 @@ else
   echo "  fish not installed — skipping fish syntax check"
 fi
 
-# --- lib unit tests ---
-if [ -x ./tests/defaults-lib.test.sh ]; then
-  echo "  unit tests (lib/defaults-lib.sh)"
-  ./tests/defaults-lib.test.sh || status=1
-fi
-if [ -x ./tests/manual-steps.test.sh ]; then
-  echo "  unit tests (scripts/manual-steps.sh list parser and docs/manual-steps.md)"
-  ./tests/manual-steps.test.sh || status=1
-fi
-if [ -x ./tests/autofix.test.sh ]; then
-  echo "  unit tests (lib/autofix.list safe / needs-Paul classification)"
-  ./tests/autofix.test.sh || status=1
-fi
-if [ -x ./tests/desktop-bindings.test.sh ]; then
-  echo "  unit tests (lib/desktop-bindings.py Assign To check and apply)"
-  ./tests/desktop-bindings.test.sh || status=1
-fi
-if [ -x ./tests/file-handlers.test.sh ]; then
-  echo "  unit tests (lib/file-handlers.py Finder default apps)"
-  ./tests/file-handlers.test.sh || status=1
-fi
-if [ -x ./tests/auto-brightness.test.sh ]; then
-  echo "  unit tests (lib/auto-brightness.py display auto-brightness)"
-  ./tests/auto-brightness.test.sh || status=1
-fi
-if [ -x ./tests/logi-settings.test.sh ]; then
-  echo "  unit tests (lib/logi-settings.py read-only Logi Options+ check)"
-  ./tests/logi-settings.test.sh || status=1
-fi
-if [ -x ./tests/notification-prefs.test.sh ]; then
-  echo "  unit tests (lib/notification-prefs.py read-only notification check)"
-  ./tests/notification-prefs.test.sh || status=1
-fi
-if [ -x ./tests/check-summary.test.sh ]; then
-  echo "  unit tests (macconfig-check.sh summary block)"
-  ./tests/check-summary.test.sh || status=1
-fi
-if [ -x ./tests/macconfig.test.sh ]; then
-  echo "  unit tests (check.sh shim and macconfig fish function)"
-  ./tests/macconfig.test.sh || status=1
-fi
-if [ -x ./tests/modes.test.sh ]; then
-  echo "  unit tests (hammerspoon/modes.lua + mode switcher planning)"
-  ./tests/modes.test.sh || status=1
-fi
-if [ -x ./tests/finder-tidy.test.sh ]; then
-  echo "  unit tests (Finder and Trash tidy defaults)"
-  ./tests/finder-tidy.test.sh || status=1
-fi
-if [ -x ./tests/window-tiling.test.sh ]; then
-  echo "  unit tests (native window tiling defaults)"
-  ./tests/window-tiling.test.sh || status=1
-fi
-if [ -x ./tests/menubar.test.sh ]; then
-  echo "  unit tests (menu bar defaults and Karabiner icon)"
-  ./tests/menubar.test.sh || status=1
-fi
-if [ -x ./tests/dock-minimize.test.sh ]; then
-  echo "  unit tests (Dock minimize-into-app and no-bouncing)"
-  ./tests/dock-minimize.test.sh || status=1
-fi
-if [ -x ./tests/pin-hotkey-launchagent.test.sh ]; then
-  echo "  unit tests (hotkey LaunchAgents and pin scripts)"
-  ./tests/pin-hotkey-launchagent.test.sh || status=1
-fi
-if [ -x ./tests/install-bundle.test.sh ]; then
-  echo "  unit tests (install.sh App Store retry)"
-  ./tests/install-bundle.test.sh || status=1
-fi
-if [ -x ./tests/display-resolution.test.sh ]; then
-  echo "  unit tests (built-in display More Space)"
-  ./tests/display-resolution.test.sh || status=1
-fi
-if [ -x ./tests/ac-sleep.test.sh ]; then
-  echo "  unit tests (AC idle sleep on mains power)"
-  ./tests/ac-sleep.test.sh || status=1
+# stdin is the push's ref lines. tests/run-all.sh reads them so shellcheck
+# diffs .sh files against the remote commit (every .sh file if that can't
+# be worked out). The test list is tests/*.test.sh, not a copy of this hook.
+if [ -x ./tests/run-all.sh ]; then
+  ./tests/run-all.sh --shellcheck changed || status=1
+else
+  echo "pre-push: tests/run-all.sh missing or not executable" >&2
+  status=1
 fi
 
 if [ "$status" -ne 0 ]; then

@@ -13,12 +13,12 @@ The one-paste block for a fresh Mac is at the top of the README. This is the res
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua` and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `ac-sleep.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `autofix-lib.sh`, `defaults-lib.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `ac-sleep.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `autofix-lib.sh`, `defaults-lib.sh`, `session-checks.sh`)
 - `scripts/` — helpers (`manual-steps.sh`, `render-manual-steps-doc.sh`, `pin-dictation-hotkey-164.sh`, `pin-quicknote-hotkey-190.sh`, `pin-finder-icon-view.sh`, `install-launchagent.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists. Installed as regular files in `~/Library/LaunchAgents` (`@HOME@` in `WatchPaths` is replaced with `$HOME`; launchd does not expand `~` or `$HOME`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `macconfig-check.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `docs/` — this walkthrough, [settings](settings.md), [manual steps](manual-steps.md), [troubleshooting](troubleshooting.md), and [modes](modes.md)
-- `tests/`, `hooks/` — unit tests and pre-push lint/test gate
+- `tests/`, `hooks/` — unit tests (`tests/run-all.sh` discovers `tests/*.test.sh`) and the pre-push lint/test gate
 - `SHORTCUTS.md` — keyboard-shortcut cheat-sheets
 
 ## Bootstrap
@@ -314,9 +314,16 @@ All scripts accept `-h`/`--help`.
 ### Pre-push checks
 
 A version-controlled git hook (`hooks/pre-push`, enabled by `install.sh` / `bootstrap.sh`
-via `core.hooksPath`) mirrors the CI gates locally: before each push it runs `shellcheck`
-on the shell scripts, `fish -n` on the fish files, and the `tests/` unit tests (`defaults-lib.test.sh`, `manual-steps.test.sh`, `autofix.test.sh`, `desktop-bindings.test.sh`, `file-handlers.test.sh`, `auto-brightness.test.sh`, `logi-settings.test.sh`, `notification-prefs.test.sh`, `check-summary.test.sh`, `macconfig.test.sh`, `modes.test.sh`, `finder-tidy.test.sh`, `window-tiling.test.sh`, `menubar.test.sh`, `dock-minimize.test.sh`, `pin-hotkey-launchagent.test.sh`, `install-bundle.test.sh`, `display-resolution.test.sh`, `ac-sleep.test.sh`). A missing
-tool is skipped rather than blocking. Bypass in a pinch with `git push --no-verify`.
+via `core.hooksPath`) mirrors the CI gates locally. It runs `fish -n` on the fish files,
+then [`tests/run-all.sh`](../tests/run-all.sh). That runner discovers every `tests/*.test.sh`
+(including the [Manual steps](manual-steps.md) staleness check inside `manual-steps.test.sh`,
+and any other `./tests/*.sh` the hook names), runs them in parallel, and shellchecks the
+`.sh` files changed versus the remote commit. When that commit can't be resolved it
+shellchecks every `.sh` file. CI calls the same runner: the shell unit-test job runs the
+suite, and the shellcheck job runs `tests/run-all.sh --shellcheck all --no-tests`. Another
+job copies the repo under `/Users/<name>/.dotfiles-mac-style`, sets `HOME` to match, and
+runs the suite there. A missing tool is skipped rather than blocking. Bypass in a pinch
+with `git push --no-verify`.
 
 ### Making changes
 

@@ -41,7 +41,7 @@ done
 eq "desktop-assign fixer is desktop" desktop "$(autofix_lookup "$LIST" desktop-assign | cut -d'|' -f2)"
 eq "file-handler fixer is fileext" fileext "$(autofix_lookup "$LIST" file-handler | cut -d'|' -f2)"
 for id in brew app-install unwanted-app dock-apps login-shell hostname auto-brightness ac-sleep notifications url-handler \
-          login-items tcc manual-step mouse-settings display-more-space mdm security software-update delete-files dotfiles-git \
+          login-items tcc manual-step mouse-settings pointer-size input-british gh-auth 1password-cli display-more-space mdm security software-update delete-files dotfiles-git \
           karabiner-rules repo-file launchagent-exit health tooling; do
   eq "$id needs Paul" PAUL "$(autofix_class "$LIST" "$id")"
 done
