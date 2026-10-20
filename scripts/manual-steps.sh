@@ -6,10 +6,12 @@
 #   list [--markdown]   numbered checklist (or a Markdown table for docs/manual-steps.md)
 #   open [--all]        interactive walk-through: opens each step's settings page and
 #                       waits for Enter. Skips steps whose check already passes unless
-#                       --all. Does nothing when stdin isn't a terminal.
+#                       --all. Prints a group heading only for a group that still has a
+#                       step to show. Does nothing when stdin isn't a terminal.
 #   check [--porcelain] run each step's read-only check: ok / warn / check by hand.
-#                       --porcelain prints status|num|id|title|detail for macconfig-check.sh.
-#                       Exit status: 1 if any automated check warns, else 0.
+#                       Human output groups lines under the same headings as list.
+#                       --porcelain prints status|num|id|title|detail for macconfig-check.sh
+#                       (no headings). Exit status: 1 if any automated check warns, else 0.
 #   validate            parse the list and report malformed rows (used by tests/).
 #
 # Read-only: never writes a setting, and every slow call is wrapped in a timeout so a
@@ -232,6 +234,9 @@ run_check() {  # spec
 }
 
 # ---- commands -----------------------------------------------------------
+# Blank line, then the group name. list, check, and open all use this.
+group_heading() { printf '\n%s%s%s\n' "$C_HDR" "$1" "$C_OFF"; }
+
 cmd_list() {
   local i num last="" auto
   if [ "${1:-}" = "--markdown" ]; then
@@ -248,7 +253,7 @@ cmd_list() {
   i=0
   while [ "$i" -lt "$N" ]; do
     if [ "${S_GROUP[$i]}" != "$last" ]; then
-      printf '\n%s%s%s\n' "$C_HDR" "${S_GROUP[$i]}" "$C_OFF"; last="${S_GROUP[$i]}"
+      group_heading "${S_GROUP[$i]}"; last="${S_GROUP[$i]}"
     fi
     num=$((i + 1))
     printf '  %2d. %s\n' "$num" "${S_TITLE[$i]}"
@@ -269,9 +274,11 @@ open_target() {  # target
 }
 
 cmd_open() {
-  local all=0 i num reply todo=0
+  local all=0 i num reply todo=0 last="" lead=""
   [ "${1:-}" = "--all" ] && all=1
-  if [ ! -t 0 ]; then
+  # Tests set MANUAL_STEPS_OPEN_TTY=1 to drive the walk-through from a pipe.
+  # A real run still requires a terminal, so a non-interactive caller does nothing.
+  if [ ! -t 0 ] && [ "${MANUAL_STEPS_OPEN_TTY:-}" != 1 ]; then
     echo "manual-steps.sh open: stdin isn't a terminal — skipping the walk-through (run it from a terminal)."
     return 0
   fi
@@ -285,7 +292,18 @@ cmd_open() {
       if [ "$R_STATUS" = ok ] || [ "$R_STATUS" = covered ]; then i=$((i + 1)); continue; fi
     fi
     todo=$((todo + 1))
-    printf '\n%s%d. %s%s\n      %s\n' "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" "${S_WHERE[$i]}"
+    if [ "${S_GROUP[$i]}" != "$last" ]; then
+      # The key prompt does not end with a newline, so a later group needs one
+      # extra newline before the blank line that starts the heading. The first
+      # heading follows the intro line, which already ended.
+      if [ -n "$last" ]; then printf '\n'; fi
+      group_heading "${S_GROUP[$i]}"
+      last="${S_GROUP[$i]}"
+      lead=""
+    else
+      lead=$'\n'
+    fi
+    printf '%s%s%d. %s%s\n      %s\n' "$lead" "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" "${S_WHERE[$i]}"
     printf '      [Enter] open%s, s skip, q quit: ' "$([ -n "${S_OPEN[$i]}" ] || echo ' (nothing to open)')"
     read -r reply || reply=q
     case "$reply" in
@@ -303,7 +321,7 @@ cmd_open() {
 }
 
 cmd_check() {
-  local porcelain=0 i num oks=0 warns=0 hands=0 covered=0 label colour msg
+  local porcelain=0 i num oks=0 warns=0 hands=0 covered=0 label colour msg last=""
   [ "${1:-}" = "--porcelain" ] && porcelain=1
   [ "$porcelain" = 1 ] || printf '%sManual steps — read-only checks%s\n' "$C_HDR" "$C_OFF"
   i=0
@@ -322,8 +340,12 @@ cmd_check() {
       *)       hands=$((hands + 1));     label="by hand";  colour="$C_DIM"; R_STATUS=hand ;;
     esac
     if [ "$porcelain" = 1 ]; then
+      # macconfig-check.sh reads status|num|id|title|detail. No headings here.
       printf '%s|%d|%s|%s|%s\n' "$R_STATUS" "$num" "${S_ID[$i]}" "${S_TITLE[$i]}" "$R_DETAIL"
     else
+      if [ "${S_GROUP[$i]}" != "$last" ]; then
+        group_heading "${S_GROUP[$i]}"; last="${S_GROUP[$i]}"
+      fi
       msg="${S_TITLE[$i]}"
       [ -n "$R_DETAIL" ] && msg="$msg — $R_DETAIL"
       printf '  %s%-19s%s %2d. %s\n' "$colour" "$label" "$C_OFF" "$num" "$msg"
