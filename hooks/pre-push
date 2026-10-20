@@ -44,7 +44,7 @@ if [ -x ./tests/defaults-lib.test.sh ]; then
   ./tests/defaults-lib.test.sh || status=1
 fi
 if [ -x ./tests/manual-steps.test.sh ]; then
-  echo "  unit tests (scripts/manual-steps.sh list parser)"
+  echo "  unit tests (scripts/manual-steps.sh list parser and docs/manual-steps.md)"
   ./tests/manual-steps.test.sh || status=1
 fi
 if [ -x ./tests/autofix.test.sh ]; then

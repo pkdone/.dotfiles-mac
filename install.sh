@@ -168,7 +168,7 @@ MANUAL_STEPS="$DOTFILES/scripts/manual-steps.sh"
 if [ "${DOTFILES_BOOTSTRAP:-0}" = 1 ]; then
   echo "   Manual steps (permissions, sign-ins) are listed when bootstrap.sh finishes."
 else
-  echo "   Remaining setup (login shell, hostname, Dock, defaults) is in the README,"
+  echo "   Remaining setup (login shell, hostname, Dock, defaults) is in docs/setup.md,"
   echo "   or run ./bootstrap.sh to do the whole sequence."
   echo ""
   "$MANUAL_STEPS" list || true

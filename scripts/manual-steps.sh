@@ -3,7 +3,7 @@
 # manual-steps.sh — the steps no script can do (privacy permissions, sign-ins, MDM
 # apps, settings not exposed via `defaults`), read from lib/manual-steps.list.
 #
-#   list [--markdown]   numbered checklist (or a Markdown table for the README)
+#   list [--markdown]   numbered checklist (or a Markdown table for docs/manual-steps.md)
 #   open [--all]        interactive walk-through: opens each step's settings page and
 #                       waits for Enter. Skips steps whose check already passes unless
 #                       --all. Does nothing when stdin isn't a terminal.

@@ -654,7 +654,7 @@ if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (macconfig-check.sh --fix): sk
 
 cat <<'MANUAL'
 
-Still manual (not scriptable / out of scope) — see README:
+Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
   - Apple Account sign-in; User & Groups account picture
   - Keyboard British input source (built-in display More Space is checked by
     macconfig-check.sh and never changed)
