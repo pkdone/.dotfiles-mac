@@ -27,10 +27,12 @@ The walkthrough after that paste (dotfiles, the apps Homebrew can't install, she
 
 About 35 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
 
+These are three ways to use the same checklist. You don't need to run all of them. Most of the time, `manualsteps open` is the only one you need.
+
 ```bash
-manualsteps        # read-only: ok / warn / by hand
-manualsteps open   # walk through the steps not yet done
-manualsteps list   # numbered checklist
+manualsteps        # see which steps are done: ok, warn, or check by hand. Changes nothing.
+manualsteps open   # go through each step not yet done, opening the right settings page for you
+manualsteps list   # just print the full numbered checklist
 ```
 
 The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
