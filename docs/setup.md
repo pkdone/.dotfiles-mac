@@ -59,7 +59,7 @@ These apps can't be installed by `brew bundle`, so set them up by hand after boo
 - **Okta Verify** — company MDM (Kandji). Listed in `lib/mdm-apps.list`, not the Brewfile: `mas` cannot upgrade the `root:wheel` App Store copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`. Updates come from MDM / the App Store UI.
 - **1Password** (desktop) — company MDM (Kandji Self Service). Listed in `lib/mdm-apps.list`, not the Brewfile, so Homebrew and Kandji never fight over the app. The CLI (`1password-cli` / `op`) stays in the Brewfile; turn on Settings → Developer → Integrate with 1Password CLI in the app.
 
-These are also in the [manual steps](manual-steps.md) checklist (`scripts/manual-steps.sh`). Do them before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
+These are also in the [manual steps](manual-steps.md) checklist (`manualsteps`, or `scripts/manual-steps.sh`). Do them before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
 
 ## Set login shell
 
@@ -282,10 +282,15 @@ To find which `defaults` key backs a System Settings toggle (so you can add it t
 > _Manual — no script can do these. `install.sh` and `bootstrap.sh` print this checklist when they finish and, on a terminal, offer to walk through it._
 
 ```bash
-~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist
-~/.dotfiles-mac/scripts/manual-steps.sh open    # walk through the steps not yet done, opening each System Settings page (terminal only; --all for every step)
-~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand (also the "Manual steps" section of macconfig-check.sh)
+manualsteps                                      # check (no arguments): ok / warn / by hand
+manualsteps open                                 # walk through the steps not yet done, opening each System Settings page (terminal only; --all for every step)
+manualsteps list                                 # numbered checklist
+~/.dotfiles-mac/scripts/manual-steps.sh list     # numbered checklist (same as manualsteps list)
+~/.dotfiles-mac/scripts/manual-steps.sh open     # walk through the steps not yet done, opening each System Settings page (terminal only; --all for every step)
+~/.dotfiles-mac/scripts/manual-steps.sh check    # read-only: ok / warn / by hand (same as manualsteps)
 ```
+
+`manualsteps` is a fish function, installed with the others in `fish/functions/`. With no arguments it runs `scripts/manual-steps.sh check` from any directory. Arguments pass through (`manualsteps list`, `manualsteps open`, `manualsteps open --all`, `manualsteps check`, `manualsteps --help`) and the script's exit status comes back unchanged.
 
 The checklist, the checks, and the notes under the table are in [Manual steps](manual-steps.md). That file is generated from `lib/manual-steps.list` by `scripts/render-manual-steps-doc.sh`.
 
@@ -306,7 +311,7 @@ The checklist, the checks, and the notes under the table are in [Manual steps](m
 | `shell.sh` | Make fish the login shell. Run once on a fresh machine (see "Set login shell"). Idempotent; sudo/`chsh` only if needed. |
 | `hostname.sh` | Set HostName/LocalHostName/ComputerName. Run once on a fresh machine (see "Set Hostname"). Idempotent; sudo only if a name differs. |
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
-| `scripts/manual-steps.sh` | The by-hand steps from `lib/manual-steps.list`: `list` (numbered checklist, `--markdown` for the table in [Manual steps](manual-steps.md)), `open` (interactive walk-through that opens each settings page), `check` (read-only ok / warn / by hand; also run by `macconfig-check.sh`). |
+| `scripts/manual-steps.sh` | The by-hand steps from `lib/manual-steps.list`: `list` (numbered checklist, `--markdown` for the table in [Manual steps](manual-steps.md)), `open` (interactive walk-through that opens each settings page), `check` (read-only ok / warn / by hand; also run by `macconfig-check.sh`). From fish, `manualsteps` does the same: no arguments runs `check`, and other arguments pass through. |
 | `scripts/render-manual-steps-doc.sh` | Regenerates [docs/manual-steps.md](manual-steps.md) from `lib/manual-steps.list`. `--check` exits non-zero when that file is stale. |
 
 All scripts accept `-h`/`--help`.
@@ -353,6 +358,7 @@ dotpush "your message"
 | Function | Description |
 |------|------|
 | `macconfig` | Checks this Mac's config settings against the repo (`macconfig-check.sh`). Arguments pass through: `macconfig`, `macconfig --fix`, `macconfig --no-color` |
+| `manualsteps` | By-hand settings (`scripts/manual-steps.sh`). No arguments runs `check`. Arguments pass through: `manualsteps list`, `manualsteps open`, `manualsteps open --all`, `manualsteps --help` |
 | `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile. Sets `HOMEBREW_NO_ASK` for that run only, so Homebrew 7 does not ask "Do you want to proceed?"; a hand-typed `brew upgrade` still asks |
 | `dotpush <message>` | Commits and pushes all dotfile changes to GitHub in one command |
 | `edit <file>` | Opens a file in CotEditor |

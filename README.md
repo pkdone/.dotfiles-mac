@@ -21,24 +21,45 @@ The walkthrough after that paste — dotfiles, the apps Homebrew can't install, 
 
 ## Everyday commands
 
+`bootstrap.sh` is the guided setup. Run it the first time on a new Mac (the paste above ends with it), and re-run it whenever you want to go through the setup again. It asks before each step and skips anything already done.
+
+```bash
+~/.dotfiles-mac/bootstrap.sh   # first-time or re-run setup (asks before each step)
+```
+
+`macconfig` checks this Mac against the repo, and puts settings back when they no longer match and the fix is safe. Run it when you want that check, and after a macOS update.
+
 ```bash
 macconfig          # check this Mac against the repo (read-only, changes nothing)
 macconfig --fix    # check, fix anything that's safe to fix automatically, then check again
-brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile
 ```
 
 `macconfig --fix` only changes settings it can safely put back on its own. Anything else is listed under "Needs Paul" for you to do by hand. `check.sh` is an older name for `macconfig`, kept because the scheduled morning check still calls it.
 
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).
 
+`manualsteps` covers the settings you do by hand. Run it once on a new Mac after bootstrap, after a macOS update, and whenever `macconfig` shows a manual step as warn.
+
+```bash
+manualsteps        # read-only: ok / warn / by hand
+manualsteps open   # walk through the steps not yet done
+manualsteps list   # numbered checklist
+```
+
+`brewsync` installs, upgrades and cleans up Homebrew packages from the Brewfile. Run it after you change the Brewfile, or when a package is out of date.
+
+```bash
+brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile
+```
+
 ## Manual steps
 
 About 35 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once on a new Mac after the bootstrap finishes (it prints the list and offers to walk you through it), and again after a macOS update or whenever `macconfig` shows a manual step as warn.
 
 ```bash
-~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist
-~/.dotfiles-mac/scripts/manual-steps.sh open    # walk through the steps not yet done
-~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand
+manualsteps        # read-only: ok / warn / by hand
+manualsteps open   # walk through the steps not yet done
+manualsteps list   # numbered checklist
 ```
 
 The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
