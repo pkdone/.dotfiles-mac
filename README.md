@@ -37,6 +37,18 @@ brewsync
 
 The summary, the SAFE / Needs Paul split, and the Mac health signals are in [Setup](docs/setup.md#verifying-the-setup).
 
+## Manual steps
+
+About 35 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once on a new Mac after the bootstrap finishes (it prints the list and offers to walk you through it), and again after a macOS update or whenever `macconfig` shows a manual step as warn.
+
+```bash
+~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist
+~/.dotfiles-mac/scripts/manual-steps.sh open    # walk through the steps not yet done
+~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand
+```
+
+The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
+
 ## Docs
 
 - [Setup](docs/setup.md) — full setup walkthrough
