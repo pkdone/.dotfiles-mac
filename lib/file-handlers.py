@@ -13,8 +13,12 @@ Check (the default) is read-only. One line per extension, fields separated by `|
 "Failed to get default application" on stderr, exit 2: that extension is unset.
 
 `--apply` sets each drifted row with `duti -s <bundle-id> .<ext> all`, plus any
-extra UTIs named on the row (`uti:…`). It then polls `duti -x` for a few
-seconds, because Launch Services often applies the change after duti returns.
+extra UTIs named on the row (`uti:…`). It then polls `duti -x` until the new
+handler shows up or the settle window ends (`FILE_HANDLERS_SETTLE_SECS`,
+default 5 seconds). Launch Services often applies the change after duti
+returns. Point `FILE_HANDLERS_CLOCK` at a file to use that file as the clock:
+each pause adds to the file instead of sleeping, so a busy machine cannot
+use up the window. Leave it unset to use real time.
 `--dry-run` changes nothing. `--only` is a comma-separated list of extensions.
 
 Rows marked `unpinnable` (no declared UTI; duti error -50 on the dynamic UTI)
@@ -58,6 +62,44 @@ def settle_seconds() -> float:
         return max(0.0, float(raw))
     except ValueError:
         return 5.0
+
+
+def _clock_path() -> str:
+    return os.environ.get("FILE_HANDLERS_CLOCK", "").strip()
+
+
+def clock_now() -> float:
+    """Seconds on the settle clock.
+
+    With FILE_HANDLERS_CLOCK unset this is the real monotonic clock. When that
+    variable names a file, the file holds the seconds and tests can move time
+    without waiting on the wall clock.
+    """
+    path = _clock_path()
+    if not path:
+        return time.monotonic()
+    try:
+        with open(path, encoding="utf-8") as fh:
+            raw = fh.read().strip()
+        return float(raw) if raw else 0.0
+    except (OSError, ValueError):
+        return 0.0
+
+
+def clock_pause(seconds: float) -> None:
+    """Advance the settle clock by `seconds`.
+
+    A real clock sleeps. A file clock (FILE_HANDLERS_CLOCK) adds `seconds` to
+    the file and returns at once, so a slow duti read does not use up the window.
+    """
+    path = _clock_path()
+    if not path:
+        if seconds > 0:
+            time.sleep(seconds)
+        return
+    updated = clock_now() + seconds
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(f"{updated:.6f}\n")
 
 
 def load_schemes(list_path: str) -> set[str]:
@@ -228,15 +270,15 @@ def check_rows(duti: str, rows, schemes: set[str]) -> list[tuple[str, str, str]]
 
 def wait_for_handler(duti: str, ext: str, bundle: str) -> tuple[str, str]:
     """Poll duti -x until it shows bundle, or the settle window ends."""
-    deadline = time.monotonic() + settle_seconds()
+    deadline = clock_now() + settle_seconds()
     last_have, last_err = "", ""
     while True:
         last_have, last_err = current_handler(duti, ext)
         if not last_err and last_have == bundle:
             return last_have, ""
-        if time.monotonic() >= deadline:
+        if clock_now() >= deadline:
             return last_have, last_err
-        time.sleep(0.25)
+        clock_pause(0.25)
 
 
 def apply_rows(duti: str, rows, tokens: list[str], schemes: set[str], dry_run: bool):

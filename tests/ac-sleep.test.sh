@@ -252,6 +252,10 @@ eq "unreadable profile does not invoke sudo" "" "$(cat "$tmp/sudo.log")"
 
 # A terminal, answering no: sudo isn't wanted. Passwordless sudo is off, so
 # the script asks instead of hanging on a password prompt.
+# The child gets its own controlling terminal (the test runner often has
+# none). The reply is written when the prompt appears. There is no timer:
+# under run-all.sh a busy machine can be slow to reach the question, and a
+# deadline would kill the script before it asks.
 : > "$tmp/pmset.log"
 : > "$tmp/sudo-prompt.log"
 prompt_rc=0
@@ -259,39 +263,38 @@ prompt_out="$(
   PATH="$bin:$PATH" PMSET_LOG="$tmp/pmset.log" SUDO_LOG="$tmp/sudo-prompt.log" \
     PMSET_CUSTOM="$tmp/on.txt" SUDO_N_RC=1 SUDO_RC=0 \
     "$PY" - "$MACOS" <<'PY'
-import os, pty, select, subprocess, sys, time
+import errno, os, pty, sys
+
 macos = sys.argv[1]
-master, slave = pty.openpty()
-proc = subprocess.Popen(
-    [macos, "--no-color", "--only", "@ac-sleep"],
-    stdin=slave, stdout=slave, stderr=subprocess.STDOUT,
-    env=os.environ.copy(),
-)
-os.close(slave)
-buf = b""
+env = os.environ.copy()
+pid, master = pty.fork()
+if pid == 0:
+    # Replace this process. If exec fails, exit so the child does not fall
+    # through into the parent's read loop.
+    try:
+        os.execvpe(macos, [macos, "--no-color", "--only", "@ac-sleep"], env)
+    finally:
+        os._exit(127)
+
+buf = bytearray()
 answered = False
-deadline = time.time() + 8
-while time.time() < deadline:
-    ready, _, _ = select.select([master], [], [], 0.2)
-    if ready:
+try:
+    while True:
         try:
             chunk = os.read(master, 4096)
-        except OSError:
+        except OSError as exc:
+            if exc.errno == errno.EINTR:
+                continue
             break
         if not chunk:
             break
-        buf += chunk
-        if (not answered) and b"[y/N]" in buf:
+        buf.extend(chunk)
+        if not answered and b"[y/N]" in buf:
             os.write(master, b"n\n")
             answered = True
-    elif proc.poll() is not None:
-        break
-if proc.poll() is None:
-    proc.kill()
-    proc.wait()
-else:
-    proc.wait()
-os.close(master)
+finally:
+    os.close(master)
+    os.waitpid(pid, 0)
 sys.stdout.buffer.write(buf)
 sys.exit(0 if answered else 1)
 PY

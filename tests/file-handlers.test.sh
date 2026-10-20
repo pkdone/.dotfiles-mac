@@ -34,6 +34,9 @@ mkdir -p "$bin"
 # Fake duti. DUTI_DB is a JSON object of ext -> bundle (missing or "" = no handler).
 # DUTI_S_FAIL is a comma-separated list of extensions whose `duti -s` fails.
 # DUTI_X_ERROR, when set, makes every `duti -x` fail with that stderr.
+# DUTI_X_LAG is how many `duti -x` reads after a successful `duti -s` still
+# show the old handler. The helper's settle clock is a file (see
+# FILE_HANDLERS_CLOCK), so those reads are not racing a wall-clock deadline.
 cat > "$bin/duti" <<'PY'
 #!/usr/bin/env python3
 import json, os, sys
@@ -159,6 +162,10 @@ export DUTI_S_LIE=""
 export DUTI_X_ERROR=""
 export DUTI_X_LAG=0
 export FILE_HANDLERS_SETTLE_SECS=5
+# The settle wait reads this file as its clock and adds to it instead of
+# sleeping. A busy machine cannot use up the retry window between duti -x reads.
+export FILE_HANDLERS_CLOCK="$tmp/clock"
+printf '0\n' > "$FILE_HANDLERS_CLOCK"
 : > "$DUTI_LOG"
 printf '{}\n' > "$DUTI_DB"
 
@@ -306,8 +313,10 @@ eq "refused extensions are not stored" "" "$("$PY" -c 'import json,sys; d=json.l
 export DUTI_S_FAIL=""
 
 # duti -s exits 0 but the handler does not change: report it, don't claim chg.
+# The clock starts at 0 here so the 0.4s window is a few pauses, not wall time.
 export DUTI_S_LIE="env"
 export FILE_HANDLERS_SETTLE_SECS=0.4
+printf '0\n' > "$FILE_HANDLERS_CLOCK"
 "$PY" -c 'import json,sys; json.dump({}, open(sys.argv[1],"w"))' "$DUTI_DB"
 printf '%s\n' 'env|CotEditor|com.coteditor.CotEditor' > "$tmp/lie.list"
 out="$(run --apply "$tmp/lie.list")"; rc=$?
@@ -317,14 +326,20 @@ export DUTI_S_LIE=""
 export FILE_HANDLERS_SETTLE_SECS=5
 
 # Launch Services applies a moment after duti returns. Poll before failing.
+# The stub keeps the old bundle for three duti -x reads, then reveals the new
+# one. The clock file only moves when the helper pauses, so those reads still
+# land inside the three-second window on a busy machine.
 export DUTI_X_LAG=3
 export FILE_HANDLERS_SETTLE_SECS=3
+printf '0\n' > "$FILE_HANDLERS_CLOCK"
 "$PY" -c 'import json,sys; json.dump({"sh":"com.mitchellh.ghostty"}, open(sys.argv[1],"w"))' "$DUTI_DB"
 printf '%s\n' 'sh|CotEditor|com.coteditor.CotEditor' > "$tmp/lag.list"
 : > "$DUTI_LOG"
 out="$(run --apply "$tmp/lag.list")"; rc=$?
 eq "a late duti -x read still counts as set" 0 "$rc"
 has "late read is a change, not a failure" "chg|sh|.sh: com.mitchellh.ghostty -> CotEditor / com.coteditor.CotEditor" "$out"
+# One read before duti -s, then three old reads and the read that sees CotEditor.
+eq "late handler is read five times" 5 "$(grep -c -F '["-x", "sh"]' "$DUTI_LOG" || true)"
 export DUTI_X_LAG=0
 export FILE_HANDLERS_SETTLE_SECS=5
 
