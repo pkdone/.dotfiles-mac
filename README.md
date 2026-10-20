@@ -4,7 +4,11 @@ Personal macOS dotfiles and bootstrap setup.
 
 ## Setup
 
-On a fresh Mac, paste this block. It installs Homebrew and the GitHub CLI, signs you in to GitHub, clones this repo to `~/.dotfiles-mac`, and then runs the guided setup, which asks before each step. It's safe to paste again later, because it skips anything that's already done.
+Do these two parts once on a new Mac, in order.
+
+### 1. Bootstrap
+
+Paste this block. It installs Homebrew and the GitHub CLI, signs you in to GitHub, clones this repo to `~/.dotfiles-mac`, and then runs the guided setup (`bootstrap.sh`), which asks before each step. It's safe to paste again later, or to re-run `~/.dotfiles-mac/bootstrap.sh`, because it skips anything that's already done.
 
 ```bash
 command -v brew >/dev/null 2>&1 || {
@@ -17,15 +21,21 @@ gh auth status || gh auth login
 ~/.dotfiles-mac/bootstrap.sh
 ```
 
-The walkthrough after that paste — dotfiles, the apps Homebrew can't install, shell, hostname, Dock, handlers, and the checks — is in [Setup](docs/setup.md).
+The walkthrough after that paste (dotfiles, the apps Homebrew can't install, shell, hostname, Dock, file handlers and the checks) is in [Setup](docs/setup.md).
 
-## Everyday commands
+### 2. Manual steps
 
-`bootstrap.sh` is the guided setup. Run it the first time on a new Mac (the paste above ends with it), and re-run it whenever you want to go through the setup again. It asks before each step and skips anything already done.
+About 35 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
 
 ```bash
-~/.dotfiles-mac/bootstrap.sh   # first-time or re-run setup (asks before each step)
+manualsteps        # read-only: ok / warn / by hand
+manualsteps open   # walk through the steps not yet done
+manualsteps list   # numbered checklist
 ```
+
+The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
+
+## Everyday commands
 
 `macconfig` checks this Mac against the repo, and puts settings back when they no longer match and the fix is safe. Run it when you want that check, and after a macOS update.
 
@@ -38,31 +48,13 @@ macconfig --fix    # check, fix anything that's safe to fix automatically, then 
 
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).
 
-`manualsteps` covers the settings you do by hand. Run it once on a new Mac after bootstrap, after a macOS update, and whenever `macconfig` shows a manual step as warn.
-
-```bash
-manualsteps        # read-only: ok / warn / by hand
-manualsteps open   # walk through the steps not yet done
-manualsteps list   # numbered checklist
-```
+`manualsteps` is worth running again after a macOS update, or whenever `macconfig` shows a manual step as warn.
 
 `brewsync` installs, upgrades and cleans up Homebrew packages from the Brewfile. Run it after you change the Brewfile, or when a package is out of date.
 
 ```bash
 brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile
 ```
-
-## Manual steps
-
-About 35 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once on a new Mac after the bootstrap finishes (it prints the list and offers to walk you through it), and again after a macOS update or whenever `macconfig` shows a manual step as warn.
-
-```bash
-manualsteps        # read-only: ok / warn / by hand
-manualsteps open   # walk through the steps not yet done
-manualsteps list   # numbered checklist
-```
-
-The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
 
 ## Docs
 
