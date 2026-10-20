@@ -28,7 +28,7 @@ lua_syntax_code() {
 # hs may print the returned string bare (ok) or quoted ("ok", "error: ...").
 hs_compile_result() {
   local line
-  line="$(printf '%s\n' "$1" | sed -nE '/^[[:space:]]*"?(ok|error:)/ { s/^[[:space:]]*//; p; q }')"
+  line="$(printf '%s\n' "$1" | sed -nE '/^[[:space:]]*"?(ok|error:)/ { s/^[[:space:]]*//; p; q; }')"
   case "$line" in
     ok|'"ok"')
       printf 'ok\n'
