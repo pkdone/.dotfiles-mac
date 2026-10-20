@@ -29,10 +29,9 @@ The walkthrough after that paste — dotfiles, the apps Homebrew can't install, 
 | `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile. Sets `HOMEBREW_NO_ASK` for that run only, so Homebrew 7 does not ask "Do you want to proceed?"; a hand-typed `brew upgrade` still asks |
 
 ```bash
-macconfig
-macconfig --fix
-~/.dotfiles-mac/check.sh --fix --no-color
-brewsync
+macconfig          # check this Mac against the repo (read-only)
+macconfig --fix    # check, repair safe drift, then re-check
+brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile
 ```
 
 The summary, the SAFE / Needs Paul split, and the Mac health signals are in [Setup](docs/setup.md#verifying-the-setup).
