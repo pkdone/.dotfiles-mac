@@ -268,12 +268,35 @@ eq "running Hammerspoon compiles via embedded path" ok "$(printf '%s\n' "$live" 
 has "hs was given the path" "$hs_repo/hammerspoon/init.lua" "$(cat "$hs_log")"
 miss "hs command did not use getenv" "os.getenv" "$(cat "$hs_log")"
 
+eq "bare hs ok is success" ok "$(hs_compile_result 'ok')"
+eq "quoted hs ok is success" ok "$(hs_compile_result '"ok"')"
+eq "bare hs error is a compile failure" error "$(hs_compile_result 'error: near eof' | cut -d'|' -f1)"
+eq "quoted hs error is a compile failure" error "$(hs_compile_result '"error: near eof"' | cut -d'|' -f1)"
+has "quoted hs error keeps the message" "near eof" "$(hs_compile_result '"error: near eof"')"
+
+# A quoted compile error must not be treated as a lost connection. luac is
+# still on PATH and would pass this file, so falling through would hide it.
+cat > "$bin/hs" <<'EOF'
+#!/bin/sh
+printf '%s\n' '"error: unexpected symbol near eof"'
+exit 0
+EOF
+quoted_err="$(DOTDIR="$hs_repo" H_HS_RUNNING=yes PATH="$bin:$PATH" hammerspoon_config_line)"
+eq "quoted hs error warns" warn "$(printf '%s\n' "$quoted_err" | cut -d'|' -f1)"
+has "quoted hs error names the compile failure" "unexpected symbol near eof" "$quoted_err"
+miss "quoted hs error is not the unavailable fallback" "hs unavailable" "$quoted_err"
+miss "quoted hs error is not the luac fallback" "lua syntax check" "$quoted_err"
+
 # A managed link is already drift. The extra scan must not warn about it again.
 record_managed_link "$home/.config/bad"
 CHECKED=0
 FIX_ID=""
+# These are called from checks/symlinks.sh, which this file does not follow.
+# shellcheck disable=SC2317
 fixid() { FIX_ID="$1"; }
+# shellcheck disable=SC2317
 pass() { printf 'PASS %s\n' "$1"; }
+# shellcheck disable=SC2317
 warn() { printf 'WARN %s %s\n' "$FIX_ID" "$1"; }
 managed_out="$(DOTDIR="$repo" HOME="$home" check_broken_dotfiles_symlinks)"
 # shellcheck disable=SC2088  # the report prints a literal tilde, not this home

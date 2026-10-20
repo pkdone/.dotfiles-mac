@@ -24,11 +24,31 @@ lua_syntax_code() {
   printf 'local f, err = loadfile(%s); if not f then io.stderr:write(err or ""); os.exit(1) end' "$(lua_quote "$1")"
 }
 
+# hs_compile_result TEXT — ok, error|message, or other.
+# hs may print the returned string bare (ok) or quoted ("ok", "error: ...").
+hs_compile_result() {
+  local line
+  line="$(printf '%s\n' "$1" | sed -nE '/^[[:space:]]*"?(ok|error:)/ { s/^[[:space:]]*//; p; q }')"
+  case "$line" in
+    ok|'"ok"')
+      printf 'ok\n'
+      ;;
+    error:*|'"error:'*)
+      line="${line#\"}"
+      line="${line%\"}"
+      printf 'error|%s\n' "$line"
+      ;;
+    *)
+      printf 'other\n'
+      ;;
+  esac
+}
+
 # hammerspoon_config_line — one line: ok|msg or warn|msg
 # Uses hs when Hammerspoon is running. Otherwise a lua syntax check of the
 # repo init.lua. loadfile compiles; it does not run the config.
 hammerspoon_config_line() {
-  local cfg="$DOTDIR/hammerspoon/init.lua" tool out rc err code
+  local cfg="$DOTDIR/hammerspoon/init.lua" tool out rc err code kind
   if [ ! -f "$cfg" ]; then
     printf 'warn|hammerspoon/init.lua missing — cannot check that the config loads\n'
     return 0
@@ -37,15 +57,18 @@ hammerspoon_config_line() {
     rc=0
     code="$(hs_loadfile_code "$cfg")"
     out="$(with_timeout 15 hs -c "$code" </dev/null 2>&1)" || rc=$?
-    if [ "$rc" = 0 ] && printf '%s\n' "$out" | grep -Eq '^(ok|"ok")$'; then
-      printf 'ok|Hammerspoon config compiles (hs loadfile of hammerspoon/init.lua)\n'
-      return 0
-    fi
-    if printf '%s\n' "$out" | grep -q '^error:'; then
-      err="$(printf '%s' "$out" | tr '\n' ' ' | sed 's/[[:space:]]*$//' | cut -c1-200)"
-      printf 'warn|Hammerspoon config did not compile via hs (%s)\n' "${err:-exit $rc}"
-      return 0
-    fi
+    kind="$(hs_compile_result "$out")"
+    case "$kind" in
+      ok)
+        printf 'ok|Hammerspoon config compiles (hs loadfile of hammerspoon/init.lua)\n'
+        return 0
+        ;;
+      error\|*)
+        err="$(printf '%s' "${kind#error|}" | tr '\n' ' ' | sed 's/[[:space:]]*$//' | cut -c1-200)"
+        printf 'warn|Hammerspoon config did not compile via hs (%s)\n' "${err:-exit $rc}"
+        return 0
+        ;;
+    esac
     # hs did not answer with a compile result (IPC). Fall through to luac/lua.
   fi
   tool=""
