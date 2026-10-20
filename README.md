@@ -25,7 +25,7 @@ The walkthrough after that paste (dotfiles, the apps Homebrew can't install, she
 
 ### 2. Manual steps
 
-About 35 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
+Nearly 50 settings can't be scripted: privacy permissions, sign-ins, company MDM apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
 
 These are three ways to use the same checklist. You don't need to run all of them. Most of the time, `manualsteps open` is the only one you need.
 
