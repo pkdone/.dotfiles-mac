@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 #
-# Spotlight Results from Apps: the 13 names in lib/spotlight-apps.list, and
-# how EnabledPreferenceRules is compared. Nothing is written.
+# Spotlight Results from Apps: the 17 names in lib/spotlight-apps.list.
+# The check does not read the toggles. EnabledPreferenceRules is the row
+# list, and a row stays after the toggle is turned off, so that old reading
+# is check by hand rather than a warning. Nothing is written.
 # Run: ./tests/spotlight-rules.test.sh
 #
 set -uo pipefail
@@ -22,63 +24,68 @@ has() {
   case "$3" in *"$2"*) pass=$((pass + 1)) ;; *)
     fail=$((fail + 1)); printf 'FAIL: %s\n  missing: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;; esac
 }
+miss() {
+  case "$3" in *"$2"*) fail=$((fail + 1)); printf 'FAIL: %s\n  unexpected: [%s]\n' "$1" "$2" ;;
+    *) pass=$((pass + 1)) ;; esac
+}
+
+OFF="Books, Calendar, Contacts, Keynote, Mail, Messages, Music, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos"
+ON="App Store, Calculator, Dictionary, System Settings, and WhatsApp"
 
 names="$(awk -F'|' '$1 !~ /^#/ && NF { print $1 }' "$LIST" | tr '\n' ',' | sed 's/,$//')"
-eq "thirteen apps" "Books,Keynote,Mail,Notes,Numbers,Photos,Podcasts,Reminders,Safari,Shortcuts,Stocks,Tips,Voice Memos" "$names"
+eq "seventeen apps" "Books,Calendar,Contacts,Keynote,Mail,Messages,Music,Notes,Numbers,Photos,Podcasts,Reminders,Safari,Shortcuts,Stocks,Tips,Voice Memos" "$names"
+eq "Calendar bundle" "com.apple.iCal" "$(awk -F'|' '$1=="Calendar" { print $2; exit }' "$LIST")"
+eq "Contacts bundle" "com.apple.AddressBook" "$(awk -F'|' '$1=="Contacts" { print $2; exit }' "$LIST")"
+eq "Messages bundle" "com.apple.MobileSMS" "$(awk -F'|' '$1=="Messages" { print $2; exit }' "$LIST")"
+eq "Music bundle" "com.apple.Music" "$(awk -F'|' '$1=="Music" { print $2; exit }' "$LIST")"
+miss "App Store is not required off" "App Store" "$names"
+miss "Calculator is not required off" "Calculator" "$names"
+miss "Dictionary is not required off" "Dictionary" "$names"
+miss "System Settings is not required off" "System Settings" "$names"
+miss "WhatsApp is not required off" "WhatsApp" "$names"
 
 run() { "$PY" "$HELPER" --list "$LIST" --json "$1"; }
 
-out="$(run '["com.apple.finder","com.apple.Safari.something-else"]')"
-eq "other apps on is ok" "ok" "${out%%|*}"
+out="$(run '["com.apple.mail","com.apple.iCal","com.apple.AddressBook","com.apple.MobileSMS","com.apple.Music","com.apple.Safari"]')"
+eq "a row list is check by hand" "hand" "${out%%|*}"
+miss "a row list is not reported as on" "are on" "$out"
+has "hand message names Calendar" "Calendar" "$out"
+has "hand message names the apps that stay on" "$ON" "$out"
 
-out="$(run '["com.apple.mail"]')"
-eq "Mail on is a warning" "warn" "${out%%|*}"
-has "Mail on names Mail" "Mail" "$out"
-
-all_off="$("$PY" - "$LIST" <<'PY'
-import json, sys
-apps = []
-for raw in open(sys.argv[1], encoding="utf-8"):
-    line = raw.split("#", 1)[0].strip()
-    if not line or "|" not in line:
-        continue
-    _name, bundle = line.split("|", 1)
-    apps.append((bundle.strip(), 0))
-print(json.dumps(dict(apps)))
-PY
-)"
-out="$(run "$all_off")"
-eq "every listed app explicitly off passes" "ok" "${out%%|*}"
-
-out="$(run '{"com.apple.finder": 1}')"
-eq "enabled-only map with Mail absent is ok" "ok" "${out%%|*}"
-
-out="$(run '{"com.apple.mail": 1, "com.apple.Safari": 0}')"
-eq "Mail on inside a mixed map warns" "warn" "${out%%|*}"
-
-out="$(run '[{"bundleID": "com.apple.mail", "enabled": true}]')"
-eq "dict list with Mail enabled warns" "warn" "${out%%|*}"
-
-out="$(run '[{"name": "Books", "enabled": false}, {"bundleID": "com.apple.mail", "enabled": 0}]')"
-eq "a partial off list is not a silent pass" "warn" "${out%%|*}"
-has "a partial off list names what is missing" "not listed as off" "$out"
-
-out="$(run '12')"
-eq "a number is not a silent pass" "warn" "${out%%|*}"
-has "a number says the shape is not understood" "does not understand" "$out"
+out="$("$PY" "$HELPER" --list "$LIST")"
+eq "no preference is check by hand" "hand" "${out%%|*}"
+has "hand message names the apps that should be off" "$OFF" "$out"
 
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 "$PY" - "$tmp" <<'PY'
 import plistlib, sys
-plistlib.dump({"Other": 1}, open(sys.argv[1], "wb"))
+plistlib.dump({"EnabledPreferenceRules": ["com.apple.mail", "com.apple.Safari"]}, open(sys.argv[1], "wb"))
 PY
 out="$("$PY" "$HELPER" --list "$LIST" --plist "$tmp")"
-eq "missing key warns" "warn" "${out%%|*}"
-has "missing key names the preference" "EnabledPreferenceRules is not set" "$out"
+eq "exported row list is check by hand" "hand" "${out%%|*}"
+miss "exported row list is not reported as on" "are on" "$out"
 
+empty="$(mktemp)"
+printf '%s\n' '# nothing' > "$empty"
+out="$("$PY" "$HELPER" --list "$empty")"
+eq "an empty app list warns" "warn" "${out%%|*}"
+rm -f "$empty"
+
+title="$(awk -F'|' '$1=="spotlight-results" { print $3; exit }' "$DIR/lib/manual-steps.list")"
+has "manual step names the apps that should be off" "$OFF" "$title"
+has "manual step names the apps that stay on" "$ON" "$title"
+has "manual step says to check by hand" "by hand" "$title"
 eq "manual step uses the spotlight check" "spotlight-results" \
   "$(awk -F'|' '$1=="spotlight-results" { print $6; exit }' "$DIR/lib/manual-steps.list")"
+
+readme="$(cat "$DIR/README.md")"
+has "README names the apps that should be off" "$OFF" "$readme"
+has "README names the apps that stay on" "$ON" "$readme"
+has "README says the step is check by hand" "check by hand" "$readme"
+
+miss "the check does not export Spotlight preferences" "defaults export com.apple.Spotlight" \
+  "$(cat "$DIR/lib/session-checks.sh")"
 
 printf 'spotlight-rules tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -30,7 +30,6 @@ dictation-164|SAFE|macos|dictation hotkey 164 re-pinned by scripts/pin-dictation
 quicknote-190|SAFE|macos|Quick Note hotkey 190 (Globe/Fn+Q) disabled by scripts/pin-quicknote-hotkey-190.sh
 finder-icon-view|SAFE|macos|Finder icon view 72/13 re-pinned by scripts/pin-finder-icon-view.sh
 finder-recents|SAFE|macos|Finder sidebar Recents hidden by lib/finder-sidebar-recents.py
-finder-favorites|SAFE|macos|Finder sidebar Favorites rebuilt from lib/sidebar-favorites.list with mysides; Finder restarts only if the list changed
 finder-show|SAFE|macos|Finder menu shortcut Show Finder set to Cmd-Ctrl-Shift-F (NSUserKeyEquivalents, -dict-add)
 titlebar-double-click|SAFE|macos|delete AppleMiniaturizeOnDoubleClick when it is set, so double-click fills the window (AppleActionOnDoubleClick Fill is the defaults row)
 coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
@@ -69,7 +68,8 @@ input-british|PAUL||British keyboard layout only (com.apple.HIToolbox AppleSelec
 gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Check-only: --fix never runs gh auth login
 1password-cli|PAUL||1Password CLI (op whoami) — manual step 1password-cli. Missing app or CLI is a warning. Installed but not signed in (needs an unlock) is info, not a warning. --fix never runs op
 app-store|PAUL||App Store signed in (mas list) — manual step app-store. Check-only: --fix never signs in
-spotlight-results|PAUL||Spotlight results off for the apps in lib/spotlight-apps.list (com.apple.Spotlight EnabledPreferenceRules). Check-only: --fix never writes Spotlight
+finder-favorites|PAUL||Finder sidebar Favorites compared with lib/sidebar-favorites.list by reading FavoriteItems.sfl4 (or sfl3/sfl2). Check-only: writing the sidebar file is not reliable, and mysides is not a Homebrew formula or cask, so --fix never changes Favorites
+spotlight-results|PAUL||Spotlight → Results from Apps: the apps in lib/spotlight-apps.list should be off (App Store, Calculator, Dictionary, System Settings, and WhatsApp stay on). EnabledPreferenceRules is the row list, not the on/off state, so this is check by hand, not a warning. --fix never writes Spotlight
 wallpaper|PAUL||Desktop picture Tahoe Night (Landscape), asset CF6347E2-4F81-4410-8892-4830991B6C5A in the wallpaper store. Check-only: --fix never changes the picture
 mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
 security|PAUL||security setting (FileVault, firewall stealth mode, automatic security updates, SSH agent and ~/.ssh modes, git commit signing) — never changed automatically

@@ -1,9 +1,9 @@
 # Finder sidebar Favorites, top to bottom.
-# macos.sh rebuilds them with mysides when this list and `mysides list` differ,
-# then restarts Finder. A matching list is left alone.
+# The check reads FavoriteItems.sfl4 (or .sfl3, or .sfl2) and compares file
+# favorites with this list. A trailing slash is not a difference. Nothing
+# writes the sidebar file. mysides is not used.
 # Format: name | path
 #   path is absolute, or starts with @HOME@ (that becomes $HOME).
-#   mysides stores a file:// address. A trailing slash is not a difference.
 # Blank lines and lines beginning with # are ignored.
 Applications|/Applications
 Desktop|@HOME@/Desktop

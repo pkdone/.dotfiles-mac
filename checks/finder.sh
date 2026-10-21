@@ -41,11 +41,11 @@ else
   fi
 fi
 
-# ---- Finder sidebar Favorites (mysides) ----
-# lib/sidebar-favorites.list is the order. A match is left alone. Drift is
-# repaired by macos.sh --only @finder-favorites, which restarts Finder only
-# when the list changed. Addresses that are not files (AirDrop and similar)
-# are not part of this list.
+# ---- Finder sidebar Favorites (sidebar file, check only) ----
+# lib/sidebar-favorites.list is the order. The check reads
+# FavoriteItems.sfl4, or sfl3, or sfl2. A match is left alone. A difference
+# is a warning: writing that file is not reliable, so --fix does not change
+# it. Rows that are not files (AirDrop and similar) are not part of this list.
 hdr "Finder Favorites"
 fixid finder-favorites
 CHECKED=$((CHECKED + 1))
@@ -57,31 +57,15 @@ if [ ! -r "$side_helper" ] || [ ! -r "$side_list" ]; then
 elif [ -z "$DOT_PYTHON" ]; then
   fixid tooling
   warn "python3 not found — skip Finder Favorites"
-elif ! command -v mysides >/dev/null 2>&1; then
-  fixid tooling
-  warn "mysides not installed — skip Finder Favorites (brew install --cask mysides)"
 else
-  if side_out="$(with_timeout 15 mysides list </dev/null 2>&1)"; then
-    side_rc=0
-  else
-    side_rc=$?
-  fi
-  if [ "$side_rc" -ne 0 ]; then
-    fixid tooling
-    warn "mysides list failed — Finder Favorites left unread"
-  else
-    side_tmp="$(mktemp)"
-    printf '%s\n' "$side_out" > "$side_tmp"
-    side_line="$("$DOT_PYTHON" "$side_helper" compare --list "$side_list" --mysides "$side_tmp" || true)"
-    rm -f "$side_tmp"
-    side_status="${side_line%%|*}"
-    side_msg="${side_line#*|}"
-    case "$side_status" in
-      ok) pass "$side_msg" ;;
-      bad) bad "$side_msg — macconfig --fix rebuilds them" ;;
-      *) fixid tooling; warn "${side_msg:-Finder Favorites check failed}" ;;
-    esac
-  fi
+  side_line="$("$DOT_PYTHON" "$side_helper" compare --list "$side_list" || true)"
+  side_status="${side_line%%|*}"
+  side_msg="${side_line#*|}"
+  case "$side_status" in
+    ok) pass "$side_msg" ;;
+    bad) warn "$side_msg — set them in Finder. macconfig --fix does not change Favorites" ;;
+    *) warn "${side_msg:-Finder Favorites could not be read}" ;;
+  esac
 fi
 
 # ---- Show Finder menu shortcut (Cmd-Ctrl-Shift-F) ----
