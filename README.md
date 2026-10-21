@@ -50,14 +50,6 @@ macconfig --fix    # check, fix anything that's safe to fix automatically, then 
 
 `macconfig --fix` only changes settings it can safely put back on its own. Anything else is listed under "Needs Paul" for you to do by hand. `check.sh` is an older name for `macconfig`, kept because the scheduled morning check still calls it.
 
-Spotlight → Results from Apps is check by hand. Turn off Books, Calendar, Contacts, Keynote, Mail, Messages, Music, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, System Settings, and WhatsApp on. macconfig still lists that step, and it does not warn: the preference it used to read (`EnabledPreferenceRules`) is the list of rows, and those rows stay after the toggles are turned off.
-
-Finder sidebar Favorites are checked by reading the sidebar file. `macconfig --fix` does not change them.
-
-macconfig checks the account picture (the Dog), Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon in the background, and the Finder sidebar rows it can name (the Tags group collapsed, Recents hidden, and Shared, AirDrop, iCloud Drive, and the Locations rows when the sidebar files name them). It does not change those. Apple Account and iCloud sync, Logi cloud backup, Spotlight's per-app toggles, the Raycast Finder hotkey and clipboard history, Gemini shortcuts, notification mirroring, the menu-bar allow list, where the Hammerspoon icon sits, and the `.cfg`, `.env`, and `.list` file types stay by hand: there is still no readable source for them.
-
-Automatic security updates are managed by the employer (MDM). `macconfig` says so and does not count that as a warning. It also does not warn when the SSH agent has no key loaded.
-
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).
 
 `manualsteps` is worth running again after a macOS update, or whenever `macconfig` shows a manual step as warn.
