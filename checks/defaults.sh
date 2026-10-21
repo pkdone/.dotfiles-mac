@@ -59,3 +59,15 @@ while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; 
     if [ "$shot_dir_missing" = 1 ]; then bad "$shot_dir_msg"; fi
   fi
 done < "$DOTDIR/lib/macos-defaults.list"
+
+# AppleActionOnDoubleClick = Fill is the row above. The older key minimizes
+# on double-click and fights Fill. It is unset on this Mac. If it shows up,
+# --fix deletes it. A missing `defaults` command (this check on Linux) counts
+# as unset.
+CHECKED=$((CHECKED + 1))
+fixid titlebar-double-click
+if defaults read NSGlobalDomain AppleMiniaturizeOnDoubleClick >/dev/null 2>&1; then
+  bad "NSGlobalDomain AppleMiniaturizeOnDoubleClick is set (double-click should fill the window). macconfig --fix removes it"
+else
+  pass "NSGlobalDomain AppleMiniaturizeOnDoubleClick is unset"
+fi

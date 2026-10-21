@@ -17,7 +17,8 @@
 #   --list      Print the managed settings as a Markdown table and exit.
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
 #               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
-#               @finder-recents / @finder-icon-view / @ac-sleep. Values that already
+#               @finder-recents / @finder-icon-view / @finder-favorites /
+#               @finder-show / @titlebar-double-click / @ac-sleep. Values that already
 #               match are left alone (no re-assert write). Used by `macconfig-check.sh --fix`.
 #   --yes       Run the deferred UI restarts without prompting (still only if
 #               something changed). Also skips the AC-sleep confirmation and goes
@@ -26,12 +27,14 @@
 #   -h|--help   Show usage.
 #
 # Safety:
-#   - One sudo command, and only for AC idle sleep: `sudo pmset -c sleep 0`.
-#     Skipped when sudo isn't available (no passwordless sudo and no terminal)
-#     or isn't wanted (--dry-run, or you answer no). An already-zero value
-#     does not call sudo. Display sleep, the lock screen, and the battery
-#     profile are not touched. Closing the lid still sleeps the Mac.
-#     Other sudo-only items (hostname, display auto-brightness) stay manual.
+#   - sudo is only used for power, and only for the pmset commands that are
+#     still wrong: AC sleep 0, AC display sleep 10 minutes, battery display
+#     sleep 2 minutes, and AC wake for network access (womp 1). Skipped when
+#     sudo isn't available (no passwordless sudo and no terminal) or isn't
+#     wanted (--dry-run, or you answer no). Values that already match do not
+#     call sudo. Battery idle sleep is not changed. Closing the lid still
+#     sleeps the Mac. Other sudo-only items (hostname, display auto-brightness)
+#     stay manual. macconfig --fix never selects @ac-sleep.
 #   - Before the first value-changing write, every affected domain is exported
 #     to backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
 #   - UI restarts (killall) are deferred to the end, run only if something
@@ -69,11 +72,11 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --list       Print the managed settings as a Markdown table and exit.
   --only ID    Apply only this item (repeatable): "domain|key" from
                lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
-               @finder-recents, @finder-icon-view, @ac-sleep. Matching values are
-               left alone.
+               @finder-recents, @finder-icon-view, @finder-favorites, @finder-show,
+               @titlebar-double-click, @ac-sleep. Matching values are left alone.
   --yes        Restart Dock/Finder/SystemUIServer/ControlCenter without prompting
-               (only if something changed). Also accept the AC idle-sleep sudo
-               step without a separate confirmation (still skipped when sudo
+               (only if something changed). Also accept the power sudo step
+               without a separate confirmation (still skipped when sudo
                cannot run).
   -h, --help   Show this help.
 USAGE
@@ -529,52 +532,213 @@ apply_finder_icon_view() {
 }
 if selected @finder-icon-view; then apply_finder_icon_view; fi
 
-# ---- AC idle sleep (pmset -c sleep 0; the one sudo command) -------------
-# Only the mains-power profile. displaysleep, the lock screen, and Battery
-# Power are left alone, so the display still turns off and the screen still
-# locks. Closing the lid still sleeps the Mac. lib/ac-sleep.py reads
-# `pmset -g custom` the same way macconfig-check.sh does. sudo runs only when
-# AC sleep is not already 0, and is skipped when it isn't available (no
-# passwordless sudo and no terminal) or isn't wanted (--dry-run, or no at the
-# prompt). --fix never selects @ac-sleep; the manual step is the fallback.
-apply_ac_sleep() {
-  local helper="$DOTDIR/lib/ac-sleep.py" custom line status msg reply
+# ---- Finder sidebar Favorites (mysides; restart Finder only if changed) --
+apply_finder_favorites() {
+  local helper="$DOTDIR/lib/sidebar-favorites.py" list="$DOTDIR/lib/sidebar-favorites.list"
+  local out verdict status detail tmp name path url shown
   CONSIDERED=$((CONSIDERED + 1))
-  if ! command -v pmset >/dev/null 2>&1; then
+  if [ ! -r "$helper" ] || [ ! -r "$list" ]; then
     WARNINGS=$((WARNINGS + 1))
-    say_warn "pmset missing — skipped AC idle sleep (manual step: sudo pmset -c sleep 0)"
+    say_warn "sidebar favorites files missing — skip Finder Favorites"
     return 0
   fi
-  if [ ! -r "$helper" ] || [ -z "$DOT_PYTHON" ]; then
+  if [ -z "$DOT_PYTHON" ]; then
     WARNINGS=$((WARNINGS + 1))
-    say_warn "can't read AC sleep — skipped (manual step: sudo pmset -c sleep 0)"
+    say_warn "python3 not found — skip Finder Favorites"
     return 0
   fi
-  custom="$(pmset -g custom 2>/dev/null || true)"
-  if [ -z "$custom" ]; then
+  if ! command -v mysides >/dev/null 2>&1; then
     WARNINGS=$((WARNINGS + 1))
-    say_warn "pmset -g custom returned nothing — skipped AC idle sleep (manual step: sudo pmset -c sleep 0)"
+    say_warn "mysides not installed — skip Finder Favorites (brew install mysides)"
     return 0
   fi
-  line="$(printf '%s\n' "$custom" | "$DOT_PYTHON" "$helper" || true)"
-  status="${line%%|*}"
-  msg="${line#*|}"; msg="${msg#*|}"
+  # A failed list must not be treated as an empty sidebar (that would remove
+  # every favorite). Leave the sidebar alone.
+  if ! out="$(perl -e '$t = shift @ARGV; alarm $t; exec { $ARGV[0] } @ARGV or exit 127' 15 mysides list 2>&1)"; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "mysides list failed — Finder Favorites left as they are"
+    return 0
+  fi
+  tmp="$(mktemp)"
+  printf '%s\n' "$out" > "$tmp"
+  verdict="$("$DOT_PYTHON" "$helper" compare --list "$list" --mysides "$tmp" || true)"
+  status="${verdict%%|*}"
+  detail="${verdict#*|}"
   if [ "$status" = ok ]; then
-    say_ok "AC idle sleep already 0 (display sleep, lock screen, and battery unchanged)"
+    rm -f "$tmp"
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Finder Favorites already match (dry-run)"
+    else
+      REASSERTED=$((REASSERTED + 1))
+      say_ok "Finder Favorites already match"
+    fi
     return 0
   fi
   if [ "$status" != bad ]; then
+    rm -f "$tmp"
     WARNINGS=$((WARNINGS + 1))
-    if [ -n "$msg" ]; then
-      say_warn "$msg"
+    say_warn "${detail:-Finder Favorites could not be compared}"
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    rm -f "$tmp"
+    CHANGED=$((CHANGED + 1))
+    say_chg "Finder Favorites -> rebuild ($detail) (dry-run)"
+    return 0
+  fi
+  while IFS="$(printf '\t')" read -r name path; do
+    [ -n "$path" ] || continue
+    case "$path" in
+      "$HOME"/*)
+        shown="~${path#"$HOME"}"
+        if [ -d "$path" ]; then
+          :
+        elif [ -e "$path" ]; then
+          say_warn "Finder favorite path is not a folder: $shown"
+        else
+          mkdir -p "$path"
+          say_chg "created $shown for a Finder favorite"
+        fi
+        ;;
+    esac
+  done < <("$DOT_PYTHON" "$helper" paths --list "$list")
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    if ! mysides remove "$name" >/dev/null 2>&1; then
+      say_warn "could not remove Finder favorite $name"
+    fi
+  done < <("$DOT_PYTHON" "$helper" names --mysides "$tmp")
+  while IFS="$(printf '\t')" read -r name url; do
+    if [ -z "$name" ] || [ -z "$url" ]; then
+      continue
+    fi
+    if ! mysides add "$name" "$url" >/dev/null 2>&1; then
+      WARNINGS=$((WARNINGS + 1))
+      say_warn "could not add Finder favorite $name"
+    fi
+  done < <("$DOT_PYTHON" "$helper" urls --list "$list")
+  rm -f "$tmp"
+  CHANGED=$((CHANGED + 1))
+  say_chg "Finder Favorites -> rebuilt ($detail)"
+  queue_restart Finder
+}
+if selected @finder-favorites; then apply_finder_favorites; fi
+
+# ---- Show Finder menu shortcut (Cmd-Ctrl-Shift-F) -----------------------
+# -dict-add changes this one entry and leaves any other menu shortcuts.
+apply_finder_show() {
+  local raw val
+  CONSIDERED=$((CONSIDERED + 1))
+  raw="$(defaults read com.apple.finder NSUserKeyEquivalents 2>/dev/null || true)"
+  val="$(finder_show_value "$raw")"
+  # '@^$f' is Cmd-Ctrl-Shift-F. The dollar sign is part of the shortcut, not a variable.
+  # shellcheck disable=SC2016
+  if [ "$val" = '@^$f' ]; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Show Finder shortcut already Cmd-Ctrl-Shift-F (dry-run)"
+    elif [ -n "$ONLY_IDS" ]; then
+      say_ok "Show Finder shortcut already Cmd-Ctrl-Shift-F (left alone)"
     else
-      say_warn "cannot tell if AC idle sleep is off — skipped (manual step: sudo pmset -c sleep 0)"
+      # shellcheck disable=SC2016
+      defaults write com.apple.finder NSUserKeyEquivalents -dict-add 'Show Finder' -string '@^$f'
+      REASSERTED=$((REASSERTED + 1))
+      say_ok "Show Finder shortcut already Cmd-Ctrl-Shift-F (re-asserted)"
     fi
     return 0
   fi
   if [ "$DRY_RUN" = 1 ]; then
     CHANGED=$((CHANGED + 1))
-    say_chg "AC idle sleep -> 0 (dry-run: sudo pmset -c sleep 0)"
+    say_chg "Show Finder shortcut ${val:-unset} -> Cmd-Ctrl-Shift-F (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.finder"
+  ensure_backup
+  # shellcheck disable=SC2016
+  defaults write com.apple.finder NSUserKeyEquivalents -dict-add 'Show Finder' -string '@^$f'
+  CHANGED=$((CHANGED + 1))
+  say_chg "Show Finder shortcut ${val:-unset} -> Cmd-Ctrl-Shift-F"
+  queue_restart Finder
+}
+if selected @finder-show; then apply_finder_show; fi
+
+# ---- Drop the old double-click-minimizes key if it is set ----------------
+# AppleActionOnDoubleClick=Fill is a normal defaults row. This only deletes
+# AppleMiniaturizeOnDoubleClick when that older key is present, so a double-click
+# fills the window instead of minimizing it. Unset is left alone.
+apply_titlebar_double_click() {
+  local cur
+  CONSIDERED=$((CONSIDERED + 1))
+  if ! cur="$(defaults read NSGlobalDomain AppleMiniaturizeOnDoubleClick 2>/dev/null)"; then
+    say_ok "AppleMiniaturizeOnDoubleClick is unset (double-click fills the window)"
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "AppleMiniaturizeOnDoubleClick=${cur} -> delete (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS NSGlobalDomain"
+  ensure_backup
+  if defaults delete NSGlobalDomain AppleMiniaturizeOnDoubleClick; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "AppleMiniaturizeOnDoubleClick=${cur} -> deleted"
+  else
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "could not delete AppleMiniaturizeOnDoubleClick"
+  fi
+}
+if selected @titlebar-double-click; then apply_titlebar_double_click; fi
+
+# ---- Power (sudo pmset; skipped when sudo is not available) --------------
+# lib/ac-sleep.py reads the same pmset -g custom text as the check. sudo runs
+# only the commands that are still wrong (AC sleep 0, AC display sleep 10,
+# battery display sleep 2, AC wake for network access). Skipped when sudo
+# isn't available or isn't wanted. Battery idle sleep is not changed.
+# Closing the lid still sleeps the Mac. --fix never selects @ac-sleep.
+apply_ac_sleep() {
+  local helper="$DOTDIR/lib/ac-sleep.py" custom line rest cmds msg shown reply c failed
+  CONSIDERED=$((CONSIDERED + 1))
+  if ! command -v pmset >/dev/null 2>&1; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "pmset missing — skipped power settings (manual step ac-sleep)"
+    return 0
+  fi
+  if [ ! -r "$helper" ] || [ -z "$DOT_PYTHON" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "can't read power settings — skipped (manual step ac-sleep)"
+    return 0
+  fi
+  custom="$(pmset -g custom 2>/dev/null || true)"
+  if [ -z "$custom" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "pmset -g custom returned nothing — skipped power settings (manual step ac-sleep)"
+    return 0
+  fi
+  line="$(printf '%s\n' "$custom" | "$DOT_PYTHON" "$helper" || true)"
+  rest="${line#*|}"
+  cmds="${rest%%|*}"
+  msg="${rest#*|}"
+  shown="$(printf '%s\n' "$cmds" | awk -F';' '{
+    out = ""
+    for (i = 1; i <= NF; i++) {
+      if ($i == "") continue
+      if (out != "") out = out "; "
+      out = out "sudo " $i
+    }
+    print out
+  }')"
+  if [ "${line%%|*}" = ok ]; then
+    say_ok "$msg"
+    return 0
+  fi
+  if [ "${line%%|*}" != bad ] || [ -z "$cmds" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "${msg:-cannot read power settings — skipped (manual step ac-sleep)}"
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "power settings (dry-run: $shown)"
     return 0
   fi
   # Passwordless sudo can run with no prompt. Otherwise a terminal is asked;
@@ -582,29 +746,41 @@ apply_ac_sleep() {
   if ! sudo -n true 2>/dev/null; then
     if [ ! -t 0 ] || [ ! -t 1 ]; then
       WARNINGS=$((WARNINGS + 1))
-      say_warn "sudo not available — skipped AC idle sleep (manual step: sudo pmset -c sleep 0)"
+      say_warn "sudo not available — skipped power settings (manual step ac-sleep: $shown)"
       return 0
     fi
     if [ "$YES" != 1 ]; then
-      printf '  Stop idle sleep on mains power? Runs: sudo pmset -c sleep 0  [y/N]\n'
+      printf '  Set sleep, display sleep, and wake for network access? Runs: %s  [y/N]\n' "$shown"
       read -r reply || reply=''
       case "$reply" in
         y|Y|yes|YES) ;;
         *)
           WARNINGS=$((WARNINGS + 1))
-          say_warn "skipped AC idle sleep — sudo not wanted (manual step: sudo pmset -c sleep 0)"
+          say_warn "skipped power settings — sudo not wanted (manual step ac-sleep)"
           return 0
           ;;
       esac
     fi
   fi
-  if sudo pmset -c sleep 0; then
+  failed=0
+  while IFS= read -r c; do
+    [ -n "$c" ] || continue
+    # shellcheck disable=SC2086  # c is one pmset command; the words are its arguments
+    if sudo $c; then
+      :
+    else
+      failed=1
+      WARNINGS=$((WARNINGS + 1))
+      say_warn "sudo $c failed — manual step ac-sleep"
+      break
+    fi
+  done <<EOF
+$(printf '%s' "$cmds" | tr ';' '\n')
+EOF
+  if [ "$failed" = 0 ]; then
     CHANGED=$((CHANGED + 1))
-    say_chg "AC idle sleep -> 0 (sudo pmset -c sleep 0)"
-    return 0
+    say_chg "power settings applied ($shown)"
   fi
-  WARNINGS=$((WARNINGS + 1))
-  say_warn "sudo pmset -c sleep 0 failed — manual step ac-sleep"
 }
 if selected @ac-sleep; then apply_ac_sleep; fi
 
@@ -656,19 +832,20 @@ cat <<'MANUAL'
 
 Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
   - Apple Account sign-in; User & Groups account picture
-  - Keyboard British input source (built-in display More Space is checked by
-    macconfig-check.sh and never changed)
+  - Keyboard British input source (checked; not written). Built-in display
+    More Space and the Tahoe Night wallpaper are checked and never changed
+  - Finder sidebar checkboxes (Shared, Locations, AirDrop, iCloud Drive, Tags)
   - Mouse double-click speed and secondary click (tracking 1.5 and scrolling 0.5
     are checked only — defaults write is unreliable, so they are never written);
-    Trackpad Look up & data detectors; trackpad dragging (Accessibility; checked
+    Trackpad Look up (checked, forceClick 0) and trackpad dragging (checked
     only, Dragging=1 DragLock=0); MX Master 3S wheel (Natural), buttons in Logi
     Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
-  - Accessibility grants (TCC); notification mirroring; Spotlight result categories
-    (per-app Allow Notifications is checked by macconfig-check.sh, never written)
+  - Accessibility grants (TCC); notification mirroring; Spotlight app results
+    are checked and not written (per-app Allow Notifications is checked too)
   - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
     (leave Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents)
   - Set Hostname (requires sudo)
-  - AC idle sleep, if the sudo step above was skipped: sudo pmset -c sleep 0
-    (closing the lid still sleeps the Mac; battery, display sleep, and the
-    lock screen stay as they are)
+  - Power, if the sudo step above was skipped: AC sleep 0, AC display sleep
+    10 minutes, battery display sleep 2 minutes, AC wake for network access.
+    Closing the lid still sleeps the Mac. Battery idle sleep is not changed
 MANUAL

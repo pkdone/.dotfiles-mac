@@ -82,3 +82,28 @@ else
     esac
   fi
 fi
+
+# ---- 6c2. Wallpaper (check-only) ----------------------------------------
+# The desktop picture is Tahoe Night (Landscape). The asset id is read from
+# the wallpaper store. A miss is a warning. --fix does not change the picture.
+# Manual step wallpaper points here.
+hdr "Wallpaper"
+fixid wallpaper
+CHECKED=$((CHECKED + 1))
+WALL_HELPER="$DOTDIR/lib/wallpaper-asset.py"
+WALL_STORE="$HOME/Library/Application Support/com.apple.wallpaper/Store/Index.plist"
+if [ ! -r "$WALL_HELPER" ]; then
+  fixid repo-file
+  warn "lib/wallpaper-asset.py missing — can't check the desktop picture"
+elif [ -z "$DOT_PYTHON" ]; then
+  fixid tooling
+  warn "no python3 — can't check the desktop picture"
+else
+  wall_line="$("$DOT_PYTHON" "$WALL_HELPER" --text "$WALL_STORE" || true)"
+  wall_status="${wall_line%%|*}"
+  wall_msg="${wall_line#*|}"; wall_msg="${wall_msg#*|}"
+  case "$wall_status" in
+    ok) pass "$wall_msg" ;;
+    *)  fixid wallpaper; warn "${wall_msg:-desktop picture check failed}" ;;
+  esac
+fi

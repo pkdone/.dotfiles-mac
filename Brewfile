@@ -20,6 +20,7 @@ brew "tmux"
 brew "htop"
 brew "mas"
 brew "dockutil"
+brew "mysides"        # rebuild Finder sidebar Favorites
 brew "duti"
 brew "ykman"
 brew "ffmpeg"
@@ -79,6 +80,7 @@ cask "docker-desktop"
 cask "multipass"
 cask "cog-app"
 cask "kid3"
+cask "yubico-authenticator"  # Yubico Authenticator
 
 # Mac App Store (via mas; requires being signed in to the App Store).
 # Wanted apps live here; unwanted ones (GarageBand/iMovie/Pages) are in lib/unwanted-apps.list.

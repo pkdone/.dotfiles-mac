@@ -2,13 +2,13 @@
 # shellcheck disable=SC2154,SC2034
 # Sourced by macconfig-check.sh. Runs in the current shell (not a subshell)
 # so a failing command still stops the check the way it did before the split.
-# ---- 6d. AC idle sleep (check-only) -------------------------------------
-# pmset -g custom needs no sudo. lib/ac-sleep.py reads only the 'AC Power:'
-# sleep key, so displaysleep, the lock screen, and Battery Power are ignored.
-# A value other than 0 is a warning, not drift: setting it is
-# `sudo pmset -c sleep 0` (manual step ac-sleep). --fix does not run sudo.
+# ---- 6d. Sleep, display sleep, and wake (check-only) --------------------
+# pmset -g custom needs no sudo. lib/ac-sleep.py reads AC sleep 0, AC display
+# sleep 10, battery display sleep 2, and AC wake for network access (womp 1).
+# Battery idle sleep is not read. A miss is a warning, not drift: setting it
+# needs sudo (manual step ac-sleep). --fix does not run sudo.
 # Closing the lid still sleeps the Mac.
-hdr "AC idle sleep"
+hdr "Power (sleep and wake)"
 fixid ac-sleep
 CHECKED=$((CHECKED + 1))
 AC_HELPER="$DOTDIR/lib/ac-sleep.py"

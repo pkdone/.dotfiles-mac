@@ -74,7 +74,8 @@ Login shell
 Hostname
 Display auto-brightness
 Display (More Space)
-AC idle sleep
+Wallpaper
+Power (sleep and wake)
 URL handlers
 File handlers
 Unwanted apps
@@ -85,6 +86,8 @@ Karabiner Fn-kill
 Hammerspoon
 Login Items (banned open-at-login)
 Finder sidebar Recents
+Finder Favorites
+Show Finder shortcut
 CotEditor
 Ghostty config
 Logi Options+

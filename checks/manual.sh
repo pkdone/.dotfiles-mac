@@ -29,6 +29,8 @@ else
           input-british) fixid input-british ;;
           gh-auth) fixid gh-auth ;;
           1password-cli) fixid 1password-cli ;;
+          spotlight-results) fixid spotlight-results ;;
+          app-store) fixid app-store ;;
           *) fixid manual-step ;;
         esac
         warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)"

@@ -1,0 +1,15 @@
+# Finder sidebar Favorites, top to bottom.
+# macos.sh rebuilds them with mysides when this list and `mysides list` differ,
+# then restarts Finder. A matching list is left alone.
+# Format: name | path
+#   path is absolute, or starts with @HOME@ (that becomes $HOME).
+#   mysides stores a file:// address. A trailing slash is not a difference.
+# Blank lines and lines beginning with # are ignored.
+Applications|/Applications
+Desktop|@HOME@/Desktop
+Developer|@HOME@/Developer
+Documents|@HOME@/Documents
+Downloads|@HOME@/Downloads
+Movies|@HOME@/Movies
+Music|@HOME@/Music
+Pictures|@HOME@/Pictures

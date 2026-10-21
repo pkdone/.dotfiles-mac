@@ -27,16 +27,19 @@
 #                                           lib/logi-settings.py; never written)
 #            @macconfig-check.sh                      verified by its own macconfig-check.sh section (not repeated here)
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
-#                                           named checks. pointer-size, input-british, op-cli
-#                                           and gh-auth live in lib/session-checks.sh (also the
-#                                           macconfig-check.sh section; warn only, never --fix)
+#            | app-store | spotlight-results
+#                                           named checks. pointer-size, input-british, op-cli,
+#                                           gh-auth, and app-store live in lib/session-checks.sh
+#                                           (also the macconfig-check.sh section; warn only, never --fix).
+#                                           spotlight-results is the same file, reported with the
+#                                           other manual steps.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Sign-ins ----
 gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
 apple-account|Sign-ins|Sign in with your Apple Account (your @icloud.com Apple ID)|System Settings → Apple Account|x-apple.systempreferences:com.apple.systempreferences.AppleIDSettings|
 icloud-sync|Sign-ins|iCloud: Photos, iCloud Drive, Messages and other unused sync Off; Passwords (iCloud Keychain) and Find My On|System Settings → Apple Account → iCloud|x-apple.systempreferences:com.apple.systempreferences.AppleIDSettings|
-app-store|Sign-ins|Sign in to the App Store (brew bundle needs it for WhatsApp and the other mas apps)|App Store → Store → Sign In|macappstore://|
+app-store|Sign-ins|Sign in to the App Store (brew bundle needs it for WhatsApp and the other mas apps). macconfig checks this with mas list|App Store → Store → Sign In|macappstore://|app-store
 
 # ---- Company apps (MDM) ----
 mdm-apps|Company apps (MDM)|Install Okta Verify and 1Password from Iru Self Service (Kandji), not Homebrew|Applications → Iru Self Service|app:Iru Self Service|@macconfig-check.sh
@@ -59,14 +62,14 @@ grokbot-fda|Privacy & Security permissions|Give Grok Bot Full Disk Access (for i
 # ---- Trackpad, mouse & pointer ----
 # Tap to click, click pressure, secondary click, three-finger drag, tracking speed,
 # and Force Click (On) are lib/macos-defaults.list. A change may need a logout/login.
-# Look up & data detectors has no reliable defaults key of its own: ActuateDetents and
-# ForceSuppressed only cover Force Click and haptic feedback (both On). TrackpadThreeFingerTapGesture
-# only switches the three-finger-tap variant, so this part stays manual.
-trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off|System Settings → Trackpad → Point & Click|x-apple.systempreferences:com.apple.Trackpad-Settings.extension|
+# Look up & data detectors is NSGlobalDomain com.apple.trackpad.forceClick = 0.
+# That is a check only. ActuateDetents and ForceSuppressed stay in the defaults
+# list (Force Click and haptic feedback On) and are a different setting.
+trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off|System Settings → Trackpad → Point & Click|x-apple.systempreferences:com.apple.Trackpad-Settings.extension|defaults:NSGlobalDomain:com.apple.trackpad.forceClick=0
 # Dragging lives in Accessibility. defaults write of Dragging/DragLock does not reliably
 # change that pane, so this stays a check only. Paul wants dragging On, without drag lock.
 trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Without Drag Lock)|System Settings → Accessibility → Pointer Control → Trackpad Options|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0
-pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
+pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal (macconfig checks this; set the slider by hand)|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
 # Tracking speed and scrolling speed are readable, but defaults write does not
 # reliably drive System Settings → Mouse on recent macOS, so they stay a check
 # only (warn on drift; macconfig-check.sh --fix does not write them). The
@@ -80,15 +83,16 @@ logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on c
 # More Space on this Color LCD is _spdisplays_resolution starting with 1800 x 1169
 # (lib/display-resolution.list). macconfig-check.sh reads system_profiler and
 # never changes the mode. A clamshell Mac (no built-in panel) is an info skip.
-display-more-space|Display, keyboard & desktop|Built-in display: More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
-auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
-# Idle sleep on the AC profile only. Display sleep and the lock screen are
-# other settings, so the display still turns off and the screen still locks.
-# Closing the lid still sleeps the Mac. Battery Power is not changed.
-# macconfig-check.sh reads the AC Power section of `pmset -g custom` and warns;
-# --fix does not run sudo.
-ac-sleep|Display, keyboard & desktop|On mains power, stop the Mac sleeping on its own. Closing the lid still sleeps the Mac, and battery is unchanged. The display still turns off and the screen still locks|Terminal: sudo pmset -c sleep 0||@macconfig-check.sh
-input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
+display-more-space|Display, keyboard & desktop|Built-in display: More Space (macconfig checks this from the display report; set it by hand)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
+auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (macconfig checks this; leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
+wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). macconfig reads the wallpaper store and warns if it is a different picture. It does not change it|System Settings → Wallpaper|x-apple.systempreferences:com.apple.Wallpaper-Settings.extension|@macconfig-check.sh
+# Mains power: sleep 0, display sleep 10 minutes, wake for network access on.
+# Battery: display sleep 2 minutes. Battery idle sleep is not changed.
+# Closing the lid still sleeps the Mac. The screen still locks.
+# macconfig-check.sh reads `pmset -g custom` and warns. --fix does not run sudo.
+# macos.sh may run the sudo pmset commands and skips them when sudo is not available.
+ac-sleep|Display, keyboard & desktop|On mains power the Mac does not sleep on its own, the display sleeps after 10 minutes, and wake for network access is on. On battery the display sleeps after 2 minutes. Closing the lid still sleeps the Mac. Battery idle sleep is not changed|Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1||@macconfig-check.sh
+input-british|Display, keyboard & desktop|Keyboard input source: British (macconfig checks the selected layout is British only)|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 # Desktop widgets and Stage Manager are lib/macos-defaults.list (StandardHideWidgets,
 # StageManagerHideWidgets, GloballyEnabled). Click wallpaper to reveal desktop stays out.
 user-picture|Display, keyboard & desktop|Set your user picture to the Dog|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|
@@ -98,10 +102,11 @@ notifications-mirroring|Notifications & Spotlight|Notifications Off when mirrori
 # Bundle ids live in lib/notifications-off.list. macconfig-check.sh reads the
 # usernoted plist and never writes it. Mirroring stays the row above.
 notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
-spotlight-results|Notifications & Spotlight|Spotlight: turn Off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Stocks, Tips, Voice Memos|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|
+spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos (macconfig checks this)|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----
 login-items-off|Login Items & Finder|Keep ChatGPT, Gemini and GeminiAppLauncher Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig-check.sh
+finder-sidebar|Login Items & Finder|Finder sidebar: show Shared at the top. Under Locations, show your home folder (pdone), Macintosh HD, Network, and Trash. Hide Recents, AirDrop, iCloud Drive, and Tags|Finder → Settings → Sidebar|app:Finder|
 
 # ---- App settings ----
 gemini-shortcuts|App settings|Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT)|Gemini → Settings → Shortcuts|app:Gemini|
@@ -112,7 +117,7 @@ raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command
 
 # ---- Modes (Hammerspoon menu-bar switcher; see docs/modes.md) ----
 mode-focus-modes|Modes (menu-bar switcher)|Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through)|System Settings → Focus → Add Focus… → Custom|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig-check.sh
-mode-focus-shortcuts|Modes (menu-bar switcher)|Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off"|Shortcuts → + → search "Set Focus"|app:Shortcuts|@macconfig-check.sh
+mode-focus-shortcuts|Modes (menu-bar switcher)|Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off". Also create "Mode Upcoming Meetings". macconfig checks all five with shortcuts list|Shortcuts → + → search "Set Focus"|app:Shortcuts|@macconfig-check.sh
 mode-hammerspoon-alerts|Modes (menu-bar switcher)|Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show|System Settings → Notifications → Hammerspoon → Alerts|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
 mode-menubar-pin|Modes (menu-bar switcher)|Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind <<|Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain)||
 
