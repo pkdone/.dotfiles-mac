@@ -223,8 +223,7 @@ ssh_audit() {
   case "$(printf '%s' "$gpgsign" | tr '[:upper:]' '[:lower:]')" in
     true|yes|on|1) ;;
     *)
-      printf 'info|commit signing is not configured (commit.gpgsign=%s, gpg.format=%s)\n' \
-        "${gpgsign:-unset}" "${fmt:-unset}"
+      # Commit signing is not used here. Say nothing when it is off.
       return 0
       ;;
   esac

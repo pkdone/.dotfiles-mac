@@ -1,0 +1,19 @@
+# Finder sidebar rows macconfig can name in the sidebar files.
+# lib/finder-sidebar-rows.py reads these. It does not write the files.
+#
+#   id | where | want
+#   where: top (TopSidebarSection), volumes (FavoriteVolumes), either
+#   want:  hidden, visible, or first (visible, and the first visible row)
+#
+# A row the files do not name stays by hand. The Tags group collapsed is the
+# defaults key SidebarTagsSctionDisclosedState (Apple's spelling). Recents
+# hidden is the Finder sidebar Recents check. Neither is repeated here.
+# Blank lines and lines beginning with # are ignored.
+
+shared|top|first
+airdrop|either|hidden
+icloud|either|hidden
+home|volumes|visible
+macintosh-hd|volumes|visible
+network|volumes|visible
+trash|volumes|visible

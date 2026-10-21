@@ -58,6 +58,7 @@ modes-config|PAUL||hammerspoon/modes.lua invalid or state.json unreadable — fi
 modes-setup|PAUL||a Focus mode or Focus Shortcut named in modes.lua is missing — create it (scripts/manual-steps.sh open)
 mode-long|PAUL||a non-Normal mode has been on longer than HEALTH_MODE_MAX_HOURS — switch back from the menu bar (never switched automatically)
 karabiner-rules|PAUL||karabiner.json is a repo file — restore it from git (dotfiles git state)
+karabiner-background|PAUL||Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon enabled and allowed (the same records sfltool dumpbtm prints). Check-only: --fix never changes Login Items. Karabiner-Elements Privileged Daemons v2 may stay disabled
 repo-file|PAUL||a repo script is missing — restore it from git (dotfiles git state)
 login-items|PAUL||login items — System Settings → General → Login Items & Extensions
 tcc|PAUL||privacy permission (TCC) — System Settings → Privacy & Security
@@ -69,10 +70,12 @@ gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Che
 1password-cli|PAUL||1Password CLI (op whoami) — manual step 1password-cli. Missing app or CLI is a warning. Installed but not signed in (needs an unlock) is info, not a warning. --fix never runs op
 app-store|PAUL||App Store signed in (mas list) — manual step app-store. Check-only: --fix never signs in
 finder-favorites|PAUL||Finder sidebar Favorites compared with lib/sidebar-favorites.list by reading FavoriteItems.sfl4 (or sfl3/sfl2). Check-only: writing the sidebar file is not reliable, and mysides is not a Homebrew formula or cask, so --fix never changes Favorites
+finder-sidebar|PAUL||Finder sidebar rows named in the top sidebar section and FavoriteVolumes (Shared first, AirDrop and iCloud Drive hidden, home / Macintosh HD / Network / Trash visible). Check-only: --fix never writes those files. A row the files do not name stays by hand
 spotlight-results|PAUL||Spotlight → Results from Apps: the apps in lib/spotlight-apps.list should be off (App Store, Calculator, Dictionary, System Settings, and WhatsApp stay on). EnabledPreferenceRules is the row list, not the on/off state, so this is check by hand, not a warning. --fix never writes Spotlight
 wallpaper|PAUL||Desktop picture Tahoe Night (Landscape), asset CF6347E2-4F81-4410-8892-4830991B6C5A in the wallpaper store. Check-only: --fix never changes the picture
+user-picture|PAUL||Account picture is the Dog. SHA-256 in lib/user-picture.sha256, from the JPEGPhoto on the user account. Check-only: --fix never changes the picture
 mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
-security|PAUL||security setting (FileVault, firewall stealth mode, automatic security updates, SSH agent and ~/.ssh modes, git commit signing) — never changed automatically
+security|PAUL||security setting (FileVault, firewall stealth mode, automatic security updates, SSH agent and ~/.ssh modes; git commit signing only when commit.gpgsign is on) — never changed automatically
 software-update|PAUL||a pending macOS update has been waiting more than 7 days — System Settings → General → Software Update. The check reads the local Software Update plist and does not call softwareupdate
 broken-symlink|PAUL||a symlink under ~/.config, ~/Library/LaunchAgents, or a home dotfile points into the dotfiles repo but the target is missing — restore it from git or re-run install.sh. --fix does not relink these
 hammerspoon-config|PAUL||Hammerspoon's repo config did not compile — fix the Lua under hammerspoon/. --fix does not reload or rewrite it

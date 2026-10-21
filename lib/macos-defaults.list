@@ -34,8 +34,11 @@ NSGlobalDomain|AppleShowAllExtensions|bool|true|Finder|Finder|Show all filename 
 NSGlobalDomain|NSTableViewDefaultSizeMode|int|3||Appearance|Sidebar icon size|`3` (Large)
 com.apple.finder|ShowStatusBar|bool|true|Finder|Finder|Show Status Bar|`true` (On)
 # Apple's own spelling of this key drops the e in Section. 0 / false keeps the
-# Tags group in the sidebar closed. The checkboxes for Shared, Locations,
-# Recents, AirDrop, iCloud Drive, and Tags stay a manual step.
+# Tags group in the sidebar closed. Recents hidden is the sidebar Recents
+# check. Shared, AirDrop, iCloud Drive, and the Locations rows are checked
+# when the sidebar files name them (lib/finder-sidebar-rows.list). A row the
+# files do not name stays by hand. ShowRecentTags and
+# SidebarShowingiCloudDesktop are not pinned: their values were not confirmed.
 com.apple.finder|SidebarTagsSctionDisclosedState|bool|false|Finder|Finder|Tags group in the sidebar|`false` (closed)
 # Finder and Trash tidy. Finder restart so open windows pick the prefs up.
 # DSDontWriteNetworkStores: the domain may not exist yet; defaults write creates it.

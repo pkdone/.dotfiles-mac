@@ -142,7 +142,17 @@ ssh_out="$(PATH="$bin:$PATH" SSH_ADD_RC=1 SSH_ADD_OUT="" ssh_audit "$ssh_home")"
 miss "no loaded key is not a warning" "no SSH key loaded" "$ssh_out"
 miss "no loaded key adds no ssh-add warning" "warn|" "$ssh_out"
 has "missing .ssh is info" "info|no ~/.ssh directory" "$ssh_out"
-has "signing off is info" "info|commit signing is not configured" "$ssh_out"
+miss "signing off is not reported" "commit signing" "$ssh_out"
+
+cat > "$ssh_home/.gitconfig" <<'EOF'
+[commit]
+	gpgsign = true
+[gpg]
+	format = openpgp
+EOF
+other_fmt="$(PATH="$bin:$PATH" SSH_ADD_RC=1 HOME="$ssh_home" ssh_audit "$ssh_home")"
+has "signing on, but not ssh, stays info" "info|commit signing is configured" "$other_fmt"
+rm -f "$ssh_home/.gitconfig"
 
 mkdir -p "$ssh_home/.ssh"
 chmod 755 "$ssh_home/.ssh"

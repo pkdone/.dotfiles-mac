@@ -1,0 +1,6 @@
+# SHA-256 of the account picture (the Dog).
+# Same bytes as:
+#   dscl . -read /Users/$USER JPEGPhoto | tail -n +2 | xxd -r -p | shasum -a 256
+# The first line of the dscl output is the label and is not part of the picture.
+# A different hash is a warning. macconfig does not change the picture.
+4d6ee72d4793f984bdfca248a3b8c334138f7183c6d77bb4fa524890cf345ecc
