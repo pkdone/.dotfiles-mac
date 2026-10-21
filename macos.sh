@@ -219,12 +219,52 @@ apply_setting() {  # domain key type desired restart tol
   CONSIDERED=$((CONSIDERED + 1))
   desired="${desired//@HOME@/$HOME}"
   ensure_screenshot_dir "$domain" "$key" "$desired"
-  local cur curtype want_token
+  local cur curtype want_token video_flex
   want_token="$(type_token "$etype")"
 
   if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
     curtype="$(defaults_read_type "$domain" "$key" 2>/dev/null || true)"
     curtype="${curtype##* }"   # "Type is boolean" -> "boolean"
+    # video On is integer 1 or boolean true. Write back in the type already
+    # stored so a re-check agrees, instead of skipping a type mismatch.
+    video_flex=0
+    if [ "$domain" = com.apple.screencapture ] && [ "$key" = video ]; then
+      case "$curtype" in
+        boolean|integer) video_flex=1 ;;
+      esac
+    fi
+    if [ "$video_flex" = 1 ] && screencapture_video_matches "$curtype" "$cur" "$desired"; then
+      if [ "$DRY_RUN" = 1 ]; then
+        say_ok "$domain $key — would re-assert (already set: $cur)"
+      elif [ -n "$ONLY_IDS" ]; then
+        say_ok "$domain $key — already set: $cur (left alone)"
+      else
+        if [ "$curtype" = boolean ]; then
+          write_default "$domain" "$key" bool true
+        else
+          write_default "$domain" "$key" int "$desired"
+        fi
+        say_ok "$domain $key — re-asserted (already set: $cur)"
+      fi
+      REASSERTED=$((REASSERTED + 1))
+      return 0
+    fi
+    if [ "$video_flex" = 1 ]; then
+      if [ "$DRY_RUN" = 1 ]; then
+        say_chg "$domain $key — would change: $cur -> $desired"
+      else
+        ensure_backup
+        if [ "$curtype" = boolean ]; then
+          write_default "$domain" "$key" bool true
+        else
+          write_default "$domain" "$key" int 1
+        fi
+        say_chg "$domain $key — changed: $cur -> $desired"
+      fi
+      CHANGED=$((CHANGED + 1))
+      queue_restart "$restart" "$domain $key"
+      return 0
+    fi
     if [ "$curtype" != "$want_token" ]; then
       say_warn "$domain $key — type mismatch (expected $want_token, found ${curtype:-none}); skipping"
       WARNINGS=$((WARNINGS + 1))
@@ -549,7 +589,7 @@ apply_finder_favorites() {
   fi
   if ! command -v mysides >/dev/null 2>&1; then
     WARNINGS=$((WARNINGS + 1))
-    say_warn "mysides not installed — skip Finder Favorites (brew install mysides)"
+    say_warn "mysides not installed — skip Finder Favorites (brew install --cask mysides)"
     return 0
   fi
   # A failed list must not be treated as an empty sidebar (that would remove

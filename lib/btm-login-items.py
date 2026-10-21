@@ -141,6 +141,68 @@ def s(x) -> str:
     return x if isinstance(x, str) and x != "$null" else ""
 
 
+def launchd_id(ident: str) -> str:
+    """Drop a numeric BTM type prefix (8.com.foo -> com.foo). Leave real labels alone.
+
+    Identifiers from the store often look like ``2.com.foo`` or ``8.com.foo.bar``.
+    A launchd label such as ``com.foo.BackgroundActivityCheck`` has no numeric
+    prefix; stripping the first word of that would hide the ``com.`` / ``co.``
+    the allow-list matches on.
+    """
+    if re.match(r"^\d+\.", ident):
+        return ident.split(".", 1)[1]
+    return ident
+
+
+# A boolean name in the BTM store is not a display name. plistlib gives True,
+# and a naive stringify prints "true" / "True". Treat those as missing.
+_BOOLISH_NAME = {"true", "false", "yes", "no"}
+
+
+def usable_name(value: str) -> str:
+    text = value.strip()
+    if not text or text == "$null" or text.lower() in _BOOLISH_NAME:
+        return ""
+    return text
+
+
+def display_name(it: dict) -> str:
+    """Name to show for a login item.
+
+    Some agents (Cursor's BackgroundActivityCheck helper among them) store
+    ``name`` as a boolean. That used to surface as the word "true". Prefer a
+    real name, then the executable's file name, then the app name in the URL,
+    then a helper name on the identifier.
+    """
+    named = usable_name(it.get("name") or "")
+    if named:
+        return named
+    exe = it.get("executable") or ""
+    named = usable_name(os.path.basename(exe.rstrip("/")))
+    if named:
+        return named
+    url = it.get("url") or ""
+    path = unquote(url.split("|")[-1])
+    if path.startswith("file://"):
+        path = path[len("file://"):]
+    parts = [p for p in path.rstrip("/").split("/") if p]
+    if parts:
+        last = parts[-1]
+        if last.endswith(".app"):
+            last = last[:-4]
+        named = usable_name(last)
+        if named:
+            return named
+    ident = it.get("identifier") or ""
+    if "BackgroundActivityCheck" in ident:
+        return "BackgroundActivityCheck"
+    tail = ident.rsplit(".", 1)[-1] if "." in ident else ""
+    named = usable_name(tail)
+    if named and any(ch.isupper() for ch in named):
+        return named
+    return it.get("bundle") or it.get("id") or ident or "login item"
+
+
 def load_store(path: Path):
     with path.open("rb") as f:
         pl = load(f)
@@ -169,12 +231,14 @@ def iter_items(paths: list[Path]):
                 "disposition": disp,
                 "enabled": bool(disp & DISP_ENABLED),
                 "bundle": s(r.get("bundleIdentifier")),
-                "id": ident.split(".", 1)[1] if "." in ident else ident,
+                "identifier": ident,
+                "id": launchd_id(ident),
                 "parent": s(r.get("container")),
                 "name": s(r.get("name")),
                 "developer": s(r.get("developerName")),
                 "team": s(r.get("teamIdentifier")),
                 "url": s(r.get("url")),
+                "executable": s(r.get("executablePath")),
             }
 
 
@@ -276,7 +340,7 @@ def audit(allow_path: str, base, paths) -> int:
             cls, detail = "mdm", "approved by an MDM Service Management rule"
         else:
             cls, detail = "unknown", ""
-        fields = [cls, kind, it["name"] or ident, it["developer"], it["team"], ident, detail]
+        fields = [cls, kind, display_name(it), it["developer"], it["team"], ident, detail]
         print("|".join(f.replace("|", "/") for f in fields))
     return 0
 
@@ -296,7 +360,7 @@ def main() -> int:
         items = list(app_items(paths))
         if not args:
             for it in items:
-                print(f"{it['bundle']}|{it['disposition']}|{it['enabled']}|{it['name']}")
+                print(f"{it['bundle']}|{it['disposition']}|{it['enabled']}|{display_name(it)}")
             return 0
         by_bundle = {}
         for it in items:  # first (your own store) wins

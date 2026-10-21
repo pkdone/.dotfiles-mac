@@ -77,6 +77,15 @@ yes "zero tol acts exact (equal)"    values_match int 47 47 0
 no  "zero tol acts exact (unequal)"  values_match int 46 47 0
 no  "tol ignored for strings"        values_match string PfHm pfhm 5
 
+# ---- screencapture video: integer 1 and boolean true are the same On ----
+yes "video integer 1 matches desired 1" screencapture_video_matches integer 1 1
+yes "video boolean true matches desired 1" screencapture_video_matches boolean true 1
+yes "video boolean 1 matches desired 1" screencapture_video_matches boolean 1 1
+no  "video boolean 0 does not match desired 1" screencapture_video_matches boolean 0 1
+no  "video integer 0 does not match desired 1" screencapture_video_matches integer 0 1
+no  "video string is not the flexible type" screencapture_video_matches string 1 1
+no  "video float is not the flexible type" screencapture_video_matches float 1 1
+
 # ---- type_token: our type -> defaults read-type word ----
 eq "type_token string" string  "$(type_token string)"
 eq "type_token float"  float   "$(type_token float)"

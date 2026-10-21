@@ -49,8 +49,9 @@ com.apple.desktopservices|DSDontWriteNetworkStores|bool|true|Finder|Finder|No .D
 # `location` is the save folder for both screenshots and recordings. A separate
 # recording-folder key is not part of this domain, so none is invented here.
 # style and video are real screencapture keys (window capture, and video on).
-# If video is stored as a boolean rather than an integer, the type check skips
-# the write instead of replacing it. All of these restart SystemUIServer.
+# video is On as integer 1 or boolean true. macOS stores it either way; the
+# check and macos.sh treat those as the same, so --fix does not leave a type
+# mismatch behind. All of these restart SystemUIServer.
 com.apple.screencapture|location|string|@HOME@/Pictures/Screenshots|SystemUIServer|Screenshots|Save location|`~/Pictures/Screenshots`
 com.apple.screencapture|show-thumbnail|bool|true|SystemUIServer|Screenshots|Floating thumbnail|`true` (On)
 com.apple.screencapture|style|string|window|SystemUIServer|Screenshots|Capture style|`window`

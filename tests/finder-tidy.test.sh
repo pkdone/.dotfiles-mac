@@ -254,5 +254,59 @@ eq "desktopservices write" "W|com.apple.desktopservices|DSDontWriteNetworkStores
 eq "desktopservices restarts Finder" Finder "$(cat "$klog")"
 miss "desktopservices does not restart the Dock" "Dock" "$(cat "$klog")"
 
+# video On is integer 1 or boolean true. A boolean true must not stay a type
+# mismatch after --fix, and a re-check of that value is clean.
+run_video_check() {
+  HOME="$home" DOTDIR="$DIR" PATH="$bin:$PATH" DEFAULTS_LOG="$dlog" DEFAULTS_STATE="$state" \
+    bash -c '
+      hdr() { :; }
+      fixid() { :; }
+      pass() { printf "PASS %s\n" "$1"; }
+      bad() { printf "BAD %s\n" "$1"; }
+      CHECKED=0
+      # shellcheck disable=SC1091
+      . "$1/lib/defaults-lib.sh"
+      # shellcheck disable=SC1091
+      . "$1/checks/defaults.sh"
+    ' bash "$DIR"
+}
+video_lines() { printf '%s\n' "$1" | grep 'com.apple.screencapture video' || true; }
+
+home="$tmp/home"
+printf 'com.apple.screencapture|video|bool|1\n' > "$state"
+check="$(run_video_check)"
+has "boolean video on passes the check" "PASS com.apple.screencapture video = 1" "$(video_lines "$check")"
+miss "boolean video on is not a type mismatch" "type mismatch" "$(video_lines "$check")"
+
+out="$(run_macos --only 'com.apple.screencapture|video')"
+rc=$?
+eq "boolean video on fixer exits 0" 0 "$rc"
+has "boolean video on is already set" "com.apple.screencapture video — already set: 1 (left alone)" "$out"
+miss "boolean video on fixer does not skip a type mismatch" "type mismatch" "$out"
+eq "boolean video on is not rewritten" "" "$(grep '^W|' "$dlog" | grep 'screencapture|video' || true)"
+check="$(run_video_check)"
+has "re-check of boolean video on is clean" "PASS com.apple.screencapture video = 1" "$(video_lines "$check")"
+miss "re-check of boolean video on has no type mismatch" "type mismatch" "$(video_lines "$check")"
+
+printf 'com.apple.screencapture|video|bool|0\n' > "$state"
+check="$(run_video_check)"
+has "boolean video off is value drift" "BAD com.apple.screencapture video = 0 (expected 1)" "$(video_lines "$check")"
+miss "boolean video off is not a type mismatch" "type mismatch" "$(video_lines "$check")"
+out="$(run_macos --only 'com.apple.screencapture|video')"
+has "boolean video off is changed" "com.apple.screencapture video — changed: 0 -> 1" "$out"
+miss "boolean video off fixer does not skip" "type mismatch" "$out"
+eq "boolean video off is written as a boolean" "W|com.apple.screencapture|video|-bool|true" \
+  "$(grep '^W|' "$dlog" | grep 'screencapture|video')"
+printf 'com.apple.screencapture|video|bool|1\n' > "$state"
+check="$(run_video_check)"
+has "re-check after writing boolean true is clean" "PASS com.apple.screencapture video = 1" "$(video_lines "$check")"
+
+printf 'com.apple.screencapture|video|int|1\n' > "$state"
+check="$(run_video_check)"
+has "integer video on passes the check" "PASS com.apple.screencapture video = 1" "$(video_lines "$check")"
+out="$(run_macos --only 'com.apple.screencapture|video')"
+has "integer video on is left alone" "com.apple.screencapture video — already set: 1 (left alone)" "$out"
+eq "integer video on is not rewritten" "" "$(grep '^W|' "$dlog" | grep 'screencapture|video' || true)"
+
 printf 'finder-tidy tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

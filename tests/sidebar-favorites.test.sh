@@ -38,6 +38,12 @@ Movies
 Music
 Pictures" "$names"
 
+brewfile="$(cat "$DIR/Brewfile")"
+has "mysides is a Homebrew cask" 'cask "mysides"' "$brewfile"
+miss "mysides is not a formula" 'brew "mysides"' "$brewfile"
+has "macos.sh installs mysides as a cask" 'brew install --cask mysides' "$(cat "$DIR/macos.sh")"
+has "finder check installs mysides as a cask" 'brew install --cask mysides' "$(cat "$DIR/checks/finder.sh")"
+
 tmp="$(mktemp -d)"
 backup_before=""
 if [ -d "$DIR/backups" ]; then

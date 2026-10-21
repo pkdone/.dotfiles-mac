@@ -41,16 +41,6 @@ def show(value):
     return str(value).replace("|", "/").replace("\n", " ")
 
 
-def truthy(value):
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, int):
-        return value != 0
-    if isinstance(value, str):
-        return value.strip().lower() in ("1", "true", "yes", "on")
-    return False
-
-
 def emit(kind, status, message):
     text = str(message).replace("\n", " ").replace("|", "/")
     print(f"{kind}|{status}|{text}")
@@ -60,12 +50,22 @@ try:
     with open(path, "rb") as fh:
         data = plistlib.load(fh)
 except Exception as exc:  # noqa: BLE001 — report, don't crash the check
-    emit("auto", "warn", f"couldn't read Software Update plist {path} ({exc})")
+    emit(
+        "auto",
+        "info",
+        "automatic security updates are managed by the employer (MDM); "
+        f"couldn't read Software Update plist {path} ({exc})",
+    )
     emit("pending", "warn", f"couldn't read Software Update plist {path} ({exc})")
     raise SystemExit(0)
 
 if not isinstance(data, dict):
-    emit("auto", "warn", f"Software Update plist {path} is not a dictionary")
+    emit(
+        "auto",
+        "info",
+        "automatic security updates are managed by the employer (MDM); "
+        f"Software Update plist {path} is not a dictionary",
+    )
     emit("pending", "warn", f"Software Update plist {path} is not a dictionary")
     raise SystemExit(0)
 
@@ -76,18 +76,14 @@ keys = (
 )
 parts = [f"{name}={show(data.get(name))}" for name in keys]
 where = f"read from {path}"
-off = [name for name in keys if not truthy(data.get(name))]
-if off:
-    emit(
-        "auto",
-        "warn",
-        "automatic security updates are not all on ("
-        + ", ".join(parts)
-        + f"; off: {', '.join(off)}; {where}). "
-        "System Settings → General → Software Update. This check does not change them",
-    )
-else:
-    emit("auto", "ok", "automatic security updates are on (" + ", ".join(parts) + f"; {where})")
+# The employer (MDM) manages these toggles. Report the values, never as a warning.
+emit(
+    "auto",
+    "info",
+    "automatic security updates are managed by the employer (MDM) ("
+    + ", ".join(parts)
+    + f"; {where})",
+)
 
 updates = data.get("RecommendedUpdates")
 titles = []
@@ -192,7 +188,8 @@ ssh_audit() {
         n="$(printf '%s\n' "$out" | grep -c . || true)"
         printf 'ok|SSH agent has %s key(s) loaded\n' "${n:-0}"
         ;;
-      1) printf 'warn|no SSH key loaded in the agent (ssh-add -l)\n' ;;
+      # No key loaded is normal here. Not a warning, and nothing tries to fix it.
+      1) ;;
       *) printf 'warn|SSH agent is not usable (ssh-add -l exit %s)\n' "$rc" ;;
     esac
   fi
@@ -309,16 +306,12 @@ for su_candidate in /Library/Preferences/com.apple.SoftwareUpdate.plist \
   fi
 done
 if [ -z "$su_plist" ]; then
-  CHECKED=$((CHECKED + 1))
-  fixid security
-  warn "couldn't read com.apple.SoftwareUpdate (tried /Library/Preferences and ~/Library/Preferences) — automatic security updates not verified"
+  note "automatic security updates are managed by the employer (MDM); Software Update preferences were not read"
   CHECKED=$((CHECKED + 1))
   fixid software-update
   warn "couldn't read com.apple.SoftwareUpdate — pending macOS update age not verified (no network call)"
 elif [ -z "${DOT_PYTHON:-}" ]; then
-  CHECKED=$((CHECKED + 1))
-  fixid tooling
-  warn "no python3 — can't read automatic security update settings"
+  note "automatic security updates are managed by the employer (MDM); not read (no python3)"
   CHECKED=$((CHECKED + 1))
   fixid tooling
   warn "no python3 — can't read the Software Update cache"
