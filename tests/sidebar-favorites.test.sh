@@ -134,10 +134,17 @@ def archive(pairs):
 
     item_uids = []
     for name, bookmark in pairs:
-        item = {
-            "NS.keys": [add("Name"), add("Bookmark")],
-            "NS.objects": [add(name), add(bookmark)],
-        }
+        # None is an item with no Name key, as Tahoe writes standard folders.
+        if name is None:
+            item = {
+                "NS.keys": [add("Bookmark")],
+                "NS.objects": [add(bookmark)],
+            }
+        else:
+            item = {
+                "NS.keys": [add("Name"), add("Bookmark")],
+                "NS.objects": [add(name), add(bookmark)],
+            }
         item_uids.append(add(item))
     items = {"NS.objects": item_uids}
     root = {"NS.keys": [add("items")], "NS.objects": [add(items)]}
@@ -170,6 +177,10 @@ def pairs_for(desired, mode):
             parent, base = os.path.split(path.rstrip("/"))
             rows.append((name, encode_bookmark([base], volume=parent or "/")))
         return rows
+    if mode == "noname":
+        return [(None, encode_bookmark(components_for(path))) for _name, path in desired]
+    if mode == "noname-other":
+        return [(None, encode_bookmark(components_for("/tmp/sidebar-fixture/CustomFolder")))]
     raise SystemExit("unknown mode " + mode)
 
 list_path, dest, mode, home = sys.argv[1:5]
@@ -187,6 +198,23 @@ sfl3="$side/com.apple.LSSharedFileList.FavoriteItems.sfl3"
 write_sfl match "$sfl4"
 out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST")"
 eq "matching sidebar file passes" "ok" "${out%%|*}"
+
+write_sfl noname "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
+eq "favorites without Name still match by path" \
+  "ok|Finder Favorites match (Applications, Desktop, Developer, Documents, Downloads, Movies, Music, Pictures)" \
+  "$out"
+miss "a nameless match does not say no name" "(no name)" "$out"
+
+write_sfl noname-other "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
+eq "a nameless other folder is drift" "bad" "${out%%|*}"
+has "a nameless item is shown as its folder name" \
+  "Favorites are CustomFolder (/tmp/sidebar-fixture/CustomFolder);" "$out"
+miss "a nameless drift does not say no name" "(no name)" "$out"
+has "drift names the list" \
+  "want Applications (/Applications), Desktop (~/Desktop), Developer (~/Developer), Documents (~/Documents), Downloads (~/Downloads), Movies (~/Movies), Music (~/Music), Pictures (~/Pictures)" \
+  "$out"
 
 write_sfl airdrop "$sfl4"
 out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
