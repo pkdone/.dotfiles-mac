@@ -50,6 +50,8 @@ macconfig --fix    # check, fix anything that's safe to fix automatically, then 
 
 `macconfig --fix` only changes settings it can safely put back on its own. Anything else is listed under "Needs Paul" for you to do by hand. `check.sh` is an older name for `macconfig`, kept because the scheduled morning check still calls it.
 
+Automatic security updates are managed by the employer (MDM). `macconfig` says so and does not count that as a warning. It also does not warn when the SSH agent has no key loaded.
+
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).
 
 `manualsteps` is worth running again after a macOS update, or whenever `macconfig` shows a manual step as warn.

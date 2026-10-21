@@ -37,3 +37,14 @@ team|6KKW3K37TU|Cyberhaven
 team|Z2FDA4QHGU|Phorion EDR
 team|8VBZ3948LU|Fleet orbit
 label|com.pdone.pin-quicknote-hotkey-190|this repo's LaunchAgent (launchagents/)
+
+# Cursor and Cursor Nightly each register a BackgroundActivityCheck agent.
+# The app bundle id also covers a helper stored inside that app. The helper's
+# own bundle id and launchd label are listed too, so the agent is allow-listed
+# whichever way the BTM store records it.
+bundle|com.todesktop.230313mzl4w4u92|Cursor (stable), including its BackgroundActivityCheck helper
+bundle|co.anysphere.cursor.nightly|Cursor Nightly, including its BackgroundActivityCheck helper
+bundle|com.todesktop.230313mzl4w4u92.BackgroundActivityCheck|Cursor BackgroundActivityCheck helper
+bundle|co.anysphere.cursor.nightly.BackgroundActivityCheck|Cursor Nightly BackgroundActivityCheck helper
+label-prefix|com.todesktop.230313mzl4w4u92.BackgroundActivityCheck|Cursor BackgroundActivityCheck launch agent
+label-prefix|co.anysphere.cursor.nightly.BackgroundActivityCheck|Cursor Nightly BackgroundActivityCheck launch agent

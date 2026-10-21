@@ -37,6 +37,18 @@ values_match() {  # type actual desired [tol]
   values_equal "$1" "$2" "$3"
 }
 
+# com.apple.screencapture video is On as integer 1 or boolean true. macOS stores
+# it either way (`defaults read` prints 1 for both). The check and macos.sh treat
+# those as the same value, so a type difference is not drift and --fix does not
+# skip a value that is already On.
+screencapture_video_matches() { # read-type word, actual, desired
+  case "$1" in
+    integer|boolean) ;;
+    *) return 1 ;;
+  esac
+  [ "$(norm_bool "$2")" = "$(norm_bool "$3")" ]
+}
+
 type_token() {  # our type -> `defaults read-type` word
   case "$1" in
     string) echo string ;;

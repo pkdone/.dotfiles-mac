@@ -59,7 +59,7 @@ elif [ -z "$DOT_PYTHON" ]; then
   warn "python3 not found — skip Finder Favorites"
 elif ! command -v mysides >/dev/null 2>&1; then
   fixid tooling
-  warn "mysides not installed — skip Finder Favorites (brew install mysides)"
+  warn "mysides not installed — skip Finder Favorites (brew install --cask mysides)"
 else
   if side_out="$(with_timeout 15 mysides list </dev/null 2>&1)"; then
     side_rc=0

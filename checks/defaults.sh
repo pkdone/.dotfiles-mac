@@ -39,7 +39,20 @@ while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; 
   if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
     curtype="$(defaults_read_type "$domain" "$key" 2>/dev/null || true)"
     curtype="${curtype##* }"
-    if [ "$curtype" != "$want_token" ]; then
+    # video On is integer 1 or boolean true. Either type with that value is clean.
+    video_flex=0
+    if [ "$domain" = com.apple.screencapture ] && [ "$key" = video ]; then
+      case "$curtype" in
+        boolean|integer) video_flex=1 ;;
+      esac
+    fi
+    if [ "$video_flex" = 1 ] && screencapture_video_matches "$curtype" "$cur" "$desired"; then
+      if [ "$shot_dir_missing" = 1 ]; then
+        bad "$shot_dir_msg"
+      else
+        pass "$domain $key = $cur"
+      fi
+    elif [ "$video_flex" = 0 ] && [ "$curtype" != "$want_token" ]; then
       bad "$domain $key — type mismatch (expected $want_token, found ${curtype:-none})"
       if [ "$shot_dir_missing" = 1 ]; then bad "$shot_dir_msg"; fi
     elif values_match "$etype" "$cur" "$desired" "$tol"; then

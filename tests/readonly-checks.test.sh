@@ -76,16 +76,21 @@ PY
 
 write_su_dated "$tmp/fresh.plist" 1 '[]' ''
 fresh="$(su_plist_lines "$tmp/fresh.plist")"
-eq "fresh cache auto is ok" ok "$(printf '%s\n' "$fresh" | awk -F'|' '$1=="auto"{print $2; exit}')"
+eq "fresh cache auto is info" info "$(printf '%s\n' "$fresh" | awk -F'|' '$1=="auto"{print $2; exit}')"
 eq "fresh cache pending is ok" ok "$(printf '%s\n' "$fresh" | awk -F'|' '$1=="pending"{print $2; exit}')"
 has "auto line names CriticalUpdateInstall" "CriticalUpdateInstall=true" "$fresh"
 has "auto line names ConfigDataInstall" "ConfigDataInstall=true" "$fresh"
 has "auto line names AutomaticallyInstallMacOSUpdates" "AutomaticallyInstallMacOSUpdates=true" "$fresh"
+has "auto line says the employer manages updates" "managed by the employer (MDM)" "$fresh"
+miss "auto line is not a warning" "warn|automatic security updates" "$fresh"
 
 write_su_dated "$tmp/off.plist" 1 '[]' critical
 off="$(su_plist_lines "$tmp/off.plist")"
-eq "critical updates off warns" warn "$(printf '%s\n' "$off" | awk -F'|' '$1=="auto"{print $2; exit}')"
+eq "critical updates off is info" info "$(printf '%s\n' "$off" | awk -F'|' '$1=="auto"{print $2; exit}')"
 has "off line still reports the other keys" "ConfigDataInstall=true" "$off"
+has "off line still names CriticalUpdateInstall" "CriticalUpdateInstall=false" "$off"
+has "off line still says the employer manages updates" "managed by the employer (MDM)" "$off"
+miss "off toggles are not a warning" "warn|automatic security updates" "$off"
 
 write_su_dated "$tmp/old.plist" 10 '[{"Display Name": "macOS Test"}]' ''
 old="$(su_plist_lines "$tmp/old.plist")"
@@ -134,7 +139,8 @@ chmod +x "$bin/ssh-add" "$bin/ssh-keygen"
 ssh_home="$tmp/sshhome"
 mkdir -p "$ssh_home"
 ssh_out="$(PATH="$bin:$PATH" SSH_ADD_RC=1 SSH_ADD_OUT="" ssh_audit "$ssh_home")"
-has "no loaded key warns" "warn|no SSH key loaded" "$ssh_out"
+miss "no loaded key is not a warning" "no SSH key loaded" "$ssh_out"
+miss "no loaded key adds no ssh-add warning" "warn|" "$ssh_out"
 has "missing .ssh is info" "info|no ~/.ssh directory" "$ssh_out"
 has "signing off is info" "info|commit signing is not configured" "$ssh_out"
 

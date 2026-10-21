@@ -27,7 +27,7 @@ The `macos.sh` step that runs the same command is in [Settings](settings.md#maco
 
 ## Software Update, LaunchAgents, and broken links
 
-The security check does not run `softwareupdate`, so it does not sit on the network. It reads the Software Update preferences already on disk: whether automatic security updates are on, and whether a recommended update has been sitting since a successful check more than 7 days ago. Install the update in System Settings when that warning appears.
+The security check does not run `softwareupdate`, so it does not sit on the network. Automatic security updates are managed by the employer (MDM). The check says so and does not warn about those toggles. It still reads the local Software Update preferences for a recommended update that has been sitting since a successful check more than 7 days ago. Install that update in System Settings when that warning appears.
 
 A `com.pdone.*` file in `~/Library/LaunchAgents` that does not match the repo, or that has no repo template, is a warning. `--fix` still repairs the two pin agents (dictation and Quick Note) when those sections report drift. It does not delete an unknown plist. Remove that file yourself, or add a template under `launchagents/`, then re-run install.
 
