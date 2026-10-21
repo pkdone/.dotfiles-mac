@@ -32,13 +32,10 @@ bash|CotEditor|com.coteditor.CotEditor
 zsh|CotEditor|com.coteditor.CotEditor
 fish|CotEditor|com.coteditor.CotEditor
 conf|CotEditor|com.coteditor.CotEditor
-cfg|CotEditor|com.coteditor.CotEditor|unpinnable
 ini|CotEditor|com.coteditor.CotEditor
-env|CotEditor|com.coteditor.CotEditor|unpinnable
 toml|CotEditor|com.coteditor.CotEditor
 yaml|CotEditor|com.coteditor.CotEditor
 yml|CotEditor|com.coteditor.CotEditor
-list|CotEditor|com.coteditor.CotEditor|unpinnable
 log|CotEditor|com.coteditor.CotEditor
 csv|CotEditor|com.coteditor.CotEditor
 json|CotEditor|com.coteditor.CotEditor

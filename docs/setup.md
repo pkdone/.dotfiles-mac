@@ -111,7 +111,7 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 git pull && ./macconfig-check.sh --fix
 ```
 
-`.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.cfg`, `.env`, and `.list` have no declared UTI (`duti` error -50 on the dynamic UTI); they are marked `unpinnable` and `macconfig-check.sh` prints info, not DRIFT. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`.
+`.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`.
 
 ## Unwanted apps (GarageBand, iMovie, Pages)
 
@@ -222,7 +222,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 | Repo-managed symlink missing or pointing elsewhere | `ln -sfn` to the repo file, **only** when the target is a symlink or missing. A real file in the way is never overwritten; that becomes Needs Paul |
 | Hammerspoon not running | `open -g -a Hammerspoon` |
 | Dock "Assign To" pins (`lib/desktop-bindings.list`) | `lib/desktop-bindings.py --apply`: writes `com.apple.spaces` `app-bindings` (bundle id → that Desktop's current Space UUID on the main display; Desktop 1 is `""`; `none` deletes the key), backs the domain up first, and restarts Dock only if a pin changed. A pin whose Desktop doesn't exist is left for you — Spaces are never created |
-| Finder double-click apps (`lib/file-handlers.list`) | `lib/file-handlers.py --apply`: `duti -s <bundle> .<ext> all` for each drifted extension, then polls `duti -x` for a few seconds. Refuses browser types (`html`, `public.html`) and URL schemes. Skips `unpinnable` rows (`.cfg`, `.env`, `.list`) |
+| Finder double-click apps (`lib/file-handlers.list`) | `lib/file-handlers.py --apply`: `duti -s <bundle> .<ext> all` for each drifted extension, then polls `duti -x` for a few seconds. Refuses browser types (`html`, `public.html`) and URL schemes |
 
 **Needs Paul: reported, never automated**
 
@@ -343,7 +343,7 @@ dotpush "your message"
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
 - **Desktop assignments:** edit `lib/desktop-bindings.list` (`1`..`N` = Desktop N on the main display, `none` = not assigned), then run `macconfig-check.sh --fix`. That writes `com.apple.spaces` `app-bindings`, resolving Desktop N to the current Space UUID (Desktop 1 is `""`; Desktops 2+ change if Spaces are recreated) and restarts the Dock only if a pin changed. If that Desktop doesn't exist yet, the pin is left for you — the fix never creates Spaces.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
-- **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; optional `unpinnable` or `uti:…`; role is always `all`), then run `macconfig-check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted. Do not add `html` — it switches the default browser. `.cfg`, `.env`, and `.list` stay `unpinnable`.
+- **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; optional `unpinnable` or `uti:…`; role is always `all`), then run `macconfig-check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted. Do not add `html` — it switches the default browser.
 - **Display auto-brightness:** Off. `macconfig-check.sh` reads it with `corebrightnessdiag status-info` (no sudo). Turn it off in System Settings → Displays. `--fix` does not write it. True Tone and Slightly dim the display on battery are left alone.
 - **Power:** On mains power the Mac does not sleep on its own, the display sleeps after 10 minutes, and wake for network access is on. On battery the display sleeps after 2 minutes. Closing the lid still sleeps the Mac. Battery idle sleep is not changed. `macos.sh` runs the sudo `pmset` commands that are still wrong and skips them when sudo isn't available or isn't wanted. `macconfig-check.sh` reads `pmset -g custom` and warns when a value differs. `--fix` does not change it. See [Troubleshooting](troubleshooting.md#ac-idle-sleep).
 - **Built-in display More Space:** the expected `_spdisplays_resolution` prefix is `lib/display-resolution.list` (`1800 x 1169` on this Color LCD). `macconfig-check.sh` reads `system_profiler SPDisplaysDataType -json` and warns on a mismatch. No built-in panel (clamshell) is an info line. `--fix` does not change the display mode.

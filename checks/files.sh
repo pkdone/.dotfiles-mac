@@ -26,3 +26,14 @@ else
     esac
   done < <("$PY" "$DOTDIR/lib/file-handlers.py" "$FILE_HANDLERS_LIST")
 fi
+
+# ---- Developer folder ---------------------------------------------------
+# All repos are cloned under ~/Developer. install.sh creates it.
+hdr "Folders"
+fixid none
+CHECKED=$((CHECKED + 1))
+if [ -d "$HOME/Developer" ]; then
+  pass "~/Developer exists"
+else
+  bad "~/Developer missing (run install.sh, or mkdir ~/Developer)"
+fi

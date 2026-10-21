@@ -67,6 +67,10 @@ link() {  # src dst
 # the same folder again before writing the default, including from macconfig --fix.
 # Existing files are not moved.
 echo ""
+echo "📁 Developer folder (repos live here)..."
+mkdir -p "$HOME/Developer"
+echo "  $HOME/Developer"
+
 echo "📁 Screenshots folder..."
 mkdir -p "$HOME/Pictures/Screenshots"
 echo "  $HOME/Pictures/Screenshots"
