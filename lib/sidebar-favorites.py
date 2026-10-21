@@ -5,7 +5,9 @@ Reads com.apple.LSSharedFileList.FavoriteItems.sfl4, or .sfl3, or .sfl2,
 under ~/Library/Application Support/com.apple.sharedfilelist/. The newest
 file that exists is the one Finder is using. File favorites are the items
 whose bookmark has a file path. Other sidebar rows (AirDrop and similar)
-are left out of the comparison.
+are left out of the comparison. A match is the same paths in the same
+order. Names in the list are labels for messages. An item with no Name
+is shown as the folder basename.
 
 Nothing here writes the sidebar file. Rebuilding it from this script is not
 reliable, and mysides is not a Homebrew formula or cask.
@@ -277,15 +279,26 @@ def read_favorites(path: str) -> tuple[str, object]:
     return ("ok", found)
 
 
+def item_label(name: str, path: str) -> str:
+    """Name from the sidebar item, or the folder basename when Name is absent."""
+    if name:
+        return name
+    folder = norm_path(path)
+    return os.path.basename(folder) or folder or "(no name)"
+
+
 def compare(desired: list[tuple[str, str]], actual: list[tuple[str, str]]) -> tuple[str, str]:
+    """Match file favorites by path, in order. List names are message labels."""
     if not desired:
         return "warn", "sidebar favorites list is empty — Favorites were not checked"
     want = [(name, norm_path(path)) for name, path in desired]
-    if actual == want:
+    have_paths = [norm_path(path) for _name, path in actual]
+    want_paths = [path for _name, path in want]
+    if have_paths == want_paths:
         names = ", ".join(name for name, _path in want)
         return "ok", f"Finder Favorites match ({names})"
     have = ", ".join(
-        f"{name or '(no name)'} ({tilde(path)})" for name, path in actual
+        f"{item_label(name, path)} ({tilde(norm_path(path))})" for name, path in actual
     ) or "(none)"
     need = ", ".join(f"{name} ({tilde(path)})" for name, path in want)
     return "bad", f"Favorites are {have}; want {need}"

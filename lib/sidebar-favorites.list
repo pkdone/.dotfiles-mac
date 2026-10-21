@@ -1,7 +1,8 @@
 # Finder sidebar Favorites, top to bottom.
 # The check reads FavoriteItems.sfl4 (or .sfl3, or .sfl2) and compares file
-# favorites with this list. A trailing slash is not a difference. Nothing
-# writes the sidebar file. mysides is not used.
+# favorites with this list by path, in order. Names are labels for messages.
+# A missing Name is not a difference. A trailing slash is not a difference.
+# Nothing writes the sidebar file. mysides is not used.
 # Format: name | path
 #   path is absolute, or starts with @HOME@ (that becomes $HOME).
 # Blank lines and lines beginning with # are ignored.
