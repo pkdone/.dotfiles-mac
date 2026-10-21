@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Finder Favorites: lib/sidebar-favorites.list, the mysides comparison, and
-# macos.sh rebuilding only when the list differs. mysides and Finder are fakes.
+# Finder Favorites: lib/sidebar-favorites.list, reading FavoriteItems.sfl*,
+# and macos.sh reporting a difference without writing the sidebar file.
 # Run: ./tests/sidebar-favorites.test.sh
 #
 set -uo pipefail
@@ -39,10 +39,13 @@ Music
 Pictures" "$names"
 
 brewfile="$(cat "$DIR/Brewfile")"
-has "mysides is a Homebrew cask" 'cask "mysides"' "$brewfile"
-miss "mysides is not a formula" 'brew "mysides"' "$brewfile"
-has "macos.sh installs mysides as a cask" 'brew install --cask mysides' "$(cat "$DIR/macos.sh")"
-has "finder check installs mysides as a cask" 'brew install --cask mysides' "$(cat "$DIR/checks/finder.sh")"
+miss "brewfile has no mysides cask" 'cask "mysides"' "$brewfile"
+miss "brewfile has no mysides formula" 'brew "mysides"' "$brewfile"
+miss "macos.sh does not run mysides" "mysides list" "$(cat "$DIR/macos.sh")"
+miss "finder check does not run mysides" "mysides list" "$(cat "$DIR/checks/finder.sh")"
+has "finder check leaves a difference as a warning" "does not change Favorites" "$(cat "$DIR/checks/finder.sh")"
+eq "favorites are check-only" "PAUL" \
+  "$(awk -F'|' '$1=="finder-favorites" { print $2; exit }' "$DIR/lib/autofix.list")"
 
 tmp="$(mktemp -d)"
 backup_before=""
@@ -65,84 +68,181 @@ cleanup() {
 }
 trap cleanup EXIT
 home="$tmp/home"
-mkdir -p "$home"
+side="$home/Library/Application Support/com.apple.sharedfilelist"
+mkdir -p "$home" "$side"
 export HOME="$home"
 
-want="$("$PY" "$HELPER" urls --list "$LIST")"
-eq "Applications address" "Applications	file:///Applications/" "$(printf '%s\n' "$want" | head -n 1)"
-has "Desktop address uses the home" "file://${home}/Desktop/" "$want"
+cat > "$tmp/write_sfl.py" <<'PY'
+import os
+import plistlib
+import struct
+import sys
+from plistlib import UID
 
-printf '%s\n' "$want" | awk -F'\t' '{ printf "%s -> %s\n", $1, $2 }' > "$tmp/match.txt"
-# A trailing slash difference and an AirDrop line must still match.
-sed 's|/$||' "$tmp/match.txt" > "$tmp/noslash.txt"
-printf '%s\n' '-> nwnode://domain-AirDrop' >> "$tmp/noslash.txt"
-out="$("$PY" "$HELPER" compare --list "$LIST" --mysides "$tmp/noslash.txt")"
-eq "trailing slash and AirDrop still match" "ok" "${out%%|*}"
+def encode_bookmark(components, volume="/"):
+    chunks = []
+    offset = 4
 
-printf '%s\n' 'Applications -> file:///Applications/' > "$tmp/short.txt"
-out="$("$PY" "$HELPER" compare --list "$LIST" --mysides "$tmp/short.txt")"
-eq "a short list is drift" "bad" "${out%%|*}"
+    def add_item(blob):
+        nonlocal offset
+        rel = offset
+        chunks.append(blob)
+        offset += len(blob)
+        if offset & 3:
+            pad = 4 - (offset & 3)
+            chunks.append(b"\x00" * pad)
+            offset += pad
+        return rel
 
-printf '%s\n' \
-  'Desktop -> file://'"$home"'/Desktop/' \
-  'Applications -> file:///Applications/' \
-  > "$tmp/order.txt"
-# pad the rest so only the swap is the point: still drift because order differs
-"$PY" "$HELPER" urls --list "$LIST" | awk -F'\t' 'NR>2 { printf "%s -> %s\n", $1, $2 }' >> "$tmp/order.txt"
-out="$("$PY" "$HELPER" compare --list "$LIST" --mysides "$tmp/order.txt")"
-eq "wrong order is drift" "bad" "${out%%|*}"
+    def add_string(text):
+        raw = text.encode("utf-8")
+        return add_item(struct.pack("<II", len(raw), 0x0101) + raw)
 
-# macos.sh with a fake mysides. Matching list does not remove, add, or restart Finder.
-bin="$tmp/bin"
-mkdir -p "$bin"
-cat > "$bin/mysides" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "${MYSIDES_LOG:?}"
-if [ "${1:-}" = list ]; then
-  cat "${MYSIDES_NOW:?}"
-  exit 0
-fi
-exit 0
-EOF
-cat > "$bin/defaults" <<'EOF'
-#!/usr/bin/env bash
-exit 1
-EOF
-cat > "$bin/killall" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "${KILLALL_LOG:?}"
-exit 0
-EOF
-chmod +x "$bin/mysides" "$bin/defaults" "$bin/killall"
-printf '%s\n' "$want" | awk -F'\t' '{ printf "%s -> %s\n", $1, $2 }' > "$tmp/now.txt"
+    vol_off = add_string(volume)
+    comp_offs = [add_string(part) for part in components]
+    payload = b"".join(struct.pack("<I", off) for off in comp_offs)
+    arr_off = add_item(struct.pack("<II", len(payload), 0x0601) + payload)
+    entries = sorted(((0x1004, arr_off), (0x2002, vol_off)))
+    entry_blob = b"".join(struct.pack("<III", key, off, 0) for key, off in entries)
+    toc_rel = offset
+    chunks.append(struct.pack("<IIIII", len(entry_blob) - 8, 0xFFFFFFFE, 1, 0, len(entries)))
+    chunks.append(entry_blob)
+    offset += 20 + len(entry_blob)
+    body = b"".join(chunks)
+    header = struct.pack("<4sIIIQQQQI", b"book", offset + 48, 0x10040000, 48, 0, 0, 0, 0, toc_rel)
+    return header + body
 
-run_macos() {
-  : > "$tmp/mysides.log"
-  : > "$tmp/killall.log"
-  HOME="$home" PATH="$bin:$PATH" MYSIDES_LOG="$tmp/mysides.log" MYSIDES_NOW="$tmp/now.txt" \
-    KILLALL_LOG="$tmp/killall.log" \
-    "$MACOS" --no-color --yes --only @finder-favorites "$@"
+def components_for(path):
+    return [part for part in path.rstrip("/").split("/") if part]
+
+def load_desired(path, home):
+    rows = []
+    for raw in open(path, encoding="utf-8"):
+        line = raw.split("#", 1)[0].strip()
+        if not line or "|" not in line:
+            continue
+        name, folder = line.split("|", 1)
+        rows.append((name.strip(), folder.strip().replace("@HOME@", home)))
+    return rows
+
+def archive(pairs):
+    objects = ["$null"]
+
+    def add(obj):
+        objects.append(obj)
+        return UID(len(objects) - 1)
+
+    item_uids = []
+    for name, bookmark in pairs:
+        item = {
+            "NS.keys": [add("Name"), add("Bookmark")],
+            "NS.objects": [add(name), add(bookmark)],
+        }
+        item_uids.append(add(item))
+    items = {"NS.objects": item_uids}
+    root = {"NS.keys": [add("items")], "NS.objects": [add(items)]}
+    return {
+        "$archiver": "NSKeyedArchiver",
+        "$version": 100000,
+        "$top": {"root": add(root)},
+        "$objects": objects,
+    }
+
+def pairs_for(desired, mode):
+    if mode == "match":
+        return [(name, encode_bookmark(components_for(path))) for name, path in desired]
+    if mode == "short":
+        name, path = desired[0]
+        return [(name, encode_bookmark(components_for(path)))]
+    if mode == "swapped":
+        rows = [(name, encode_bookmark(components_for(path))) for name, path in desired]
+        rows[0], rows[1] = rows[1], rows[0]
+        return rows
+    if mode == "airdrop":
+        rows = [(name, encode_bookmark(components_for(path))) for name, path in desired]
+        rows.append(("AirDrop", b"not-a-bookmark"))
+        return rows
+    if mode == "noparse":
+        return [("Desktop", b"not-a-bookmark"), ("Documents", b"also-no")]
+    if mode == "volume":
+        rows = []
+        for name, path in desired:
+            parent, base = os.path.split(path.rstrip("/"))
+            rows.append((name, encode_bookmark([base], volume=parent or "/")))
+        return rows
+    raise SystemExit("unknown mode " + mode)
+
+list_path, dest, mode, home = sys.argv[1:5]
+os.makedirs(os.path.dirname(dest), exist_ok=True)
+with open(dest, "wb") as fh:
+    plistlib.dump(archive(pairs_for(load_desired(list_path, home), mode)), fh, fmt=plistlib.FMT_BINARY)
+PY
+
+write_sfl() { # mode dest
+  "$PY" "$tmp/write_sfl.py" "$LIST" "$2" "$1" "$home"
 }
 
-out="$(run_macos)"
+sfl4="$side/com.apple.LSSharedFileList.FavoriteItems.sfl4"
+sfl3="$side/com.apple.LSSharedFileList.FavoriteItems.sfl3"
+write_sfl match "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST")"
+eq "matching sidebar file passes" "ok" "${out%%|*}"
+
+write_sfl airdrop "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
+eq "AirDrop is not part of the comparison" "ok" "${out%%|*}"
+
+write_sfl volume "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
+eq "volume path plus the last component matches" "ok" "${out%%|*}"
+
+write_sfl short "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
+eq "a short list is drift" "bad" "${out%%|*}"
+
+write_sfl swapped "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
+eq "wrong order is drift" "bad" "${out%%|*}"
+
+write_sfl noparse "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST" --sfl "$sfl4")"
+eq "unreadable bookmarks are not an empty sidebar" "warn" "${out%%|*}"
+has "unreadable bookmarks say the paths could not be read" "could not read paths" "$out"
+
+rm -f "$sfl4"
+write_sfl match "$sfl3"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST")"
+eq "sfl3 is read when sfl4 is absent" "ok" "${out%%|*}"
+
+write_sfl short "$sfl3"
+write_sfl match "$sfl4"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST")"
+eq "sfl4 wins when both files exist" "ok" "${out%%|*}"
+
+rm -f "$sfl4" "$sfl3"
+out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST")"
+eq "a missing sidebar file warns" "warn" "${out%%|*}"
+has "a missing sidebar file names the file" "FavoriteItems.sfl4" "$out"
+
+write_sfl match "$sfl4"
+before="$(cksum "$sfl4")"
+out="$(HOME="$home" "$MACOS" --no-color --yes --only @finder-favorites)"
 eq "matching favorites exits 0" 0 "$?"
 has "matching favorites are left alone" "Finder Favorites already match" "$out"
-eq "matching favorites only lists" "list" "$(cat "$tmp/mysides.log")"
-eq "matching favorites does not restart Finder" "" "$(cat "$tmp/killall.log")"
+eq "matching favorites does not rewrite the sidebar file" "$before" "$(cksum "$sfl4")"
 eq "matching favorites does not create Developer" "no" "$([ -d "$home/Developer" ] && echo yes || echo no)"
 
-printf '%s\n' 'Applications -> file:///Applications/' > "$tmp/now.txt"
-out="$(run_macos --dry-run)"
-has "dry-run would rebuild" "dry-run" "$out"
-eq "dry-run does not call mysides add" "" "$(grep -v '^list$' "$tmp/mysides.log" || true)"
-eq "dry-run does not restart Finder" "" "$(cat "$tmp/killall.log")"
+write_sfl short "$sfl4"
+before="$(cksum "$sfl4")"
+out="$(HOME="$home" "$MACOS" --no-color --yes --dry-run --only @finder-favorites)"
+has "a difference is reported" "does not change the sidebar" "$out"
+eq "dry-run does not rewrite the sidebar file" "$before" "$(cksum "$sfl4")"
+eq "dry-run does not create Developer" "no" "$([ -d "$home/Developer" ] && echo yes || echo no)"
 
-out="$(run_macos)"
-has "rebuild says it changed Favorites" "Finder Favorites -> rebuilt" "$out"
-has "rebuild removes the old favorite" "remove Applications" "$(cat "$tmp/mysides.log")"
-has "rebuild adds Desktop" "add Desktop" "$(cat "$tmp/mysides.log")"
-eq "rebuild restarts Finder" "Finder" "$(cat "$tmp/killall.log")"
-eq "rebuild creates the Developer folder" "yes" "$([ -d "$home/Developer" ] && echo yes || echo no)"
+out="$(HOME="$home" "$MACOS" --no-color --yes --only @finder-favorites)"
+has "a real run also leaves the sidebar alone" "does not change the sidebar" "$out"
+eq "a real run does not rewrite the sidebar file" "$before" "$(cksum "$sfl4")"
+eq "a real run does not create Developer" "no" "$([ -d "$home/Developer" ] && echo yes || echo no)"
 
 printf 'sidebar-favorites tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

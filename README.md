@@ -50,6 +50,10 @@ macconfig --fix    # check, fix anything that's safe to fix automatically, then 
 
 `macconfig --fix` only changes settings it can safely put back on its own. Anything else is listed under "Needs Paul" for you to do by hand. `check.sh` is an older name for `macconfig`, kept because the scheduled morning check still calls it.
 
+Spotlight → Results from Apps is check by hand. Turn off Books, Calendar, Contacts, Keynote, Mail, Messages, Music, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, System Settings, and WhatsApp on. macconfig still lists that step, and it does not warn: the preference it used to read (`EnabledPreferenceRules`) is the list of rows, and those rows stay after the toggles are turned off.
+
+Finder sidebar Favorites are checked by reading the sidebar file. `macconfig --fix` does not change them.
+
 Automatic security updates are managed by the employer (MDM). `macconfig` says so and does not count that as a warning. It also does not warn when the SSH agent has no key loaded.
 
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).

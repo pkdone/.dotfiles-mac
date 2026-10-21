@@ -19,7 +19,8 @@
 #               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
 #               @finder-recents / @finder-icon-view / @finder-favorites /
 #               @finder-show / @titlebar-double-click / @ac-sleep. Values that already
-#               match are left alone (no re-assert write). Used by `macconfig-check.sh --fix`.
+#               match are left alone (no re-assert write). @finder-favorites only
+#               reads the sidebar file. Used by `macconfig-check.sh --fix`.
 #   --yes       Run the deferred UI restarts without prompting (still only if
 #               something changed). Also skips the AC-sleep confirmation and goes
 #               straight to sudo when a terminal can ask for a password. Used by
@@ -74,6 +75,7 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
                lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
                @finder-recents, @finder-icon-view, @finder-favorites, @finder-show,
                @titlebar-double-click, @ac-sleep. Matching values are left alone.
+               @finder-favorites reads the sidebar file and does not change it.
   --yes        Restart Dock/Finder/SystemUIServer/ControlCenter without prompting
                (only if something changed). Also accept the power sudo step
                without a separate confirmation (still skipped when sudo
@@ -572,10 +574,12 @@ apply_finder_icon_view() {
 }
 if selected @finder-icon-view; then apply_finder_icon_view; fi
 
-# ---- Finder sidebar Favorites (mysides; restart Finder only if changed) --
+# ---- Finder sidebar Favorites (read the sidebar file; never write it) ----
+# mysides is not a Homebrew formula or cask, and writing FavoriteItems.sfl4
+# is not reliable. A difference is a warning. Finder is not restarted.
 apply_finder_favorites() {
   local helper="$DOTDIR/lib/sidebar-favorites.py" list="$DOTDIR/lib/sidebar-favorites.list"
-  local out verdict status detail tmp name path url shown
+  local verdict status detail
   CONSIDERED=$((CONSIDERED + 1))
   if [ ! -r "$helper" ] || [ ! -r "$list" ]; then
     WARNINGS=$((WARNINGS + 1))
@@ -587,80 +591,19 @@ apply_finder_favorites() {
     say_warn "python3 not found — skip Finder Favorites"
     return 0
   fi
-  if ! command -v mysides >/dev/null 2>&1; then
-    WARNINGS=$((WARNINGS + 1))
-    say_warn "mysides not installed — skip Finder Favorites (brew install --cask mysides)"
-    return 0
-  fi
-  # A failed list must not be treated as an empty sidebar (that would remove
-  # every favorite). Leave the sidebar alone.
-  if ! out="$(perl -e '$t = shift @ARGV; alarm $t; exec { $ARGV[0] } @ARGV or exit 127' 15 mysides list 2>&1)"; then
-    WARNINGS=$((WARNINGS + 1))
-    say_warn "mysides list failed — Finder Favorites left as they are"
-    return 0
-  fi
-  tmp="$(mktemp)"
-  printf '%s\n' "$out" > "$tmp"
-  verdict="$("$DOT_PYTHON" "$helper" compare --list "$list" --mysides "$tmp" || true)"
+  verdict="$("$DOT_PYTHON" "$helper" compare --list "$list" || true)"
   status="${verdict%%|*}"
   detail="${verdict#*|}"
   if [ "$status" = ok ]; then
-    rm -f "$tmp"
-    if [ "$DRY_RUN" = 1 ]; then
-      say_ok "Finder Favorites already match (dry-run)"
-    else
-      REASSERTED=$((REASSERTED + 1))
-      say_ok "Finder Favorites already match"
-    fi
+    say_ok "Finder Favorites already match"
     return 0
   fi
-  if [ "$status" != bad ]; then
-    rm -f "$tmp"
-    WARNINGS=$((WARNINGS + 1))
-    say_warn "${detail:-Finder Favorites could not be compared}"
-    return 0
+  WARNINGS=$((WARNINGS + 1))
+  if [ "$status" = bad ]; then
+    say_warn "Finder Favorites differ ($detail). Set them in Finder; this does not change the sidebar"
+  else
+    say_warn "${detail:-Finder Favorites could not be read}"
   fi
-  if [ "$DRY_RUN" = 1 ]; then
-    rm -f "$tmp"
-    CHANGED=$((CHANGED + 1))
-    say_chg "Finder Favorites -> rebuild ($detail) (dry-run)"
-    return 0
-  fi
-  while IFS="$(printf '\t')" read -r name path; do
-    [ -n "$path" ] || continue
-    case "$path" in
-      "$HOME"/*)
-        shown="~${path#"$HOME"}"
-        if [ -d "$path" ]; then
-          :
-        elif [ -e "$path" ]; then
-          say_warn "Finder favorite path is not a folder: $shown"
-        else
-          mkdir -p "$path"
-          say_chg "created $shown for a Finder favorite"
-        fi
-        ;;
-    esac
-  done < <("$DOT_PYTHON" "$helper" paths --list "$list")
-  while IFS= read -r name; do
-    [ -n "$name" ] || continue
-    if ! mysides remove "$name" >/dev/null 2>&1; then
-      say_warn "could not remove Finder favorite $name"
-    fi
-  done < <("$DOT_PYTHON" "$helper" names --mysides "$tmp")
-  while IFS="$(printf '\t')" read -r name url; do
-    if [ -z "$name" ] || [ -z "$url" ]; then
-      continue
-    fi
-    if ! mysides add "$name" "$url" >/dev/null 2>&1; then
-      WARNINGS=$((WARNINGS + 1))
-      say_warn "could not add Finder favorite $name"
-    fi
-  done < <("$DOT_PYTHON" "$helper" urls --list "$list")
-  rm -f "$tmp"
-  CHANGED=$((CHANGED + 1))
-  say_chg "Finder Favorites -> rebuilt ($detail)"
-  queue_restart Finder
 }
 if selected @finder-favorites; then apply_finder_favorites; fi
 
@@ -874,14 +817,16 @@ Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
   - Apple Account sign-in; User & Groups account picture
   - Keyboard British input source (checked; not written). Built-in display
     More Space and the Tahoe Night wallpaper are checked and never changed
-  - Finder sidebar checkboxes (Shared, Locations, AirDrop, iCloud Drive, Tags)
+  - Finder sidebar Favorites are checked from the sidebar file and not changed.
+    Sidebar checkboxes (Shared, Locations, AirDrop, iCloud Drive, Tags) stay manual
   - Mouse double-click speed and secondary click (tracking 1.5 and scrolling 0.5
     are checked only — defaults write is unreliable, so they are never written);
     Trackpad Look up (checked, forceClick 0) and trackpad dragging (checked
     only, Dragging=1 DragLock=0); MX Master 3S wheel (Natural), buttons in Logi
     Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
-  - Accessibility grants (TCC); notification mirroring; Spotlight app results
-    are checked and not written (per-app Allow Notifications is checked too)
+  - Accessibility grants (TCC); notification mirroring. Spotlight → Results from
+    Apps is check by hand (the toggles are not in a preference the check can
+    read). Per-app Allow Notifications is checked
   - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
     (leave Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents)
   - Set Hostname (requires sudo)

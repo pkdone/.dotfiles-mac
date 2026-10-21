@@ -1,11 +1,20 @@
-# Spotlight → Results from Apps that should be off.
-# macconfig and manualsteps compare com.apple.Spotlight EnabledPreferenceRules
-# with this list. They never write it.
+# Spotlight → System Settings → Spotlight → Results from Apps that should be off.
+# Alphabetical by the name shown in that list. 17 apps.
+# macconfig does not read the on/off toggles: com.apple.Spotlight
+# EnabledPreferenceRules is the list of rows, and a row stays after the
+# toggle is turned off. The manual step is check by hand. Nothing is written.
 # Format: plain name | bundle id
 # Blank lines and lines beginning with # are ignored.
+#
+# Leave these on (do not add them here): App Store, Calculator, Dictionary,
+# System Settings, WhatsApp.
 Books|com.apple.iBooksX
+Calendar|com.apple.iCal
+Contacts|com.apple.AddressBook
 Keynote|com.apple.iWork.Keynote
 Mail|com.apple.mail
+Messages|com.apple.MobileSMS
+Music|com.apple.Music
 Notes|com.apple.Notes
 Numbers|com.apple.iWork.Numbers
 Photos|com.apple.Photos

@@ -513,7 +513,6 @@ if [ "$FIX" = 1 ]; then
       coteditor)        pat="CotEditor" ;;
       finder-recents)   pat="Finder sidebar Recents" ;;
       finder-icon-view) pat="Finder icon view defaults" ;;
-      finder-favorites) pat="Finder Favorites" ;;
       finder-show)      pat="Show Finder shortcut" ;;
       titlebar-double-click) pat="AppleMiniaturizeOnDoubleClick" ;;
     esac

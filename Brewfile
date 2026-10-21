@@ -20,7 +20,6 @@ brew "tmux"
 brew "htop"
 brew "mas"
 brew "dockutil"
-cask "mysides"        # rebuild Finder sidebar Favorites (cask, not a formula)
 brew "duti"
 brew "ykman"
 brew "ffmpeg"

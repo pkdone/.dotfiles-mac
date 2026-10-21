@@ -31,8 +31,9 @@
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and app-store live in lib/session-checks.sh
 #                                           (also the macconfig-check.sh section; warn only, never --fix).
-#                                           spotlight-results is the same file, reported with the
-#                                           other manual steps.
+#                                           spotlight-results is the same file. The toggles cannot
+#                                           be read, so the result is check by hand, reported with
+#                                           the other manual steps.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Sign-ins ----
@@ -102,7 +103,7 @@ notifications-mirroring|Notifications & Spotlight|Notifications Off when mirrori
 # Bundle ids live in lib/notifications-off.list. macconfig-check.sh reads the
 # usernoted plist and never writes it. Mirroring stays the row above.
 notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
-spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Keynote, Mail, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos (macconfig checks this)|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
+spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Keynote, Mail, Messages, Music, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, System Settings, and WhatsApp on. Check this page by hand (macconfig cannot read the toggles)|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----
 login-items-off|Login Items & Finder|Keep ChatGPT, Gemini and GeminiAppLauncher Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig-check.sh

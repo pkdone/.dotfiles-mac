@@ -127,32 +127,25 @@ check_app_store() {
   esac
 }
 
-# Spotlight → Results from Apps. lib/spotlight-rules.py reads EnabledPreferenceRules.
-# A miss is a warning. Nothing is written.
+# Spotlight → Results from Apps. The apps that should be off are
+# lib/spotlight-apps.list. The on/off toggles are not in a preference this
+# check can read (EnabledPreferenceRules is the row list, and a row stays
+# after the toggle is turned off), so the result is check by hand, not a
+# warning. Nothing is written.
 check_spotlight_results() {
-  local py helper plist line status detail
+  local py helper line status detail
   helper="$DOTDIR/lib/spotlight-rules.py"
   if [ ! -r "$helper" ] || [ ! -r "$DOTDIR/lib/spotlight-apps.list" ]; then
     res hand "Spotlight app list is missing"; return
   fi
   py="$(command -v python3 2>/dev/null || true)"
   if [ -z "$py" ]; then res hand "python3 not found"; return; fi
-  if ! defaults read com.apple.Spotlight >/dev/null 2>&1; then
-    res hand "can't read Spotlight preferences"; return
-  fi
-  plist="$(mktemp)"
-  if ! with_timeout 15 defaults export com.apple.Spotlight "$plist" >/dev/null 2>&1; then
-    rm -f "$plist"
-    res hand "can't export Spotlight preferences"
-    return
-  fi
-  line="$("$py" "$helper" --plist "$plist" --list "$DOTDIR/lib/spotlight-apps.list" 2>/dev/null || true)"
-  rm -f "$plist"
+  line="$("$py" "$helper" --list "$DOTDIR/lib/spotlight-apps.list" 2>/dev/null || true)"
   status="${line%%|*}"
   detail="${line#*|}"
   case "$status" in
     ok) res ok "$detail" ;;
     warn) res warn "$detail" ;;
-    *) res hand "${detail:-could not compare Spotlight results}" ;;
+    *) res hand "${detail:-check System Settings → Spotlight → Results from Apps by hand}" ;;
   esac
 }
