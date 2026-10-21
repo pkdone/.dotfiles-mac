@@ -2,8 +2,11 @@
 """Read Login Items / SMAppService state from the BTM database without sfltool.
 
 `sfltool dumpbtm` often pops an admin password dialog on Tahoe. The BTM stores under
-/var/db/com.apple.backgroundtaskmanagement/ are world-readable (with Full Disk Access
-for the calling terminal) and enough for our checks. Read-only.
+/var/db/com.apple.backgroundtaskmanagement/ are the same records dumpbtm prints.
+They are world-readable with Full Disk Access and enough for our checks. Read-only.
+The login-items commands below never run sfltool. `--karabiner` reads those records
+first, and only runs `sfltool dumpbtm` with a short timeout when the records cannot
+be read. If that does not finish, the result is an info line.
 
 Store layout:
   macOS 26 and earlier: one BackgroundItems-v<N>.btm holding every item.
@@ -15,6 +18,12 @@ Store layout:
 Usage:
   btm-login-items.py                  # list app-type items: bundle|disposition|enabled|name
   btm-login-items.py com.foo.bar ...  # one line per bundle: bundle=missing|disabled|enabled
+  btm-login-items.py --karabiner      # Karabiner-Core-Service and
+                                      # Karabiner-VirtualHIDDevice-Daemon must be
+                                      # enabled and allowed. One line per result:
+                                      #   ok|name|message / warn|name|message / info|-|message
+                                      # --dump FILE parses that dumpbtm text and does
+                                      # not read the database or run sfltool.
   btm-login-items.py --audit ALLOW    # every ENABLED login/background item, one per line:
                                       #   class|kind|name|developer|team|id|detail
                                       # class: allow (on ALLOW list) | mdm (approved by an MDM
@@ -41,6 +50,13 @@ TYPE_LOGIN_ITEM = 0x4
 TYPE_AGENT = 0x8
 TYPE_DAEMON = 0x10
 DISP_ENABLED = 0x1
+# dumpbtm disposition words, low bit first: enabled, allowed, visible, notified.
+# 0xB (11) is enabled, allowed, visible, and notified. 0x2 is disabled, allowed.
+DISP_ALLOWED = 0x2
+KARABINER_BACKGROUND = (
+    "Karabiner-Core-Service",
+    "Karabiner-VirtualHIDDevice-Daemon",
+)
 SYSTEM_UUID_PREFIX = "FFFFEEEE-DDDD-CCCC-BBBB-AAAA"
 STORE_RE = re.compile(r"^BackgroundItems-v(\d+)(?:-([0-9A-Fa-f-]{36}))?\.btm$")
 
@@ -345,13 +361,207 @@ def audit(allow_path: str, base, paths) -> int:
     return 0
 
 
+def _pipe(text: str) -> str:
+    return str(text).replace("\n", " ").replace("|", "/")
+
+
+def disposition_phrase(enabled: bool, allowed: bool) -> str:
+    state = "enabled" if enabled else "disabled"
+    allow = "allowed" if allowed else "not allowed"
+    return f"{state}, {allow}"
+
+
+def bits_state(disp: int) -> tuple[bool, str]:
+    enabled = bool(disp & DISP_ENABLED)
+    allowed = bool(disp & DISP_ALLOWED)
+    ok = enabled and allowed
+    return ok, disposition_phrase(enabled, allowed)
+
+
+def words_state(words: list[str]) -> tuple[bool, str]:
+    enabled = "enabled" in words
+    allowed = False
+    for index, word in enumerate(words):
+        if word == "allowed" and (index == 0 or words[index - 1] != "not"):
+            allowed = True
+    return enabled and allowed, disposition_phrase(enabled, allowed)
+
+
+def item_matches_label(it: dict, label: str) -> bool:
+    if it.get("name") == label or display_name(it) == label:
+        return True
+    ident = it.get("identifier") or ""
+    if ident == label or ident.endswith("." + label):
+        return True
+    for raw in (it.get("executable") or "", it.get("url") or ""):
+        path = unquote(str(raw).split("|")[-1])
+        if path.startswith("file://"):
+            path = path[len("file://"):]
+        base = os.path.basename(path.rstrip("/"))
+        if base in (label, label + ".app"):
+            return True
+    return False
+
+
+def karabiner_lines(states: dict[str, list[tuple[bool, str]]]) -> list[str]:
+    """One line per required service. Other background items are ignored."""
+    lines = []
+    hand = (
+        " System Settings → General → Login Items & Extensions →"
+        " Allow in the Background. macconfig does not change this"
+    )
+    for label in KARABINER_BACKGROUND:
+        found = states.get(label) or []
+        if not found:
+            lines.append(
+                f"warn|{label}|{_pipe(label)} is not in the background items,"
+                " so it is not enabled and allowed." + hand
+            )
+            continue
+        bad = [phrase for ok, phrase in found if not ok]
+        if bad:
+            lines.append(
+                f"warn|{label}|{_pipe(label)} is {_pipe(bad[0])}."
+                " It needs to be enabled and allowed." + hand
+            )
+        else:
+            lines.append(f"ok|{label}|{_pipe(label)} is enabled and allowed")
+    return lines
+
+
+def states_from_items(items: list[dict]) -> dict[str, list[tuple[bool, str]]]:
+    found: dict[str, list[tuple[bool, str]]] = {}
+    for it in items:
+        disp = it.get("disposition")
+        if not isinstance(disp, int):
+            continue
+        for label in KARABINER_BACKGROUND:
+            if item_matches_label(it, label):
+                found.setdefault(label, []).append(bits_state(disp))
+    return found
+
+
+def parse_dumpbtm(text: str) -> list[dict]:
+    """Name and disposition words from `sfltool dumpbtm` text."""
+    records = []
+    chunks = re.split(r"(?m)^\s*#\d+\s*:", "\n" + text)
+    for chunk in chunks:
+        name_match = re.search(r"(?m)^\s*Name:\s*(.+?)\s*$", chunk)
+        disp_match = re.search(r"(?m)^\s*Disposition:\s*\[([^\]]*)\]", chunk)
+        if not name_match or not disp_match:
+            continue
+        words = re.findall(r"[A-Za-z]+", disp_match.group(1))
+        records.append({"name": name_match.group(1).strip(), "words": words})
+    return records
+
+
+def states_from_dump(records: list[dict]) -> dict[str, list[tuple[bool, str]]]:
+    found: dict[str, list[tuple[bool, str]]] = {}
+    for record in records:
+        name = record.get("name") or ""
+        if name not in KARABINER_BACKGROUND:
+            continue
+        found.setdefault(name, []).append(words_state(record.get("words") or []))
+    return found
+
+
+def read_live_items() -> list[dict] | None:
+    """BTM items, None when the database is not there, or raise PermissionError."""
+    try:
+        _base, paths = stores()
+    except OSError as exc:
+        if exc.errno in (errno.EPERM, errno.EACCES):
+            raise PermissionError(exc.errno, exc.strerror, str(BTM_DIR)) from exc
+        raise
+    if not paths:
+        return None
+    return list(iter_items(paths))
+
+
+def read_sfltool_dump() -> str:
+    """`sfltool dumpbtm` text, or '' when it is missing, fails, or does not finish."""
+    try:
+        proc = subprocess.run(
+            ["sfltool", "dumpbtm"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return (proc.stdout or "") + (proc.stderr or "")
+
+
+def resolve_karabiner(read_items, read_dump) -> list[str]:
+    """Prefer the BTM database. Fall back to dump text only when that cannot be read."""
+    items = None
+    try:
+        items = read_items()
+    except PermissionError:
+        items = None
+    if items is not None:
+        return karabiner_lines(states_from_items(items))
+    dump = read_dump() or ""
+    records = parse_dumpbtm(dump) if dump else []
+    if records:
+        return karabiner_lines(states_from_dump(records))
+    return [
+        "info|-|Karabiner background items could not be read, so Allow in the"
+        " Background stays by hand. macconfig does not change this"
+    ]
+
+
+def karabiner_cli(argv: list[str]) -> int:
+    dump_path = ""
+    if argv[:1] == ["--dump"]:
+        if len(argv) != 2:
+            print("usage: btm-login-items.py --karabiner --dump FILE", file=sys.stderr)
+            return 64
+        dump_path = argv[1]
+    elif argv:
+        print("usage: btm-login-items.py --karabiner [--dump FILE]", file=sys.stderr)
+        return 64
+    try:
+        if dump_path:
+            with open(dump_path, encoding="utf-8") as fh:
+                text = fh.read()
+            records = parse_dumpbtm(text)
+            if records:
+                lines = karabiner_lines(states_from_dump(records))
+            else:
+                lines = [
+                    "info|-|Karabiner background items could not be read from"
+                    " that dump, so Allow in the Background stays by hand."
+                    " macconfig does not change this"
+                ]
+        else:
+            lines = resolve_karabiner(read_live_items, read_sfltool_dump)
+    except OSError as exc:
+        lines = [
+            "info|-|Karabiner background items could not be read"
+            f" ({_pipe(exc)}), so Allow in the Background stays by hand."
+            " macconfig does not change this"
+        ]
+    except Exception as exc:  # noqa: BLE001 - report, don't crash the check
+        lines = [
+            "info|-|Karabiner background items could not be read"
+            f" ({_pipe(exc)}), so Allow in the Background stays by hand."
+            " macconfig does not change this"
+        ]
+    print("\n".join(lines))
+    return 0
+
+
 def main() -> int:
+    args = sys.argv[1:]
+    if args[:1] == ["--karabiner"]:
+        return karabiner_cli(args[1:])
     try:
         base, paths = stores()
         if not paths:
             print("btm=missing", file=sys.stderr)
             return 2
-        args = sys.argv[1:]
         if args[:1] == ["--audit"]:
             if len(args) != 2:
                 print("usage: btm-login-items.py --audit ALLOWLIST", file=sys.stderr)

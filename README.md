@@ -54,6 +54,8 @@ Spotlight → Results from Apps is check by hand. Turn off Books, Calendar, Cont
 
 Finder sidebar Favorites are checked by reading the sidebar file. `macconfig --fix` does not change them.
 
+macconfig checks the account picture (the Dog), Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon in the background, and the Finder sidebar rows it can name (the Tags group collapsed, Recents hidden, and Shared, AirDrop, iCloud Drive, and the Locations rows when the sidebar files name them). It does not change those. Apple Account and iCloud sync, Logi cloud backup, Spotlight's per-app toggles, the Raycast Finder hotkey and clipboard history, Gemini shortcuts, notification mirroring, the menu-bar allow list, where the Hammerspoon icon sits, and the `.cfg`, `.env`, and `.list` file types stay by hand: there is still no readable source for them.
+
 Automatic security updates are managed by the employer (MDM). `macconfig` says so and does not count that as a warning. It also does not warn when the SSH agent has no key loaded.
 
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).

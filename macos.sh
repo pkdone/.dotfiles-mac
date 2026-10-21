@@ -814,11 +814,14 @@ if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (macconfig-check.sh --fix): sk
 cat <<'MANUAL'
 
 Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
-  - Apple Account sign-in; User & Groups account picture
+  - Apple Account sign-in. The account picture (the Dog) is checked and never changed
   - Keyboard British input source (checked; not written). Built-in display
     More Space and the Tahoe Night wallpaper are checked and never changed
   - Finder sidebar Favorites are checked from the sidebar file and not changed.
-    Sidebar checkboxes (Shared, Locations, AirDrop, iCloud Drive, Tags) stay manual
+    macconfig checks the Tags group collapsed, Recents hidden, and, when the
+    sidebar files name the row, Shared at the top, AirDrop and iCloud Drive
+    hidden, and your home folder, Macintosh HD, Network, and Trash visible.
+    A row the files do not name stays manual. macconfig does not change the sidebar
   - Mouse double-click speed and secondary click (tracking 1.5 and scrolling 0.5
     are checked only — defaults write is unreliable, so they are never written);
     Trackpad Look up (checked, forceClick 0) and trackpad dragging (checked

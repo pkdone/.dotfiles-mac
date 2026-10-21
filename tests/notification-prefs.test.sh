@@ -76,6 +76,13 @@ eq "check and helper never write the notification store" "" "$writers"
 SAMPLE='{
   "apps": [
     {"bundle-id": "com.google.Chrome", "flags": 41951246, "path": "/Applications/Google Chrome.app"},
+    {"bundle-id": "com.google.Chrome.framework.AlertNotificationService", "flags": 33554432},
+    {"bundle-id": "us.zoom.xos", "flags": 33554432},
+    {"bundle-id": "com.mitchellh.ghostty", "flags": 33554432},
+    {"bundle-id": "net.whatsapp.WhatsApp", "flags": 33554432},
+    {"bundle-id": "com.anthropic.claudefordesktop", "flags": 33554432},
+    {"bundle-id": "com.todesktop.230313mzl4w4u92", "flags": 33554432},
+    {"bundle-id": "com.electron.dockerdesktop", "flags": 33554432},
     {"bundle-id": "com.apple.Safari", "flags": 33554432},
     {"bundle-id": "_SYSTEM_CENTER_banner", "flags": 33554432},
     {"bundle-id": "com.apple.Passbook", "flags": 814219270},
@@ -91,6 +98,17 @@ SAMPLE='{
     {"bundle-id": "com.apple.iCal", "flags": 814219286},
     {"bundle-id": "org.hammerspoon.Hammerspoon", "flags": 8396822},
     {"bundle-id": "com.example.newapp", "flags": 1},
+    {"bundle-id": "io.kandji.Kandji", "flags": 1},
+    {"bundle-id": "io.tailscale.ipn.macsys", "flags": 1},
+    {"bundle-id": "com.logi.cp-dev-mgr", "flags": 1},
+    {"bundle-id": "org.cogx.cog", "flags": 1},
+    {"bundle-id": "com.google.GeminiMacOS", "flags": 1},
+    {"bundle-id": "com.anysphere.sand", "flags": 1},
+    {"bundle-id": "com.openai.codex", "flags": 1},
+    {"bundle-id": "com.canonical.multipassGui", "flags": 1},
+    {"bundle-id": "com.yubico.yubioath", "flags": 1},
+    {"bundle-id": "com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod", "flags": 1},
+    {"bundle-id": "com.sonos.macController2", "flags": 1},
   ]
 }'
 write_plist "$tmp/sample.plist" "$SAMPLE"
@@ -108,13 +126,43 @@ ok|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notificati
 ok|com.spotify.client|Spotify (com.spotify.client): Allow Notifications is off (flags=276832270)
 ok|com.apple.tips|Tips (com.apple.tips): Allow Notifications is off (flags=294125584)
 ok|com.apple.Passbook|Wallet (com.apple.Passbook): Allow Notifications is off (flags=814219270)
+ok|io.kandji.Kandji|Kandji (io.kandji.Kandji): Allow Notifications is off (flags=1)
+ok|io.tailscale.ipn.macsys|Tailscale (io.tailscale.ipn.macsys): Allow Notifications is off (flags=1)
+ok|com.logi.cp-dev-mgr|Logi Options+ (com.logi.cp-dev-mgr): Allow Notifications is off (flags=1)
+ok|org.cogx.cog|Cog (org.cogx.cog): Allow Notifications is off (flags=1)
+ok|com.google.GeminiMacOS|Gemini (com.google.GeminiMacOS): Allow Notifications is off (flags=1)
+ok|com.anysphere.sand|Grok Bot (com.anysphere.sand): Allow Notifications is off (flags=1)
+ok|com.openai.codex|ChatGPT (com.openai.codex): Allow Notifications is off (flags=1)
+ok|com.canonical.multipassGui|Multipass (com.canonical.multipassGui): Allow Notifications is off (flags=1)
+ok|com.yubico.yubioath|Yubico Authenticator (com.yubico.yubioath): Allow Notifications is off (flags=1)
+ok|com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod|YouTube Music (com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod): Allow Notifications is off (flags=1)
+ok|com.sonos.macController2|Sonos (com.sonos.macController2): Allow Notifications is off (flags=1)
 info|com.example.newapp|com.example.newapp: third-party app is not in lib/notifications-reviewed.list or lib/notifications-off.list (Allow Notifications is off (flags=1)) — review it in System Settings → Notifications, then add the bundle id to one of those lists
 ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=8396822, bit 4 set, bit 3 clear)
 EOF
 )" "$out"
 
 # Chrome is the positive control: bit 25 set, reviewed, so no warn and no info.
-miss "reviewed Chrome is not a warning" "com.google.Chrome" "$out"
+# Match the bundle field, not a substring: YouTube Music's id also starts
+# with com.google.Chrome.
+miss "reviewed Chrome is not an info line" "info|com.google.Chrome|" "$out"
+miss "reviewed Chrome is not a warning" "warn|com.google.Chrome|" "$out"
+for quiet in \
+  com.google.Chrome.framework.AlertNotificationService \
+  us.zoom.xos \
+  com.mitchellh.ghostty \
+  net.whatsapp.WhatsApp \
+  com.anthropic.claudefordesktop \
+  com.todesktop.230313mzl4w4u92 \
+  com.electron.dockerdesktop
+do
+  miss "reviewed $quiet stays quiet while Allow Notifications is on" "$quiet" "$out"
+done
+# An Off-list app that is also in the reviewed snapshot still has to be off.
+write_plist "$tmp/kandji-on.plist" '{"apps": [{"bundle-id": "io.kandji.Kandji", "flags": 33554432}]}'
+kandji_on="$(run "$tmp/kandji-on.plist")"
+has "off-list Kandji with bit 25 set warns" "warn|io.kandji.Kandji|" "$kandji_on"
+has "off-list warning says turn it off" "turn it off" "$kandji_on"
 miss "Apple apps outside the Off list are ignored" "com.apple.Safari" "$out"
 miss "system-center apps are ignored" "_SYSTEM_CENTER_" "$out"
 

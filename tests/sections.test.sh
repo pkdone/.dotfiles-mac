@@ -75,6 +75,7 @@ Hostname
 Display auto-brightness
 Display (More Space)
 Wallpaper
+User picture
 Power (sleep and wake)
 URL handlers
 File handlers
@@ -83,10 +84,12 @@ Dictation shortcut
 Quick Note shortcut
 Finder icon view defaults
 Karabiner Fn-kill
+Karabiner background
 Hammerspoon
 Login Items (banned open-at-login)
 Finder sidebar Recents
 Finder Favorites
+Finder sidebar rows
 Show Finder shortcut
 CotEditor
 Ghostty config

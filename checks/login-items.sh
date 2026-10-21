@@ -8,8 +8,10 @@ hdr "Login Items (banned open-at-login)"
 fixid tooling   # helper / python problems below; the item checks are login-items
 BANNED_BUNDLES="com.openai.codex com.google.GeminiMacOS com.google.GeminiMacOS.launcher"
 BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
-# Prefer parsing the world-readable BTM db — `sfltool dumpbtm` pops an admin
-# password dialog on Tahoe and must never run from macconfig-check.sh.
+# Prefer parsing the world-readable BTM db. `sfltool dumpbtm` can pop an admin
+# password dialog on Tahoe. This section never runs it. The Karabiner background
+# check reads the same database, and only tries sfltool with a short timeout
+# when that database cannot be read.
 BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
 if [ ! -r "$BTM_HELPER" ]; then
   warn "lib/btm-login-items.py missing — skip SMAppService login-item check"

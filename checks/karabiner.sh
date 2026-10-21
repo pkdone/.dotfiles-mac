@@ -78,3 +78,51 @@ PY
     fi
   fi
 fi
+
+# ---- Karabiner background items (check only) ----------------------------
+# Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon must be enabled
+# and allowed. Karabiner-Elements Privileged Daemons v2 may stay disabled.
+# The helper reads Background Task Management (the same records `sfltool
+# dumpbtm` prints) and does not change them. If those records cannot be read
+# it tries sfltool with a short timeout. If that does not finish, this is info.
+# Manual step karabiner-login-items points here. --fix does not change this.
+hdr "Karabiner background"
+fixid karabiner-background
+kb_bg="$DOTDIR/lib/btm-login-items.py"
+if [ ! -r "$kb_bg" ]; then
+  CHECKED=$((CHECKED + 1))
+  fixid repo-file
+  warn "lib/btm-login-items.py missing — can't check Karabiner background items"
+elif [ -z "$DOT_PYTHON" ]; then
+  info "no python3 — Karabiner background items stay by hand"
+else
+  kb_bg_out="$(with_timeout 20 "$DOT_PYTHON" "$kb_bg" --karabiner </dev/null 2>/dev/null || true)"
+  kb_bg_n=0
+  while IFS='|' read -r kb_st kb_name kb_msg; do
+    [ -n "$kb_st" ] || continue
+    case "$kb_st" in
+      ok)
+        CHECKED=$((CHECKED + 1))
+        kb_bg_n=$((kb_bg_n + 1))
+        pass "$kb_msg"
+        ;;
+      warn)
+        CHECKED=$((CHECKED + 1))
+        kb_bg_n=$((kb_bg_n + 1))
+        fixid karabiner-background
+        warn "$kb_msg"
+        ;;
+      info) info "$kb_msg" ;;
+      *)
+        CHECKED=$((CHECKED + 1))
+        fixid tooling
+        warn "${kb_msg:-$kb_st}"
+        ;;
+    esac
+  done <<KB_BG
+$kb_bg_out
+KB_BG
+  if [ "$kb_bg_n" -eq 0 ] && ! printf '%s\n' "$kb_bg_out" | grep -q '^info|'; then
+    info "Karabiner background items could not be read, so Allow in the Background stays by hand"
+  fi
+fi
