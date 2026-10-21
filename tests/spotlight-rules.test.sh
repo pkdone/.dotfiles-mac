@@ -79,10 +79,10 @@ has "manual step says to check by hand" "by hand" "$title"
 eq "manual step uses the spotlight check" "spotlight-results" \
   "$(awk -F'|' '$1=="spotlight-results" { print $6; exit }' "$DIR/lib/manual-steps.list")"
 
-readme="$(cat "$DIR/README.md")"
-has "README names the apps that should be off" "$OFF" "$readme"
-has "README names the apps that stay on" "$ON" "$readme"
-has "README says the step is check by hand" "check by hand" "$readme"
+readme="$(cat "$DIR/docs/manual-steps.md")"
+has "Manual-steps doc names the apps that should be off" "$OFF" "$readme"
+has "Manual-steps doc names the apps that stay on" "$ON" "$readme"
+has "Manual-steps doc says the step is check by hand" "check by hand" "$readme"
 
 miss "the check does not export Spotlight preferences" "defaults export com.apple.Spotlight" \
   "$(cat "$DIR/lib/session-checks.sh")"
