@@ -46,6 +46,24 @@ type_token() {  # our type -> `defaults read-type` word
   esac
 }
 
+# The Show Finder menu shortcut is one entry in a dictionary, so it is not a
+# row in lib/macos-defaults.list. Pull that entry out of `defaults read` text.
+# Prints the key equivalent (for example @^$f) or nothing.
+finder_show_value() {
+  printf '%s\n' "$1" | awk '
+    index($0, "Show Finder") == 0 { next }
+    {
+      line = $0
+      sub(/^.*"Show Finder"[[:space:]]*=[[:space:]]*/, "", line)
+      sub(/^"/, "", line)
+      sub(/";?[[:space:]]*$/, "", line)
+      sub(/;[[:space:]]*$/, "", line)
+      print line
+      exit
+    }
+  '
+}
+
 # Interpreter for helpers that read TCC-gated files (BTM db, Finder sidebar SFL).
 # Prefer Homebrew/mise python so TCC follows the terminal (Ghostty). Apple's
 # /usr/bin/python3 is an xcode-select shim onto com.apple.python3, which has its

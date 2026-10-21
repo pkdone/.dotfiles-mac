@@ -4,5 +4,10 @@
 #
 # Format: Name | /Applications/….app | optional-mas-id
 # Blank lines and # comments ignored.
+# Okta Verify is company-managed (App Store id 490179405). mas can't upgrade it.
 Okta Verify|/Applications/Okta Verify.app|490179405
 1Password|/Applications/1Password.app|
+Tailscale|/Applications/Tailscale.app|
+Zoom|/Applications/zoom.us.app|
+Formal|/Applications/Formal.app|
+Cyberhaven|/Applications/Cyberhaven.app|

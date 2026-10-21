@@ -1,0 +1,18 @@
+# Spotlight → Results from Apps that should be off.
+# macconfig and manualsteps compare com.apple.Spotlight EnabledPreferenceRules
+# with this list. They never write it.
+# Format: plain name | bundle id
+# Blank lines and lines beginning with # are ignored.
+Books|com.apple.iBooksX
+Keynote|com.apple.iWork.Keynote
+Mail|com.apple.mail
+Notes|com.apple.Notes
+Numbers|com.apple.iWork.Numbers
+Photos|com.apple.Photos
+Podcasts|com.apple.podcasts
+Reminders|com.apple.reminders
+Safari|com.apple.Safari
+Shortcuts|com.apple.shortcuts
+Stocks|com.apple.stocks
+Tips|com.apple.tips
+Voice Memos|com.apple.VoiceMemos

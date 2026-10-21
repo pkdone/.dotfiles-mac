@@ -7,7 +7,8 @@
 # not opened. lib/session-checks.sh is the same code scripts/manual-steps.sh
 # runs. A 1Password CLI that is installed but not signed in (it needs an
 # unlock) is info, not a warning. Pointer size runs only when the manual-steps
-# list has a pointer-size row. Those rows are not repeated in section 16
+# list has a pointer-size row. App Store sign-in (`mas list`) runs only when
+# the app-store row exists. Those rows are not repeated in section 16
 # (MANUAL_STEPS_COVERED). MANUAL_STEPS_LIST overrides the list, same as
 # scripts/manual-steps.sh.
 hdr "Sign-ins, keyboard, and pointer"
@@ -63,4 +64,11 @@ else
   fixid 1password-cli
   emit_manual_check 1password-cli
   cover_step 1password-cli
+  if awk -F'|' '$1 == "app-store" { found = 1 } END { exit !found }' "$steps_list"; then
+    R_STATUS=""; R_DETAIL=""
+    check_app_store
+    fixid app-store
+    emit_manual_check app-store
+    cover_step app-store
+  fi
 fi

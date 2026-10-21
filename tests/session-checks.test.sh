@@ -54,7 +54,16 @@ cat > "$tmp/bin/op" <<'EOF'
 #!/usr/bin/env bash
 exit "${OP_RC:-0}"
 EOF
-chmod +x "$tmp/bin/defaults" "$tmp/bin/gh" "$tmp/bin/op"
+cat > "$tmp/bin/mas" <<'EOF'
+#!/usr/bin/env bash
+if [ "${MAS_RC:-0}" -ne 0 ]; then
+  printf '%s\n' "${MAS_OUT:-Not signed in}" >&2
+  exit "${MAS_RC}"
+fi
+printf '%s\n' '123 WhatsApp'
+exit 0
+EOF
+chmod +x "$tmp/bin/defaults" "$tmp/bin/gh" "$tmp/bin/op" "$tmp/bin/mas"
 
 with_timeout() { shift; "$@"; }
 # shellcheck source=../lib/session-checks.sh disable=SC1091
@@ -65,23 +74,38 @@ run_check() { # function name — CHECK_PATH replaces PATH (missing-binary cases
   R_DETAIL=""
   PATH="${CHECK_PATH:-$tmp/bin:$PATH}" DEFAULTS_DIR="$tmp/defaults" \
     SESSION_CHECKS_OP_APP="$tmp/1Password.app" \
-    GH_RC="${GH_RC:-0}" OP_RC="${OP_RC:-0}" \
+    GH_RC="${GH_RC:-0}" OP_RC="${OP_RC:-0}" MAS_RC="${MAS_RC:-0}" \
     "$@"
 }
 
 british_on() {
-  cat > "$tmp/defaults/com.apple.HIToolbox.AppleEnabledInputSources" <<'EOF'
+  cat > "$tmp/defaults/com.apple.HIToolbox.AppleSelectedInputSources" <<'EOF'
 (
     {
+        InputSourceKind = "Keyboard Layout";
         "KeyboardLayout Name" = British;
         "KeyboardLayout ID" = 2;
+    },
+    {
+        "Bundle ID" = "com.apple.PressAndHold";
+        InputSourceKind = "Non Keyboard Input Method";
     }
 )
 EOF
 }
 british_off() {
-  printf '%s\n' '( { "KeyboardLayout Name" = ABC; } )' \
-    > "$tmp/defaults/com.apple.HIToolbox.AppleEnabledInputSources"
+  cat > "$tmp/defaults/com.apple.HIToolbox.AppleSelectedInputSources" <<'EOF'
+(
+    {
+        InputSourceKind = "Keyboard Layout";
+        "KeyboardLayout Name" = ABC;
+    },
+    {
+        InputSourceKind = "Keyboard Layout";
+        "KeyboardLayout Name" = British;
+    }
+)
+EOF
 }
 pointer() { # domain-exists size-or-empty
   printf 'domain\n' > "$tmp/defaults/com.apple.universalaccess"
@@ -95,14 +119,14 @@ pointer() { # domain-exists size-or-empty
 british_on
 run_check check_input_british
 eq "British enabled is ok" ok "$R_STATUS"
-eq "British enabled detail" "British enabled" "$R_DETAIL"
+eq "British enabled detail" "British keyboard layout only" "$R_DETAIL"
 
 british_off
 run_check check_input_british
-eq "British missing is a warning" warn "$R_STATUS"
-has "British missing names the layout" "British layout not enabled" "$R_DETAIL"
+eq "another layout is a warning" warn "$R_STATUS"
+has "another layout names it" "ABC" "$R_DETAIL"
 
-rm -f "$tmp/defaults/com.apple.HIToolbox.AppleEnabledInputSources"
+rm -f "$tmp/defaults/com.apple.HIToolbox.AppleSelectedInputSources"
 run_check check_input_british
 eq "unreadable input sources are by hand" hand "$R_STATUS"
 
@@ -151,6 +175,21 @@ mkdir -p "$tmp/empty-bin"
 # An empty PATH, not /usr/bin: some machines ship gh there, and this case is "gh missing".
 CHECK_PATH="$tmp/empty-bin" run_check check_gh_auth
 eq "missing gh is a warning" warn "$R_STATUS"
+unset CHECK_PATH
+
+MAS_RC=0
+run_check check_app_store
+eq "mas list success is ok" ok "$R_STATUS"
+has "mas ok names the App Store" "signed in to the App Store" "$R_DETAIL"
+
+MAS_RC=1
+run_check check_app_store
+eq "mas not signed in is a warning" warn "$R_STATUS"
+has "mas failure says not signed in" "not signed in" "$R_DETAIL"
+MAS_RC=0
+
+CHECK_PATH="$tmp/empty-bin" run_check check_app_store
+eq "missing mas is a warning" warn "$R_STATUS"
 unset CHECK_PATH
 
 OP_RC=0
@@ -224,7 +263,7 @@ run_section() {
     set -euo pipefail
     # shellcheck disable=SC2030  # this PATH is only for the eval'd section
     export PATH="$tmp/bin:$PATH" DEFAULTS_DIR="$tmp/defaults" SESSION_CHECKS_OP_APP="$tmp/1Password.app"
-    export GH_RC="${1:-0}" OP_RC="${2:-0}" MANUAL_STEPS_LIST="${3:-$LIST}"
+    export GH_RC="${1:-0}" OP_RC="${2:-0}" MAS_RC="${4:-0}" MANUAL_STEPS_LIST="${3:-$LIST}"
     DOTDIR="$DIR"
     CHECKED=0
     with_timeout() { shift; "$@"; }
@@ -251,7 +290,7 @@ has "section links British" 'PASS input-british' "$out"
 has "section links gh" 'manual step gh-auth' "$out"
 has "section links op" 'PASS 1password-cli' "$out"
 has "section links pointer" 'PASS pointer-size' "$out"
-has "section covers all four steps" 'COVERED pointer-size input-british gh-auth 1password-cli' "$out"
+has "section covers the sign-in steps" 'COVERED pointer-size input-british gh-auth 1password-cli app-store' "$out"
 
 british_off
 out="$(run_section 0 0)"

@@ -24,6 +24,8 @@ com.apple.dock|wvous-br-modifier|int|0|Dock|Dock|Hot Corner bottom-right modifie
 com.apple.dock|minimize-to-application|bool|true|Dock|Dock|Minimize windows into application icon|`true` (On)
 com.apple.dock|no-bouncing|bool|true|Dock|Dock|Animate opening applications|`true` (Off — no bounce)
 com.apple.spaces|spans-displays|bool|false|logout|Dock|Displays have separate Spaces|`false` (separate Spaces On)
+# Switching to an app moves to a Space that already has its windows.
+NSGlobalDomain|AppleSpacesSwitchOnActivate|bool|true|logout|Dock|Switch to a Space with open windows|`true` (On)
 com.apple.finder|FXPreferredViewStyle|string|icnv|Finder|Finder|Default view|`icnv` (Icon view)
 com.apple.finder|ShowHardDrivesOnDesktop|bool|false|Finder|Finder|Hard drives on Desktop|`false` (Off)
 com.apple.finder|NewWindowTarget|string|PfHm|Finder|Finder|New window target|`PfHm` (Home)
@@ -31,22 +33,34 @@ com.apple.finder|_FXShowPosixPathInTitle|bool|true|Finder|Finder|Full POSIX path
 NSGlobalDomain|AppleShowAllExtensions|bool|true|Finder|Finder|Show all filename extensions|`true` (On)
 NSGlobalDomain|NSTableViewDefaultSizeMode|int|3||Appearance|Sidebar icon size|`3` (Large)
 com.apple.finder|ShowStatusBar|bool|true|Finder|Finder|Show Status Bar|`true` (On)
+# Apple's own spelling of this key drops the e in Section. 0 / false keeps the
+# Tags group in the sidebar closed. The checkboxes for Shared, Locations,
+# Recents, AirDrop, iCloud Drive, and Tags stay a manual step.
+com.apple.finder|SidebarTagsSctionDisclosedState|bool|false|Finder|Finder|Tags group in the sidebar|`false` (closed)
 # Finder and Trash tidy. Finder restart so open windows pick the prefs up.
 # DSDontWriteNetworkStores: the domain may not exist yet; defaults write creates it.
 com.apple.finder|FXRemoveOldTrashItems|bool|true|Finder|Finder|Remove Trash items after 30 days|`true` (On)
 com.apple.finder|FXDefaultSearchScope|string|SCcf|Finder|Finder|Search scope|`SCcf` (current folder)
 com.apple.finder|_FXSortFoldersFirst|bool|true|Finder|Finder|Keep folders on top|`true` (On)
 com.apple.desktopservices|DSDontWriteNetworkStores|bool|true|Finder|Finder|No .DS_Store on network volumes|`true` (On)
-# Screenshots. @HOME@ expands to $HOME when applying and checking (never a hardcoded
-# /Users/… path). install.sh and macos.sh mkdir -p the folder before the location is
-# written. Existing screenshots are not moved. show-thumbnail keeps the floating thumbnail.
-# Both restart SystemUIServer.
+# Screenshots and screen recordings. @HOME@ expands to $HOME when applying and
+# checking (never a hardcoded /Users/… path). install.sh and macos.sh mkdir -p the
+# folder before the location is written. Existing pictures are not moved.
+# `location` is the save folder for both screenshots and recordings. A separate
+# recording-folder key is not part of this domain, so none is invented here.
+# style and video are real screencapture keys (window capture, and video on).
+# If video is stored as a boolean rather than an integer, the type check skips
+# the write instead of replacing it. All of these restart SystemUIServer.
 com.apple.screencapture|location|string|@HOME@/Pictures/Screenshots|SystemUIServer|Screenshots|Save location|`~/Pictures/Screenshots`
 com.apple.screencapture|show-thumbnail|bool|true|SystemUIServer|Screenshots|Floating thumbnail|`true` (On)
+com.apple.screencapture|style|string|window|SystemUIServer|Screenshots|Capture style|`window`
+com.apple.screencapture|video|int|1|SystemUIServer|Screenshots|Include video capture|`1` (On)
 com.apple.menuextra.clock|ShowAMPM|bool|true|SystemUIServer|Control Center|Clock — Show AM/PM|`true` (On)
 com.apple.menuextra.clock|ShowDayOfWeek|bool|true|SystemUIServer|Control Center|Clock — Show day of week|`true` (On)
 com.apple.menuextra.clock|ShowDate|int|1|SystemUIServer|Control Center|Clock — Show date|`1` (On)
 NSGlobalDomain|com.apple.sound.beep.feedback|int|1||Sound|Volume-change feedback|`1` (On)
+# Alert volume is about 0.69. ±0.02 lets a nearby slider value match.
+NSGlobalDomain|com.apple.sound.beep.volume|float|0.69||Sound|Alert volume|`0.69` (about 0.69)|0.02
 @host/com.apple.controlcenter|Spotlight|int|8|ControlCenter|Menu Bar|Spotlight|`8` (Don't Show)
 @host/com.apple.controlcenter|FocusModes|int|8|ControlCenter|Menu Bar|Focus|`8` (Don't Show)
 com.apple.ImageCapture|disableHotPlug|bool|true||Photos|Open Photos for devices|`true` (Off — do not auto-open)
@@ -64,11 +78,14 @@ org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload cra
 # Trackpad. Values match this Mac today, so applying them changes nothing until one drifts.
 # restart=logout: the trackpad may need a logout/login before it follows a new value.
 # Force Click and haptic feedback are On (ActuateDetents=1, ForceSuppressed=0).
-# Look up & data detectors is not one of these keys; it stays in lib/manual-steps.list.
+# Look up & data detectors is checked on manual step trackpad-lookup
+# (NSGlobalDomain com.apple.trackpad.forceClick = 0). It is not written here.
 # Accessibility dragging (Dragging=1, DragLock=0) stays a check there too: defaults write
 # does not reliably drive System Settings → Accessibility → Pointer Control → Trackpad Options.
 # Mouse tracking (com.apple.mouse.scaling = 1.5) and scrolling (com.apple.scrollwheel.scaling = 0.5)
 # stay a check on manual step mouse-settings for the same reason. Do not add those keys here.
+# The gesture keys below are the same two trackpad domains as tap to click, so they are
+# written the same way. Natural scrolling is on. Swipe between pages with a scroll is off.
 com.apple.AppleMultitouchTrackpad|Clicking|int|1|logout|Trackpad|Tap to click|`1` (On)
 com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking|int|1|logout|Trackpad|Tap to click (Bluetooth trackpad)|`1` (On)
 NSGlobalDomain|com.apple.mouse.tapBehavior|int|1|logout|Trackpad|Tap to click behavior|`1` (On)
@@ -79,6 +96,24 @@ com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerDrag|int|0|logout|Trackpad|
 NSGlobalDomain|com.apple.trackpad.scaling|float|0.6875|logout|Trackpad|Tracking speed|`0.6875` (Slower)
 com.apple.AppleMultitouchTrackpad|ActuateDetents|int|1|logout|Trackpad|Force Click|`1` (On)
 com.apple.AppleMultitouchTrackpad|ForceSuppressed|int|0|logout|Trackpad|Haptic feedback|`0` (On)
+NSGlobalDomain|com.apple.swipescrolldirection|bool|true|logout|Trackpad|Natural scrolling|`true` (On)
+NSGlobalDomain|AppleEnableSwipeNavigateWithScrolls|bool|false|logout|Trackpad|Swipe between pages|`false` (Off)
+com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerTapGesture|int|0|logout|Trackpad|Three-finger tap|`0` (Off)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadThreeFingerTapGesture|int|0|logout|Trackpad|Three-finger tap (Bluetooth trackpad)|`0` (Off)
+com.apple.AppleMultitouchTrackpad|TrackpadTwoFingerFromRightEdgeSwipeGesture|int|3|logout|Trackpad|Swipe in from the right edge|`3` (Notification Centre)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadTwoFingerFromRightEdgeSwipeGesture|int|3|logout|Trackpad|Swipe in from the right edge (Bluetooth trackpad)|`3` (Notification Centre)
+com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerHorizSwipeGesture|int|2|logout|Trackpad|Three-finger horizontal swipe|`2` (switch full-screen apps)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadThreeFingerHorizSwipeGesture|int|2|logout|Trackpad|Three-finger horizontal swipe (Bluetooth trackpad)|`2` (switch full-screen apps)
+com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerVertSwipeGesture|int|2|logout|Trackpad|Three-finger vertical swipe|`2` (Mission Control)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadThreeFingerVertSwipeGesture|int|2|logout|Trackpad|Three-finger vertical swipe (Bluetooth trackpad)|`2` (Mission Control)
+com.apple.AppleMultitouchTrackpad|TrackpadFourFingerHorizSwipeGesture|int|2|logout|Trackpad|Four-finger horizontal swipe|`2` (switch full-screen apps)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadFourFingerHorizSwipeGesture|int|2|logout|Trackpad|Four-finger horizontal swipe (Bluetooth trackpad)|`2` (switch full-screen apps)
+com.apple.AppleMultitouchTrackpad|TrackpadFourFingerVertSwipeGesture|int|2|logout|Trackpad|Four-finger vertical swipe|`2` (Mission Control)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadFourFingerVertSwipeGesture|int|2|logout|Trackpad|Four-finger vertical swipe (Bluetooth trackpad)|`2` (Mission Control)
+com.apple.AppleMultitouchTrackpad|TrackpadFourFingerPinchGesture|int|2|logout|Trackpad|Four-finger pinch|`2` (Launchpad)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadFourFingerPinchGesture|int|2|logout|Trackpad|Four-finger pinch (Bluetooth trackpad)|`2` (Launchpad)
+com.apple.AppleMultitouchTrackpad|TrackpadFiveFingerPinchGesture|int|2|logout|Trackpad|Five-finger pinch|`2` (Show Desktop)
+com.apple.driver.AppleBluetoothMultitouch.trackpad|TrackpadFiveFingerPinchGesture|int|2|logout|Trackpad|Five-finger pinch (Bluetooth trackpad)|`2` (Show Desktop)
 # Native window tiling (macOS 15+). System Settings → Desktop & Dock → Windows.
 # EnableTilingByEdgeDrag is unset on this Mac. Unset is the system default, On.
 # Pinning true makes a later Off into drift that macconfig --fix repairs.
@@ -91,6 +126,11 @@ com.apple.AppleMultitouchTrackpad|ForceSuppressed|int|0|logout|Trackpad|Haptic f
 # EnableTilingOptionAccelerator, and EnableStandardClickToShowDesktop alone.
 com.apple.WindowManager|EnableTilingByEdgeDrag|bool|true||Window Tiling|Drag windows to left or right edge to tile|`true` (On)
 com.apple.WindowManager|EnableTiledWindowMargins|bool|false||Window Tiling|Tiled windows have margins|`false` (Off)
+# Double-click a window's title bar to fill the screen (not full screen, and not
+# minimize). The older AppleMiniaturizeOnDoubleClick key is not set. If it is
+# present, macos.sh deletes it (@titlebar-double-click) so it does not minimize
+# instead. restart is empty: the next double-click uses the new value.
+NSGlobalDomain|AppleActionOnDoubleClick|string|Fill||Windows|Double-click a window's title bar|`Fill`
 # Desktop widgets and Stage Manager. Same domain. System Settings → Desktop & Dock.
 # StandardHideWidgets true hides widgets on the desktop (Widgets → Show Widgets →
 # On Desktop off). StageManagerHideWidgets true hides them while Stage Manager is

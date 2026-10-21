@@ -25,7 +25,7 @@ What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md).
 
 ### 2. Manual steps
 
-About 40 settings can't be scripted: privacy permissions, sign-ins, company-managed apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
+A little over 40 settings can't be scripted: privacy permissions, sign-ins, company-managed apps and a few System Settings pages. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
 
 These are three ways to use the same checklist. You don't need to run all of them. Most of the time, `manualsteps open` is the only one you need.
 

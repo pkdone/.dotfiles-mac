@@ -30,6 +30,9 @@ dictation-164|SAFE|macos|dictation hotkey 164 re-pinned by scripts/pin-dictation
 quicknote-190|SAFE|macos|Quick Note hotkey 190 (Globe/Fn+Q) disabled by scripts/pin-quicknote-hotkey-190.sh
 finder-icon-view|SAFE|macos|Finder icon view 72/13 re-pinned by scripts/pin-finder-icon-view.sh
 finder-recents|SAFE|macos|Finder sidebar Recents hidden by lib/finder-sidebar-recents.py
+finder-favorites|SAFE|macos|Finder sidebar Favorites rebuilt from lib/sidebar-favorites.list with mysides; Finder restarts only if the list changed
+finder-show|SAFE|macos|Finder menu shortcut Show Finder set to Cmd-Ctrl-Shift-F (NSUserKeyEquivalents, -dict-add)
+titlebar-double-click|SAFE|macos|delete AppleMiniaturizeOnDoubleClick when it is set, so double-click fills the window (AppleActionOnDoubleClick Fill is the defaults row)
 coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
 launchagent|SAFE|launchagent|repo LaunchAgent rendered from launchagents/ (@HOME@ -> $HOME) and loaded; a plist that differs from the repo is rewritten and reloaded with launchctl bootout then bootstrap
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
@@ -45,7 +48,7 @@ dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if t
 login-shell|PAUL||login shell change needs sudo / chsh — shell.sh
 hostname|PAUL||hostname change needs sudo — hostname.sh
 auto-brightness|PAUL||Automatically adjust brightness — System Settings → Displays. Readable without sudo via corebrightnessdiag; the saved CoreBrightness plist is root-owned and its keys move between macOS versions, so --fix never writes it. True Tone and battery dim are left alone
-ac-sleep|PAUL||AC idle sleep on mains power — sudo pmset -c sleep 0 (manual step ac-sleep). pmset -g custom's AC Power sleep key is readable without sudo; --fix never runs sudo. Display sleep, the lock screen, and the battery profile are left alone. Closing the lid still sleeps the Mac
+ac-sleep|PAUL||Power — sudo pmset for AC sleep 0, AC display sleep 10, battery display sleep 2, and AC wake for network access (manual step ac-sleep). pmset -g custom is readable without sudo; --fix never runs sudo. Battery idle sleep is not changed. Closing the lid still sleeps the Mac
 display-more-space|PAUL||Built-in display More Space — System Settings → Displays. Read from system_profiler SPDisplaysDataType (_spdisplays_resolution starts with the prefix in lib/display-resolution.list); --fix never changes the display mode (no displayplacer)
 notifications|PAUL||Allow Notifications for apps in lib/notifications-off.list, and Hammerspoon notification style Alerts — System Settings → Notifications. Read from the usernoted group plist; --fix never writes it
 url-handler|PAUL||default-app changes can raise a macOS confirmation dialog — handlers.sh
@@ -62,9 +65,12 @@ tcc|PAUL||privacy permission (TCC) — System Settings → Privacy & Security
 manual-step|PAUL||manual step (permission / sign-in) — scripts/manual-steps.sh open
 mouse-settings|PAUL||Mouse tracking speed (NSGlobalDomain com.apple.mouse.scaling = 1.5) and scrolling speed (com.apple.scrollwheel.scaling = 0.5) — System Settings → Mouse. Check-only: writing these is unreliable on recent macOS, so --fix never writes them. Double-click and secondary click stay in the manual step
 pointer-size|PAUL||Pointer size one notch above Normal (com.apple.universalaccess mouseDriverCursorSize, about 1.4; accept 1.2-2.0) — System Settings → Accessibility → Display → Pointer. Check-only (manual step pointer-size): --fix never writes it
-input-british|PAUL||British keyboard input source (com.apple.HIToolbox AppleEnabledInputSources) — System Settings → Keyboard → Text Input → Input Sources. Check-only (manual step input-british): --fix never writes defaults
+input-british|PAUL||British keyboard layout only (com.apple.HIToolbox AppleSelectedInputSources). Other entries that are not a keyboard layout, such as Press and Hold, are fine. Check-only (manual step input-british): --fix never writes defaults
 gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Check-only: --fix never runs gh auth login
 1password-cli|PAUL||1Password CLI (op whoami) — manual step 1password-cli. Missing app or CLI is a warning. Installed but not signed in (needs an unlock) is info, not a warning. --fix never runs op
+app-store|PAUL||App Store signed in (mas list) — manual step app-store. Check-only: --fix never signs in
+spotlight-results|PAUL||Spotlight results off for the apps in lib/spotlight-apps.list (com.apple.Spotlight EnabledPreferenceRules). Check-only: --fix never writes Spotlight
+wallpaper|PAUL||Desktop picture Tahoe Night (Landscape), asset CF6347E2-4F81-4410-8892-4830991B6C5A in the wallpaper store. Check-only: --fix never changes the picture
 mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
 security|PAUL||security setting (FileVault, firewall stealth mode, automatic security updates, SSH agent and ~/.ssh modes, git commit signing) — never changed automatically
 software-update|PAUL||a pending macOS update has been waiting more than 7 days — System Settings → General → Software Update. The check reads the local Software Update plist and does not call softwareupdate

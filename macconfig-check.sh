@@ -513,6 +513,9 @@ if [ "$FIX" = 1 ]; then
       coteditor)        pat="CotEditor" ;;
       finder-recents)   pat="Finder sidebar Recents" ;;
       finder-icon-view) pat="Finder icon view defaults" ;;
+      finder-favorites) pat="Finder Favorites" ;;
+      finder-show)      pat="Show Finder shortcut" ;;
+      titlebar-double-click) pat="AppleMiniaturizeOnDoubleClick" ;;
     esac
     printf '%s\n' "$MACOS_OUT" | grep -F -- "$pat" | grep -E '^  (chg|warn|ok) ' | head -1 | sed -E 's/^ +(chg|warn|ok) +//'
   }

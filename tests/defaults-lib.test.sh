@@ -83,5 +83,14 @@ eq "type_token float"  float   "$(type_token float)"
 eq "type_token int"    integer "$(type_token int)"
 eq "type_token bool"   boolean "$(type_token bool)"
 
+# shellcheck disable=SC2016  # '@^$f' is the shortcut text, not a variable
+eq "Show Finder shortcut" '@^$f' "$(finder_show_value '    "Show Finder" = "@^$f";')"
+# shellcheck disable=SC2016
+eq "Show Finder among other shortcuts" '@^$f' "$(finder_show_value '{
+    "Other" = "@o";
+    "Show Finder" = "@^$f";
+}')"
+eq "missing Show Finder shortcut" "" "$(finder_show_value '{ "Other" = "@o"; }')"
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
