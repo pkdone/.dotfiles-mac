@@ -79,6 +79,7 @@ User picture
 Power (sleep and wake)
 URL handlers
 File handlers
+Folders
 Unwanted apps
 Dictation shortcut
 Quick Note shortcut
