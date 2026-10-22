@@ -185,7 +185,7 @@ print("count %d" % n)' "$1"
 rows() { awk -F'|' '$1 !~ /^#/ && NF { print $1 "|" $2 "|" $3 }' "$REAL_LIST"; }
 exts() { rows | cut -d'|' -f1 | sort; }
 eq "extensions, one per line" "$(printf '%s\n' \
-  bash cfg conf css csv env fish ini js json list log markdown md plist sh swift text toml txt xml yaml yml zsh)" \
+  bash conf css csv fish ini js json log markdown md plist sh swift text toml txt xml yaml yml zsh)" \
   "$(exts)"
 eq "extensions are unique" "" "$(exts | uniq -d)"
 eq "cursor extensions are js and swift" "$(printf '%s\n' js swift)" \
@@ -193,9 +193,9 @@ eq "cursor extensions are js and swift" "$(printf '%s\n' js swift)" \
 eq "cursor bundle is the stable cask" "com.todesktop.230313mzl4w4u92" \
   "$(rows | awk -F'|' '$2 == "Cursor" { print $3 }' | sort -u)"
 eq "every other row is CotEditor" "" "$(rows | awk -F'|' '$2 != "Cursor" && !($2 == "CotEditor" && $3 == "com.coteditor.CotEditor") { print }')"
-eq "24 extensions" 24 "$(rows | grep -c .)"
+eq "21 extensions" 21 "$(rows | grep -c .)"
 eq "html is not managed" "" "$(exts | grep -x html || true)"
-eq "unpinnable extensions" "$(printf '%s\n' cfg env list)" \
+eq "no unpinnable extensions" "" \
   "$(awk -F'|' '$4 == "unpinnable" { print $1 }' "$REAL_LIST" | sort)"
 eq "plist sets both property-list UTIs" "uti:com.apple.property-list,com.apple.xml-property-list" \
   "$(awk -F'|' '$1 == "plist" { print $4 }' "$REAL_LIST")"
@@ -401,7 +401,7 @@ eq "handlers --list does not call duti" "" "$(cat "$DUTI_LOG")"
 out="$(run --apply "$REAL_LIST")"; rc=$?
 eq "real list apply exits 0" 0 "$rc"
 eq "real list sets every pinnable extension" 21 "$(printf '%s\n' "$out" | grep -c '^chg|')"
-eq "real list reports unpinnable rows" 3 "$(printf '%s\n' "$out" | grep -c '^info|')"
+eq "real list reports no unpinnable rows" 0 "$(printf '%s\n' "$out" | grep -c '^info|')"
 eq "real list duti -s count" 23 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
 has "plist sets com.apple.property-list" '["-s", "com.coteditor.CotEditor", "com.apple.property-list", "all"]' "$(s_calls "$DUTI_LOG")"
 has "plist sets com.apple.xml-property-list" '["-s", "com.coteditor.CotEditor", "com.apple.xml-property-list", "all"]' "$(s_calls "$DUTI_LOG")"
@@ -409,7 +409,7 @@ eq "real list does not set html cfg env or list" "" "$(s_calls "$DUTI_LOG" | gre
 out="$(run "$REAL_LIST")"
 eq "real list has no drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
 eq "real list pinnable rows ok" 21 "$(printf '%s\n' "$out" | grep -c '^ok|')"
-eq "real list unpinnable rows are info" 3 "$(printf '%s\n' "$out" | grep -c '^info|')"
+eq "real list has no info rows" 0 "$(printf '%s\n' "$out" | grep -c '^info|')"
 
 # handlers.sh --dry-run uses the same helper (bootstrap step 6). URL schemes
 # hit the fake duti's -d and come back unset; file rows are already applied.

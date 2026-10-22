@@ -42,6 +42,7 @@ file-handler|SAFE|fileext|Finder double-click defaults from lib/file-handlers.li
 # ---- PAUL: report only, never automated ----
 brew|PAUL||installing / uninstalling / updating apps — brewsync (the routine runs it separately)
 app-install|PAUL||an app is missing — install it (Brewfile / brewsync, App Store or Self Service)
+developer-folder|PAUL||~/Developer is missing — install.sh creates it
 unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
 dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
 login-shell|PAUL||login shell change needs sudo / chsh — shell.sh

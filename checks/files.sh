@@ -30,10 +30,10 @@ fi
 # ---- Developer folder ---------------------------------------------------
 # All repos are cloned under ~/Developer. install.sh creates it.
 hdr "Folders"
-fixid none
+fixid developer-folder
 CHECKED=$((CHECKED + 1))
 if [ -d "$HOME/Developer" ]; then
-  pass "~/Developer exists"
+  pass "Developer folder ($HOME/Developer) exists"
 else
-  bad "~/Developer missing (run install.sh, or mkdir ~/Developer)"
+  bad "Developer folder ($HOME/Developer) missing — run install.sh"
 fi
