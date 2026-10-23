@@ -94,6 +94,17 @@ wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). maccon
 # macconfig-check.sh reads `pmset -g custom` and warns. --fix does not run sudo.
 # macos.sh may run the sudo pmset commands and skips them when sudo is not available.
 ac-sleep|Display, keyboard & desktop|On mains power the Mac does not sleep on its own, the display sleeps after 10 minutes, and wake for network access is on. On battery the display sleeps after 2 minutes. Closing the lid still sleeps the Mac. Battery idle sleep is not changed|Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1||@macconfig-check.sh
+# Charge Limit 80% (macOS Tahoe 26.4 or later, Apple silicon laptops).
+# Apple documents this only in System Settings. There is no pmset or defaults
+# write. The Shortcuts action Set Battery Charge Limit is not a shell command.
+# SMC writers are a different mechanism and are not this setting.
+# The chosen percentage cannot be read without the private entitlement
+# com.apple.private.iokit.soc-limit. pmset -g, pmset -g battlimit,
+# ioreg -rn AppleSmartBattery, system_profiler SPPowerDataType, and the
+# power preferences under /Library/Preferences and ~/Library do not show it.
+# A desktop has no battery. Leave the check empty. Do not add a check that
+# only warns when a key is missing.
+charge-limit|Display, keyboard & desktop|Charge Limit 80% (Apple silicon laptops). Check by hand: the chosen percentage cannot be read|System Settings → Battery → Charging → Charge Limit|x-apple.systempreferences:com.apple.Battery-Settings.extension|
 input-british|Display, keyboard & desktop|Keyboard input source: British (macconfig checks the selected layout is British only)|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 # Desktop widgets and Stage Manager are lib/macos-defaults.list (StandardHideWidgets,
 # StageManagerHideWidgets, GloballyEnabled). Click wallpaper to reveal desktop stays out.
