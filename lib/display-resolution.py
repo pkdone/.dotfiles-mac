@@ -7,10 +7,11 @@ A built-in panel is a drive whose `spdisplays_connection_type` is
 built-in panel. No such drive (lid closed, external display only) is an info
 skip, not a warning.
 
-More Space on this Color LCD is the scaled mode whose `_spdisplays_resolution`
-starts with the prefix in lib/display-resolution.list (`1800 x 1169`). The
-live string looks like `1800 x 1169 @ 120.00Hz`. Pixel size and the Retina id
-are not compared.
+The panel size comes from `spdisplays_pixelresolution` (for example
+`spdisplays_3024x1964Retina`). lib/display-resolution.list maps each panel
+size to the start of its More Space `_spdisplays_resolution`: 3024x1964 (14")
+is `1800 x 1169` and 3456x2234 (16") is `2056 x 1329`. The live string looks
+like `1800 x 1169 @ 120.00Hz`. A panel size not in the list is an info line.
 
 One line, fields separated by `|`:
 
@@ -27,6 +28,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -39,23 +41,36 @@ def emit(status: str, message: str) -> None:
     print(f"{status}||{text}")
 
 
-def load_prefix(path: str) -> str:
-    rows: list[str] = []
+PANEL_RE = re.compile(r"(\d{3,5})\s*x\s*(\d{3,5})")
+
+
+def load_prefixes(path: str) -> dict[str, str]:
+    rows: dict[str, str] = {}
     with open(path, encoding="utf-8") as fh:
         for lineno, raw in enumerate(fh, 1):
             body = raw.split("#", 1)[0].strip()
             if not body:
                 continue
-            kind, sep, prefix = body.partition("|")
-            if not sep or kind.strip() != "builtin" or not prefix.strip():
+            panel, sep, prefix = body.partition("|")
+            panel = panel.strip()
+            if not sep or not re.fullmatch(r"\d+x\d+", panel) or not prefix.strip():
                 raise ValueError(
-                    f"{os.path.basename(path)}:{lineno}: want builtin|<prefix>"
+                    f"{os.path.basename(path)}:{lineno}: want <width>x<height>|<prefix>"
                 )
-            rows.append(prefix.strip())
-    if len(rows) != 1:
-        name = os.path.basename(path)
-        raise ValueError(f"{name}: want exactly one builtin prefix")
-    return rows[0]
+            if panel in rows:
+                raise ValueError(f"{os.path.basename(path)}:{lineno}: {panel} listed twice")
+            rows[panel] = prefix.strip()
+    if not rows:
+        raise ValueError(f"{os.path.basename(path)}: no panel rows")
+    return rows
+
+
+def panel_size(drv: dict) -> str:
+    raw = drv.get("spdisplays_pixelresolution")
+    if not isinstance(raw, str):
+        return ""
+    match = PANEL_RE.search(raw)
+    return f"{match.group(1)}x{match.group(2)}" if match else ""
 
 
 def is_builtin(drv: dict) -> bool:
@@ -91,7 +106,7 @@ def iter_displays(data: object) -> list[dict]:
     return found
 
 
-def describe(builtins: list[dict], prefix: str) -> None:
+def describe(builtins: list[dict], prefixes: dict[str, str]) -> None:
     if not builtins:
         emit(
             "info",
@@ -101,8 +116,16 @@ def describe(builtins: list[dict], prefix: str) -> None:
         return
     mismatches: list[str] = []
     shown: list[str] = []
+    unknown: list[str] = []
+    wanted: list[str] = []
     for drv in builtins:
         name = panel_name(drv)
+        panel = panel_size(drv)
+        prefix = prefixes.get(panel)
+        if prefix is None:
+            unknown.append(f"{name} {panel or 'size not reported'}")
+            continue
+        wanted.append(prefix)
         resolution = drv.get("_spdisplays_resolution")
         if not isinstance(resolution, str) or not resolution:
             mismatches.append(f"{name}: _spdisplays_resolution is missing")
@@ -111,13 +134,22 @@ def describe(builtins: list[dict], prefix: str) -> None:
             shown.append(f"{name} '{resolution}'")
         else:
             mismatches.append(f"{name}: _spdisplays_resolution is '{resolution}'")
+    want = ", ".join(dict.fromkeys(wanted))
     if mismatches:
         detail = "; ".join(mismatches)
         emit(
             "warn",
             f"Built-in display is not More Space ({detail}; want"
-            f" _spdisplays_resolution to start with {prefix}) — System Settings"
+            f" _spdisplays_resolution to start with {want}) — System Settings"
             " → Displays. macconfig-check.sh --fix does not change this",
+        )
+        return
+    if unknown and not shown:
+        known = ", ".join(sorted(prefixes))
+        emit(
+            "info",
+            f"built-in panel size not in lib/display-resolution.list"
+            f" ({'; '.join(unknown)}; known: {known}) — More Space not checked",
         )
         return
     joined = "; ".join(shown)
@@ -137,7 +169,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--list", default=DEFAULT_LIST, help="expected prefix list")
     args = parser.parse_args(argv)
     try:
-        prefix = load_prefix(args.list)
+        prefixes = load_prefixes(args.list)
     except FileNotFoundError as exc:
         emit("error", f"display resolution list missing ({exc.filename})")
         return 0
@@ -155,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001 - a torn profiler dump is a report
         emit("error", f"could not read system_profiler JSON ({exc})")
         return 0
-    describe([drv for drv in displays if is_builtin(drv)], prefix)
+    describe([drv for drv in displays if is_builtin(drv)], prefixes)
     return 0
 
 

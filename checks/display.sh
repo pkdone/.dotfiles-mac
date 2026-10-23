@@ -37,9 +37,9 @@ else
 fi
 
 # ---- 6c. Built-in display More Space (check-only) -----------------------
-# system_profiler SPDisplaysDataType -json. The expected prefix lives in
-# lib/display-resolution.list (More Space on this Color LCD is 1800 x 1169).
-# No built-in panel is an info skip (clamshell). --fix never changes the
+# system_profiler SPDisplaysDataType -json. lib/display-resolution.list maps
+# the panel size to its More Space prefix (14" 1800 x 1169, 16" 2056 x 1329).
+# An unlisted panel size or no built-in panel (clamshell) is an info skip. --fix never changes the
 # display mode. Manual step display-more-space points here.
 hdr "Display (More Space)"
 fixid display-more-space

@@ -81,9 +81,10 @@ logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling 
 logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup|Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices|app:logioptionsplus|
 
 # ---- Display, keyboard & desktop ----
-# More Space on this Color LCD is _spdisplays_resolution starting with 1800 x 1169
-# (lib/display-resolution.list). macconfig-check.sh reads system_profiler and
-# never changes the mode. A clamshell Mac (no built-in panel) is an info skip.
+# More Space is _spdisplays_resolution starting with the value for this panel
+# size in lib/display-resolution.list (14" 1800 x 1169, 16" 2056 x 1329).
+# macconfig-check.sh reads system_profiler and never changes the mode. An
+# unlisted panel size or a clamshell Mac (no built-in panel) is an info skip.
 display-more-space|Display, keyboard & desktop|Built-in display: More Space (macconfig checks this from the display report; set it by hand)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (macconfig checks this; leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). macconfig reads the wallpaper store and warns if it is a different picture. It does not change it|System Settings → Wallpaper|x-apple.systempreferences:com.apple.Wallpaper-Settings.extension|@macconfig-check.sh

@@ -49,7 +49,7 @@ login-shell|PAUL||login shell change needs sudo / chsh — shell.sh
 hostname|PAUL||hostname change needs sudo — hostname.sh
 auto-brightness|PAUL||Automatically adjust brightness — System Settings → Displays. Readable without sudo via corebrightnessdiag; the saved CoreBrightness plist is root-owned and its keys move between macOS versions, so --fix never writes it. True Tone and battery dim are left alone
 ac-sleep|PAUL||Power — sudo pmset for AC sleep 0, AC display sleep 10, battery display sleep 2, and AC wake for network access (manual step ac-sleep). pmset -g custom is readable without sudo; --fix never runs sudo. Battery idle sleep is not changed. Closing the lid still sleeps the Mac
-display-more-space|PAUL||Built-in display More Space — System Settings → Displays. Read from system_profiler SPDisplaysDataType (_spdisplays_resolution starts with the prefix in lib/display-resolution.list); --fix never changes the display mode (no displayplacer)
+display-more-space|PAUL||Built-in display More Space — System Settings → Displays. Read from system_profiler SPDisplaysDataType (_spdisplays_resolution starts with the prefix for this panel size in lib/display-resolution.list); --fix never changes the display mode (no displayplacer)
 notifications|PAUL||Allow Notifications for apps in lib/notifications-off.list, and Hammerspoon notification style Alerts — System Settings → Notifications. Read from the usernoted group plist; --fix never writes it
 url-handler|PAUL||default-app changes can raise a macOS confirmation dialog — handlers.sh
 app-config|PAUL||an app config in the repo is invalid or overridden — fix ghostty/config, or merge and remove the override by hand

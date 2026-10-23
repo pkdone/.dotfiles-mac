@@ -32,8 +32,10 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 chmod +x "$HELPER"
 
-eq "expected More Space prefix" "builtin|1800 x 1169" \
-  "$(grep -E '^builtin\|' "$LIST")"
+eq "14-inch More Space prefix" "3024x1964|1800 x 1169" \
+  "$(grep -E '^3024x1964\|' "$LIST")"
+eq "16-inch More Space prefix" "3456x2234|2056 x 1329" \
+  "$(grep -E '^3456x2234\|' "$LIST")"
 eq "display-more-space is checked by macconfig-check.sh" "@macconfig-check.sh" \
   "$(awk -F'|' '$1 == "display-more-space" { print $6; exit }' "$STEPS")"
 eq "display-more-space is Needs Paul" "PAUL|" \
@@ -42,7 +44,7 @@ miss "helper does not call displayplacer" 'displayplacer' "$(cat "$HELPER")"
 writers="$(grep -nE 'subprocess|os\.system|Popen' "$HELPER" || true)"
 eq "helper does not shell out" "" "$writers"
 
-# This Mac's Color LCD: More Space is 1800 x 1169 on a 3024x1964 Retina panel.
+# 14-inch Color LCD: More Space is 1800 x 1169 on a 3024x1964 Retina panel.
 cat > "$tmp/more-space.json" <<'EOF'
 {
   "SPDisplaysDataType": [
@@ -81,7 +83,8 @@ cat > "$tmp/default.json" <<'EOF'
         {
           "_name": "Color LCD",
           "spdisplays_connection_type": "spdisplays_internal",
-          "_spdisplays_resolution": "1512 x 982 @ 120.00Hz"
+          "_spdisplays_resolution": "1512 x 982 @ 120.00Hz",
+          "spdisplays_pixelresolution": "spdisplays_3024x1964Retina"
         }
       ]
     }
@@ -141,7 +144,8 @@ cat > "$tmp/name-only.json" <<'EOF'
       "spdisplays_ndrvs": [
         {
           "_name": "Color LCD",
-          "_spdisplays_resolution": "1800 x 1169 @ 120.00Hz"
+          "_spdisplays_resolution": "1800 x 1169 @ 120.00Hz",
+          "spdisplays_pixelresolution": "spdisplays_3024x1964Retina"
         }
       ]
     }
@@ -159,7 +163,8 @@ cat > "$tmp/other-internal.json" <<'EOF'
         {
           "_name": "Built-in Liquid Retina XDR Display",
           "spdisplays_connection_type": "spdisplays_internal",
-          "_spdisplays_resolution": "1800 x 1169"
+          "_spdisplays_resolution": "1800 x 1169",
+          "spdisplays_pixelresolution": "spdisplays_3024x1964Retina"
         }
       ]
     }
@@ -172,7 +177,7 @@ has "any internal panel is checked" "Built-in Liquid Retina XDR Display '1800 x 
 cat > "$tmp/no-res.json" <<'EOF'
 {
   "SPDisplaysDataType": [
-    {"spdisplays_ndrvs": [{"_name": "Color LCD", "spdisplays_connection_type": "spdisplays_internal"}]}
+    {"spdisplays_ndrvs": [{"_name": "Color LCD", "spdisplays_connection_type": "spdisplays_internal", "spdisplays_pixelresolution": "spdisplays_3024x1964Retina"}]}
   ]
 }
 EOF
@@ -195,12 +200,41 @@ out="$(run "$tmp/more-space.json" "$tmp/no-such.list")"; rc=$?
 eq "missing list exits 0" 0 "$rc"
 has "missing list is an error line" "error||display resolution list missing" "$out"
 
-printf 'builtin|1800 x 1169\nbuiltin|1512 x 982\n' > "$tmp/two.list"
+printf '3024x1964|1800 x 1169\n3024x1964|1512 x 982\n' > "$tmp/two.list"
 out="$(run "$tmp/more-space.json" "$tmp/two.list")"
-has "two prefixes are an error" "exactly one builtin prefix" "$out"
+has "a panel listed twice is an error" "3024x1964 listed twice" "$out"
+
+printf 'builtin|1800 x 1169\n' > "$tmp/old.list"
+out="$(run "$tmp/more-space.json" "$tmp/old.list")"
+has "a row without a panel size is an error" "want <width>x<height>/<prefix>" "$out"
+
+# 16-inch panel: More Space is 2056 x 1329 on 3456x2234.
+cat > "$tmp/sixteen.json" <<'EOF'
+{"SPDisplaysDataType": [{"spdisplays_ndrvs": [{"_name": "Color LCD", "spdisplays_connection_type": "spdisplays_internal", "_spdisplays_resolution": "2056 x 1329 @ 120.00Hz", "spdisplays_pixelresolution": "spdisplays_3456x2234Retina"}]}]}
+EOF
+out="$(run "$tmp/sixteen.json")"
+eq "16-inch More Space passes" \
+  "ok||Built-in display is More Space (Color LCD '2056 x 1329 @ 120.00Hz'; _spdisplays_resolution starts with 2056 x 1329)" \
+  "$out"
+sed 's/2056 x 1329/1800 x 1169/' "$tmp/sixteen.json" > "$tmp/sixteen-14mode.json"
+out="$(run "$tmp/sixteen-14mode.json")"
+has "16-inch panel on the 14-inch value warns" "warn||" "$out"
+has "16-inch warning names its own prefix" "start with 2056 x 1329" "$out"
+
+# A panel size not in the list is info, not drift.
+sed 's/3456x2234/2560x1664/' "$tmp/sixteen.json" > "$tmp/unknown.json"
+out="$(run "$tmp/unknown.json")"
+eq "unknown panel is info" \
+  "info||built-in panel size not in lib/display-resolution.list (Color LCD 2560x1664; known: 3024x1964, 3456x2234) — More Space not checked" \
+  "$out"
+cat > "$tmp/no-size.json" <<'EOF'
+{"SPDisplaysDataType": [{"spdisplays_ndrvs": [{"_name": "Color LCD", "spdisplays_connection_type": "spdisplays_internal", "_spdisplays_resolution": "1800 x 1169"}]}]}
+EOF
+out="$(run "$tmp/no-size.json")"
+has "panel size not reported is info" "info||built-in panel size not in lib/display-resolution.list (Color LCD size not reported" "$out"
 
 # The prefix comes from the list, not a hard-coded pass inside the helper call.
-printf 'builtin|1512 x 982\n' > "$tmp/other.list"
+printf '3024x1964|1512 x 982\n' > "$tmp/other.list"
 out="$(run "$tmp/default.json" "$tmp/other.list")"
 has "a different list prefix is what gets checked" "starts with 1512 x 982" "$out"
 
