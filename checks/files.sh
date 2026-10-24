@@ -12,7 +12,7 @@ FILE_HANDLERS_LIST="$DOTDIR/lib/file-handlers.list"
 if [ ! -r "$FILE_HANDLERS_LIST" ]; then
   fixid repo-file; warn "lib/file-handlers.list missing — skipping file handlers check"
 elif ! command -v duti >/dev/null 2>&1; then
-  fixid tooling; warn "duti not installed — skipping file handlers check"
+  fixid tooling; warn "duti not installed — run brewsync (skipping file handlers check)"
 elif ! PY="$(dot_python)"; then
   fixid tooling; warn "no python3 — skipping file handlers check"
 else

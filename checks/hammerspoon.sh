@@ -127,7 +127,7 @@ H_HS_RUNNING=no   # reused by the Mac health JSON (background jobs)
 if [ ! -d /Applications/Hammerspoon.app ]; then
   H_HS_RUNNING=not_installed
   fixid app-install
-  warn "Hammerspoon.app not installed — brew bundle (cask \"hammerspoon\")"
+  warn "Hammerspoon.app not installed — run brewsync (cask hammerspoon)"
 elif ! pgrep -xq Hammerspoon; then
   warn "Hammerspoon not running — open -a Hammerspoon (then it starts at login)"
 else

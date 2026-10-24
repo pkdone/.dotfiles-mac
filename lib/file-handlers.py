@@ -367,14 +367,14 @@ def main(argv: list[str] | None = None) -> int:
     schemes = load_schemes(args.list_path)
     duti = duti_bin()
     if not duti:
-        message = "duti not installed — file handlers not checked"
+        message = "duti not installed — run brewsync; file handlers not checked"
         if not args.apply:
             emit("warn", "", message)
             return 0
         tokens = [t.strip().lstrip(".").lower() for t in args.only.split(",") if t.strip()]
         targets = tokens or [ext for ext, _app, _bundle, _mode, _extra in rows]
         for ext in targets:
-            emit("fail", ext, "duti not installed — file handler not changed")
+            emit("fail", ext, "duti not installed — run brewsync; file handler not changed")
         return 1
     if not args.apply:
         for status, ext, message in check_rows(duti, rows, schemes):

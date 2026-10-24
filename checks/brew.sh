@@ -6,6 +6,8 @@
 hdr "Homebrew (Brewfile)"
 fixid brew
 CHECKED=$((CHECKED + 1))
+# shellcheck source=../lib/brew-missing-hint.sh disable=SC1091
+. "$DOTDIR/lib/brew-missing-hint.sh"
 if ! command -v brew >/dev/null 2>&1; then
   warn "brew not installed — skipping Brewfile check"
 else
@@ -13,7 +15,13 @@ else
   if ! brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" >/dev/null 2>&1; then
     # --no-upgrade => fail only on genuinely MISSING entries, not merely outdated ones.
     bad "Brewfile not satisfied — missing entries:"
-    brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" --verbose 2>&1 | sed 's/^/          /' || true
+    verbose="$(brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" --verbose 2>&1 || true)"
+    hint="$(brew_missing_hint "$verbose")"
+    if [ -z "$hint" ]; then
+      hint="Homebrew packages: run brewsync. Mac App Store apps: needs App Store sign-in."
+    fi
+    printf '%s\n' "$hint" | sed 's/^/          /'
+    printf '%s\n' "$verbose" | sed 's/^/          /' || true
   else
     # The Brewfile pins names, not versions, so a *managed* package being merely
     # outdated is a soft warning (run brewsync), not drift. Match brewsync's env

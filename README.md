@@ -37,6 +37,36 @@ manualsteps list   # just print the full numbered checklist
 
 The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
 
+<!-- BEGIN app-sources -->
+## Where apps come from
+
+This repo installs apps and tools from three places.
+
+### Homebrew
+
+Command-line tools and desktop apps listed in the Brewfile. The first setup installs them with `brew bundle`. After that, `brewsync` installs anything missing and upgrades what is already there. If one of these is missing, run `brewsync`.
+
+**Command-line tools:** git, gh, fish, mise, jq, yq, ripgrep, fd, fzf, bat, eza, tree, wget, curl, direnv, tmux, htop, mas, dockutil, duti, ykman, ffmpeg, pkgconf, shellcheck, openssl, python, uv, go, rustup, mongosh, pnpm, awscli, kubernetes-cli, helm, sops, age, coreutils, findutils, gnu-sed, gawk, and grep.
+
+**Desktop apps:** ghostty, visual-studio-code, cursor, cursor-cli, coteditor, karabiner-elements, hammerspoon, microsoft-teams, raycast, 1password-cli, logi-options+, chatgpt, claude, google-gemini, grok-bot, grok-build, google-chrome, spotify, sonos, granola, slack, whatsapp, acorn, docker-desktop, multipass, cog-app, kid3, and yubico-authenticator.
+
+### Mac App Store
+
+Apps the Brewfile installs with `mas`. Sign in to the App Store first, or the install fails. If one of these is missing, it needs App Store sign-in.
+
+**Apps:** Keynote and Numbers.
+
+### Company apps (Iru Self Service)
+
+Company-managed apps. Install each one yourself from Iru Self Service (Kandji). The names are in `lib/mdm-apps.list`. They are not in the Brewfile. If one of these is missing, install it from Iru Self Service.
+
+**Apps:** Okta Verify, 1Password, Tailscale, Zoom, Formal, and Cyberhaven.
+
+1Password for Safari and Okta Extension App are not in any of these lists. This Mac can't sign in to the App Store with a personal Apple ID, and it isn't known whether Iru installs those Safari extensions. They are left out so a missing copy does not raise a warning.
+
+Cursor Nightly and YouTube Music are installed by hand. They are not Homebrew apps and not company apps. See [Setup](docs/setup.md#apps-not-in-the-brewfile).
+<!-- END app-sources -->
+
 ## Everyday commands
 
 ### macconfig

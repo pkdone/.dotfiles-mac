@@ -454,7 +454,7 @@ if [ "$FIX" = 1 ]; then
   fix_hammerspoon() {
     local i=0
     if [ ! -d /Applications/Hammerspoon.app ]; then
-      echo "Hammerspoon.app not installed — brew bundle"; return 2
+      echo "Hammerspoon.app not installed — run brewsync"; return 2
     fi
     if pgrep -xq Hammerspoon; then echo "Hammerspoon already running"; return 0; fi
     if [ "$DRY_RUN" = 1 ]; then echo "would start Hammerspoon (open -g -a Hammerspoon)"; return 0; fi
@@ -611,7 +611,7 @@ if [ "$FIX" = 1 ]; then
     elif ! command -v duti >/dev/null 2>&1; then
       while IFS= read -r e; do
         [ -n "$e" ] || continue
-        FILE_OUT="${FILE_OUT}fail|${e}|duti not installed — file handler not changed"$'\n'
+        FILE_OUT="${FILE_OUT}fail|${e}|duti not installed — run brewsync; file handler not changed"$'\n'
       done < <(printf '%s\n' "$FILE_ONLY" | tr ',' '\n')
     else
       file_cmd=("$file_py" "$DOTDIR/lib/file-handlers.py" --apply)

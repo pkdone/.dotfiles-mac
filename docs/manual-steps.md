@@ -28,8 +28,8 @@ British input (`com.apple.HIToolbox` `AppleSelectedInputSources`, the keyboard l
 | 1 | Sign in to the GitHub CLI (needed to clone this private repo) | Terminal: gh auth login | auto |
 | 2 | Sign in with your Apple Account (your @icloud.com Apple ID) | System Settings → Apple Account | by hand |
 | 3 | iCloud: Photos, iCloud Drive, Messages and other unused sync Off; Passwords (iCloud Keychain) and Find My On | System Settings → Apple Account → iCloud | by hand |
-| 4 | Sign in to the App Store (brew bundle needs it for Okta Extension, 1Password for Safari, Keynote, and Numbers). macconfig checks this with mas list | App Store → Store → Sign In | auto |
-| 5 | Install Okta Verify and 1Password from Iru Self Service (Kandji), not Homebrew | Applications → Iru Self Service | macconfig-check.sh |
+| 4 | Sign in to the App Store. Keynote and Numbers need App Store sign-in. macconfig checks this with mas list | App Store → Store → Sign In | auto |
+| 5 | Install the company apps from Iru Self Service (Kandji), not Homebrew. The names are in lib/mdm-apps.list | Applications → Iru Self Service | macconfig-check.sh |
 | 6 | Sign in to 1Password and unlock it | 1Password app | by hand |
 | 7 | Turn on Integrate with 1Password CLI, then run op whoami in a terminal | 1Password → Settings → Developer | auto |
 | 8 | Install Cursor Nightly (separate app, next to the stable Cursor) | cursor.com/nightlydownload | auto |

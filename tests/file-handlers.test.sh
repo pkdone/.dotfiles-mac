@@ -379,7 +379,7 @@ eq "missing duti check exits 0" 0 "$rc"
 has "missing duti is a warning" "warn||duti not installed" "$out"
 out="$(run --apply --only env "$tmp/small.list")"; rc=$?
 eq "missing duti apply exits 1" 1 "$rc"
-has "missing duti apply does not pretend to set" "fail|env|duti not installed — file handler not changed" "$out"
+has "missing duti apply does not pretend to set" "fail|env|duti not installed — run brewsync; file handler not changed" "$out"
 export PATH="$bin:$PATH"
 
 # handlers.sh --list prints the file-handler rows without calling duti.

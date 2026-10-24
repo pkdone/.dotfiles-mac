@@ -102,7 +102,7 @@ HANDLERS_LIST="$DOTDIR/lib/url-handlers.list"
 if [ ! -r "$HANDLERS_LIST" ]; then
   fixid repo-file; warn "lib/url-handlers.list missing — skipping URL handlers check"
 elif ! command -v duti >/dev/null 2>&1; then
-  fixid tooling; warn "duti not installed — skipping URL handlers check"
+  fixid tooling; warn "duti not installed — run brewsync (skipping URL handlers check)"
 else
   while IFS='|' read -r scheme bundle; do
     case "$scheme" in ''|'#'*) continue ;; esac
