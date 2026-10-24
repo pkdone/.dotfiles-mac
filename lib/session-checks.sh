@@ -1,8 +1,9 @@
 # shellcheck shell=bash
 #
-# Read-only checks shared by scripts/manual-steps.sh and macconfig-check.sh:
-# British input source, pointer size, GitHub CLI sign-in, 1Password CLI,
-# App Store sign-in, and Spotlight app results.
+# Read-only checks for scripts/manual-steps.sh: British input source, pointer
+# size, GitHub CLI sign-in, 1Password CLI, App Store sign-in, and Spotlight
+# app results. macconfig-check.sh prints that script's result in Manual steps
+# and does not source this file.
 # Each records R_STATUS (ok|warn|hand) and R_DETAIL via res(). Nothing here
 # writes a setting, runs sudo, or opens the notification store. Callers wrap
 # slow commands in with_timeout (defined by the caller).
@@ -11,7 +12,7 @@
 # in (it needs an unlock, or this session was never authorised) is hand.
 
 # res is provided by scripts/manual-steps.sh. Define it when this file is
-# sourced alone (macconfig-check.sh) so a check can record a status quietly.
+# sourced alone (the session-checks tests) so a check can record a status quietly.
 if ! declare -F res >/dev/null 2>&1; then
   # Callers read R_STATUS and R_DETAIL after the check returns.
   # shellcheck disable=SC2034

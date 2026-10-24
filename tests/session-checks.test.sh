@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
 # British input source, pointer size, gh auth status, and op whoami.
-# The checks live in lib/session-checks.sh (read-only: warn or info, never a
-# write). macconfig-check.sh reports them and links each one to its manual step.
+# The checks live once, in lib/session-checks.sh, and scripts/manual-steps.sh
+# runs them. macconfig-check.sh prints that result in Manual steps.
 # Run: ./tests/session-checks.test.sh
 #
 set -uo pipefail
@@ -218,29 +218,21 @@ miss "session checks do not sudo" 'sudo' "$lib_code"
 miss "session checks do not defaults write" 'defaults write' "$lib_code"
 miss "session checks do not touch the notification store" 'usernoted' "$lib_code"
 
-# ---- macconfig-check.sh section ------------------------------------------
-section="$(cat "$DIR/checks/session.sh")"
-code="$(printf '%s\n' "$section" | grep -v '^[[:space:]]*#')"
-has "section sources the shared checks" 'lib/session-checks.sh' "$section"
-has "section tags pointer-size" 'fixid pointer-size' "$section"
-has "section tags input-british" 'fixid input-british' "$section"
-has "section tags gh-auth" 'fixid gh-auth' "$section"
-has "section tags 1password-cli" 'fixid 1password-cli' "$section"
-# shellcheck disable=SC2016  # needles are source text, compared literally
-has "section gates pointer size on the manual step" '$1 == "pointer-size"' "$section"
-# shellcheck disable=SC2016
-has "a non-ok non-warn result is info" '*)    info "$msg"' "$section"
-# shellcheck disable=SC2016
-has "section warns, it does not drift" 'warn) warn "$msg"' "$section"
-miss "section does not report drift" 'bad "' "$code"
-miss "section does not sudo" 'sudo' "$code"
-miss "section does not defaults write" 'defaults write' "$code"
-miss "section does not touch the notification store" 'usernoted' "$code"
+# macconfig-check.sh shows the manual-steps result. It does not run the checks again.
+check_src="$(grep -v '^[[:space:]]*#' "$DIR/macconfig-check.sh" "$DIR"/checks/*.sh)"
+for fn in check_pointer_size check_input_british check_gh_auth check_op_cli check_app_store; do
+  miss "macconfig-check.sh does not call $fn" "$fn" "$check_src"
+done
+miss "nothing hides these rows from Manual steps" 'MANUAL_STEPS_COVERED' \
+  "$(cat "$DIR/macconfig-check.sh" "$DIR"/checks/*.sh "$MS")"
+miss "there is no second sign-in section" 'Sign-ins, keyboard, and pointer' \
+  "$(cat "$DIR/macconfig-check.sh" "$DIR"/checks/*.sh)"
+manual_src="$(grep -v '^[[:space:]]*#' "$DIR/checks/manual.sh")"
 # shellcheck disable=SC2016  # needle is source text, compared literally
-has "covered ids are passed into the manual-steps section" \
-  'MANUAL_STEPS_COVERED="${SESSION_COVERED:-}"' "$(cat "$DIR/checks/manual.sh")"
-
-for id in pointer-size input-british gh-auth 1password-cli; do
+has "a by-hand manual step is info" 'hand)    info ' "$manual_src"
+miss "Manual steps does not report drift" 'bad "' "$manual_src"
+for id in pointer-size input-british gh-auth 1password-cli app-store; do
+  has "a $id warning keeps its id" "$id) fixid $id" "$manual_src"
   eq "$id is Needs Paul with no fixer" "PAUL|" \
     "$(awk -F'|' -v id="$id" '$1 == id { print $2 "|" $3; exit }' "$AUTO")"
   has "manual step $id exists" "$id|" "$(cat "$LIST")"
@@ -253,20 +245,22 @@ eq "1password-cli check name" "op-cli" \
   "$(awk -F'|' '$1 == "1password-cli" { print $6; exit }' "$LIST")"
 eq "pointer-size check name" "pointer-size" \
   "$(awk -F'|' '$1 == "pointer-size" { print $6; exit }' "$LIST")"
+eq "app-store check name" "app-store" \
+  "$(awk -F'|' '$1 == "app-store" { print $6; exit }' "$LIST")"
 
-# Eval the section with the same fakes. Stubs replace pass/warn/info so the
-# real macconfig-check.sh machinery (and the notification store) never runs.
-# Stubs and DOTDIR/CHECKED are read by the eval'd section, not by this function.
+# Source the Manual steps section with the same fakes. Stubs replace
+# pass/warn/info so the real macconfig-check.sh machinery never runs.
 # shellcheck disable=SC2034,SC2317
-run_section() {
+run_manual() {
   (
     set -euo pipefail
-    # shellcheck disable=SC2030  # this PATH is only for the eval'd section
+    # shellcheck disable=SC2030  # this PATH is only for the sourced section
     export PATH="$tmp/bin:$PATH" DEFAULTS_DIR="$tmp/defaults" SESSION_CHECKS_OP_APP="$tmp/1Password.app"
-    export GH_RC="${1:-0}" OP_RC="${2:-0}" MAS_RC="${4:-0}" MANUAL_STEPS_LIST="${3:-$LIST}"
+    export GH_RC="${1:-0}" OP_RC="${2:-0}" MAS_RC="${4:-0}" NO_COLOR=1
+    export MANUAL_STEPS_LIST="${3:-$tmp/steps.list}"
     DOTDIR="$DIR"
     CHECKED=0
-    with_timeout() { shift; "$@"; }
+    FIX_ID=""
     hdr() { :; }
     fixid() { FIX_ID="$1"; }
     pass() { printf 'PASS %s %s\n' "$FIX_ID" "$1"; }
@@ -274,86 +268,93 @@ run_section() {
     info() { printf 'INFO %s %s\n' "$FIX_ID" "$1"; }
     bad() { printf 'DRIFT %s %s\n' "$FIX_ID" "$1"; }
     # shellcheck disable=SC1091
-    . "$DIR/checks/session.sh"
-    printf 'COVERED %s\n' "$SESSION_COVERED"
+    . "$DIR/checks/manual.sh"
   )
 }
 
 british_on
 pointer 1.4
-out="$(run_section 0 0)"
+cat > "$tmp/steps.list" <<'EOF'
+gh-auth|Sign-ins|Sign in to the GitHub CLI|Terminal: gh auth login||gh-auth
+app-store|Sign-ins|Sign in to the App Store|App Store → Store → Sign In|macappstore://|app-store
+1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI|1Password → Settings → Developer|app:1Password|op-cli
+input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
+pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
+EOF
+
+out="$(run_manual 0 0)"
 rc=$?
-eq "section all-ok exits 0" 0 "$rc"
-miss "section all-ok has no warning" 'WARN ' "$out"
-miss "section all-ok has no drift" 'DRIFT ' "$out"
-has "section links British" 'PASS input-british' "$out"
-has "section links gh" 'manual step gh-auth' "$out"
-has "section links op" 'PASS 1password-cli' "$out"
-has "section links pointer" 'PASS pointer-size' "$out"
-has "section covers the sign-in steps" 'COVERED pointer-size input-british gh-auth 1password-cli app-store' "$out"
+eq "manual section all-ok exits 0" 0 "$rc"
+miss "manual section all-ok has no warning" 'WARN ' "$out"
+miss "manual section all-ok has no drift" 'DRIFT ' "$out"
+has "manual section prints British" 'Keyboard input source: British' "$out"
+has "manual section prints gh" 'Sign in to the GitHub CLI' "$out"
+has "manual section prints op" 'Integrate with 1Password CLI' "$out"
+has "manual section prints pointer" 'Pointer size one notch above Normal' "$out"
+has "manual section prints the App Store" 'Sign in to the App Store' "$out"
 
 british_off
-out="$(run_section 0 0)"
+out="$(run_manual 0 0)"
 has "British off is a warning tagged input-british" 'WARN input-british' "$out"
-has "British off names the manual step" 'manual step input-british' "$out"
+has "British off names the step" 'Keyboard input source: British' "$out"
 miss "British off is not drift" 'DRIFT ' "$out"
 british_on
 
 pointer 1.0
-out="$(run_section 0 0)"
+out="$(run_manual 0 0)"
 has "Normal pointer is a warning tagged pointer-size" 'WARN pointer-size' "$out"
-has "Normal pointer names the manual step" 'manual step pointer-size' "$out"
+has "Normal pointer names the step" 'Pointer size one notch above Normal' "$out"
 miss "Normal pointer is not drift" 'DRIFT ' "$out"
 pointer 1.4
 
-out="$(run_section 1 0)"
+out="$(run_manual 1 0)"
 has "gh signed out is a warning tagged gh-auth" 'WARN gh-auth' "$out"
-has "gh signed out names the manual step" 'manual step gh-auth' "$out"
+has "gh signed out names the step" 'Sign in to the GitHub CLI' "$out"
 miss "gh signed out is not drift" 'DRIFT ' "$out"
 
-out="$(run_section 0 1)"
-has "op locked is info, not a warning" 'INFO 1password-cli' "$out"
-has "op locked names the manual step" 'manual step 1password-cli' "$out"
+out="$(run_manual 0 1)"
+has "op locked is info, not a warning" 'INFO ' "$out"
+has "op locked names the step" 'Integrate with 1Password CLI' "$out"
+has "op locked says check by hand" 'check by hand' "$out"
 miss "op locked does not warn" 'WARN 1password-cli' "$out"
 miss "op locked is not drift" 'DRIFT ' "$out"
 
-# No pointer-size row: that check does not run, and it is not covered.
+rmdir "$tmp/1Password.app"
+out="$(run_manual 0 0)"
+has "missing 1Password app is a warning tagged 1password-cli" 'WARN 1password-cli' "$out"
+mkdir -p "$tmp/1Password.app"
+
+out="$(run_manual 0 0 "$tmp/steps.list" 1)"
+has "mas not signed in is a warning tagged app-store" 'WARN app-store' "$out"
+miss "mas not signed in is not drift" 'DRIFT ' "$out"
+
+# No pointer-size row: that check does not run.
 cat > "$tmp/no-pointer.list" <<'EOF'
 input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 gh-auth|Sign-ins|Sign in to the GitHub CLI|Terminal: gh auth login||gh-auth
 1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI|1Password → Settings → Developer|app:1Password|op-cli
 EOF
-out="$(run_section 0 0 "$tmp/no-pointer.list")"
+out="$(run_manual 0 0 "$tmp/no-pointer.list")"
 miss "absent pointer step is not checked" 'pointer-size' "$out"
-has "other steps still run without the pointer row" 'COVERED input-british gh-auth 1password-cli' "$out"
+has "other steps still run without the pointer row" 'Sign in to the GitHub CLI' "$out"
 
-# Standalone manual-steps.sh still runs the checks. COVERED skips them.
-british_on
-pointer 1.4
-cat > "$tmp/steps.list" <<'EOF'
-input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
-gh-auth|Sign-ins|Sign in to the GitHub CLI|Terminal: gh auth login||gh-auth
-1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI|1Password → Settings → Developer|app:1Password|op-cli
-pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
-EOF
+# scripts/manual-steps.sh is the one runner of these checks.
 porcelain() {
   # shellcheck disable=SC2031  # parent PATH, not the section subshell's
   PATH="$tmp/bin:$PATH" DEFAULTS_DIR="$tmp/defaults" \
     SESSION_CHECKS_OP_APP="$tmp/1Password.app" \
     GH_RC="${1:-0}" OP_RC="${2:-0}" \
-    MANUAL_STEPS_LIST="$tmp/steps.list" MANUAL_STEPS_COVERED="${3:-}" \
+    MANUAL_STEPS_LIST="$tmp/steps.list" \
     "$MS" check --porcelain 2>&1
 }
 out="$(porcelain 0 0)"
 eq "standalone gh-auth passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="gh-auth"{print $1; exit}')"
 eq "standalone British passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="input-british"{print $1; exit}')"
+eq "standalone pointer passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="pointer-size"{print $1; exit}')"
 out="$(porcelain 0 1)"
 eq "standalone op not signed in is by hand" "hand" "$(printf '%s\n' "$out" | awk -F'|' '$3=="1password-cli"{print $1; exit}')"
-out="$(porcelain 0 0 'pointer-size input-british gh-auth 1password-cli')"
-eq "covered pointer-size is not checked again" "covered" "$(printf '%s\n' "$out" | awk -F'|' '$3=="pointer-size"{print $1; exit}')"
-eq "covered gh-auth is not checked again" "covered" "$(printf '%s\n' "$out" | awk -F'|' '$3=="gh-auth"{print $1; exit}')"
-eq "covered op is not checked again" "covered" "$(printf '%s\n' "$out" | awk -F'|' '$3=="1password-cli"{print $1; exit}')"
-eq "covered British is not checked again" "covered" "$(printf '%s\n' "$out" | awk -F'|' '$3=="input-british"{print $1; exit}')"
+out="$(porcelain 1 0)"
+eq "standalone gh signed out is a warning" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$3=="gh-auth"{print $1; exit}')"
 
 printf 'session-checks tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

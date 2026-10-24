@@ -29,11 +29,13 @@
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
 #            | app-store | spotlight-results
 #                                           named checks. pointer-size, input-british, op-cli,
-#                                           gh-auth, and app-store live in lib/session-checks.sh
-#                                           (also the macconfig-check.sh section; warn only, never --fix).
-#                                           spotlight-results is the same file. The toggles cannot
-#                                           be read, so the result is check by hand, reported with
-#                                           the other manual steps.
+#                                           gh-auth, app-store, and spotlight-results live in
+#                                           lib/session-checks.sh, sourced here. macconfig-check.sh
+#                                           prints that result in Manual steps and does not run the
+#                                           checks again. A warning keeps the step id (Needs Paul).
+#                                           --fix never changes them. spotlight-results cannot read
+#                                           the toggles, so the result is check by hand, reported
+#                                           with the other manual steps.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Sign-ins ----

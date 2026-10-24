@@ -100,7 +100,6 @@ Notifications
 Leftover app backups
 Security hygiene
 Mac health
-Sign-ins, keyboard, and pointer
 Manual steps (lib/manual-steps.list)'
 
 eq "section headings and order match the pre-split report" "$expected" "$(headings_in_source)"
