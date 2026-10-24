@@ -14,13 +14,14 @@ if [ ! -x "$MANUAL_STEPS" ]; then
   CHECKED=$((CHECKED + 1))
   fixid repo-file; warn "scripts/manual-steps.sh missing or not executable — skipping manual steps"
 else
-  ms_out="$(NO_COLOR=1 MANUAL_STEPS_COVERED="${SESSION_COVERED:-}" "$MANUAL_STEPS" check --porcelain 2>&1)" || true
+  ms_out="$(NO_COLOR=1 "$MANUAL_STEPS" check --porcelain 2>&1)" || true
   while IFS='|' read -r ms_status ms_num ms_id ms_title ms_detail; do
     case "$ms_status" in
       ok)      CHECKED=$((CHECKED + 1)); pass "$ms_num. $ms_title${ms_detail:+ — $ms_detail}" ;;
-      # Check-only rows get their own PAUL id (never --fix). The sign-in /
-      # pointer ids are usually covered by section 15c; this tags a warning
-      # if that section did not run.
+      # Check-only rows get their own PAUL id (never --fix), the same way as
+      # mouse-settings. British input, gh auth, 1Password CLI, pointer size,
+      # and the App Store sign-in are the scripts/manual-steps.sh result,
+      # printed here once.
       warn)
         CHECKED=$((CHECKED + 1))
         case "$ms_id" in

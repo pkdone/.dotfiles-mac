@@ -6,8 +6,8 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH; commit signing only when it is on), account picture (the Dog), Karabiner background items, Finder sidebar rows the sidebar files name, Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), British input source, GitHub CLI sign-in, 1Password CLI, pointer size (check-only; manual steps input-british / gh-auth / 1password-cli / pointer-size), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, by-hand settings).
-# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py, lib/session-checks.sh and lib/defaults-lib.sh
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH; commit signing only when it is on), account picture (the Dog), Karabiner background items, Finder sidebar rows the sidebar files name, Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, British input, GitHub CLI, 1Password CLI, pointer size, App Store sign-in, by-hand settings).
+# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
 #
@@ -50,7 +50,7 @@ DRY_RUN=0
 ISSUES=0
 
 # Area names match checks/<area>.sh. finder is one area with two sections.
-KNOWN_AREAS=" symlinks brew mdm defaults dock desktops shell hostname display power handlers files apps hotkeys finder karabiner hammerspoon login-items coteditor ghostty logi modes notifications backups security health session manual "
+KNOWN_AREAS=" symlinks brew mdm defaults dock desktops shell hostname display power handlers files apps hotkeys finder karabiner hammerspoon login-items coteditor ghostty logi modes notifications backups security health manual "
 ONLY_RAW=""
 ONLY_SET=0
 ONLY_NORM=""
@@ -223,7 +223,6 @@ H_HS_RUNNING=unknown
 H_GIT_STATUS=unknown; H_GIT_DIRTY=""; H_GIT_AHEAD=""; H_GIT_BEHIND=""; H_GIT_FETCHED=""
 H_LI_STATUS=unknown; H_LI_ENABLED=0; H_LI_ALLOW=0; H_LI_MDM=0; H_LI_UNKNOWN=(); H_LI_STALE=()
 BTM_HELPER="$DOTDIR/lib/btm-login-items.py"
-SESSION_COVERED=""
 LAUNCHAGENT_CHECKED=""
 MANAGED_LINKS=""
 
@@ -369,11 +368,6 @@ fi
 if area_selected health; then
   # shellcheck source=checks/health.sh
   . "$DOTDIR/checks/health.sh"
-fi
-
-if area_selected session; then
-  # shellcheck source=checks/session.sh
-  . "$DOTDIR/checks/session.sh"
 fi
 
 if area_selected manual; then

@@ -116,7 +116,8 @@ check_spec_ok() {
 R_STATUS=""; R_DETAIL=""
 res() { R_STATUS="$1"; R_DETAIL="$2"; }
 
-# British input, pointer size, gh auth, and op whoami. Shared with macconfig-check.sh.
+# British input, pointer size, gh auth, op whoami, App Store, and Spotlight.
+# macconfig-check.sh prints this script's result and does not run these again.
 # shellcheck source=../lib/session-checks.sh disable=SC1091
 . "$DOTDIR/lib/session-checks.sh"
 
@@ -329,12 +330,7 @@ cmd_check() {
   i=0
   while [ "$i" -lt "$N" ]; do
     num=$((i + 1))
-    # macconfig-check.sh reports these in their own section and sets this so
-    # they are not printed twice. Standalone `check` leaves it unset.
-    case " ${MANUAL_STEPS_COVERED:-} " in
-      *" ${S_ID[$i]} "*) res covered "verified by macconfig-check.sh" ;;
-      *) run_check "${S_CHECK[$i]}" ;;
-    esac
+    run_check "${S_CHECK[$i]}"
     case "$R_STATUS" in
       ok)      oks=$((oks + 1));         label="ok";       colour="$C_OK" ;;
       warn)    warns=$((warns + 1));     label="warn";     colour="$C_WARN" ;;
