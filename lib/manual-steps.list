@@ -42,7 +42,7 @@
 gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
 apple-account|Sign-ins|Sign in with your Apple Account (your @icloud.com Apple ID)|System Settings → Apple Account|x-apple.systempreferences:com.apple.systempreferences.AppleIDSettings|
 icloud-sync|Sign-ins|iCloud: Photos, iCloud Drive, Messages and other unused sync Off; Passwords (iCloud Keychain) and Find My On|System Settings → Apple Account → iCloud|x-apple.systempreferences:com.apple.systempreferences.AppleIDSettings|
-app-store|Sign-ins|Sign in to the App Store (brew bundle needs it for WhatsApp and the other mas apps). macconfig checks this with mas list|App Store → Store → Sign In|macappstore://|app-store
+app-store|Sign-ins|Sign in to the App Store (brew bundle needs it for Okta Extension, 1Password for Safari, Keynote, and Numbers). macconfig checks this with mas list|App Store → Store → Sign In|macappstore://|app-store
 
 # ---- Company apps (MDM) ----
 mdm-apps|Company apps (MDM)|Install Okta Verify and 1Password from Iru Self Service (Kandji), not Homebrew|Applications → Iru Self Service|app:Iru Self Service|@macconfig-check.sh

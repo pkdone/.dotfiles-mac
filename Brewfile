@@ -74,6 +74,7 @@ cask "spotify"
 cask "sonos"          # Sonos S2 desktop controller
 cask "granola"
 cask "slack"
+cask "whatsapp"
 cask "acorn"
 cask "docker-desktop"
 cask "multipass"
@@ -83,7 +84,7 @@ cask "yubico-authenticator"  # Yubico Authenticator
 
 # Mac App Store (via mas; requires being signed in to the App Store).
 # Wanted apps live here; unwanted ones (GarageBand/iMovie/Pages) are in lib/unwanted-apps.list.
-mas "WhatsApp", id: 310633997
+# WhatsApp is the Homebrew cask above.
 # Okta Verify is Kandji/MDM (see lib/mdm-apps.list) — mas can't upgrade it.
 mas "Okta Extension App", id: 1439967473
 mas "1Password for Safari", id: 1569813296
