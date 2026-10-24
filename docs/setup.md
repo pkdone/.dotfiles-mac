@@ -117,7 +117,7 @@ git pull && ./macconfig-check.sh --fix
 
 `prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `macconfig-check.sh` drifts if they reappear.
 
-Wanted Mac App Store apps (WhatsApp, Okta Extension, 1Password for Safari, Keynote, Numbers) are declared in the `Brewfile` via `mas` so `brew bundle` / `macconfig-check.sh` keep that set closed. Okta Verify is MDM-managed (`lib/mdm-apps.list`), not Brewfile-managed.
+Wanted Mac App Store apps (Okta Extension, 1Password for Safari, Keynote, Numbers) are declared in the `Brewfile` via `mas` so `brew bundle` / `macconfig-check.sh` keep that set closed. WhatsApp is the Homebrew cask `whatsapp`. Okta Verify is MDM-managed (`lib/mdm-apps.list`), not Brewfile-managed.
 
 ```bash
 ~/.dotfiles-mac/prune-apps.sh --dry-run   # preview

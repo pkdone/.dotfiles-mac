@@ -60,7 +60,7 @@ if [ "${MAS_RC:-0}" -ne 0 ]; then
   printf '%s\n' "${MAS_OUT:-Not signed in}" >&2
   exit "${MAS_RC}"
 fi
-printf '%s\n' '123 WhatsApp'
+printf '%s\n' '409183694 Keynote'
 exit 0
 EOF
 chmod +x "$tmp/bin/defaults" "$tmp/bin/gh" "$tmp/bin/op" "$tmp/bin/mas"

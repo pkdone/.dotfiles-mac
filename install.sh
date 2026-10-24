@@ -33,8 +33,9 @@ if command -v gh >/dev/null 2>&1 && ! gh auth status >/dev/null 2>&1; then
   echo "⚠️  gh is installed but not authenticated — run 'gh auth login' if you need private repos."
 fi
 
-echo "ℹ️  The Brewfile's 'mas' app (WhatsApp) requires you to be signed in to the App Store,"
-echo "    or that one step will fail. Everything else will still install."
+echo "ℹ️  The Brewfile's Mac App Store apps (Okta Extension, 1Password for Safari,"
+echo "    Keynote, and Numbers) require you to be signed in to the App Store,"
+echo "    or those installs will fail. Everything else will still install."
 
 # ---- symlink helper -----------------------------------------------------
 # link SRC DST: point DST at SRC. If DST is already a symlink, repoint it (idempotent).
@@ -119,9 +120,10 @@ if ! command -v brew >/dev/null 2>&1; then
   echo "Homebrew not found — installing..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
-# Tolerate a partial failure (e.g. the 'mas' WhatsApp entry when not signed in to the
-# App Store): brew bundle attempts every entry, so we record the outcome and carry on
-# to mise trust + the summary rather than letting set -e abort the whole bootstrap.
+# Tolerate a partial failure (e.g. a Mac App Store app such as Keynote when not
+# signed in to the App Store): brew bundle attempts every entry, so we record
+# the outcome and carry on to mise trust + the summary rather than letting
+# set -e abort the whole bootstrap.
 # On a terminal, a failed `brew bundle check` opens the App Store, asks Paul to sign
 # in, and retries `brew bundle install` once. Non-interactive runs keep the warning
 # below. Sign-in is the App Store UI; the mas CLI is not consulted.
@@ -131,7 +133,7 @@ if brew bundle check --file "$DOTFILES/Brewfile" >/dev/null 2>&1; then
   bundle_ok=1
 elif [ -t 0 ]; then
   echo ""
-  echo "⚠️  Some Brewfile entries are still missing (often App Store apps such as WhatsApp)."
+  echo "⚠️  Some Brewfile entries are still missing (often App Store apps such as Keynote or Numbers)."
   brew bundle check --file "$DOTFILES/Brewfile" --verbose 2>&1 | sed 's/^/    /' || true
   echo "    Opening the App Store. Sign in, then this retries the install once."
   open 'macappstore://' || echo "    (couldn't open macappstore:// — open the App Store and sign in)"
@@ -161,7 +163,7 @@ if [ "$bundle_ok" = 1 ]; then
   echo "✅ Dotfiles are in place. Run macconfig (or ./macconfig-check.sh) any time to verify."
 else
   echo "⚠️  Dotfiles are in place, but some Brewfile entries did not install"
-  echo "    (commonly the App Store 'mas' app when not signed in). Fix the cause and"
+  echo "    (commonly a Mac App Store app when not signed in). Fix the cause and"
   echo "    re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
 fi
 
