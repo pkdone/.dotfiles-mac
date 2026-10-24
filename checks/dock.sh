@@ -7,7 +7,7 @@ hdr "Dock"
 fixid dock-apps
 if ! command -v dockutil >/dev/null 2>&1; then
   fixid tooling
-  warn "dockutil not installed — skipping Dock check"
+  warn "dockutil not installed — run brewsync (skipping Dock check)"
 else
   # dockutil --list is tab-separated: label \t file://URL \t section \t plist \t bundle-id
   # We compare by PATH (mirrors how dock.sh pins apps). Only %20 needs decoding for our

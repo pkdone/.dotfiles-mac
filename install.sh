@@ -33,9 +33,16 @@ if command -v gh >/dev/null 2>&1 && ! gh auth status >/dev/null 2>&1; then
   echo "⚠️  gh is installed but not authenticated — run 'gh auth login' if you need private repos."
 fi
 
-echo "ℹ️  The Brewfile's Mac App Store apps (Okta Extension, 1Password for Safari,"
-echo "    Keynote, and Numbers) require you to be signed in to the App Store,"
-echo "    or those installs will fail. Everything else will still install."
+# shellcheck source=lib/join-names.sh disable=SC1091
+. "$DOTFILES/lib/join-names.sh"
+mas_apps="$(sed -nE 's/^mas "([^"]+)".*/\1/p' "$DOTFILES/Brewfile" | join_and)"
+if [ -n "$mas_apps" ]; then
+  echo "ℹ️  Mac App Store apps in the Brewfile (${mas_apps}) need App Store sign-in."
+  echo "    If you are not signed in, those installs fail. Homebrew packages still install."
+else
+  echo "ℹ️  The Brewfile has no Mac App Store apps."
+fi
+echo "    Anything from Homebrew that is still missing: run brewsync."
 
 # ---- symlink helper -----------------------------------------------------
 # link SRC DST: point DST at SRC. If DST is already a symlink, repoint it (idempotent).
@@ -133,7 +140,8 @@ if brew bundle check --file "$DOTFILES/Brewfile" >/dev/null 2>&1; then
   bundle_ok=1
 elif [ -t 0 ]; then
   echo ""
-  echo "⚠️  Some Brewfile entries are still missing (often App Store apps such as Keynote or Numbers)."
+  echo "⚠️  Some Brewfile entries are still missing."
+  echo "    Homebrew packages: run brewsync. Mac App Store apps: needs App Store sign-in."
   brew bundle check --file "$DOTFILES/Brewfile" --verbose 2>&1 | sed 's/^/    /' || true
   echo "    Opening the App Store. Sign in, then this retries the install once."
   open 'macappstore://' || echo "    (couldn't open macappstore:// — open the App Store and sign in)"
@@ -162,9 +170,9 @@ echo ""
 if [ "$bundle_ok" = 1 ]; then
   echo "✅ Dotfiles are in place. Run macconfig (or ./macconfig-check.sh) any time to verify."
 else
-  echo "⚠️  Dotfiles are in place, but some Brewfile entries did not install"
-  echo "    (commonly a Mac App Store app when not signed in). Fix the cause and"
-  echo "    re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
+  echo "⚠️  Dotfiles are in place, but some Brewfile entries did not install."
+  echo "    Homebrew packages: run brewsync. Mac App Store apps: needs App Store sign-in."
+  echo "    Then re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
 fi
 
 # ---- manual steps -------------------------------------------------------

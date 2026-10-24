@@ -58,7 +58,7 @@ if [ "$LIST_ONLY" = 1 ]; then
 fi
 
 if ! command -v duti >/dev/null 2>&1; then
-  echo "Error: duti not installed — run brew bundle / brewsync first." >&2
+  echo "Error: duti not installed — run brewsync first." >&2
   exit 1
 fi
 

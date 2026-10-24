@@ -13,7 +13,7 @@ GHOSTTY_BIN=/Applications/Ghostty.app/Contents/MacOS/ghostty
 G_REPO="$DOTDIR/ghostty/config"
 if [ ! -x "$GHOSTTY_BIN" ]; then
   CHECKED=$((CHECKED + 1))
-  fixid app-install; warn "Ghostty.app not installed — brew bundle (cask \"ghostty\")"
+  fixid app-install; warn "Ghostty.app not installed — run brewsync (cask ghostty)"
 else
   CHECKED=$((CHECKED + 1))
   if g_val="$(with_timeout 10 "$GHOSTTY_BIN" +validate-config --config-file="$G_REPO" </dev/null 2>&1)"; then

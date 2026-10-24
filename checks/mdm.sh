@@ -14,7 +14,7 @@ if [ -r "$DOTDIR/lib/mdm-apps.list" ]; then
     if [ -d "$path" ]; then
       pass "$name present (MDM-managed; not in Brewfile)"
     else
-      warn "$name missing at $path — install via company MDM / App Store"
+      warn "$name missing at $path — install from Iru Self Service"
     fi
   done < "$DOTDIR/lib/mdm-apps.list"
 fi

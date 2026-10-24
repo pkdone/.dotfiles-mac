@@ -12,7 +12,7 @@ LOGI_APP=/Applications/logioptionsplus.app
 LOGI_HELPER="$DOTDIR/lib/logi-settings.py"
 CHECKED=$((CHECKED + 1))
 if [ ! -d "$LOGI_APP" ]; then
-  fixid app-install; warn "Logi Options+ not installed — brew bundle (cask \"logi-options+\")"
+  fixid app-install; warn "Logi Options+ not installed — run brewsync (cask logi-options+)"
 elif [ -z "$DOT_PYTHON" ] || [ ! -r "$LOGI_HELPER" ]; then
   fixid tooling; warn "can't check Logi Options+ settings (python3 or lib/logi-settings.py missing)"
 else

@@ -1,5 +1,12 @@
 #tap "homebrew/cask"
 
+# Names below are read by scripts/render-app-sources.sh (the README section
+# "Where apps come from"). Each entry starts the line with brew, cask, or mas.
+# After changing this file, run scripts/render-app-sources.sh.
+
+# ---- Homebrew formulae (brew bundle / brewsync) -------------------------
+# If one of these is missing, run brewsync.
+
 # Core CLI
 brew "git"
 brew "gh"
@@ -51,7 +58,11 @@ brew "gnu-sed"
 brew "gawk"
 brew "grep"
 
-# GUI apps
+# ---- Homebrew casks (brew bundle / brewsync) ----------------------------
+# If one of these is missing, run brewsync.
+# 1Password desktop is company-managed (lib/mdm-apps.list, Iru Self Service).
+# The CLI stays here.
+
 cask "ghostty"
 cask "visual-studio-code"
 cask "cursor"
@@ -61,7 +72,6 @@ cask "karabiner-elements"
 cask "hammerspoon"   # Lua automation (hammerspoon/ → ~/.hammerspoon; Sidecar → Slack)
 cask "microsoft-teams"
 cask "raycast"
-# 1Password desktop is Kandji/MDM (see lib/mdm-apps.list); the CLI stays here.
 cask "1password-cli"  # 1Password CLI (op)
 cask "logi-options+"
 cask "chatgpt"
@@ -82,13 +92,15 @@ cask "cog-app"
 cask "kid3"
 cask "yubico-authenticator"  # Yubico Authenticator
 
-# Mac App Store (via mas; requires being signed in to the App Store).
-# Wanted apps live here; unwanted ones (GarageBand/iMovie/Pages) are in lib/unwanted-apps.list.
-# WhatsApp is the Homebrew cask above.
-# Okta Verify is Kandji/MDM (see lib/mdm-apps.list) — mas can't upgrade it.
-mas "Okta Extension App", id: 1439967473
-mas "1Password for Safari", id: 1569813296
+# ---- Mac App Store (mas; needs App Store sign-in) -----------------------
+# If one of these is missing, it needs App Store sign-in.
+# Only Keynote and Numbers. 1Password for Safari (id 1569813296) and
+# Okta Extension App (id 1439967473) are not listed: this Mac can't sign in
+# to the App Store with a personal Apple ID, and they are not in
+# lib/mdm-apps.list (a missing-app warning would be noise).
+# Unwanted App Store apps (GarageBand, iMovie, Pages) are lib/unwanted-apps.list.
+# WhatsApp is the cask above. Okta Verify and 1Password desktop are
+# lib/mdm-apps.list (Iru Self Service). mas can't upgrade those copies.
 # Apple iWork kept installed (not pruned); declare so brew bundle cleanup stays clean.
 mas "Keynote", id: 409183694
 mas "Numbers", id: 409203825
-

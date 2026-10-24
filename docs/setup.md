@@ -6,15 +6,15 @@ The one-paste block for a fresh Mac is at the top of the README. This is the res
 
 ## What's in the repo
 
-- `Brewfile` — Homebrew packages and casks
+- `Brewfile` — Homebrew formulae, casks, and Mac App Store apps
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
 - `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua` and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
-- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `ac-sleep.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `finder-sidebar-rows.py`, `finder-sidebar-rows.list`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `user-picture.py`, `user-picture.sha256`, `autofix-lib.sh`, `defaults-lib.sh`, `session-checks.sh`)
-- `scripts/` — helpers (`manual-steps.sh`, `render-manual-steps-doc.sh`, `pin-dictation-hotkey-164.sh`, `pin-quicknote-hotkey-190.sh`, `pin-finder-icon-view.sh`, `install-launchagent.sh`, `load-launchagent.sh`)
+- `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `ac-sleep.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `finder-sidebar-rows.py`, `finder-sidebar-rows.list`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `user-picture.py`, `user-picture.sha256`, `autofix-lib.sh`, `defaults-lib.sh`, `session-checks.sh`, `join-names.sh`, `brew-missing-hint.sh`)
+- `scripts/` — helpers (`manual-steps.sh`, `render-manual-steps-doc.sh`, `render-app-sources.sh`, `pin-dictation-hotkey-164.sh`, `pin-quicknote-hotkey-190.sh`, `pin-finder-icon-view.sh`, `install-launchagent.sh`, `load-launchagent.sh`)
 - `launchagents/` — user LaunchAgent plists. Installed as regular files in `~/Library/LaunchAgents` (`@HOME@` in `WatchPaths` is replaced with `$HOME`; launchd does not expand `~` or `$HOME`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `macconfig-check.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
 - `docs/` — this walkthrough, [settings](settings.md), [manual steps](manual-steps.md), [troubleshooting](troubleshooting.md), and [modes](modes.md)
@@ -52,12 +52,16 @@ The same block is at the top of [README.md](../README.md#setup).
 
 > _Manual — no script installs these; do them by hand._
 
-These apps can't be installed by `brew bundle`, so set them up by hand after bootstrapping:
+Homebrew formulae and casks, and the Mac App Store apps (Keynote and Numbers), come from the Brewfile. Company apps come from Iru Self Service. The exact lists are in [Where apps come from](../README.md#where-apps-come-from).
 
-- **Cursor Nightly** — download and install it manually from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. It's deliberately kept out of the Brewfile (which installs only the stable Cursor), so the stable build and Nightly sit side by side.
-- **YouTube Music** — a Chrome PWA. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
-- **Okta Verify** — company MDM (Kandji). Listed in `lib/mdm-apps.list`, not the Brewfile: `mas` cannot upgrade the `root:wheel` App Store copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`. Updates come from MDM / the App Store UI.
-- **1Password** (desktop) — company MDM (Kandji Self Service). Listed in `lib/mdm-apps.list`, not the Brewfile, so Homebrew and Kandji never fight over the app. The CLI (`1password-cli` / `op`) stays in the Brewfile; turn on Settings → Developer → Integrate with 1Password CLI in the app.
+These two are not in those lists. Set them up by hand after bootstrapping:
+
+- **Cursor Nightly** — download and install it from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. The Brewfile installs only the stable Cursor, so the stable build and Nightly sit side by side.
+- **YouTube Music** — a Chrome app. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
+
+Company apps are the names in `lib/mdm-apps.list`. Install each one from Iru Self Service (Kandji), not Homebrew. Okta Verify is an App Store copy owned by `root:wheel` (id 490179405). `mas` cannot upgrade that copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`, so it stays out of the Brewfile. The 1Password desktop app is company-managed too. Its CLI (`1password-cli` / `op`) stays in the Brewfile. In the app, turn on Settings → Developer → Integrate with 1Password CLI.
+
+1Password for Safari and Okta Extension App are not in the Brewfile and not in `lib/mdm-apps.list`. This Mac can't sign in to the App Store with a personal Apple ID, and it isn't known whether Iru installs those Safari extensions. They are left out so a missing copy does not raise a warning.
 
 These are also in the [manual steps](manual-steps.md) checklist (`manualsteps`, or `scripts/manual-steps.sh`). Do them before running `dock.sh`, or it'll skip them — `bootstrap.sh` flags any not-yet-installed Dock app before its Dock step, so you can install them first (or re-run `dock.sh` afterwards).
 
@@ -117,7 +121,7 @@ git pull && ./macconfig-check.sh --fix
 
 `prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `macconfig-check.sh` drifts if they reappear.
 
-Wanted Mac App Store apps (Okta Extension, 1Password for Safari, Keynote, Numbers) are declared in the `Brewfile` via `mas` so `brew bundle` / `macconfig-check.sh` keep that set closed. WhatsApp is the Homebrew cask `whatsapp`. Okta Verify is MDM-managed (`lib/mdm-apps.list`), not Brewfile-managed.
+The Mac App Store apps this repo wants are Keynote and Numbers. They are `mas` lines in the Brewfile, so `brew bundle` keeps that set, and they need App Store sign-in. WhatsApp is the Homebrew cask `whatsapp`. Company apps are `lib/mdm-apps.list`, installed from Iru Self Service, not the Brewfile.
 
 ```bash
 ~/.dotfiles-mac/prune-apps.sh --dry-run   # preview
