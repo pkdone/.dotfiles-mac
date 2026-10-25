@@ -39,7 +39,7 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 
 This file is generated from `lib/manual-steps.list`. Edit the list, then run `scripts/render-manual-steps-doc.sh`.
 
-Hammerspoon, Karabiner-Elements, and Raycast are under System Settings → Privacy & Security → Accessibility (called Device Control and Data Access on newer macOS).
+Hammerspoon, Karabiner-Elements, and Raycast are under System Settings → Privacy & Security → Accessibility (called Device Control and Data Access on newer macOS). Open the app first. It appears in Accessibility or Driver Extensions only after it has asked. If an Accessibility app is still not listed, click + and add it from Applications.
 
 `manualsteps` is the fish function for `scripts/manual-steps.sh`, installed with the others in `fish/functions/`. With no arguments it runs `check`. Any arguments pass through (`manualsteps list`, `manualsteps open`, `manualsteps open --all`, `manualsteps check`, `manualsteps --help`), and the exit status is the script's.
 

@@ -164,7 +164,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 
 **`finder_hotkey.lua`** brings Finder to the front from any app. `Shift + Control + Command + F` launches Finder, or focuses it when it is already running (`hs.application.launchOrFocus("Finder")`). If the Raycast backup being imported still has a Finder hotkey on those keys, unbind it in Raycast so it doesn't clash with Hammerspoon (manual step `raycast-finder-unbind` in [Manual steps](manual-steps.md)). The shortcut is also in [Shortcuts](../SHORTCUTS.md#hammerspoon).
 
-**Manual once (TCC):** System Settings → Privacy & Security → **Accessibility** → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](manual-steps.md).)
+**Manual once (TCC):** Open Hammerspoon first. System Settings → Privacy & Security → **Accessibility** → enable **Hammerspoon**. If it is not listed, click + and add it from Applications. Restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](manual-steps.md).)
 
 ## Modes (menu-bar switcher)
 
