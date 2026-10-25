@@ -225,14 +225,7 @@ printf '%s\n' \
 mkdir -p "$tmp/bin"
 printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/open"
 chmod +x "$tmp/bin/open"
-# Tags are a separate read. Pin an empty FavoriteTagNames so this host's
-# Finder preferences do not turn the step into NOTSET.
-"$PY" - "$tmp/tags.plist" <<'PY'
-import plistlib, sys
-plistlib.dump({"FavoriteTagNames": []}, open(sys.argv[1], "wb"))
-PY
 open_out="$(printf 's\n' | HOME="$home" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
-  FINDER_TAGS_PLIST="$tmp/tags.plist" \
   MANUAL_STEPS_LIST="$tmp/step.list" PATH="$tmp/bin:$PATH" \
   "$DIR/scripts/manual-steps.sh" open 2>"$tmp/open.err")"
 eq "open of a missing FavoriteItems file exits 0" 0 "$?"

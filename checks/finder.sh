@@ -57,34 +57,9 @@ SIDE_ROWS
       info "Finder sidebar rows could not be read, so they stay by hand"
     fi
   fi
-  # FavoriteTagNames: every "Show these tags in the sidebar" box unticked.
-  # Read-only. A missing key is the default list (still shown), so that warns.
-  tag_py="$DOTDIR/lib/finder-sidebar-tags.py"
-  if [ ! -r "$tag_py" ]; then
-    info "sidebar tag check is missing, so the sidebar tags stay by hand"
-  elif [ -z "$DOT_PYTHON" ]; then
-    info "no python3 — Finder sidebar tags stay by hand"
-  else
-    if [ -n "${FINDER_TAGS_PLIST+x}" ]; then
-      tag_line="$(with_timeout 15 "$DOT_PYTHON" "$tag_py" --plist "$FINDER_TAGS_PLIST" </dev/null 2>/dev/null || true)"
-    else
-      tag_line="$(with_timeout 15 "$DOT_PYTHON" "$tag_py" </dev/null 2>/dev/null || true)"
-    fi
-    tag_st="${tag_line%%|*}"
-    tag_msg="${tag_line#*|}"
-    case "$tag_st" in
-      ok)
-        CHECKED=$((CHECKED + 1))
-        pass "$tag_msg"
-        ;;
-      warn)
-        CHECKED=$((CHECKED + 1))
-        fixid finder-sidebar
-        warn "$tag_msg"
-        ;;
-      *) info "${tag_msg:-Finder sidebar tags could not be read, so they stay by hand}" ;;
-    esac
-  fi
+  # No tags in the sidebar is manual step finder-sidebar-tags. FavoriteTagNames
+  # is not read: on this Mac every box is unticked and the sidebar has no Tags
+  # section, but the key still lists tag names (tags sync through iCloud).
 }
 
 if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
@@ -160,10 +135,10 @@ fi
 # lib/finder-sidebar-rows.list is Shared, AirDrop and iCloud Drive hidden,
 # and the home folder, Macintosh HD, Network, and Trash visible.
 # A row the sidebar files do not name is an info line (still by hand).
-# Tags in the sidebar are lib/finder-sidebar-tags.py (FavoriteTagNames).
 # Tags collapsed is the defaults key SidebarTagsSctionDisclosedState. Recents
-# hidden is the section above. --fix does not write the sidebar files or the
-# tag list. Manual step finder-sidebar points here.
+# hidden is the section above. No tags in the sidebar is manual step
+# finder-sidebar-tags (FavoriteTagNames is not read and is not a warning).
+# --fix does not write the sidebar files. Manual step finder-sidebar points here.
 hdr "Finder sidebar rows"
 check_step_finder_sidebar
 

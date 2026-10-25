@@ -204,7 +204,15 @@ spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Boo
 
 # ---- Login Items & Finder ----
 login-items-off|Login Items & Finder|Keep ChatGPT Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:login-items
-finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents and Shared stay hidden, and, when the sidebar files name the row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. No tags are shown in the sidebar. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar, then Finder → Settings → Tags → untick every box under Show these tags in the sidebar (Red, Orange, Yellow, Green, Blue, Purple, Grey, Work, Home, Important)|app:Finder|@macconfig:finder
+finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents and Shared stay hidden, and, when the sidebar files name the row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar|app:Finder|@macconfig:finder
+# FavoriteTagNames is not what the sidebar shows. On pdone-mac2 every box
+# under Show these tags in the sidebar is unticked and the sidebar has no
+# Tags section, but `defaults read com.apple.finder FavoriteTagNames` still
+# returns ("", Red, Orange, Yellow, Green, Blue, Purple, Grey). Tags sync
+# through iCloud (TagsCloudSerialNumber). Do not read that key and do not
+# warn. Leave the check empty. The why-line is
+# MANUAL: Can't check this automatically. If it's already set, press s.
+finder-sidebar-tags|Login Items & Finder|No tags shown in the sidebar|Finder → Settings → Tags → untick every box under Show these tags in the sidebar||
 
 # ---- App settings ----
 # Raycast is set by hand: the launcher hotkey, then Clipboard History.

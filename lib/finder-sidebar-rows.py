@@ -17,8 +17,9 @@ Nothing here writes a sidebar file.
 
 The Tags group collapsed is SidebarTagsSctionDisclosedState in
 lib/macos-defaults.list (Apple spells it that way). Recents hidden is
-lib/finder-sidebar-recents.py. Tags in the sidebar are
-lib/finder-sidebar-tags.py. This script does not repeat those.
+lib/finder-sidebar-recents.py. No tags in the sidebar is manual step
+finder-sidebar-tags. FavoriteTagNames is not read. This script does not
+repeat those.
 
 SidebarShowingiCloudDesktop is not checked. Its value on this Mac was
 not confirmed, so pinning it would warn on a good setup.
