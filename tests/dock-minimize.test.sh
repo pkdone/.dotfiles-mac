@@ -222,5 +222,96 @@ eq "drift does not restart Finder" 0 "$miss_finder"
 
 eq "dock-apps.list unchanged" "$dockapps_before" "$(cksum "$DOCKAPPS")"
 
+# WhatsApp Web sits between Slack and Granola. A missing copy is the manual
+# step, not a hard error. The Safari web-app UUID is not stored in the list.
+names="$(awk -F'|' '$1 !~ /^[[:space:]]*#/ && $1 !~ /^[[:space:]]*$/ { print $1 }' "$DOCKAPPS")"
+eq "dock order starts Slack, WhatsApp Web, Granola" \
+  "$(printf '%s\n' Slack 'WhatsApp Web' Granola)" \
+  "$(printf '%s\n' "$names" | head -n 3)"
+eq "WhatsApp Web dock row is the manual step" \
+  "WhatsApp Web|@HOME@/Applications/WhatsApp Web.app|manual:whatsapp-web" \
+  "$(awk -F'|' '$1=="WhatsApp Web" { print; exit }' "$DOCKAPPS")"
+eq "dock list does not hard-code a Safari web app UUID" "" \
+  "$(grep -E 'com\.apple\.(Safari|safari)\.WebApp\.[0-9A-Fa-f]{8}-' "$DOCKAPPS" || true)"
+list_out="$("$DIR/dock.sh" --list)"
+has "dock.sh --list names WhatsApp Web second" $' 1. Slack\n 2. WhatsApp Web\n 3. Granola' "$list_out"
+
+docktmp="$(mktemp -d)"
+dockbin="$docktmp/bin"
+mkdir -p "$dockbin"
+cat > "$dockbin/dockutil" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "${DOCK_LOG:?}"
+if [ "$1" = "--list" ]; then
+  cat "${DOCK_LIST:?}"
+fi
+exit 0
+EOF
+cat > "$dockbin/killall" <<'EOF'
+#!/usr/bin/env bash
+printf 'killall %s\n' "$*" >> "${DOCK_LOG:?}"
+exit 0
+EOF
+chmod +x "$dockbin/dockutil" "$dockbin/killall"
+dock_list() { # home, omit_manual (1 to drop manual: rows)
+  awk -F'|' -v home="$1" -v omit="$2" '
+    $1 ~ /^[[:space:]]*#/ || $1 ~ /^[[:space:]]*$/ { next }
+    {
+      path = $2
+      gsub(/@HOME@/, home, path)
+      if (omit == "1" && $3 ~ /^manual:/) next
+      enc = path
+      gsub(/ /, "%20", enc)
+      printf "%s\tfile://%s/\tpersistent-apps\n", $1, enc
+    }
+  ' "$DOCKAPPS"
+}
+run_dock() { # home
+  : > "$docktmp/log"
+  HOME="$1" PATH="$dockbin:$PATH" DOCK_LOG="$docktmp/log" "$DIR/dock.sh"
+}
+run_check() { # home, omit_manual
+  dock_list "$1" "$2" > "$docktmp/list"
+  HOME="$1" PATH="$dockbin:$PATH" DOCK_LOG="$docktmp/log" DOCK_LIST="$docktmp/list" \
+    "$DIR/macconfig-check.sh" --only dock --no-color
+}
+
+miss_home="$docktmp/miss-home"
+mkdir -p "$miss_home"
+out="$(run_dock "$miss_home")"; rc=$?
+eq "dock.sh skips a missing WhatsApp Web" 0 "$rc"
+has "dock.sh points at the manual step" \
+  "[skip] WhatsApp Web is missing because the manual step hasn't been done (whatsapp-web)" "$out"
+eq "dock.sh does not add the missing app" "" \
+  "$(grep -F 'WhatsApp Web.app' "$docktmp/log" || true)"
+
+have_home="$docktmp/have-home"
+mkdir -p "$have_home/Applications/WhatsApp Web.app"
+out="$(run_dock "$have_home")"; rc=$?
+eq "dock.sh adds WhatsApp Web when the app exists" 0 "$rc"
+has "dock.sh adds the web app path" \
+  "--add $have_home/Applications/WhatsApp Web.app" "$(cat "$docktmp/log")"
+eq "dock.sh does not skip WhatsApp Web when it exists" "" \
+  "$(printf '%s\n' "$out" | grep '\[skip\] WhatsApp Web' || true)"
+
+out="$(run_check "$miss_home" 1)"; rc=$?
+eq "macconfig does not fail when WhatsApp Web is missing" 0 "$rc"
+has "macconfig says the manual step hasn't been done" \
+  "WhatsApp Web is missing because the manual step hasn't been done (whatsapp-web)" "$out"
+eq "a missing WhatsApp Web is not drift" "" \
+  "$(printf '%s\n' "$out" | grep 'DRIFT' || true)"
+
+out="$(run_check "$have_home" 0)"; rc=$?
+eq "macconfig passes when WhatsApp Web is in the Dock" 0 "$rc"
+eq "an installed WhatsApp Web is not called missing" "" \
+  "$(printf '%s\n' "$out" | grep "manual step hasn't been done" || true)"
+has "dock order matches with WhatsApp Web included" "Dock matches lib/dock-apps.list" "$out"
+
+out="$(run_check "$have_home" 1)"; rc=$?
+eq "an installed WhatsApp Web missing from the Dock is drift" 1 "$rc"
+has "drift names WhatsApp Web" "WhatsApp Web" "$out"
+
+rm -rf "$docktmp"
+
 printf 'dock-minimize tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -123,18 +123,31 @@ confirm() {  # prompt -> 0 to proceed, 1 to skip
 # skips a missing app, so this just surfaces it before the confirm below — install them
 # first and answer N, or proceed and re-run dock.sh later. Mirrors dock.sh's own parsing.
 precheck_dock() {
-  local list="$DOTDIR/lib/dock-apps.list" name path apps
+  local list="$DOTDIR/lib/dock-apps.list" name path manual apps step
   local missing=()
+  local manual_missing=()
   [ -r "$list" ] || return 0
   apps="$(<"$list")"
-  while IFS='|' read -r name path; do
+  while IFS='|' read -r name path manual; do
     case "$name" in ''|'#'*) continue ;; esac
     path="${path/@HOME@/$HOME}"
     # Expand a globbed path the same way dock.sh does.
     # shellcheck disable=SC2086  # intentional: unquoted $path lets the glob expand
     case "$path" in *'*'*) set -- $path; path="$1" ;; esac
-    [ -e "$path" ] || missing+=("$name")
+    [ -e "$path" ] && continue
+    if [ -n "${manual:-}" ]; then
+      step="${manual#manual:}"
+      manual_missing+=("$name ($step)")
+    else
+      missing+=("$name")
+    fi
   done <<< "$apps"
+  if [ "${#manual_missing[@]}" -gt 0 ]; then
+    echo "  ⚠️  Not set up yet — dock.sh will skip these:"
+    for name in "${manual_missing[@]}"; do echo "        - $name"; done
+    echo "      They are missing because the manual step hasn't been done."
+    echo "      Do that step, then re-run dock.sh (and macconfig --fix for the Desktop pin)."
+  fi
   if [ "${#missing[@]}" -gt 0 ]; then
     echo "  ⚠️  Not installed yet — dock.sh will skip these:"
     for name in "${missing[@]}"; do echo "        - $name"; done

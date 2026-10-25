@@ -25,7 +25,7 @@ set -uo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
 TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"
-NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer tailscale-signin edge-light "
+NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer tailscale-signin edge-light whatsapp-web "
 
 usage() {
   cat <<'USAGE'
@@ -82,8 +82,8 @@ load_steps() {
       groups_done="$groups_done|$group|"; last_group="$group"
     fi
     case "$target" in
-      ''|x-apple.systempreferences:?*|https://?*|macappstore://*|app:?*) ;;
-      *) ERRORS+=("line $lineno: open '$target' must be x-apple.systempreferences:, https://, macappstore:// or app:") ;;
+      ''|x-apple.systempreferences:?*|https://?*|macappstore://*|app:?*|safari:https://?*) ;;
+      *) ERRORS+=("line $lineno: open '$target' must be x-apple.systempreferences:, https://, safari:https://, macappstore:// or app:") ;;
     esac
     check_spec_ok "$chk" || ERRORS+=("line $lineno: unknown check '$chk'")
     S_ID+=("$id"); S_GROUP+=("$group"); S_TITLE+=("$title"); S_WHERE+=("$where")
@@ -352,6 +352,57 @@ check_remove_widgets() {
   esac
 }
 
+# whatsapp-web — the Safari web app exists and its bundle id starts with
+# com.apple.Safari.WebApp. The UUID is generated per Mac, so it is read from
+# Contents/Info.plist and not stored. Linking the phone cannot be read.
+check_whatsapp_web() {
+  local app="${HOME}/Applications/WhatsApp Web.app" plist bid py rc low
+  if [ ! -e "$app" ]; then
+    # Quote HOME so a "." in the temp path stays literal, and keep the tilde
+    # out of the replacement (bash would expand it back to $HOME).
+    res warn "not found at ~${app#"$HOME"}"
+    return
+  fi
+  plist="$app/Contents/Info.plist"
+  if [ ! -f "$plist" ]; then
+    res hand "can't read the bundle id"
+    return
+  fi
+  py="$(command -v python3 2>/dev/null || true)"
+  bid=""
+  rc=1
+  if [ -n "$py" ]; then
+    bid="$(with_timeout 5 "$py" -c '
+import plistlib, sys
+try:
+    info = plistlib.load(open(sys.argv[1], "rb"))
+except Exception:
+    raise SystemExit(2)
+bundle = info.get("CFBundleIdentifier") if isinstance(info, dict) else None
+if not isinstance(bundle, str) or not bundle.strip():
+    raise SystemExit(3)
+sys.stdout.write(bundle.strip())
+' "$plist" 2>/dev/null)"
+    rc=$?
+  elif command -v defaults >/dev/null 2>&1; then
+    bid="$(defaults read "${app}/Contents/Info" CFBundleIdentifier 2>/dev/null || true)"
+    if [ -n "$bid" ]; then rc=0; fi
+  fi
+  if [ "$rc" -ne 0 ] || [ -z "$bid" ]; then
+    res hand "can't read the bundle id"
+    return
+  fi
+  low="$(printf '%s' "$bid" | tr '[:upper:]' '[:lower:]')"
+  case "$low" in
+    com.apple.safari.webapp.*)
+      res ok "Safari web app. Linking the phone can't be checked."
+      ;;
+    *)
+      res warn "bundle id $bid does not start with com.apple.Safari.WebApp."
+      ;;
+  esac
+}
+
 # logi:<id>[,<id>] — lib/logi-settings.py reads a temporary copy of Logi Options+'s
 # settings.db (deleted afterwards; the real database is never opened) and compares the
 # MX Master 3S values with lib/logi-expected.list.
@@ -421,6 +472,7 @@ run_check() {  # spec [id]
     edge-light)       check_edge_light ;;
     home-printer)     check_home_printer ;;
     tailscale-signin) check_tailscale_signin ;;
+    whatsapp-web)     check_whatsapp_web ;;
     *)                res hand "unknown check '$spec'" ;;
   esac
 }
@@ -535,6 +587,12 @@ open_target() {  # target
       fleet_open_self_service || true
       ;;
     app:*) open -a "${t#app:}" 2>/dev/null || echo "      (couldn't open ${t#app:} — open it by hand)" ;;
+    # https:// follows the default browser, which this repo sets to Chrome.
+    # File → Add to Dock exists only in Safari, so a Safari web app must not
+    # go through that default.
+    safari:https://*)
+      open -a Safari "${t#safari:}" 2>/dev/null || echo "      (couldn't open ${t#safari:} in Safari — open it by hand)"
+      ;;
     *)     open "$t" 2>/dev/null || echo "      (couldn't open $t — open it by hand)" ;;
   esac
 }
