@@ -17,11 +17,11 @@ Nothing here writes a sidebar file.
 
 The Tags group collapsed is SidebarTagsSctionDisclosedState in
 lib/macos-defaults.list (Apple spells it that way). Recents hidden is
-lib/finder-sidebar-recents.py. This script does not repeat those.
+lib/finder-sidebar-recents.py. Tags in the sidebar are
+lib/finder-sidebar-tags.py. This script does not repeat those.
 
-ShowRecentTags and SidebarShowingiCloudDesktop are not checked. Their
-values on this Mac were not confirmed, so pinning them would warn on a
-good setup.
+SidebarShowingiCloudDesktop is not checked. Its value on this Mac was
+not confirmed, so pinning it would warn on a good setup.
 
 Output, one line per result, fields separated by |:
 

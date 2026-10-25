@@ -497,7 +497,7 @@ out="$(porcelain 1 0)"
 eq "standalone gh signed out is a warning" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$3=="gh-auth"{print $1; exit}')"
 
 # manualsteps open/pending skip a step whose check is ok. No account is
-# "Not set yet". A one-row list, so other steps do not get in the way.
+# "NOTSET:". A one-row list, so other steps do not get in the way.
 printf '%s\n' \
   '1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin once in a terminal|1Password → Settings → Developer|app:1Password|op-cli' \
   > "$tmp/op-only.list"
@@ -516,7 +516,7 @@ miss "open does not show an added account" "Integrate with 1Password CLI" "$open
 pending_miss="$(OP_WHOAMI_RC=1 OP_ACCOUNTS=0 PATH="$stub_path" \
   SESSION_CHECKS_OP_APP="$tmp/1Password.app" MANUAL_STEPS_LIST="$tmp/op-only.list" \
   OP_LOG="$tmp/op.log" NO_COLOR=1 "$MS" pending)"
-has "no account says not set yet" "Not set yet:" "$pending_miss"
+has "no account says not set yet" "NOTSET:" "$pending_miss"
 has "no account names the developer setting" "1Password → Settings → Developer" "$pending_miss"
 has "no account says to run op signin" "then run op signin" "$pending_miss"
 miss "no account does not mention op whoami" "op whoami" "$pending_miss"

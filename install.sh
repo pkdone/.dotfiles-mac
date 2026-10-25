@@ -179,7 +179,7 @@ else
     read -r reply || reply=''
     case "$reply" in
       y|Y|yes|YES) "$MANUAL_STEPS" open || true ;;
-      *) echo "Later: $MANUAL_STEPS open" ;;
+      *) echo "Later: manualsteps open" ;;
     esac
   fi
 fi
