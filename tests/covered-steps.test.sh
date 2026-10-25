@@ -123,6 +123,24 @@ has "manual section ignores covered rows" "covered|'') : ;;" \
 miss "covered-steps does not launch macconfig" "macconfig-check.sh" \
   "$(cat "$DIR/lib/covered-steps.sh")"
 
+# A clamshell (no built-in display) is an info skip. open must not walk it.
+cat > "$tmp/bin/system_profiler" <<'EOF'
+#!/bin/sh
+printf '%s\n' '{"SPDisplaysDataType":[]}'
+EOF
+chmod +x "$tmp/bin/system_profiler"
+printf '%s\n' \
+  'display-more-space|Display, keyboard & desktop|More Space|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display' \
+  > "$tmp/disp.list"
+disp_porc="$(PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_LIST="$tmp/disp.list" \
+  "$MS" check --porcelain 2>"$tmp/disp.err")"
+disp_rc=$?
+eq "a More Space info skip is ok" "ok" "$(printf '%s\n' "$disp_porc" | cut -d'|' -f1)"
+eq "a More Space info skip exits 0" 0 "$disp_rc"
+disp_open="$(printf 's\n' | PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$tmp/disp.list" "$MS" open 2>"$tmp/dispopen.err")"
+miss "open skips More Space when there is no built-in display" "More Space" "$disp_open"
+
 # Every @macconfig step: manualsteps check and the shared function agree.
 awk -F'|' '$1 !~ /^#/ && $6 ~ /^@macconfig:/ { print $1, substr($6, 12) }' "$LIST" > "$tmp/ids.txt"
 while read -r id area; do

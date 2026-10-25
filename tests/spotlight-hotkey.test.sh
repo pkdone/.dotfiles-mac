@@ -36,7 +36,31 @@ state="$tmp/hotkeys.txt"
 dlog="$tmp/defaults.log"
 alog="$tmp/activate.log"
 mkdir -p "$bin" "$home"
-cleanup() { rm -rf "$tmp"; }
+# macos.sh writes a restore snapshot under backups/. Remember what was already
+# there and delete only directories this run creates.
+snapshot_backups() {
+  if [ -d "$DIR/backups" ]; then
+    find "$DIR/backups" -mindepth 1 -maxdepth 1 -type d -name 'defaults-*' | sort
+  fi
+}
+mkdir -p "$DIR/backups/defaults-keep-spotlight-test"
+printf 'keep\n' > "$DIR/backups/defaults-keep-spotlight-test/marker"
+BACKUP_BEFORE="$(snapshot_backups)"
+sweep_new_backups() {
+  local now d
+  now="$(snapshot_backups)"
+  while IFS= read -r d; do
+    [ -n "$d" ] || continue
+    case "$BACKUP_BEFORE" in
+      *"$d"*) ;;
+      *) rm -rf "$d" ;;
+    esac
+  done <<< "$now"
+}
+cleanup() {
+  sweep_new_backups
+  rm -rf "$DIR/backups/defaults-keep-spotlight-test" "$tmp"
+}
 trap cleanup EXIT
 
 cat > "$bin/defaults" <<'EOF'
@@ -238,7 +262,10 @@ rc=$?
 ok "macos repairs a disabled hotkey" "$rc"
 has "macos reports the change" "Spotlight hotkey 64 -> Command+Space" "$out"
 eq "macos writes once when it differs" 1 "$(write_count)"
-rm -rf "$DIR/backups"
+sweep_new_backups
+eq "a pre-existing defaults backup is left in place" "keep" \
+  "$(cat "$DIR/backups/defaults-keep-spotlight-test/marker")"
+eq "this run's defaults backup is removed" "$BACKUP_BEFORE" "$(snapshot_backups)"
 
 printf 'spotlight-hotkey tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
