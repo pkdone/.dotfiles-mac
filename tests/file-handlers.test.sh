@@ -66,6 +66,7 @@ dyn_exts = set(filter(None, os.environ.get("DUTI_DYN_EXTS", "").split(",")))
 s_dyn = set(filter(None, os.environ.get("DUTI_S_DYN", "").split(",")))
 x_error = os.environ.get("DUTI_X_ERROR", "")
 lag = int(os.environ.get("DUTI_X_LAG", "0"))
+lag_once = os.environ.get("DUTI_X_LAG_ONCE", "") == "1"
 DYN = "dyn.ah62d4qmxhk2x43xmsrya"
 DECLARED = {
     "html": ["public.html"],
@@ -148,6 +149,14 @@ if len(argv) == 4 and argv[0] == "-s":
             save(db)
             raise SystemExit(0)
         if lag > 0:
+            # DUTI_X_LAG_ONCE arms the lag on the first duti -s only. A retry
+            # then writes the new bundle immediately.
+            if lag_once and db.get("_lag_used_" + ext):
+                db[ext] = bundle
+                save(db)
+                raise SystemExit(0)
+            if lag_once:
+                db["_lag_used_" + ext] = 1
             lag_map = db.get("_lag") or {}
             lag_map[ext] = [lag, bundle]
             db["_lag"] = lag_map
@@ -162,6 +171,23 @@ if len(argv) == 4 and argv[0] == "-s":
     db["_set_" + typed] = bundle
     if typed == "com.apple.property-list":
         db["plist"] = bundle
+    save(db)
+    raise SystemExit(0)
+
+if len(argv) == 2 and argv[0] == "-d":
+    scheme = argv[1]
+    db = load()
+    bundle = db.get("scheme:" + scheme) or ""
+    if not bundle:
+        sys.stderr.write("no default handler\n")
+        raise SystemExit(1)
+    sys.stdout.write(bundle + "\n")
+    raise SystemExit(0)
+
+if len(argv) == 3 and argv[0] == "-s":
+    bundle, scheme = argv[1], argv[2]
+    db = load()
+    db["scheme:" + scheme] = bundle
     save(db)
     raise SystemExit(0)
 
@@ -180,6 +206,7 @@ export DUTI_S_DYN=""
 export DUTI_E_BARE=""
 export DUTI_X_ERROR=""
 export DUTI_X_LAG=0
+export DUTI_X_LAG_ONCE=""
 export FILE_HANDLERS_SETTLE_SECS=5
 # The settle wait reads this file as its clock and adds to it instead of
 # sleeping. A busy machine cannot use up the retry window between duti -x reads.
@@ -329,19 +356,42 @@ has "env refusal names duti -s" "fail|env|duti -s com.coteditor.CotEditor .env a
 has "list refusal is reported too" "fail|list|duti -s com.coteditor.CotEditor .list all failed:" "$out"
 has "a sibling extension is still set" "chg|txt|.txt: unset -> CotEditor / com.coteditor.CotEditor" "$out"
 eq "refused extensions are not stored" "" "$("$PY" -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.stdout.write(d.get("env","")+d.get("list",""))' "$DUTI_DB")"
+eq "a duti -s error is not retried" 1 "$(s_calls "$DUTI_LOG" | grep -c '".env"' || true)"
 export DUTI_S_FAIL=""
 
-# duti -s exits 0 but the handler does not change: report it, don't claim chg.
-# The clock starts at 0 here so the 0.4s window is a few pauses, not wall time.
+# duti -s exits 0 but the handler never changes. That is a warning, not a
+# failure: Launch Services can lag, and the exit code must stay 0. The set
+# is tried once more before giving up. The clock starts at 0 so the 0.4s
+# window is a few pauses, not wall time.
 export DUTI_S_LIE="env"
 export FILE_HANDLERS_SETTLE_SECS=0.4
 printf '0\n' > "$FILE_HANDLERS_CLOCK"
 "$PY" -c 'import json,sys; json.dump({}, open(sys.argv[1],"w"))' "$DUTI_DB"
 printf '%s\n' 'env|CotEditor|com.coteditor.CotEditor' > "$tmp/lie.list"
+: > "$DUTI_LOG"
 out="$(run --apply "$tmp/lie.list")"; rc=$?
-eq "a set that does not stick exits 1" 1 "$rc"
-has "a set that does not stick is fail" "fail|env|duti -s com.coteditor.CotEditor .env all did not stick after 0.4s: duti -x still shows unset" "$out"
+eq "a set that does not stick exits 0" 0 "$rc"
+has "a set that does not stick is a warning" "warn|env|set .env to CotEditor, but macOS has not picked it up yet; run macconfig later to confirm" "$out"
+eq "a set that does not stick is not a failure line" "" "$(printf '%s\n' "$out" | grep '^fail|' || true)"
+eq "a set that does not stick retries duti -s once" 2 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
 export DUTI_S_LIE=""
+export FILE_HANDLERS_SETTLE_SECS=5
+
+# The first wait can miss a slow Launch Services update. One retry then
+# sticks, and that is a change.
+export DUTI_X_LAG=1000
+export DUTI_X_LAG_ONCE=1
+export FILE_HANDLERS_SETTLE_SECS=0.4
+printf '0\n' > "$FILE_HANDLERS_CLOCK"
+"$PY" -c 'import json,sys; json.dump({"sh":"com.mitchellh.ghostty"}, open(sys.argv[1],"w"))' "$DUTI_DB"
+printf '%s\n' 'sh|CotEditor|com.coteditor.CotEditor' > "$tmp/retry.list"
+: > "$DUTI_LOG"
+out="$(run --apply "$tmp/retry.list")"; rc=$?
+eq "a retry that then sticks exits 0" 0 "$rc"
+has "a retry that then sticks is a change" "chg|sh|.sh: com.mitchellh.ghostty -> CotEditor / com.coteditor.CotEditor" "$out"
+eq "a slow set is retried once" 2 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
+export DUTI_X_LAG=0
+export DUTI_X_LAG_ONCE=""
 export FILE_HANDLERS_SETTLE_SECS=5
 
 # Launch Services applies a moment after duti returns. Poll before failing.
@@ -359,6 +409,24 @@ eq "a late duti -x read still counts as set" 0 "$rc"
 has "late read is a change, not a failure" "chg|sh|.sh: com.mitchellh.ghostty -> CotEditor / com.coteditor.CotEditor" "$out"
 # One read before duti -s, then three old reads and the read that sees CotEditor.
 eq "late handler is read five times" 5 "$(grep -c -F '["-x", "sh"]' "$DUTI_LOG" || true)"
+export DUTI_X_LAG=0
+export FILE_HANDLERS_SETTLE_SECS=5
+
+# The default window is 20 seconds, checked every half second. Twenty old
+# reads would miss a 5 second window and still land inside 20, so this is a
+# change and the set is not retried. FILE_HANDLERS_SETTLE_SECS is unset so
+# the helper's own default is what runs.
+export DUTI_X_LAG=20
+unset FILE_HANDLERS_SETTLE_SECS
+printf '0\n' > "$FILE_HANDLERS_CLOCK"
+"$PY" -c 'import json,sys; json.dump({"swift":"com.coteditor.CotEditor"}, open(sys.argv[1],"w"))' "$DUTI_DB"
+printf '%s\n' 'swift|Cursor|com.todesktop.230313mzl4w4u92' > "$tmp/slow.list"
+: > "$DUTI_LOG"
+out="$(run --apply "$tmp/slow.list")"; rc=$?
+eq "a slow handler within the default window exits 0" 0 "$rc"
+has "a slow handler within the default window is a change" \
+  "chg|swift|.swift: com.coteditor.CotEditor -> Cursor / com.todesktop.230313mzl4w4u92" "$out"
+eq "a slow handler that sticks is not retried" 1 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
 export DUTI_X_LAG=0
 export FILE_HANDLERS_SETTLE_SECS=5
 
@@ -483,6 +551,24 @@ eq "handlers dry-run exits 0" 0 "$dry_rc"
 has "handlers dry-run sees a pinned extension" "ok      .txt already CotEditor / com.coteditor.CotEditor" "$dry_out"
 has "handlers dry-run finishes" "Dry run complete." "$dry_out"
 eq "handlers dry-run does not call duti -s" "" "$(s_calls "$DUTI_LOG" | grep '^\[' || true)"
+
+# handlers.sh apply: duti -s for .swift exits 0, but Launch Services never
+# shows Cursor. The line is a warning, the script exits 0, and it does not
+# print the old "error" prefix. URL schemes go through the fake duti -d / -s.
+export DUTI_S_LIE="swift"
+export FILE_HANDLERS_SETTLE_SECS=0.4
+printf '0\n' > "$FILE_HANDLERS_CLOCK"
+"$PY" -c 'import json,sys; json.dump({"swift":"com.coteditor.CotEditor"}, open(sys.argv[1],"w"))' "$DUTI_DB"
+: > "$DUTI_LOG"
+handlers_out="$("$DIR/handlers.sh" 2>&1)"
+handlers_rc=$?
+eq "handlers apply exits 0 when the set has not shown up yet" 0 "$handlers_rc"
+has "handlers warns that macOS has not picked the handler up" \
+  "warn    set .swift to Cursor, but macOS has not picked it up yet; run macconfig later to confirm" \
+  "$handlers_out"
+miss "handlers does not call a slow set an error" "error   " "$handlers_out"
+export DUTI_S_LIE=""
+export FILE_HANDLERS_SETTLE_SECS=5
 
 printf 'file-handlers tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
