@@ -152,8 +152,11 @@ NSGlobalDomain|AppleActionOnDoubleClick|string|Fill||Windows|Double-click a wind
 # StandardHideWidgets true hides widgets on the desktop (Widgets → Show Widgets →
 # On Desktop off). StageManagerHideWidgets true hides them while Stage Manager is
 # on (Show Widgets → In Stage Manager off). GloballyEnabled false turns Stage
-# Manager off (Desktop & Stage Manager → Stage Manager). These three replace the
-# desktop-widgets manual step. restart is empty, same as the tiling rows:
+# Manager off (Desktop & Stage Manager → Stage Manager). These three hide
+# widgets. They do not delete placed ones (manual step remove-widgets: the
+# notificationcenterui plist, widgets → instances). macconfig --fix repairs
+# these three keys and does not write that plist or kill NotificationCenter
+# or chronod. restart is empty, same as the tiling rows:
 # WindowManager applies the domain live (Stage Manager togglers and widget
 # togglers write these keys and the desktop updates with no killall), so macos.sh
 # does not killall Dock (that reloads Spaces) or WindowManager.

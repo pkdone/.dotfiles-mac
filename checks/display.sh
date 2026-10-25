@@ -111,6 +111,54 @@ else
   esac
 fi
 
+# ---- 6c25. Desktop widgets (removed, check-only) ------------------------
+# StandardHideWidgets hides widgets. It does not delete them. Placed widgets
+# are widgets → instances in the notificationcenterui plist, one data blob
+# each, and they still show when the desktop is revealed.
+# lib/desktop-widgets.py only reads that plist. This section does not write
+# it and does not kill NotificationCenter or chronod. macconfig --fix does
+# not either (remove-widgets in lib/autofix.list is report-only). Manual step
+# remove-widgets is the removal. WIDGETS_SECTION_RAN tells checks/manual.sh
+# not to print the same result again; `manualsteps open` still uses the check,
+# so the step is shown only when a widget is placed.
+hdr "Desktop widgets"
+WIDGETS_SECTION_RAN=1
+fixid remove-widgets
+WIDGETS_HELPER="$DOTDIR/lib/desktop-widgets.py"
+if [ ! -r "$WIDGETS_HELPER" ]; then
+  CHECKED=$((CHECKED + 1))
+  fixid repo-file
+  warn "lib/desktop-widgets.py missing — can't check desktop widgets"
+elif [ -z "$DOT_PYTHON" ]; then
+  CHECKED=$((CHECKED + 1))
+  fixid tooling
+  warn "no python3 — can't check desktop widgets"
+else
+  widgets_line="$(with_timeout 15 "$DOT_PYTHON" "$WIDGETS_HELPER" </dev/null 2>/dev/null || true)"
+  widgets_status="${widgets_line%%|*}"
+  widgets_msg="${widgets_line#*|}"
+  widgets_msg="${widgets_msg#*|}"
+  # The fallback stays outside ${var:-...}: an apostrophe there breaks bash.
+  widgets_hand="can't read the desktop widget list — check by hand"
+  case "$widgets_status" in
+    ok)
+      CHECKED=$((CHECKED + 1))
+      pass "$widgets_msg"
+      ;;
+    warn)
+      CHECKED=$((CHECKED + 1))
+      fixid remove-widgets
+      warn "$widgets_msg"
+      ;;
+    hand)
+      info "${widgets_msg:-$widgets_hand}"
+      ;;
+    *)
+      info "$widgets_hand"
+      ;;
+  esac
+fi
+
 # ---- 6c3. Account picture (the Dog, check-only) -------------------------
 # SHA-256 of the JPEGPhoto on the user account. The hash is
 # lib/user-picture.sha256. A different picture is a warning. --fix does not

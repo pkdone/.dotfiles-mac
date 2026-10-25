@@ -22,7 +22,7 @@ set -uo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
 TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"
-NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results "
+NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets "
 
 usage() {
   cat <<'USAGE'
@@ -192,6 +192,30 @@ check_karabiner_driver() {
   fi
 }
 
+# remove-widgets — lib/desktop-widgets.py reads widgets.instances in the
+# notificationcenterui plist. It does not write that file and does not kill
+# NotificationCenter or chronod. ok when no widget is placed, so `open` skips
+# the step; warn when any are placed; hand when the plist cannot be read.
+check_remove_widgets() {
+  local py="" p line status detail
+  for p in "$(command -v python3 2>/dev/null)" /opt/homebrew/bin/python3 /usr/bin/python3; do
+    if [ -n "$p" ] && [ -x "$p" ]; then py="$p"; break; fi
+  done
+  if [ -z "$py" ]; then res hand "no python3 — can't read the desktop widget list"; return; fi
+  if [ ! -r "$DOTDIR/lib/desktop-widgets.py" ]; then
+    res hand "lib/desktop-widgets.py missing"
+    return
+  fi
+  line="$(with_timeout 15 "$py" "$DOTDIR/lib/desktop-widgets.py" </dev/null 2>/dev/null || true)"
+  status="${line%%|*}"
+  detail="${line#*|}"
+  detail="${detail#*|}"
+  case "$status" in
+    ok|warn|hand) res "$status" "$detail" ;;
+    *) res hand "can't read the desktop widget list" ;;
+  esac
+}
+
 # logi:<id>[,<id>] — lib/logi-settings.py reads a temporary copy of Logi Options+'s
 # settings.db (deleted afterwards; the real database is never opened) and compares the
 # MX Master 3S values with lib/logi-expected.list.
@@ -233,6 +257,7 @@ run_check() {  # spec
     op-cli)           check_op_cli ;;
     gh-auth)          check_gh_auth ;;
     spotlight-results) check_spotlight_results ;;
+    remove-widgets)   check_remove_widgets ;;
     *)                res hand "unknown check '$spec'" ;;
   esac
 }

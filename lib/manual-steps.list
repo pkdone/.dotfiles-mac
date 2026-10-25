@@ -27,7 +27,7 @@
 #                                           lib/logi-settings.py; never written)
 #            @macconfig-check.sh                      verified by its own macconfig-check.sh section (not repeated here)
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
-#            | spotlight-results
+#            | spotlight-results | remove-widgets
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
@@ -36,6 +36,13 @@
 #                                           --fix never changes them. spotlight-results cannot read
 #                                           the toggles, so the result is check by hand, reported
 #                                           with the other manual steps.
+#                                           remove-widgets reads widgets.instances in the
+#                                           notificationcenterui plist (lib/desktop-widgets.py;
+#                                           never written, and NotificationCenter / chronod are
+#                                           not killed). The Desktop widgets section reports
+#                                           it. Manual steps skips that duplicate when the section
+#                                           ran. open still uses the check, so the step is shown
+#                                           only when a widget is placed.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Sign-ins ----
@@ -119,8 +126,13 @@ ac-sleep|Display, keyboard & desktop|On mains power the Mac does not sleep on it
 # only warns when a key is missing.
 charge-limit|Display, keyboard & desktop|Charge Limit 80% (Apple silicon laptops). Check by hand: the chosen percentage cannot be read|System Settings → Battery → click ⓘ next to Charging → drag Charge Limit to 80% (leave Optimised Battery Charging on) → Done|x-apple.systempreferences:com.apple.Battery-Settings.extension|
 input-british|Display, keyboard & desktop|Keyboard input source: British (macconfig checks the selected layout is British only)|System Settings → Keyboard → Text Input → click Edit… next to Input Sources (opens a sheet) → British → Done|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
-# Desktop widgets and Stage Manager are lib/macos-defaults.list (StandardHideWidgets,
-# StageManagerHideWidgets, GloballyEnabled). Click wallpaper to reveal desktop stays out.
+# Hiding widgets is lib/macos-defaults.list (StandardHideWidgets,
+# StageManagerHideWidgets). That does not delete placed widgets. They live in
+# the notificationcenterui plist (widgets → instances) and still appear when
+# the desktop is revealed. The check only reads that plist. macconfig --fix
+# does not write it and does not kill NotificationCenter or chronod.
+# Click wallpaper to reveal desktop stays out.
+remove-widgets|Display, keyboard & desktop|Remove every widget from the desktop: Control-click (or right-click) each widget → Remove Widget.|Desktop (reveal the desktop if the widgets are hidden)||remove-widgets
 user-picture|Display, keyboard & desktop|Set your user picture to the Dog (macconfig checks this). A different picture is a warning. macconfig does not change it|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig-check.sh
 
 # ---- Notifications & Spotlight ----
