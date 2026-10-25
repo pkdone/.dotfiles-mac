@@ -75,6 +75,7 @@ Hostname
 Display auto-brightness
 Display (More Space)
 Wallpaper
+Desktop widgets
 User picture
 Power (sleep and wake)
 URL handlers
