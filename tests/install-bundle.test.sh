@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 #
-# install.sh's Brewfile failure: a partial `brew bundle` warns and points at
-# brewsync. It does not open the App Store or retry the install. This does not
-# execute install.sh (it refuses to run off Darwin).
+# install.sh's Brewfile failure: a partial install names the missing entries
+# and points at brewsync. It does not open the App Store. The retry is
+# `brew install`, not another `brew bundle install`. This does not execute
+# install.sh (it refuses to run off Darwin, and on Darwin it would change
+# the machine).
 # Run: ./tests/install-bundle.test.sh
 #
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL="$DIR/install.sh"
+HELPER="$DIR/lib/brew-bundle.sh"
 
 pass=0
 fail=0
@@ -26,13 +29,17 @@ miss() {
 }
 
 src="$(cat "$INSTALL")"
+helper="$(cat "$HELPER")"
 # shellcheck disable=SC2016  # needles are source text, compared literally
-has "checks the Brewfile after install" 'brew bundle check --file "$DOTFILES/Brewfile"' "$src"
-has "keeps the partial-failure warning" 'some Brewfile entries did not install' "$src"
+has "delegates the Brewfile to the helper" 'scripts/brew-bundle-install.sh' "$src"
+# shellcheck disable=SC2016
+has "checks the Brewfile after install" 'brew bundle check --no-upgrade --file "$file"' "$helper"
 has "partial failure points at brewsync" 'run brewsync' "$src"
+miss "generic some-entries message is gone" 'some Brewfile entries did not install' "$src$helper"
 miss "does not open the App Store" 'macappstore://' "$src"
 # shellcheck disable=SC2016
-miss "does not retry brew bundle install" 'brew bundle install --file' "$src"
+miss "does not retry brew bundle install" 'brew bundle install --file' "$src$helper"
+has "retries a cask with brew install" 'brew install --cask' "$helper"
 miss "does not call mas account" 'mas account' "$src"
 miss "does not ask for App Store sign-in" 'App Store sign-in' "$src"
 

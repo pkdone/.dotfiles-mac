@@ -17,3 +17,7 @@ discovery/
 # Python helper bytecode
 __pycache__/
 *.py[cod]
+
+# Setup run logs belong in ~/Library/Logs/dotfiles/, never in this checkout.
+*.log
+logs/

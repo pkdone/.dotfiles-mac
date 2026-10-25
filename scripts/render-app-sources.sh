@@ -70,7 +70,7 @@ This repo installs apps and tools from three places.
 
 ### Homebrew
 
-Command-line tools and desktop apps listed in the Brewfile. The first setup installs them with \`brew bundle\`. After that, \`brewsync\` installs anything missing and upgrades what is already there. If one of these is missing, run \`brewsync\`.
+Command-line tools and desktop apps listed in the Brewfile. The first setup installs them with \`brew bundle\`. A failed entry is retried once and does not stop the others. An app already in \`/Applications\` is adopted. After that, \`brewsync\` installs anything missing and upgrades what is already there. If one of these is missing, run \`brewsync\`.
 
 **Command-line tools:** ${tools}.
 
