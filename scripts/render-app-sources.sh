@@ -40,10 +40,13 @@ render() {
   if has_mas; then
     store="The Mac App Store is for the apps the Brewfile installs with \`mas\`."
   else
-    store="Nothing is installed from the Mac App Store now, because this Mac can't sign in with a personal Apple ID."
+    store="The Mac App Store. Nothing is installed from it now, because this Mac can't sign in with a personal Apple ID."
   fi
   cat <<EOF
-Apps and tools come from three places. Homebrew, via the Brewfile, is for most apps and command-line tools. Fleet Self service is for company-managed apps that can't be installed unattended; setup prompts you to install them. ${store}
+Apps and tools come from three places:
+1. Homebrew, via the Brewfile, for most apps and command-line tools.
+2. Fleet Self service, for company-managed apps that can't be installed unattended. Setup prompts you to install them.
+3. ${store}
 EOF
 }
 

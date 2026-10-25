@@ -34,17 +34,10 @@ These are three ways to use the same checklist. You don't need to run all of the
 ```bash
 manualsteps        # check each step and report whether it is done (ok), needs attention (warn), or must be checked by hand. Changes nothing.
 manualsteps open   # go through each step not yet done, opening the right settings page for you
-manualsteps list   # just print the full numbered checklist
+manualsteps list   # just print the full numbered checklist (even for those already set)
 ```
 
 The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
-
-<!-- BEGIN app-sources -->
-Apps and tools come from three places. Homebrew, via the Brewfile, is for most apps and command-line tools. Fleet Self service is for company-managed apps that can't be installed unattended; setup prompts you to install them. Nothing is installed from the Mac App Store now, because this Mac can't sign in with a personal Apple ID.
-<!-- END app-sources -->
-
-WhatsApp is not installed because the company's app policy blocks it on company Macs. WhatsApp Web is used instead, as a Safari web app, set up by a manual step.
-Gemini is not installed because the company's app policy blocks it on company Macs.
 
 ## Everyday commands
 
@@ -68,6 +61,15 @@ What the check's output means, including the Mac health summary at the end, is e
 ```bash
 brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile
 ```
+
+## Where apps come from
+
+<!-- BEGIN app-sources -->
+Apps and tools come from three places:
+1. Homebrew, via the Brewfile, for most apps and command-line tools.
+2. Fleet Self service, for company-managed apps that can't be installed unattended. Setup prompts you to install them.
+3. The Mac App Store. Nothing is installed from it now, because this Mac can't sign in with a personal Apple ID.
+<!-- END app-sources -->
 
 ## Docs
 
