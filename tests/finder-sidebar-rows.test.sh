@@ -32,7 +32,7 @@ chmod +x "$HELPER"
 home="$tmp/home"
 mkdir -p "$home"
 
-eq "finder sidebar step is checked by macconfig" "@macconfig-check.sh" \
+eq "finder sidebar step is checked by macconfig" "@macconfig:finder" \
   "$(awk -F'|' '$1 == "finder-sidebar" { print $6; exit }' "$DIR/lib/manual-steps.list")"
 has "manual step says macconfig checks this" "macconfig checks this" \
   "$(awk -F'|' '$1 == "finder-sidebar" { print $3; exit }' "$DIR/lib/manual-steps.list")"

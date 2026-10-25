@@ -6,8 +6,11 @@
 #   list [--markdown]   numbered checklist (or a Markdown table for docs/manual-steps.md)
 #   open [--all]        interactive walk-through: opens each step's settings page and
 #                       waits for Enter. Skips steps whose check already passes unless
-#                       --all. Prints a group heading only for a group that still has a
+#                       --all. Under each title, one line says why the step is shown.
+#                       Prints a group heading only for a group that still has a
 #                       step to show. Does nothing when stdin isn't a terminal.
+#                       A check of @macconfig:<area> runs that section's step function
+#                       once (lib/covered-steps.sh). It does not run the whole of macconfig.
 #   check [--porcelain] run each step's read-only check: ok / warn / check by hand.
 #                       Human output groups lines under the same headings as list.
 #                       --porcelain prints status|num|id|title|detail for macconfig-check.sh
@@ -93,6 +96,13 @@ check_spec_ok() {
   local spec="$1" rest
   case "$spec" in
     ''|'@macconfig-check.sh') return 0 ;;
+    @macconfig:*)
+      rest="${spec#@macconfig:}"
+      case "$rest" in
+        mdm|karabiner|display|power|notifications|login-items|finder|modes) return 0 ;;
+      esac
+      return 1
+      ;;
     tcc:*)
       rest="${spec#tcc:}"
       case "$rest" in *:*) ;; *) return 1 ;; esac
@@ -122,6 +132,8 @@ res() { R_STATUS="$1"; R_DETAIL="$2"; }
 . "$DOTDIR/lib/session-checks.sh"
 # shellcheck source=../lib/fleet-apps.sh disable=SC1091
 . "$DOTDIR/lib/fleet-apps.sh"
+# shellcheck source=../lib/covered-steps.sh disable=SC1091
+. "$DOTDIR/lib/covered-steps.sh"
 
 # Allowed in the system TCC database? Reading it needs Full Disk Access for whatever
 # runs this (Ghostty / Grok Bot); without it, fall back to check by hand.
@@ -239,11 +251,27 @@ check_logi() {  # comma-separated ids
   esac
 }
 
-run_check() {  # spec
-  local spec="$1" rest path
+run_check() {  # spec [id]
+  local spec="$1" id="${2:-}" rest path line status detail
   case "$spec" in
     '')          res hand "" ;;
     '@macconfig-check.sh') res covered "verified by macconfig-check.sh" ;;
+    @macconfig:*)
+      # macconfig already ran the section. Do not run it again or count it twice.
+      if [ "${MACCONFIG_OWNS_SECTIONS:-}" = 1 ]; then
+        res covered "verified by macconfig-check.sh"
+        return 0
+      fi
+      line="$(covered_step_run "$id" "${spec#@macconfig:}" 2>/dev/null || true)"
+      status="${line%%|*}"
+      detail="${line#*|}"
+      detail="$(printf '%s' "$detail" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+      case "$status" in
+        ok) res ok "$detail" ;;
+        warn) res warn "$detail" ;;
+        *) res hand "" ;;
+      esac
+      ;;
     tcc:*)       rest="${spec#tcc:}"; check_tcc "${rest%%:*}" "${rest#*:}" ;;
     defaults:*)  rest="${spec#defaults:}"; check_defaults "${rest%%:*}" "${rest#*:}" ;;
     logi:*)      check_logi "${spec#logi:}" ;;
@@ -272,7 +300,11 @@ cmd_list() {
     printf '| # | Step | Where | Checked |\n|---|------|------|------|\n'
     i=0
     while [ "$i" -lt "$N" ]; do
-      case "${S_CHECK[$i]}" in '') auto="by hand" ;; '@macconfig-check.sh') auto="macconfig-check.sh" ;; *) auto="auto" ;; esac
+      case "${S_CHECK[$i]}" in
+        '') auto="by hand" ;;
+        '@macconfig-check.sh'|@macconfig:*) auto="macconfig-check.sh" ;;
+        *) auto="auto" ;;
+      esac
       printf '| %d | %s | %s | %s |\n' "$((i + 1))" "${S_TITLE[$i]}" "${S_WHERE[$i]}" "$auto"
       i=$((i + 1))
     done
@@ -293,6 +325,25 @@ cmd_list() {
   printf 'scripts/manual-steps.sh open    walks through the rest, opening each settings page\n'
 }
 
+# Why this step is on the walk-through. Uses the check just run (R_STATUS / R_DETAIL).
+open_why() {
+  case "$R_STATUS" in
+    warn)
+      if [ -n "$R_DETAIL" ]; then
+        printf '%s' "Not set yet: $R_DETAIL"
+      else
+        printf '%s' "Not set yet"
+      fi
+      ;;
+    ok|covered)
+      printf '%s' "Already done, shown because of --all"
+      ;;
+    *)
+      printf '%s' "Can't check this automatically. If it's already set, press s."
+      ;;
+  esac
+}
+
 open_target() {  # target
   local t="$1"
   case "$t" in
@@ -307,7 +358,7 @@ open_target() {  # target
 }
 
 cmd_open() {
-  local all=0 i num reply todo=0 last="" lead=""
+  local all=0 i num reply todo=0 last="" lead="" why_c=""
   [ "${1:-}" = "--all" ] && all=1
   # Tests set MANUAL_STEPS_OPEN_TTY=1 to drive the walk-through from a pipe.
   # A real run still requires a terminal, so a non-interactive caller does nothing.
@@ -320,8 +371,8 @@ cmd_open() {
   i=0
   while [ "$i" -lt "$N" ]; do
     num=$((i + 1))
+    run_check "${S_CHECK[$i]}" "${S_ID[$i]}"
     if [ "$all" = 0 ]; then
-      run_check "${S_CHECK[$i]}"
       if [ "$R_STATUS" = ok ] || [ "$R_STATUS" = covered ]; then i=$((i + 1)); continue; fi
     fi
     todo=$((todo + 1))
@@ -336,7 +387,14 @@ cmd_open() {
     else
       lead=$'\n'
     fi
-    printf '%s%s%d. %s%s\n      %s\n' "$lead" "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" "${S_WHERE[$i]}"
+    case "$R_STATUS" in
+      warn) why_c="$C_WARN" ;;
+      *) why_c="$C_DIM" ;;
+    esac
+    printf '%s%s%d. %s%s\n      %s%s%s\n      %s\n' \
+      "$lead" "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" \
+      "$why_c" "$(open_why)" "$C_OFF" \
+      "${S_WHERE[$i]}"
     printf '      [Enter] open%s, s skip, q quit: ' "$([ -n "${S_OPEN[$i]}" ] || echo ' (nothing to open)')"
     read -r reply || reply=q
     case "$reply" in
@@ -360,7 +418,7 @@ cmd_check() {
   i=0
   while [ "$i" -lt "$N" ]; do
     num=$((i + 1))
-    run_check "${S_CHECK[$i]}"
+    run_check "${S_CHECK[$i]}" "${S_ID[$i]}"
     case "$R_STATUS" in
       ok)      oks=$((oks + 1));         label="ok";       colour="$C_OK" ;;
       warn)    warns=$((warns + 1));     label="warn";     colour="$C_WARN" ;;

@@ -52,9 +52,9 @@ title="$(awk -F'|' '$1 == "notifications-apps" { print $3; exit }' "$STEPS")"
 title_names="$(printf '%s\n' "$title" | sed -E 's/^Turn notifications Off for //')"
 off_joined="$(printf '%s\n' "$off_names" | awk 'NR > 1 { printf ", " } { printf "%s", $0 } END { printf "\n" }')"
 eq "off-list names match the manual step" "$off_joined" "$title_names"
-eq "notifications-apps is checked by macconfig-check.sh" "@macconfig-check.sh" \
+eq "notifications-apps is checked by macconfig-check.sh" "@macconfig:notifications" \
   "$(awk -F'|' '$1 == "notifications-apps" { print $6; exit }' "$STEPS")"
-eq "mode-hammerspoon-alerts is checked by macconfig-check.sh" "@macconfig-check.sh" \
+eq "mode-hammerspoon-alerts is checked by macconfig-check.sh" "@macconfig:notifications" \
   "$(awk -F'|' '$1 == "mode-hammerspoon-alerts" { print $6; exit }' "$STEPS")"
 
 eq "allow bit constant is 25" "ALLOW_NOTIFICATIONS_BIT = 25" \

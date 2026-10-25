@@ -36,7 +36,7 @@ eq "14-inch More Space prefix" "3024x1964|1800 x 1169" \
   "$(grep -E '^3024x1964\|' "$LIST")"
 eq "16-inch More Space prefix" "3456x2234|2056 x 1329" \
   "$(grep -E '^3456x2234\|' "$LIST")"
-eq "display-more-space is checked by macconfig-check.sh" "@macconfig-check.sh" \
+eq "display-more-space is checked by macconfig-check.sh" "@macconfig:display" \
   "$(awk -F'|' '$1 == "display-more-space" { print $6; exit }' "$STEPS")"
 eq "display-more-space is fixed by macos.sh" "SAFE|macos" \
   "$(awk -F'|' '$1 == "display-more-space" { print $2 "|" $3; exit }' "$DIR/lib/autofix.list")"

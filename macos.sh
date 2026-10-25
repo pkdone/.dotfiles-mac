@@ -19,7 +19,8 @@
 #   --no-color  Disable ANSI colour (also honours the NO_COLOR env var).
 #   --list      Print the managed settings as a Markdown table and exit.
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
-#               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
+#               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @spotlight-64 /
+#               @coteditor /
 #               @finder-recents / @finder-icon-view / @finder-favorites /
 #               @finder-show / @titlebar-double-click / @ac-sleep /
 #               @display-more-space. Values that already match are left alone
@@ -85,7 +86,8 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
   --list       Print the managed settings as a Markdown table and exit.
   --only ID    Apply only this item (repeatable): "domain|key" from
-               lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
+               lib/macos-defaults.list, or @dictation-164, @quicknote-190, @spotlight-64,
+               @coteditor,
                @finder-recents, @finder-icon-view, @finder-favorites, @finder-show,
                @titlebar-double-click, @ac-sleep, @display-more-space. Matching
                values are left alone. Dark mode is also turned on live when it
@@ -567,6 +569,40 @@ apply_quicknote_hotkey() {
   queue_restart logout "Quick Note shortcut (symbolic hotkey 190)"
 }
 if selected @quicknote-190; then apply_quicknote_hotkey; fi
+
+# ---- Spotlight hotkey 64 (Command+Space; not a macos-defaults row) -------
+# Keep "Show Spotlight search" on Command+Space. Raycast's Replace Spotlight
+# button sets enabled=0. Write only when the value differs, including a full
+# setup (no re-assert). No LaunchAgent.
+apply_spotlight_hotkey() {
+  local pin="$DOTDIR/scripts/pin-spotlight-hotkey-64.sh"
+  CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -x "$pin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "scripts/pin-spotlight-hotkey-64.sh missing — skip Spotlight hotkey"
+    return 0
+  fi
+  if "$pin" --check >/dev/null 2>&1; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Spotlight hotkey 64 already Command+Space (dry-run)"
+    else
+      say_ok "Spotlight hotkey 64 already Command+Space (left alone)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Spotlight hotkey 64 -> Command+Space (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.symbolichotkeys"
+  ensure_backup
+  "$pin" >/dev/null
+  CHANGED=$((CHANGED + 1))
+  say_chg "Spotlight hotkey 64 -> Command+Space"
+  queue_restart logout "Spotlight shortcut (symbolic hotkey 64)"
+}
+if selected @spotlight-64; then apply_spotlight_hotkey; fi
 
 # ---- CotEditor theme + monospaced font (nested prefs via export/import) ----
 apply_coteditor() {

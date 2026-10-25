@@ -27,7 +27,7 @@ Each run of `bootstrap.sh` and `install.sh` writes a log under `~/Library/Logs/d
 
 ### 2. Manual steps
 
-43 settings have to be set by hand: privacy permissions, sign-ins, company-managed apps and a few System Settings pages. `macconfig` checks most of them for you afterwards; 14 you confirm by eye. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
+38 settings have to be set by hand: privacy permissions, sign-ins, company-managed apps and a few System Settings pages. `macconfig` checks most of them for you afterwards; 7 you confirm by eye. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
 
 These are three ways to use the same checklist. You don't need to run all of them. Most of the time, `manualsteps open` is the only one you need.
 

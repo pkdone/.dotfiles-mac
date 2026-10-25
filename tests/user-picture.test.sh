@@ -33,7 +33,7 @@ chmod +x "$HELPER"
 
 stored="$(grep -E '^[0-9a-f]{64}$' "$EXPECT")"
 eq "lib hash is the Dog" "$DOG" "$stored"
-eq "user-picture is checked by macconfig" "@macconfig-check.sh" \
+eq "user-picture is checked by macconfig" "@macconfig:display" \
   "$(awk -F'|' '$1 == "user-picture" { print $6; exit }' "$DIR/lib/manual-steps.list")"
 has "manual step says macconfig checks this" "macconfig checks this" \
   "$(awk -F'|' '$1 == "user-picture" { print $3; exit }' "$DIR/lib/manual-steps.list")"

@@ -180,28 +180,31 @@ has "logi backup path stays Settings Other" \
 has "logi backup says sign in first" "sign in to your Logi account first" "$logi_row"
 has "logi backup names restore" "Restore settings from backup (same page) on a new Mac if needed" "$logi_row"
 
-# No .rayconfig: import is optional, then hotkey and Clipboard History.
-# Finder unbind is only after an import. Scheduled Backup is its own step.
+# Raycast is set by hand: hotkey, then Clipboard History. No import or export.
 raycast_ids="$(awk -F'|' '$1 ~ /^raycast-/ { printf "%s ", $1 }' "$LIST")"
-eq "raycast steps: import, then the two by-hand steps, then unbind, then backup" \
-  "raycast-ax raycast-import raycast-hotkey raycast-clipboard raycast-finder-unbind raycast-scheduled-backup " \
+eq "raycast steps: accessibility, hotkey, clipboard" \
+  "raycast-ax raycast-hotkey raycast-clipboard " \
   "$raycast_ids"
-import_row="$(grep '^raycast-import|' "$LIST")"
-has "import is optional" "Only if you have a .rayconfig backup" "$import_row"
-has "import says skip to the next two" "Skip this and do the next two steps" "$import_row"
-has "import path ticks the backup boxes" "tick Settings, Aliases & Hotkeys" "$import_row"
+hotkey_row="$(grep '^raycast-hotkey|' "$LIST")"
 has "hotkey path records the shortcut" \
-  "Settings (Command+,) → General → click Raycast Hotkey → press Shift+Control+Command+R" \
-  "$(grep '^raycast-hotkey|' "$LIST")"
-has "clipboard path records the command hotkey" \
-  "row of type Command (not the Extension row) click Record Hotkey → press Control+Command+V" \
-  "$(grep '^raycast-clipboard|' "$LIST")"
-has "clipboard path sets history and exclusions" \
-  "Keep History to 1 Day and add 1Password and 1Password for Safari" \
-  "$(grep '^raycast-clipboard|' "$LIST")"
-has "scheduled backup stays out of the repo" \
-  "Scheduled Backup (to a synced folder, never this repo)" \
-  "$(grep '^raycast-scheduled-backup|' "$LIST")"
+  "Open Raycast → Settings (Command+,) → General → Raycast Hotkey → click the hotkey recorder and press Shift+Control+Command+R" \
+  "$hotkey_row"
+has "hotkey step says not to replace Spotlight" \
+  "Don't click the Replace Spotlight button" \
+  "$hotkey_row"
+clip_row="$(grep '^raycast-clipboard|' "$LIST")"
+has "clipboard path uses the Clipboard History sidebar" \
+  "Raycast Settings → Clipboard History (in the left sidebar; there is no Extensions tab)" \
+  "$clip_row"
+has "clipboard path names Keep history for" "Keep history for" "$clip_row"
+has "clipboard path names Disabled Applications" "Disabled Applications" "$clip_row"
+has "clipboard path names Add Hotkey" "Add Hotkey" "$clip_row"
+has "clipboard path names the apps already listed" \
+  "Keychain Access and Passwords are already listed" \
+  "$clip_row"
+miss "no raycast import step" "raycast-import|" "$steps_text"
+miss "no finder unbind step" "raycast-finder-unbind|" "$steps_text"
+miss "no scheduled backup step" "raycast-scheduled-backup|" "$steps_text"
 
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \

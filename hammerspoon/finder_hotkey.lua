@@ -1,9 +1,7 @@
 -- finder_hotkey.lua: bring Finder to the front.
 --
 -- Shift+Control+Command+F launches Finder, or focuses it when it is already
--- running. This is the hotkey that used to be set on Finder inside Raycast.
--- If a Raycast backup still has it, unbind it there so both don't answer
--- (manual step raycast-finder-unbind).
+-- running. Hammerspoon owns this shortcut.
 --
 -- The app name, modifiers, and key are plain fields. tests/finder_hotkey_spec.lua
 -- reads them with a normal Lua interpreter, no Hammerspoon.

@@ -9,6 +9,88 @@
 # only: a mode still runs without them). A non-Normal mode left on for more than
 # HEALTH_MODE_MAX_HOURS is a warning. Apps a mode quit or hid on purpose are listed as
 # info, never drift. Read-only: never switches a mode or touches state.json.
+# scripts/manual-steps.sh calls check_step_mode_focus_shortcuts and
+# check_step_mode_focus_modes (@macconfig:modes).
+check_step_mode_focus_shortcuts() {
+  local modes_need modes_have modes_missing s
+  MODES_CFG="$DOTDIR/hammerspoon/modes.lua"
+  fixid modes-setup
+  CHECKED=$((CHECKED + 1))
+  if [ ! -r "$MODES_CFG" ]; then
+    fixid repo-file
+    warn "hammerspoon/modes.lua missing — can't check the Focus Shortcuts"
+    return 0
+  fi
+  modes_need="$(grep -oE "(on|off)[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/^[a-z]+[[:space:]]*=[[:space:]]*'//; s/'\$//" | sort -u)"
+  # Mode Upcoming Meetings is a Shortcut on this Mac. The mode switcher does
+  # not run it. shortcuts list still has to show it (manual step mode-focus-shortcuts).
+  if ! printf '%s\n' "$modes_need" | grep -Fxq 'Mode Upcoming Meetings'; then
+    modes_need="${modes_need}
+Mode Upcoming Meetings"
+  fi
+  if ! command -v shortcuts >/dev/null 2>&1; then
+    fixid tooling; warn "shortcuts CLI not found — can't check the Focus Shortcuts"
+  elif ! modes_have="$(with_timeout 15 shortcuts list </dev/null 2>/dev/null)"; then
+    fixid tooling; warn "shortcuts list failed — can't check the Focus Shortcuts"
+  else
+    modes_missing=""
+    while IFS= read -r s; do
+      [ -n "$s" ] || continue
+      if ! printf '%s\n' "$modes_have" | grep -Fxq "$s"; then modes_missing="$modes_missing '$s',"; fi
+    done <<< "$modes_need"
+    if [ -n "$modes_missing" ]; then
+      warn "Shortcuts missing:${modes_missing%,} — create them (manual step mode-focus-shortcuts); modes still run, without the Focus"
+    else
+      pass "Focus Shortcuts exist ($(printf '%s\n' "$modes_need" | grep -c .))"
+    fi
+  fi
+}
+
+check_step_mode_focus_modes() {
+  local modes_focus modes_fdb modes_fnames modes_fmiss f
+  MODES_CFG="$DOTDIR/hammerspoon/modes.lua"
+  CHECKED=$((CHECKED + 1))
+  if [ ! -r "$MODES_CFG" ]; then
+    fixid repo-file
+    warn "hammerspoon/modes.lua missing — can't check the Focus modes"
+    return 0
+  fi
+  modes_focus="$(grep -oE "^[[:space:]]+focus[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/.*'([^']+)'/\1/" | sort -u)"
+  modes_fdb="$HOME/Library/DoNotDisturb/DB/ModeConfigurations.json"
+  if [ -z "$DOT_PYTHON" ]; then
+    fixid tooling; warn "python3 missing — can't check the Focus modes"
+  elif ! modes_fnames="$("$DOT_PYTHON" - "$modes_fdb" <<'PY' 2>/dev/null
+import json, sys
+def walk(o):
+    if isinstance(o, dict):
+        for k, v in o.items():
+            if k == "name" and isinstance(v, str):
+                print(v)
+            walk(v)
+    elif isinstance(o, list):
+        for v in o:
+            walk(v)
+walk(json.load(open(sys.argv[1])))
+PY
+)"; then
+    note "Focus modes not readable (needs Full Disk Access) — check System Settings → Focus for:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
+  else
+    modes_fmiss=""
+    for f in $modes_focus; do
+      if ! printf '%s\n' "$modes_fnames" | grep -Fxq "$f"; then modes_fmiss="$modes_fmiss $f"; fi
+    done
+    if [ -n "$modes_fmiss" ]; then
+      warn "Focus modes missing:$modes_fmiss — System Settings → Focus → click Add Focus… (opens a sheet) → Custom (manual step mode-focus-modes)"
+    else
+      pass "Focus modes exist:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
+    fi
+  fi
+}
+
+if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
+  return 0
+fi
+
 hdr "Modes (Hammerspoon)"
 HEALTH_MODE_MAX_HOURS="${HEALTH_MODE_MAX_HOURS:-4}"
 MODES_CFG="$DOTDIR/hammerspoon/modes.lua"
@@ -42,65 +124,8 @@ else
     *)        fixid tooling; warn "hammerspoon/modes.lua: unexpected validator output: $(printf '%s' "$modes_val" | head -c 200)" ;;
   esac
 
-  # Shortcuts named in modes.lua (Focus on/off only)
-  fixid modes-setup
-  CHECKED=$((CHECKED + 1))
-  modes_need="$(grep -oE "(on|off)[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/^[a-z]+[[:space:]]*=[[:space:]]*'//; s/'\$//" | sort -u)"
-  # Mode Upcoming Meetings is a Shortcut on this Mac. The mode switcher does
-  # not run it. shortcuts list still has to show it (manual step mode-focus-shortcuts).
-  if ! printf '%s\n' "$modes_need" | grep -Fxq 'Mode Upcoming Meetings'; then
-    modes_need="${modes_need}
-Mode Upcoming Meetings"
-  fi
-  if ! command -v shortcuts >/dev/null 2>&1; then
-    fixid tooling; warn "shortcuts CLI not found — can't check the Focus Shortcuts"
-  elif ! modes_have="$(with_timeout 15 shortcuts list </dev/null 2>/dev/null)"; then
-    fixid tooling; warn "shortcuts list failed — can't check the Focus Shortcuts"
-  else
-    modes_missing=""
-    while IFS= read -r s; do
-      [ -n "$s" ] || continue
-      if ! printf '%s\n' "$modes_have" | grep -Fxq "$s"; then modes_missing="$modes_missing '$s',"; fi
-    done <<< "$modes_need"
-    if [ -n "$modes_missing" ]; then
-      warn "Shortcuts missing:${modes_missing%,} — create them (manual step mode-focus-shortcuts); modes still run, without the Focus"
-    else
-      pass "Focus Shortcuts exist ($(printf '%s\n' "$modes_need" | grep -c .))"
-    fi
-  fi
-
-  # Focus modes named in modes.lua (focus = '<name>'), from the Focus database
-  CHECKED=$((CHECKED + 1))
-  modes_focus="$(grep -oE "^[[:space:]]+focus[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/.*'([^']+)'/\1/" | sort -u)"
-  modes_fdb="$HOME/Library/DoNotDisturb/DB/ModeConfigurations.json"
-  if [ -z "$DOT_PYTHON" ]; then
-    fixid tooling; warn "python3 missing — can't check the Focus modes"
-  elif ! modes_fnames="$("$DOT_PYTHON" - "$modes_fdb" <<'PY' 2>/dev/null
-import json, sys
-def walk(o):
-    if isinstance(o, dict):
-        for k, v in o.items():
-            if k == "name" and isinstance(v, str):
-                print(v)
-            walk(v)
-    elif isinstance(o, list):
-        for v in o:
-            walk(v)
-walk(json.load(open(sys.argv[1])))
-PY
-)"; then
-    note "Focus modes not readable (needs Full Disk Access) — check System Settings → Focus for:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
-  else
-    modes_fmiss=""
-    for f in $modes_focus; do
-      if ! printf '%s\n' "$modes_fnames" | grep -Fxq "$f"; then modes_fmiss="$modes_fmiss $f"; fi
-    done
-    if [ -n "$modes_fmiss" ]; then
-      warn "Focus modes missing:$modes_fmiss — System Settings → Focus → click Add Focus… (opens a sheet) → Custom (manual step mode-focus-modes)"
-    else
-      pass "Focus modes exist:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
-    fi
-  fi
+  check_step_mode_focus_shortcuts
+  check_step_mode_focus_modes
 fi
 
 # Current mode (state.json is written by the switcher; absent = Normal)
