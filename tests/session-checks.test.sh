@@ -27,6 +27,16 @@ miss() {
   case "$3" in *"$2"*) fail=$((fail + 1)); printf 'FAIL: %s\n  unexpected: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;;
     *) pass=$((pass + 1)) ;; esac
 }
+# Account ids, emails, UUIDs, and URLs from op must not show up in a result or a log.
+no_account_fields() {
+  local label="$1" blob="$2" field
+  for field in \
+    'acct-email-SECRET@example.com' 'acct-url-SECRET' 'user-uuid-SECRET' 'account-uuid-SECRET' \
+    '"email"' '"user_uuid"' '"account_uuid"' '"url"'
+  do
+    miss "$label has no $field" "$field" "$blob"
+  done
+}
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -264,13 +274,23 @@ eq "an added account is ok" ok "$R_STATUS"
 eq "an added account detail" \
   "set up (account added via the 1Password app); a new terminal asks to unlock on first use" \
   "$R_DETAIL"
-miss "an added account does not print the email" "acct-email-SECRET@example.com" "$R_DETAIL"
-miss "an added account does not print the url" "acct-url-SECRET" "$R_DETAIL"
-miss "an added account does not print the user uuid" "user-uuid-SECRET" "$R_DETAIL"
-miss "an added account does not print the account uuid" "account-uuid-SECRET" "$R_DETAIL"
+no_account_fields "an added account result" "$R_DETAIL"
+no_account_fields "an added account log" "$(cat "$tmp/op.log")"
 has "an added account lists accounts as json" "account list --format=json" "$(cat "$tmp/op.log")"
 miss "an added account does not sign in" "signin" "$(cat "$tmp/op.log")"
 has "account list is not a tty" "stdin-not-tty" "$(cat "$tmp/op.log")"
+# set -x is the debug path. It may show the count, never an account field.
+: > "$tmp/trace.log"
+(
+  set -x
+  run_check check_op_cli
+  printf 'STATUS=%s\nDETAIL=%s\n' "$R_STATUS" "$R_DETAIL"
+) >"$tmp/trace.out" 2>"$tmp/trace.log"
+eq "traced account count is ok" "ok" "$(sed -n 's/^STATUS=//p' "$tmp/trace.out")"
+no_account_fields "traced stdout" "$(cat "$tmp/trace.out")"
+no_account_fields "debug trace" "$(cat "$tmp/trace.log")"
+no_account_fields "debug trace log" "$(cat "$tmp/op.log")"
+has "debug trace shows the count" "n=1" "$(cat "$tmp/trace.log")"
 
 : > "$tmp/op.log"
 OP_ACCOUNTS=2
@@ -293,10 +313,8 @@ OP_ACCOUNT_BODY='https://acct-url-SECRET.1password.com acct-email-SECRET@example
 OP_ACCOUNT_RC=1
 run_check check_op_cli
 eq "account list failure is not set yet" warn "$R_STATUS"
-miss "account list failure does not print the url" "acct-url-SECRET" "$R_DETAIL"
-miss "account list failure does not print the email" "acct-email-SECRET@example.com" "$R_DETAIL"
-miss "account list failure does not print the user uuid" "user-uuid-SECRET" "$R_DETAIL"
-miss "account list failure does not print the account uuid" "account-uuid-SECRET" "$R_DETAIL"
+no_account_fields "account list failure result" "$R_DETAIL"
+no_account_fields "account list failure log" "$(cat "$tmp/op.log")"
 unset OP_WHOAMI_RC OP_ACCOUNTS OP_ACCOUNT_BODY OP_ACCOUNT_RC
 
 OP_RC=0
@@ -344,8 +362,11 @@ eq "1password-cli step names op signin once" \
   "Turn on Integrate with 1Password CLI, then run op signin once in a terminal" \
   "$(awk -F'|' '$1 == "1password-cli" { print $3; exit }' "$LIST")"
 has "op check still runs op whoami" "with_timeout 8 op whoami </dev/null" "$(cat "$LIB")"
-has "op check counts accounts from json" "with_timeout 8 op account list --format=json </dev/null" "$(cat "$LIB")"
+has "op check counts inside the timeout" "with_timeout 8 python3 -c" "$(cat "$LIB")"
+has "op check discards account-list stderr" "2>/dev/null || true)" "$(cat "$LIB")"
+miss "op check does not capture account list in a variable" "json=" "$(cat "$LIB")"
 miss "op check does not run op signin" "with_timeout 8 op signin" "$(cat "$LIB")"
+miss "session checks do not mktemp" 'mktemp' "$(grep -v '^[[:space:]]*#' "$LIB")"
 eq "pointer-size check name" "pointer-size" \
   "$(awk -F'|' '$1 == "pointer-size" { print $6; exit }' "$LIST")"
 eq "no app-store manual step" "" \

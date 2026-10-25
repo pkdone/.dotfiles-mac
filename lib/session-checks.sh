@@ -99,52 +99,75 @@ ${text}"
   res ok "British keyboard layout only"
 }
 
-# Print how many accounts are in an `op account list --format=json` body on
-# stdin. Anything that is not a JSON array counts as 0. The body is never
-# printed (no account ids, emails, UUIDs, or URLs).
-op_account_count() {
-  local py n
-  py="$(command -v python3 2>/dev/null || true)"
-  if [ -z "$py" ]; then
-    printf '0'
-    return 0
-  fi
-  n="$("$py" -c '
-import json, sys
-raw = sys.stdin.read()
-try:
-    data = json.loads(raw)
-except Exception:
-    print(0)
-    raise SystemExit(0)
-print(len(data) if isinstance(data, list) else 0)
-' 2>/dev/null || printf '0')"
-  case "$n" in
-    ''|*[!0-9]*) printf '0' ;;
-    *) printf '%s' "$n" ;;
-  esac
-}
-
 # The manual step is to turn on Integrate with 1Password CLI, then run
 # `op signin` once in a terminal. This check never prompts and never runs
 # `op signin`. `op whoami` only succeeds in a terminal that has already
 # authorised, and that session expires, so a failure does not mean setup is
 # missing. An account from `op account list` means the app integration is on:
-# the step is done, and a new terminal asks to unlock on first use. The list
-# is only counted. No account is not set yet. SESSION_CHECKS_OP_APP overrides
-# the app path in tests.
+# the step is done, and a new terminal asks to unlock on first use.
+# The list body (account ids, emails, UUIDs, URLs) is piped into python,
+# which prints only the number of accounts. It is not stored in a shell
+# variable, a log, or a temp file, and stderr is discarded. The shell only
+# keeps that count. No account is not set yet. SESSION_CHECKS_OP_APP
+# overrides the app path in tests.
 check_op_cli() {
   local app="${SESSION_CHECKS_OP_APP:-/Applications/1Password.app}"
-  local json n
+  local n
   if [ ! -d "$app" ]; then res warn "1Password.app not installed (Fleet Self service)"; return; fi
   if ! command -v op >/dev/null 2>&1; then res warn "op CLI not installed (brew bundle)"; return; fi
   if with_timeout 8 op whoami </dev/null >/dev/null 2>&1; then
     res ok "signed in"
     return
   fi
-  json="$(with_timeout 8 op account list --format=json </dev/null 2>/dev/null || true)"
-  n="$(printf '%s' "$json" | op_account_count)"
-  json=""
+  # python is the timed command. It moves to its own process group, pipes
+  # `op account list` into a counter, and prints one integer. On the alarm
+  # it kills that group, not the shell that started it.
+  n="$(with_timeout 8 python3 -c '
+import json, os, signal, subprocess
+moved = False
+try:
+    os.setpgrp()
+    moved = True
+except Exception:
+    moved = False
+proc = None
+def stop(_sig, _frm):
+    if moved:
+        try:
+            os.killpg(0, signal.SIGKILL)
+        except Exception:
+            pass
+    elif proc is not None:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    raise SystemExit(142)
+signal.signal(signal.SIGALRM, stop)
+try:
+    proc = subprocess.Popen(
+        ["op", "account", "list", "--format=json"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+except Exception:
+    print(0)
+    raise SystemExit(0)
+try:
+    data = json.load(proc.stdout)
+except Exception:
+    data = None
+try:
+    proc.stdout.close()
+except Exception:
+    pass
+try:
+    proc.wait()
+except Exception:
+    pass
+print(len(data) if isinstance(data, list) else 0)
+' </dev/null 2>/dev/null || true)"
   case "$n" in
     ''|*[!0-9]*) n=0 ;;
   esac
