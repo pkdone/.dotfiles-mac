@@ -55,6 +55,14 @@ team|EQHXZ8M8AV|Google Chrome, including its background updater
 bundle|com.google.Chrome|Google Chrome
 team|2BUA8C4S2C|1Password launcher and browser helper (Fleet Self service)
 bundle|com.okta.mobile|Okta Verify opens at login (Fleet Self service)
+# Tailscale has no launch-at-login switch of its own. It is added under
+# Open at Login (/Applications/Tailscale.app from Fleet). Team W5364U7YZB
+# covers the app, its login-item helper, and the network extension. The
+# bundle rows cover a record that has no team id.
+team|W5364U7YZB|Tailscale (Fleet), including its login item and network extension
+bundle|io.tailscale.ipn.macsys|Tailscale opens at login
+bundle|io.tailscale.ipn.macos|Tailscale Mac App Store build, if that app is the one installed
+bundle|io.tailscale.ipn.macsys.login-item-helper|Tailscale login item helper
 team|6KKW3K37TU|Cyberhaven
 team|Z2FDA4QHGU|Phorion EDR
 team|8VBZ3948LU|Fleet orbit

@@ -78,6 +78,13 @@ mdm-apps|Company apps (MDM)|Install the company apps from Fleet Self service (Fl
 # ---- Sign-ins ----
 gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
 tailscale-signin|Sign-ins|Open Tailscale, turn it on, and sign in as paul.done@anysphere.co|Open Tailscale from Applications (it comes from Fleet Self service) → click the Tailscale icon in the menu bar → click Log in (or turn the Connected switch on) → choose sign in with your work account and use paul.done@anysphere.co → finish sign-in in the browser|app:Tailscale|tailscale-signin
+# Tailscale has no launch-at-login option of its own. Open at Login is read
+# (System Events login-item names, and the BTM app record). It is not added:
+# the other apps register themselves, and osascript "make login item" needs
+# an Automation prompt. When the read says it is missing, the reason line is
+# NOTSET: and the check's click path. When Tailscale.app is not installed yet,
+# the step is left alone.
+tailscale-login|Sign-ins|Add Tailscale to Open at Login. It has no launch-at-login option of its own|System Settings → General → Login Items & Extensions → under Open at Login click + → Applications → Tailscale → Open|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:login-items
 
 # ---- Apps not in the Brewfile ----
 cursor-nightly|Apps not in the Brewfile|Install Cursor Nightly (separate app, next to the stable Cursor)|cursor.com/nightlydownload|https://cursor.com/nightlydownload|app:/Applications/Cursor Nightly.app

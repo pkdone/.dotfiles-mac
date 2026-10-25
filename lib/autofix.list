@@ -62,7 +62,7 @@ mode-long|PAUL||a non-Normal mode has been on longer than HEALTH_MODE_MAX_HOURS 
 karabiner-rules|PAUL||karabiner.json is a repo file — restore it from git (dotfiles git state)
 karabiner-background|PAUL||Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon enabled and allowed (the same records sfltool dumpbtm prints). Check-only: --fix never changes Login Items. Karabiner-Elements Privileged Daemons v2 may stay disabled
 repo-file|PAUL||a repo script is missing — restore it from git (dotfiles git state)
-login-items|PAUL||login items — System Settings → General → Login Items & Extensions
+login-items|PAUL||login items — ChatGPT stays off. Tailscale stays in Open at Login (System Settings → General → Login Items & Extensions → under Open at Login click + → Applications → Tailscale → Open). Check-only: --fix never adds or removes a login item
 tcc|PAUL||privacy permission (TCC) — System Settings → Privacy & Security
 manual-step|PAUL||manual step (permission / sign-in) — manualsteps open
 mouse-settings|PAUL||Mouse tracking speed (NSGlobalDomain com.apple.mouse.scaling = 1.5, 7th notch from Slow) and scrolling speed (com.apple.scrollwheel.scaling = 0.5, 5th notch from Slow) — System Settings → Mouse. Check-only: writing these is unreliable on recent macOS, so --fix never writes them. Double-click and secondary click stay in the manual step
