@@ -14,12 +14,50 @@ function brewsync --description "Install, update, and clean up Homebrew packages
     # do not prompt.
     set -lx HOMEBREW_NO_ASK 1
 
+    if test (id -u) -eq 0
+        echo "brewsync: refusing to run as root. Run it as your user account. It will ask for an admin password if an installer needs one." >&2
+        return 1
+    end
+
+    # The log wrapper in bash pipes stdout through tee, so the inner command's
+    # stdout is not a tty. Record the real terminal before that, the same way
+    # install.sh does, so an admin-password prompt still happens here.
+    if isatty stdin; and isatty stdout
+        set -lx DOTFILES_INTERACTIVE 1
+    else
+        set -lx DOTFILES_INTERACTIVE 0
+    end
+
+    set -l lib "$HOME/.dotfiles-mac/lib/dotfiles-log.sh"
+    # Errors from the helper (refusing a log inside the repo) stay on stderr.
+    # A failed helper prints no path.
+    set -l logfile (bash -c 'source "$1" && dotfiles_new_log brewsync' _ "$lib")
+    if test -z "$logfile"
+        return 1
+    end
+
+    begin
+        __brewsync_body
+    end 2>&1 | tee -a "$logfile"
+    set -l rc $pipestatus[1]
+    echo "Log: $logfile" | tee -a "$logfile"
+    return $rc
+end
+
+function __brewsync_body
     echo "📦 Bundling from Brewfile..."
-    brew bundle --file ~/.dotfiles-mac/Brewfile
+    ~/.dotfiles-mac/scripts/brew-bundle-install.sh --file ~/.dotfiles-mac/Brewfile
+    set -l bundle_rc $status
+    # 2 and above: network, disk, Command Line Tools, or Homebrew itself.
+    # Upgrading would hit the same wall, so stop after the message above.
+    if test $bundle_rc -ge 2
+        echo "Skipping upgrade and cleanup because the checks above failed."
+        return $bundle_rc
+    end
 
     echo ""
     echo "⬆️  Updating & upgrading..."
-    brew update && brew upgrade
+    brew update; and brew upgrade
 
     echo ""
     echo "🧹 Cleaning up..."
@@ -33,9 +71,11 @@ function brewsync --description "Install, update, and clean up Homebrew packages
     echo "🩺 Running doctor..."
     brew doctor
 
-    echo ""
-    echo "✅ Checking bundle..."
-    brew bundle check --file ~/.dotfiles-mac/Brewfile
+    if test $bundle_rc -ne 0
+        echo ""
+        echo "⚠️  Some Brewfile entries are still missing. The names and the fix commands are above."
+        return $bundle_rc
+    end
 
     echo ""
     echo "🎉 Done! Everything is fresh."

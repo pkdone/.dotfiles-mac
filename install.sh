@@ -14,7 +14,23 @@
 # because launchd does not expand ~ or $HOME, then load-launchagent.sh --reload
 # bootout/bootstraps the job so WatchPaths is picked up.
 #
+# Each run is copied to ~/Library/Logs/dotfiles/install-YYYYMMDD-HHMMSS.log.
+# The Brewfile install retries a missing entry once and names anything still
+# missing. Do not run this script as root.
+#
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/dotfiles-log.sh disable=SC1091
+. "$SCRIPT_DIR/lib/dotfiles-log.sh"
+dotfiles_refuse_root "install.sh"
+
+if [ "$(uname -s)" != Darwin ]; then
+  echo "install.sh is for macOS (Darwin); detected $(uname -s). Aborting." >&2
+  exit 1
+fi
+
+dotfiles_log_exec install "$@"
 
 DOTFILES="$HOME/.dotfiles-mac"
 
@@ -23,12 +39,8 @@ require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2;
 
 # ---- preflight ----------------------------------------------------------
 # Surface must-do-by-hand things up front as warnings, so later steps don't fail
-# cryptically.
-if [ "$(uname -s)" != Darwin ]; then
-  echo "install.sh is for macOS (Darwin); detected $(uname -s). Aborting." >&2
-  exit 1
-fi
-
+# cryptically. Network, Command Line Tools, disk space, and Homebrew's own
+# health are checked immediately before the Brewfile install.
 if command -v gh >/dev/null 2>&1 && ! gh auth status >/dev/null 2>&1; then
   echo "⚠️  gh is installed but not authenticated — run 'gh auth login' if you need private repos."
 fi
@@ -112,36 +124,33 @@ done
 
 echo ""
 echo "🍺 Installing from Brewfile..."
-if ! command -v brew >/dev/null 2>&1; then
-  echo "Homebrew not found — installing..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-fi
-# Tolerate a partial failure: brew bundle attempts every entry, so we record
-# the outcome and carry on to mise trust + the summary rather than letting
-# set -e abort the whole bootstrap. A miss is a warning that points at brewsync.
-bundle_ok=1
-brew bundle --file "$DOTFILES/Brewfile" || bundle_ok=0
-if brew bundle check --file "$DOTFILES/Brewfile" >/dev/null 2>&1; then
-  bundle_ok=1
-else
-  bundle_ok=0
-fi
+# One failed entry must not abort the rest of setup. The helper retries each
+# miss once, names whatever is still missing, and returns non-zero. mise trust,
+# the hook, and the manual-steps list still run.
+bundle_rc=0
+"$SCRIPT_DIR/scripts/brew-bundle-install.sh" --install-homebrew --file "$DOTFILES/Brewfile" || bundle_rc=$?
 
 echo ""
 echo "🔧 Trusting mise config..."
-"$(brew --prefix)/bin/mise" trust "$DOTFILES/mise/config.toml" || true
+if command -v brew >/dev/null 2>&1; then
+  "$(brew --prefix)/bin/mise" trust "$DOTFILES/mise/config.toml" || true
+else
+  echo "  skipped — Homebrew is not installed."
+fi
 
 echo ""
 echo "🪝 Enabling the pre-push lint/test hook..."
 git -C "$DOTFILES" config core.hooksPath hooks
 
 echo ""
-if [ "$bundle_ok" = 1 ]; then
+if [ "$bundle_rc" -eq 0 ]; then
   echo "✅ Dotfiles are in place. Run macconfig (or ./macconfig-check.sh) any time to verify."
+elif [ "$bundle_rc" -ge 2 ]; then
+  echo "⚠️  Dotfiles are in place, but Homebrew install did not start. The reason is above."
+  echo "    Fix that, then run brewsync (or run this script again)."
 else
-  echo "⚠️  Dotfiles are in place, but some Brewfile entries did not install."
+  echo "⚠️  Dotfiles are in place. The Brewfile entries named above are still missing."
   echo "    For anything still missing, run brewsync."
-  echo "    Then re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
 fi
 
 # ---- manual steps -------------------------------------------------------
@@ -155,7 +164,7 @@ else
   echo "   or run ./bootstrap.sh to do the whole sequence."
   echo ""
   "$MANUAL_STEPS" list || true
-  if [ -t 0 ] && [ -t 1 ]; then
+  if dotfiles_is_interactive; then
     echo ""
     printf 'Walk through the manual steps now, opening each settings page? [y/N] '
     read -r reply || reply=''

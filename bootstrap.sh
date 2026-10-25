@@ -18,6 +18,9 @@
 # already-configured machine is a no-op. The scripts can still be run individually;
 # this is just the guided "do everything" entrypoint.
 #
+# Each run is copied to ~/Library/Logs/dotfiles/bootstrap-YYYYMMDD-HHMMSS.log.
+# Do not run this script as root.
+#
 # Flags:
 #   --dry-run    Preview every step (using each script's own preview mode); change nothing.
 #   --yes, -y    Don't prompt before each step (sub-scripts may still prompt for sudo).
@@ -26,6 +29,10 @@
 set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/dotfiles-log.sh disable=SC1091
+. "$DOTDIR/lib/dotfiles-log.sh"
+dotfiles_refuse_root "bootstrap.sh"
+
 DRYRUN=0
 ASSUME_YES=0
 
@@ -48,8 +55,17 @@ USAGE
   esac
 done
 
+# Help and unknown arguments exit above, so a log is only opened for a real run.
+dotfiles_log_exec bootstrap "$@"
+
 # ---- logging / prompts --------------------------------------------------
-if [ -t 1 ]; then C_HDR=$'\033[1m'; C_OFF=$'\033[0m'; else C_HDR=''; C_OFF=''; fi
+# stdout is tee'd into the log, so it is not a tty. Colour follows the outer
+# terminal, which the log wrapper recorded before the redirect.
+if [ "${DOTFILES_STDOUT_TTY:-}" = 1 ] || { [ -z "${DOTFILES_STDOUT_TTY:-}" ] && [ -t 1 ]; }; then
+  C_HDR=$'\033[1m'; C_OFF=$'\033[0m'
+else
+  C_HDR=''; C_OFF=''
+fi
 banner() { printf '\n%s== %s ==%s\n' "$C_HDR" "$1" "$C_OFF"; }
 
 confirm() {  # prompt -> 0 to proceed, 1 to skip
@@ -139,7 +155,7 @@ echo ""
 "$MANUAL_STEPS" list || true
 # The walk-through is interactive by nature: offer it only on a real run, on a terminal,
 # and not under --yes.
-if [ "$DRYRUN" = 0 ] && [ "$ASSUME_YES" = 0 ] && [ -t 0 ] && [ -t 1 ]; then
+if [ "$DRYRUN" = 0 ] && [ "$ASSUME_YES" = 0 ] && dotfiles_is_interactive; then
   echo ""
   printf 'Walk through the manual steps now, opening each settings page? [y/N] '
   read -r reply || reply=''

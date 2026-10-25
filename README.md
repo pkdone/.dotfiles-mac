@@ -23,6 +23,8 @@ gh auth status || gh auth login
 
 What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md).
 
+Each run of `bootstrap.sh` and `install.sh` writes a log under `~/Library/Logs/dotfiles/` (for example `install-20260101-120000.log`) and prints that path when it finishes. Logs older than 30 days are removed. A failed Homebrew app is retried once and does not stop the others. Setup then names anything still missing and the command to install it. An app that is already in `/Applications` is adopted instead of failing. In a terminal, setup asks once for an admin password when a package installer needs it. It stops early, with a plain explanation, if the network, the Xcode Command Line Tools, or free disk space is not ready.
+
 ### 2. Manual steps
 
 43 settings have to be set by hand: privacy permissions, sign-ins, company-managed apps and a few System Settings pages. `macconfig` checks most of them for you afterwards; 14 you confirm by eye. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
@@ -44,7 +46,7 @@ This repo installs apps and tools from three places.
 
 ### Homebrew
 
-Command-line tools and desktop apps listed in the Brewfile. The first setup installs them with `brew bundle`. After that, `brewsync` installs anything missing and upgrades what is already there. If one of these is missing, run `brewsync`.
+Command-line tools and desktop apps listed in the Brewfile. The first setup installs them with `brew bundle`. A failed entry is retried once and does not stop the others. An app already in `/Applications` is adopted. After that, `brewsync` installs anything missing and upgrades what is already there. If one of these is missing, run `brewsync`.
 
 **Command-line tools:** git, gh, fish, mise, jq, yq, ripgrep, fd, fzf, bat, eza, tree, wget, curl, direnv, tmux, htop, mas, dockutil, duti, ykman, ffmpeg, pkgconf, shellcheck, openssl, python, uv, go, rustup, mongosh, pnpm, awscli, kubernetes-cli, helm, sops, age, coreutils, findutils, gnu-sed, gawk, and grep.
 
@@ -82,7 +84,7 @@ What the check's output means, including the Mac health summary at the end, is e
 
 ### brewsync
 
-`brewsync` installs, upgrades and cleans up Homebrew packages from the Brewfile. Run it after you change the Brewfile, or when a package is out of date.
+`brewsync` installs, upgrades and cleans up Homebrew packages from the Brewfile. It retries a missing entry once, adopts an app that is already in `/Applications`, and writes a log under `~/Library/Logs/dotfiles/`. Run it after you change the Brewfile, or when a package is out of date.
 
 ```bash
 brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile
