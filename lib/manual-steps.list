@@ -66,9 +66,10 @@ grokbot-fda|Privacy & Security permissions|Give Grok Bot Full Disk Access|Open G
 # That is a check only. ActuateDetents and ForceSuppressed stay in the defaults
 # list (Force Click and haptic feedback On) and are a different setting.
 trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off|System Settings → Trackpad → Point & Click|x-apple.systempreferences:com.apple.Trackpad-Settings.extension|defaults:NSGlobalDomain:com.apple.trackpad.forceClick=0
-# Dragging lives in Accessibility. defaults write of Dragging/DragLock does not reliably
-# change that pane, so this stays a check only. Paul wants dragging On, without drag lock.
-trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Without Drag Lock)|System Settings → Accessibility → Pointer Control → Trackpad Options|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0
+# Dragging lives in Accessibility → Pointer Control → Trackpad Options…, a sheet,
+# not a page of its own. defaults write of Dragging/DragLock does not reliably
+# change that sheet, so this stays a check only. Paul wants dragging On, without drag lock.
+trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Without Drag Lock)|System Settings → Accessibility → Pointer Control → click Trackpad Options… (opens a sheet) → Use trackpad for dragging On (Without Drag Lock) → Done|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0
 pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal (macconfig checks this; set the slider by hand)|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
 # Tracking speed and scrolling speed are readable, but defaults write does not
 # reliably drive System Settings → Mouse on recent macOS, so they stay a check
@@ -112,10 +113,12 @@ ac-sleep|Display, keyboard & desktop|On mains power the Mac does not sleep on it
 # com.apple.private.iokit.soc-limit. pmset -g, pmset -g battlimit,
 # ioreg -rn AppleSmartBattery, system_profiler SPPowerDataType, and the
 # power preferences under /Library/Preferences and ~/Library do not show it.
+# Charge Limit is not a row on the Battery page. It is on the sheet opened by
+# ⓘ next to Charging, with Optimised Battery Charging.
 # A desktop has no battery. Leave the check empty. Do not add a check that
 # only warns when a key is missing.
-charge-limit|Display, keyboard & desktop|Charge Limit 80% (Apple silicon laptops). Check by hand: the chosen percentage cannot be read|System Settings → Battery → Charging → Charge Limit|x-apple.systempreferences:com.apple.Battery-Settings.extension|
-input-british|Display, keyboard & desktop|Keyboard input source: British (macconfig checks the selected layout is British only)|System Settings → Keyboard → Text Input → Input Sources|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
+charge-limit|Display, keyboard & desktop|Charge Limit 80% (Apple silicon laptops). Check by hand: the chosen percentage cannot be read|System Settings → Battery → click ⓘ next to Charging → drag Charge Limit to 80% (leave Optimised Battery Charging on) → Done|x-apple.systempreferences:com.apple.Battery-Settings.extension|
+input-british|Display, keyboard & desktop|Keyboard input source: British (macconfig checks the selected layout is British only)|System Settings → Keyboard → Text Input → click Edit… next to Input Sources (opens a sheet) → British → Done|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 # Desktop widgets and Stage Manager are lib/macos-defaults.list (StandardHideWidgets,
 # StageManagerHideWidgets, GloballyEnabled). Click wallpaper to reveal desktop stays out.
 user-picture|Display, keyboard & desktop|Set your user picture to the Dog (macconfig checks this). A different picture is a warning. macconfig does not change it|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig-check.sh
@@ -138,7 +141,7 @@ raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+
 raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|Raycast → Settings → Extensions → Clipboard History|app:Raycast|
 
 # ---- Modes (Hammerspoon menu-bar switcher; see docs/modes.md) ----
-mode-focus-modes|Modes (menu-bar switcher)|Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through)|System Settings → Focus → Add Focus… → Custom|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig-check.sh
+mode-focus-modes|Modes (menu-bar switcher)|Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through)|System Settings → Focus → click Add Focus… (opens a sheet) → Custom → Done|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig-check.sh
 mode-focus-shortcuts|Modes (menu-bar switcher)|Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off". Also create "Mode Upcoming Meetings". macconfig checks all five with shortcuts list|Shortcuts → + → search "Set Focus"|app:Shortcuts|@macconfig-check.sh
 mode-hammerspoon-alerts|Modes (menu-bar switcher)|Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show|System Settings → Notifications → Hammerspoon → Alerts|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
 mode-menubar-pin|Modes (menu-bar switcher)|Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind <<|Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain)||

@@ -32,7 +32,8 @@ eq "charge-limit group" "Display, keyboard & desktop" "$(printf '%s\n' "$row" | 
 eq "charge-limit title" \
   "Charge Limit 80% (Apple silicon laptops). Check by hand: the chosen percentage cannot be read" \
   "$(printf '%s\n' "$row" | cut -d'|' -f3)"
-eq "charge-limit where" "System Settings → Battery → Charging → Charge Limit" \
+eq "charge-limit where" \
+  "System Settings → Battery → click ⓘ next to Charging → drag Charge Limit to 80% (leave Optimised Battery Charging on) → Done" \
   "$(printf '%s\n' "$row" | cut -d'|' -f4)"
 eq "charge-limit opens Battery settings" \
   "x-apple.systempreferences:com.apple.Battery-Settings.extension" \
@@ -59,7 +60,7 @@ has "manual-steps doc names system_profiler" "system_profiler SPPowerDataType" "
 has "manual-steps doc says a desktop has no battery" "A desktop has no battery." "$doc"
 has "manual-steps doc leaves the step by hand" "The step stays by hand." "$doc"
 has "table row is by hand" \
-  "| Charge Limit 80% (Apple silicon laptops). Check by hand: the chosen percentage cannot be read | System Settings → Battery → Charging → Charge Limit | by hand |" \
+  "| Charge Limit 80% (Apple silicon laptops). Check by hand: the chosen percentage cannot be read | System Settings → Battery → click ⓘ next to Charging → drag Charge Limit to 80% (leave Optimised Battery Charging on) → Done | by hand |" \
   "$doc"
 
 # No check, so no fixid. A real read would add both together.

@@ -125,6 +125,12 @@ done
 steps_text="$(cat "$LIST")"
 has "look up stays a manual note" "trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off|" "$steps_text"
 has "dragging stays a check" "defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0" "$steps_text"
+has "dragging names the Trackpad Options sheet" \
+  "click Trackpad Options… (opens a sheet)" "$(grep '^trackpad-dragging|' "$LIST")"
+has "input sources name the Edit sheet" \
+  "click Edit… next to Input Sources (opens a sheet)" "$(grep '^input-british|' "$LIST")"
+has "focus names the Add Focus sheet" \
+  "click Add Focus… (opens a sheet)" "$(grep '^mode-focus-modes|' "$LIST")"
 miss "look up note does not mention Force Click" "Force Click" "$(grep '^trackpad-lookup|' "$LIST")"
 
 # Exact rows macos.sh applies and macconfig-check.sh checks. restart=logout.
