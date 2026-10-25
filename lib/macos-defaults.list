@@ -50,12 +50,11 @@ com.apple.finder|ShowStatusBar|bool|true|Finder|Finder|Show Status Bar|`true` (O
 # Tags group in the sidebar closed. Recents hidden is the sidebar Recents
 # check. Shared, AirDrop, iCloud Drive, and the Locations rows are checked
 # when the sidebar files name them (lib/finder-sidebar-rows.list). Shared
-# stays hidden. A row the files do not name stays by hand. Tags in the
-# sidebar are FavoriteTagNames, read by lib/finder-sidebar-tags.py and not
-# written here (the list type is an array). ShowRecentTags is not checked:
-# Finder → Settings → Tags has no control that turns recent tags off, and
-# those boxes only change FavoriteTagNames. SidebarShowingiCloudDesktop is
-# not pinned: its value was not confirmed.
+# stays hidden. A row the files do not name stays by hand. No tags in the
+# sidebar is manual step finder-sidebar-tags. FavoriteTagNames is not read:
+# tags sync through iCloud, and the key can still list tag names after every
+# box is unticked. SidebarShowingiCloudDesktop is not pinned: its value was
+# not confirmed.
 com.apple.finder|SidebarTagsSctionDisclosedState|bool|false|Finder|Finder|Tags group in the sidebar|`false` (closed)
 # Finder and Trash tidy. Finder restart so open windows pick the prefs up.
 # DSDontWriteNetworkStores: the domain may not exist yet; defaults write creates it.

@@ -52,8 +52,48 @@ title="$(awk -F'|' '$1 == "notifications-apps" { print $3; exit }' "$STEPS")"
 title_names="$(printf '%s\n' "$title" | sed -E 's/^Turn notifications Off for //')"
 off_joined="$(printf '%s\n' "$off_names" | awk 'NR > 1 { printf ", " } { printf "%s", $0 } END { printf "\n" }')"
 eq "off-list names match the manual step" "$off_joined" "$title_names"
+eq "off list is the seven apps" \
+  "com.apple.iCal
+com.apple.FaceTime
+com.apple.gamecenter
+com.apple.Home
+com.apple.tips
+com.apple.Passbook
+com.apple.MobileSMS" \
+  "$(grep -E '^[^#[:space:]]' "$OFF" | awk '{ print $1 }')"
+where="$(awk -F'|' '$1 == "notifications-apps" { print $4; exit }' "$STEPS")"
+for app in Calendar FaceTime "Game Center" Home Tips Wallet Messages; do
+  has "notifications step names $app" "$app" "$where"
+  has "notifications step turns off Allow notifications for $app" \
+    "$app → turn off Allow notifications" "$where"
+done
+has "Messages Critical is still off" "Critical Alerts stay allowed" "$where"
+off_entries="$(grep -E '^[^#[:space:]]' "$OFF" || true)"
+for gone in "Cursor Nightly" Mail "Microsoft Teams" Slack Spotify Tailscale \
+  "Logi Options+" Cog "Grok Bot" ChatGPT Multipass "Yubico Authenticator" \
+  "YouTube Music" Sonos Santa Sentinel Kerberos Chrome Ghostty Zoom Hammerspoon \
+  "Find My" Finder WhatsApp
+do
+  miss "off list does not name $gone" "$gone" "$off_entries"
+done
 eq "notifications-apps is checked by macconfig-check.sh" "@macconfig:notifications" \
   "$(awk -F'|' '$1 == "notifications-apps" { print $6; exit }' "$STEPS")"
+for step in notifications-previews notifications-display-sleep notifications-lock-screen notifications-mirroring; do
+  eq "$step is by hand" "" "$(awk -F'|' -v id="$step" '$1 == id { print $6; exit }' "$STEPS")"
+done
+eq "show previews is When Unlocked" "When Unlocked" \
+  "$(awk -F'|' '$1 == "notifications-previews" { print $4; exit }' "$STEPS" | awk -F' → ' '{ print $NF }')"
+has "display sleeping is turned off" "turn off when display is sleeping" \
+  "$(awk -F'|' '$1 == "notifications-display-sleep" { print $4; exit }' "$STEPS")"
+has "lock screen is turned on" "turn on when screen is locked" \
+  "$(awk -F'|' '$1 == "notifications-lock-screen" { print $4; exit }' "$STEPS")"
+has "mirroring is Notifications Off" "Notifications Off" \
+  "$(awk -F'|' '$1 == "notifications-mirroring" { print $4; exit }' "$STEPS")"
+grep -E '^notifications-(previews|display-sleep|lock-screen|mirroring)\|' "$STEPS" > "$tmp/centre.list"
+centre="$(NO_COLOR=1 MANUAL_STEPS_LIST="$tmp/centre.list" "$DIR/scripts/manual-steps.sh" pending 2>"$tmp/centre.err")"
+eq "Notification Centre steps use the MANUAL line" 4 \
+  "$(printf '%s\n' "$centre" | grep -c "MANUAL: Can't check this automatically. If it's already set, press s.")"
+miss "Notification Centre steps are not NOTSET" "NOTSET:" "$centre"
 eq "mode-hammerspoon-alerts is checked by macconfig-check.sh" "@macconfig:notifications" \
   "$(awk -F'|' '$1 == "mode-hammerspoon-alerts" { print $6; exit }' "$STEPS")"
 
@@ -112,27 +152,14 @@ write_plist "$tmp/sample.plist" "$SAMPLE"
 out="$(run "$tmp/sample.plist")"; rc=$?
 eq "sample exits 0" 0 "$rc"
 eq "sample snapshot" "$(cat <<'EOF'
-ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=814219286)
-ok|co.anysphere.cursor.nightly|Cursor Nightly (co.anysphere.cursor.nightly): Allow Notifications is off (flags=276832270)
-ok|com.apple.FaceTime|FaceTime (com.apple.FaceTime): Allow Notifications is off (flags=278929416)
-ok|com.apple.gamecenter|Game Center (com.apple.gamecenter): Allow Notifications is off (flags=5109194758)
-ok|com.apple.Home|Home (com.apple.Home): Allow Notifications is off (flags=830996486)
-ok|com.apple.mail|Mail (com.apple.mail): Allow Notifications is off (flags=276824078)
-ok|com.microsoft.teams2|Microsoft Teams (com.microsoft.teams2): Allow Notifications is off (flags=276832270)
-ok|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is off (flags=276832270)
-ok|com.spotify.client|Spotify (com.spotify.client): Allow Notifications is off (flags=276832270)
-ok|com.apple.tips|Tips (com.apple.tips): Allow Notifications is off (flags=294125584)
-ok|com.apple.Passbook|Wallet (com.apple.Passbook): Allow Notifications is off (flags=814219270)
-ok|io.tailscale.ipn.macsys|Tailscale (io.tailscale.ipn.macsys): Allow Notifications is off (flags=1)
-ok|com.logi.cp-dev-mgr|Logi Options+ (com.logi.cp-dev-mgr): Allow Notifications is off (flags=1)
-ok|org.cogx.cog|Cog (org.cogx.cog): Allow Notifications is off (flags=1)
-ok|com.anysphere.sand|Grok Bot (com.anysphere.sand): Allow Notifications is off (flags=1)
-ok|com.openai.codex|ChatGPT (com.openai.codex): Allow Notifications is off (flags=1)
-ok|com.canonical.multipassGui|Multipass (com.canonical.multipassGui): Allow Notifications is off (flags=1)
-ok|com.yubico.yubioath|Yubico Authenticator (com.yubico.yubioath): Allow Notifications is off (flags=1)
-ok|com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod|YouTube Music (com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod): Allow Notifications is off (flags=1)
-ok|com.sonos.macController2|Sonos (com.sonos.macController2): Allow Notifications is off (flags=1)
-info|com.example.newapp|com.example.newapp: third-party app is not in lib/notifications-reviewed.list or lib/notifications-off.list (Allow Notifications is off (flags=1)) — review it in System Settings → Notifications, then add the bundle id to one of those lists
+ok|com.apple.iCal|Calendar (com.apple.iCal): flags=814219286, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.FaceTime|FaceTime (com.apple.FaceTime): flags=278929416, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.gamecenter|Game Center (com.apple.gamecenter): flags=5109194758, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.Home|Home (com.apple.Home): flags=830996486, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.tips|Tips (com.apple.tips): flags=294125584, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.Passbook|Wallet (com.apple.Passbook): flags=814219270, bit 25 clear, not confirmed off in System Settings
+info|com.apple.MobileSMS|Messages (com.apple.MobileSMS): not registered for notifications yet, nothing to turn off
+info|com.example.newapp|com.example.newapp: third-party app is not in lib/notifications-reviewed.list or lib/notifications-off.list (flags=1, bit 25 clear, not confirmed off in System Settings) — review it in System Settings → Notifications, then add the bundle id to one of those lists
 ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=8396822, bit 4 set, bit 3 clear)
 EOF
 )" "$out"
@@ -152,11 +179,90 @@ for quiet in \
 do
   miss "reviewed $quiet stays quiet while Allow Notifications is on" "$quiet" "$out"
 done
-# An Off-list app that is also in the reviewed snapshot still has to be off.
-write_plist "$tmp/tailscale-on.plist" '{"apps": [{"bundle-id": "io.tailscale.ipn.macsys", "flags": 33554432}]}'
-tailscale_on="$(run "$tmp/tailscale-on.plist")"
-has "off-list Tailscale with bit 25 set warns" "warn|io.tailscale.ipn.macsys|" "$tailscale_on"
-has "off-list warning says turn it off" "turn it off" "$tailscale_on"
+# Apps Paul left on, and company tools, are not drift when Allow Notifications is on.
+# 33554432 is bit 25 alone. 33554448 is bit 25 plus bit 4 (Hammerspoon Alerts).
+# Find My, Finder, Kerberos, and WhatsApp Web are com.apple.* and stay quiet.
+ON_OK='{
+  "apps": [
+    {"bundle-id": "com.apple.iCal", "flags": 814219286},
+    {"bundle-id": "io.tailscale.ipn.macsys", "flags": 33554432},
+    {"bundle-id": "com.tinyspeck.slackmacgap", "flags": 33554432},
+    {"bundle-id": "com.spotify.client", "flags": 33554432},
+    {"bundle-id": "com.microsoft.teams2", "flags": 33554432},
+    {"bundle-id": "co.anysphere.cursor.nightly", "flags": 33554432},
+    {"bundle-id": "com.todesktop.230313mzl4w4u92", "flags": 33554432},
+    {"bundle-id": "com.anysphere.sand", "flags": 33554432},
+    {"bundle-id": "com.google.Chrome", "flags": 41951246},
+    {"bundle-id": "com.google.Chrome.framework.AlertNotificationService", "flags": 33554432},
+    {"bundle-id": "com.mitchellh.ghostty", "flags": 33554432},
+    {"bundle-id": "us.zoom.xos", "flags": 33554432},
+    {"bundle-id": "com.northpolesec.santa", "flags": 33554432},
+    {"bundle-id": "com.sentinelone.SentinelAgent", "flags": 33554432},
+    {"bundle-id": "org.hammerspoon.Hammerspoon", "flags": 33554448},
+    {"bundle-id": "com.apple.findmy", "flags": 33554432},
+    {"bundle-id": "com.apple.finder", "flags": 33554432},
+    {"bundle-id": "com.apple.KerberosMenuExtra", "flags": 33554432},
+    {"bundle-id": "com.apple.Safari.WebApp.00000000-0000-0000-0000-000000000000", "flags": 33554432}
+  ]
+}'
+write_plist "$tmp/on-ok.plist" "$ON_OK"
+on_ok="$(run "$tmp/on-ok.plist")"
+miss "reviewed apps that are on are not warnings" "warn|" "$on_ok"
+for quiet in \
+  io.tailscale.ipn.macsys \
+  com.tinyspeck.slackmacgap \
+  com.spotify.client \
+  com.microsoft.teams2 \
+  co.anysphere.cursor.nightly \
+  com.todesktop.230313mzl4w4u92 \
+  com.anysphere.sand \
+  com.google.Chrome \
+  com.northpolesec.santa \
+  com.sentinelone.SentinelAgent \
+  com.apple.findmy \
+  com.apple.finder \
+  com.apple.KerberosMenuExtra \
+  com.apple.Safari.WebApp
+do
+  miss "on is not drift for $quiet" "$quiet" "$on_ok"
+done
+has "Hammerspoon on with Alerts still passes the style check" \
+  "ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=33554448, bit 4 set, bit 3 clear)" \
+  "$on_ok"
+
+# Messages shows Critical: bit 25 clear, another bit set. That is off.
+# 67108864 is 1 << 26, the older ncprefs critical-alerts bit. The check does
+# not require that bit either way. Bit 25 clear is enough.
+write_plist "$tmp/messages-critical.plist" '{"apps": [{"bundle-id": "com.apple.MobileSMS", "flags": 67108864}]}'
+messages_critical="$(run "$tmp/messages-critical.plist")"
+has "Messages Critical is not called off" \
+  "ok|com.apple.MobileSMS|Messages (com.apple.MobileSMS): flags=67108864, bit 25 clear, not confirmed off in System Settings" \
+  "$messages_critical"
+miss "Messages Critical does not say is off" "is off" "$messages_critical"
+# pdone-mac2. 268443662 is badge, sound, and banner, bit 25 clear.
+# System Settings showed Tailscale on. The same flags on Logi Options+ are
+# not called off either. 310386702 is the on-row (bit 25 set).
+write_plist "$tmp/tailscale-flags.plist" '{
+  "apps": [
+    {"bundle-id": "com.apple.iCal", "flags": 268443662},
+    {"bundle-id": "io.tailscale.ipn.macsys", "flags": 268443662},
+    {"bundle-id": "com.logi.cp-dev-mgr", "flags": 268443662},
+    {"bundle-id": "io.tailscale.ipn.macos", "flags": 310386702}
+  ]
+}'
+tail_flags="$(run "$tmp/tailscale-flags.plist")"
+has "Tailscale's flags are not called off" \
+  "ok|com.apple.iCal|Calendar (com.apple.iCal): flags=268443662, bit 25 clear, not confirmed off in System Settings" \
+  "$tail_flags"
+miss "flags 268443662 are not reported as off" "is off" "$tail_flags"
+miss "macsys Tailscale is not a warning" "warn|io.tailscale.ipn.macsys|" "$tail_flags"
+miss "Logi Options+ is not a warning" "warn|com.logi.cp-dev-mgr|" "$tail_flags"
+miss "App Store Tailscale on is not drift" "io.tailscale.ipn.macos" "$tail_flags"
+miss "Messages Critical is not a warning" "warn|com.apple.MobileSMS|" "$messages_critical"
+write_plist "$tmp/messages-on.plist" '{"apps": [{"bundle-id": "com.apple.MobileSMS", "flags": 100663296}]}'
+messages_on="$(run "$tmp/messages-on.plist")"
+has "Messages with Allow Notifications on warns" "warn|com.apple.MobileSMS|" "$messages_on"
+has "off-list warning says turn it off" "turn it off" "$messages_on"
 miss "Apple apps outside the Off list are ignored" "com.apple.Safari" "$out"
 miss "system-center apps are ignored" "_SYSTEM_CENTER_" "$out"
 
@@ -172,7 +278,7 @@ printf 'com.google.Chrome # Chrome\n' > "$tmp/reviewed.list"
 write_plist "$tmp/slack-on.plist" "$SLACK_ON"
 out="$(run "$tmp/slack-on.plist" "$tmp/off.list" "$tmp/reviewed.list")"
 eq "bit 25 set is a warning" \
-  "ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=814219286)
+  "ok|com.apple.iCal|Calendar (com.apple.iCal): flags=814219286, bit 25 clear, not confirmed off in System Settings
 warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is on (flags=310386702, bit 25 set) — System Settings → Notifications → turn it off. macconfig-check.sh --fix does not change this
 info|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): not registered for notifications yet, so the Alerts style can't be checked until Hammerspoon has posted a notification" \
   "$out"
@@ -231,7 +337,7 @@ has "the bit alone means allowed" "bit 25 set" "$out"
 
 write_plist "$tmp/zero.plist" '{"apps": [{"bundle-id": "com.apple.iCal", "flags": 0}]}'
 out="$(run "$tmp/zero.plist" "$tmp/off.list" "$tmp/reviewed.list")"
-has "zero flags means off" "ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=0)" "$out"
+has "zero flags are not called off" "ok|com.apple.iCal|Calendar (com.apple.iCal): flags=0, bit 25 clear, not confirmed off in System Settings" "$out"
 
 write_plist "$tmp/binary.plist" "$SLACK_ON" binary
 eq "binary plist matches xml" "$(run "$tmp/slack-on.plist" "$tmp/off.list" "$tmp/reviewed.list")" \

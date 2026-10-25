@@ -28,12 +28,27 @@ Sources for bit 25, set = on:
   https://github.com/Tembeon/hush
 - ncmanager (older com.apple.ncprefs): allow_notifications = 1 << 25.
 
-macOS 27 samples from this Mac agree. Bit 25 is clear on every app in
-lib/notifications-off.list (Slack, Spotify, Teams and Cursor Nightly share
-276832270; Calendar 814219286; FaceTime 278929416; Game Center 5109194758;
-Home 830996486; Mail 276824078; Tips 294125584; Wallet 814219270) and set on
-Chrome (com.google.Chrome, 41951246). Hammerspoon (8396822) is clear too; it
-is reviewed, not required off.
+macOS 27 samples from this Mac agree that bit 25 set matches a row System
+Settings is showing as on. Chrome (com.google.Chrome, 41951246) has it set.
+A later read of apps that showed as on was flags=310386702, which is the
+older Slack sample 276832270 plus exactly bit 25.
+
+Bit 25 clear is not proof the System Settings row is off. On pdone-mac2,
+io.tailscale.ipn.macsys and com.logi.cp-dev-mgr were both flags=268443662.
+That value is badge (bit 1), sound (bit 2), and banner (bit 3, the Desktop
+subtitle), plus bits 13 and 28. Bit 25 is clear. System Settings still
+showed Tailscale on (Badges, Sounds, Desktop). Logi Options+ had the same
+flags and was not described as on, so those bits are not themselves "on".
+The Tailscale row in System Settings may be a different bundle id
+(io.tailscale.ipn.macos, or a network-extension id) from the one that was
+read. Either way, a clear bit 25 must not be reported as "Allow
+Notifications is off".
+
+Messages (com.apple.MobileSMS) is on the Off list. System Settings shows
+"Critical" when normal notifications are off and Critical Alerts stay
+allowed. Bit 25 clear, with any other bit set, is the same uncertain clear
+result, not a warning. The Off list is only those seven apps. Hammerspoon
+(8396822) is clear on bit 25 too; it is reviewed, not required off.
 
 To recalibrate: toggle Allow Notifications for one app in System Settings,
 read that app's flags again, and set ALLOW_NOTIFICATIONS_BIT to the bit that
@@ -59,8 +74,8 @@ BANNER_STYLE_BIT on the other one. Then run ./tests/notification-prefs.test.sh.
 
 Output, one line per result, fields separated by `|`:
 
-    ok|bundle-id|message       listed app, Allow Notifications is off
-    warn|bundle-id|message     listed app, allowed or flags unreadable
+    ok|bundle-id|message       listed app, bit 25 is clear (not confirmed off)
+    warn|bundle-id|message     listed app, bit 25 set, or flags unreadable
     info|bundle-id|message     listed app not in the store yet, or a third-party
                             app in neither list
     error|-|message            store or list missing, or the plist did not parse
@@ -145,9 +160,24 @@ def alert_style(flags: object) -> str | None:
 
 
 def allow_bit_set(flags: object) -> bool | None:
+    """True when bit 25 is set.
+
+    Bit 25 set matched rows System Settings showed as on (flags=310386702).
+    Bit 25 clear is not the opposite: io.tailscale.ipn.macsys flags=268443662
+    has the bit clear and System Settings still showed Tailscale on. Other
+    bits, including Critical Alerts, are not a separate drift.
+    """
     if isinstance(flags, bool) or not isinstance(flags, int):
         return None
     return ((flags >> ALLOW_NOTIFICATIONS_BIT) & 1) == 1
+
+
+def bit_clear_note(shown: str) -> str:
+    """Say what was read. Do not claim the System Settings row is off."""
+    return (
+        f"flags={shown}, bit {ALLOW_NOTIFICATIONS_BIT} clear,"
+        " not confirmed off in System Settings"
+    )
 
 
 def allowed_state(flag_values: list[object]) -> str:
@@ -219,7 +249,7 @@ def report(
             emit(
                 "ok",
                 bundle,
-                f"{label} ({bundle}): Allow Notifications is off (flags={shown})",
+                f"{label} ({bundle}): {bit_clear_note(shown)}",
             )
         else:
             emit(
@@ -240,7 +270,7 @@ def report(
                 f" bit {ALLOW_NOTIFICATIONS_BIT} set)"
             )
         elif state == "off":
-            detail = f"Allow Notifications is off (flags={shown})"
+            detail = bit_clear_note(shown)
         else:
             detail = f"flags unreadable ({shown})"
         emit(

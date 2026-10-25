@@ -3,38 +3,49 @@
 # usernoted store, is not com.apple.* or _SYSTEM_CENTER_*, and is in neither
 # this file nor lib/notifications-off.list. That is how a newly appeared app
 # gets flagged. Add the id here once you've decided to leave its notifications
-# as they are, or to lib/notifications-off.list if Allow Notifications must be Off.
+# as they are. The Off list is only the seven apps in lib/notifications-off.list.
 #
 # One bundle id per line. Text after # is a comment. Blank lines and lines
 # beginning with # are ignored.
 #
-# Ids also listed in lib/notifications-off.list are included so this file is the
-# full third-party snapshot. The Off list still wins: those apps must be off.
+# On is allowed for every id here. Do not move one to the Off list just
+# because notifications are on. Company and MDM tools (Santa, SentinelAgent)
+# stay here so the check never asks for them to be turned off. Kerberos, Find
+# My, and Finder are com.apple.* ids, so they are ignored unless someone adds
+# them to the Off list. Do not add them. WhatsApp Web is
+# com.apple.Safari.WebApp.<uuid>. The UUID is not stored here, and com.apple.*
+# is ignored, so it is not drift.
 
-com.tinyspeck.slackmacgap # Slack (must be Off: lib/notifications-off.list)
-com.spotify.client # Spotify (must be Off: lib/notifications-off.list)
-com.microsoft.teams2 # Microsoft Teams (must be Off: lib/notifications-off.list)
-co.anysphere.cursor.nightly # Cursor Nightly (must be Off: lib/notifications-off.list)
-com.google.Chrome # Chrome (flags 41951246; bit 25 set in the snapshot)
-org.hammerspoon.Hammerspoon # Hammerspoon (alert style is checked: manual step mode-hammerspoon-alerts)
-# Allow Notifications left on. Reviewed, so they are not info lines, and they
-# are not in lib/notifications-off.list, so on is allowed.
-com.google.Chrome.framework.AlertNotificationService # Chrome alerts
-us.zoom.xos # Zoom
-com.mitchellh.ghostty # Ghostty
-com.anthropic.claudefordesktop # Claude
+# Allow Notifications left on. Reviewed, so they are not info lines.
 com.todesktop.230313mzl4w4u92 # Cursor
+co.anysphere.cursor.nightly # Cursor Nightly
+com.mitchellh.ghostty # Ghostty
+com.google.Chrome # Chrome
+com.google.Chrome.framework.AlertNotificationService # Chrome alerts
+com.anysphere.sand # Grok Bot
+org.hammerspoon.Hammerspoon # Hammerspoon (alert style is checked: manual step mode-hammerspoon-alerts)
+com.microsoft.teams2 # Microsoft Teams
+com.northpolesec.santa # Santa (company tool; never require off)
+com.sentinelone.SentinelAgent # SentinelAgent (company tool; never require off)
+com.tinyspeck.slackmacgap # Slack
+com.spotify.client # Spotify
+# Tailscale's System Settings row may not be io.tailscale.ipn.macsys.
+# That id read flags=268443662 (bit 25 clear) while Settings showed
+# Tailscale on. The other ids are the App Store app and the two
+# network extensions. None of them are required off.
+io.tailscale.ipn.macsys # Tailscale standalone
+io.tailscale.ipn.macos # Tailscale Mac App Store
+io.tailscale.ipn.macsys.network-extension # Tailscale standalone extension
+io.tailscale.ipn.macos.network-extension # Tailscale App Store extension
+us.zoom.xos # Zoom
+# Reviewed earlier. Not required off, so on is allowed.
+com.logi.cp-dev-mgr # Logi Options+
+org.cogx.cog # Cog
+com.openai.codex # ChatGPT
+com.canonical.multipassGui # Multipass
+com.yubico.yubioath # Yubico Authenticator
+com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod # YouTube Music
+com.sonos.macController2 # Sonos
+com.anthropic.claudefordesktop # Claude
 com.electron.dockerdesktop # Docker Desktop
-# Same apps as the new lib/notifications-off.list rows. The Off list still wins.
-io.tailscale.ipn.macsys # Tailscale (must be Off: lib/notifications-off.list)
-com.logi.cp-dev-mgr # Logi Options+ (must be Off: lib/notifications-off.list)
-org.cogx.cog # Cog (must be Off: lib/notifications-off.list)
-com.anysphere.sand # Grok Bot (must be Off: lib/notifications-off.list)
-com.openai.codex # ChatGPT (must be Off: lib/notifications-off.list)
-com.canonical.multipassGui # Multipass (must be Off: lib/notifications-off.list)
-com.yubico.yubioath # Yubico Authenticator (must be Off: lib/notifications-off.list)
-com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod # YouTube Music (must be Off: lib/notifications-off.list)
-com.sonos.macController2 # Sonos (must be Off: lib/notifications-off.list)
-com.sentinelone.SentinelAgent # SentinelOne (already off)
-com.northpolesec.santa # Santa (already off)
-com.raycast.macos # Raycast (already off)
+com.raycast.macos # Raycast

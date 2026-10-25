@@ -1,30 +1,26 @@
 # Apps whose Allow Notifications must be Off
-# (System Settings → Notifications → Application Notifications).
+# (System Settings → Notifications → the app → Allow notifications).
 # macconfig-check.sh reads the usernoted group plist via lib/notification-prefs.py
 # and warns (Needs Paul) when one of these has Allow Notifications on. It never
 # writes the store, and there is no --fix for this.
+#
+# This is the whole list. Anything else may stay on. Do not add Cursor, Cursor
+# Nightly, Find My, Finder, Ghostty, Google Chrome, Grok Bot, Hammerspoon,
+# Microsoft Teams, Slack, Spotify, Tailscale, the Safari web app, Zoom, or company
+# tools (Santa, SentinelAgent, Kerberos). On is not drift for those.
+#
+# Messages shows "Critical" in System Settings when Allow notifications is off
+# and Critical Alerts are still allowed. That is off, not drift. The check
+# reads flags bit 25 only. It does not require Critical Alerts off.
 #
 # One bundle id per line. Text after # is the display name (keep it in the
 # notifications-apps title in lib/manual-steps.list). Blank lines and lines
 # beginning with # are ignored.
 
 com.apple.iCal # Calendar
-co.anysphere.cursor.nightly # Cursor Nightly
 com.apple.FaceTime # FaceTime
 com.apple.gamecenter # Game Center
 com.apple.Home # Home
-com.apple.mail # Mail
-com.microsoft.teams2 # Microsoft Teams
-com.tinyspeck.slackmacgap # Slack
-com.spotify.client # Spotify
 com.apple.tips # Tips
 com.apple.Passbook # Wallet
-io.tailscale.ipn.macsys # Tailscale
-com.logi.cp-dev-mgr # Logi Options+
-org.cogx.cog # Cog
-com.anysphere.sand # Grok Bot
-com.openai.codex # ChatGPT
-com.canonical.multipassGui # Multipass
-com.yubico.yubioath # Yubico Authenticator
-com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod # YouTube Music
-com.sonos.macController2 # Sonos
+com.apple.MobileSMS # Messages
