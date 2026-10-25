@@ -7,6 +7,17 @@
 # scripts/manual-steps.sh calls check_step_finder_sidebar (@macconfig:finder).
 check_step_finder_sidebar() {
   fixid finder-sidebar
+  fav_base="$HOME/Library/Application Support/com.apple.sharedfilelist"
+  fav_have=0
+  for fav_ext in sfl4 sfl3 sfl2; do
+    if [ -f "$fav_base/com.apple.LSSharedFileList.FavoriteItems.$fav_ext" ]; then
+      fav_have=1
+      break
+    fi
+  done
+  if [ "$fav_have" = 0 ]; then
+    note "Finder Favorites file is missing (~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.FavoriteItems.sfl4). Finder may not create it until the sidebar is edited, so this can't be checked"
+  fi
   side_rows="$DOTDIR/lib/finder-sidebar-rows.py"
   side_rules="$DOTDIR/lib/finder-sidebar-rows.list"
   if [ ! -r "$side_rows" ] || [ ! -r "$side_rules" ]; then
@@ -111,6 +122,7 @@ else
   side_msg="${side_line#*|}"
   case "$side_status" in
     ok) pass "$side_msg" ;;
+    info) info "$side_msg" ;;
     bad) warn "$side_msg — set them in Finder. macconfig --fix does not change Favorites" ;;
     *) warn "${side_msg:-Finder Favorites could not be read}" ;;
   esac

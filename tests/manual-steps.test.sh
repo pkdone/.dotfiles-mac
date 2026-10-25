@@ -64,8 +64,8 @@ eq "driver step says to open Karabiner-Elements first" \
   "$(awk -F'|' '$1=="karabiner-driver" { print $4 }' "$LIST" | cut -d. -f1)."
 eq "step paths do not use the newer page name" "" \
   "$(awk -F'|' '$4 ~ /Device Control/ { print }' "$LIST")"
-eq "newer page name is mentioned once, in the manual-steps doc" 1 \
-  "$(grep -c 'Device Control and Data Access' "$DIR/../docs/manual-steps.md")"
+eq "manual-steps doc does not use the newer page name" "" \
+  "$(grep -F 'Device Control' "$DIR/../docs/manual-steps.md" || true)"
 eq "setup doc uses Accessibility for that page" "" \
   "$(grep -F 'Device Control' "$DIR/../docs/setup.md" || true)"
 eq "settings doc uses Accessibility for that page" "" \

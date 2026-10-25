@@ -39,6 +39,29 @@ DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$DOTDIR/lib/dotfiles-log.sh"
 # shellcheck source=lib/fleet-apps.sh disable=SC1091
 . "$DOTDIR/lib/fleet-apps.sh"
+
+# 0 when Automatically adjust brightness is already off. 1 when it is on,
+# or when the check can't be read (missing tool, empty output, unreadable plist).
+auto_brightness_needs_hand() {
+  local bin diag line status py
+  bin="${AUTO_BRIGHTNESS_DIAG:-/usr/libexec/corebrightnessdiag}"
+  py="$(command -v python3 2>/dev/null || true)"
+  if [ ! -x "$bin" ] || [ -z "$py" ] || [ ! -r "$DOTDIR/lib/auto-brightness.py" ]; then
+    return 0
+  fi
+  diag="$("$bin" status-info 2>/dev/null || true)"
+  if [ -z "$diag" ]; then
+    return 0
+  fi
+  line="$(printf '%s\n' "$diag" | "$py" "$DOTDIR/lib/auto-brightness.py" || true)"
+  status="${line%%|*}"
+  [ "$status" = ok ] && return 1
+  return 0
+}
+
+if [ "${BOOTSTRAP_DEFINE_ONLY:-}" = 1 ]; then
+  return 0
+fi
 dotfiles_refuse_root "bootstrap.sh"
 
 DRYRUN=0
@@ -197,13 +220,15 @@ fi
 # Its open action is System Settings → Displays.
 MANUAL_STEPS="$DOTDIR/scripts/manual-steps.sh"
 echo ""
-printf '%sStill by hand: Automatically adjust brightness Off%s\n' "$C_HDR" "$C_OFF"
-echo "  System Settings → Displays. The manual-steps walk-through opens this page."
-echo "  Setup leaves it alone: changing it needs an admin password, and the saved"
-echo "  value is a root-owned file. Leave True Tone and Slightly dim the display"
-echo "  on battery as they are."
-echo ""
-"$MANUAL_STEPS" list || true
+if auto_brightness_needs_hand; then
+  printf '%sStill by hand: Automatically adjust brightness Off%s\n' "$C_HDR" "$C_OFF"
+  echo "  System Settings → Displays. The manual-steps walk-through opens this page."
+  echo "  Setup leaves it alone: changing it needs an admin password, and the saved"
+  echo "  value is a root-owned file. Leave True Tone and Slightly dim the display"
+  echo "  on battery as they are."
+  echo ""
+fi
+"$MANUAL_STEPS" pending || true
 # The walk-through is interactive by nature: offer it only on a real run, on a terminal,
 # and not under --yes.
 if [ "$DRYRUN" = 0 ] && [ "$ASSUME_YES" = 0 ] && dotfiles_is_interactive; then

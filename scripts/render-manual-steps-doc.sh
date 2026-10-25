@@ -33,20 +33,21 @@ render() {
 
 See [README.md](../README.md).
 
-> _Manual — no script can do these. `install.sh` and `bootstrap.sh` print this checklist when they finish and, on a terminal, offer to walk through it._
+> _Manual — no script can do these. `install.sh` prints this checklist when it finishes. `bootstrap.sh` prints the steps that are not set yet, or that can't be checked, and on a terminal offers to walk through them._
 
-Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, company MDM apps, and settings that aren't a single reliable `defaults` write (notification mirroring, a Finder sidebar row the sidebar files do not name, mouse double-click and secondary click, the Menu Bar allow-list for Raycast, Logi Options+ and Docker, the battery charge limit, and Automatically adjust brightness). The account picture, the desktop picture, and the Finder sidebar rows the files do name are checked and not changed. **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it. Per-app Allow Notifications is checked by `macconfig-check.sh` (see [Notifications](settings.md#notifications)). Built-in display More Space is set by `macos.sh` with `displayplacer` when that mode is listed (see below). Automatically adjust brightness stays by hand under System Settings → Displays. Spotlight → Results from Apps is check by hand: the toggles are not in a preference the check can read, so nothing is written. Look up & data detectors is checked and not written. Trackpad tap to click, click pressure, secondary click, three-finger drag, tracking speed, Force Click, and the gesture keys are applied by `macos.sh` (see [macOS defaults](settings.md#macos-defaults)).
+Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, Fleet apps, and settings that aren't a single reliable `defaults` write (notification mirroring, a Finder sidebar row the sidebar files do not name, mouse double-click and secondary click, the Menu Bar allow-list for Raycast, Logi Options+ and Docker, the battery charge limit, and Automatically adjust brightness). The account picture, the desktop picture, and the Finder sidebar rows the files do name are checked and not changed. **`lib/manual-steps.list` is the single source of truth** for them; `scripts/manual-steps.sh` reads it. Per-app Allow Notifications is checked by `macconfig-check.sh` (see [Notifications](settings.md#notifications)). Built-in display More Space is set by `macos.sh` with `displayplacer` when that mode is listed (see below). Automatically adjust brightness stays by hand under System Settings → Displays when it is on, or when the check can't read it. Spotlight → Results from Apps is checked by hand: the toggles are not in a preference the check can read, so nothing is written. Look up & data detectors is checked and not written. Trackpad tap to click, click pressure, secondary click, three-finger drag, tracking speed, Force Click, and the gesture keys are applied by `macos.sh` (see [macOS defaults](settings.md#macos-defaults)).
 
 This file is generated from `lib/manual-steps.list`. Edit the list, then run `scripts/render-manual-steps-doc.sh`.
 
-Hammerspoon, Karabiner-Elements, and Raycast are under System Settings → Privacy & Security → Accessibility (called Device Control and Data Access on newer macOS). Open the app first. It appears in Accessibility or Driver Extensions only after it has asked. If an Accessibility app is still not listed, click + and add it from Applications.
+Hammerspoon, Karabiner-Elements, and Raycast are under System Settings → Privacy & Security → Accessibility. Open the app first. It appears in Accessibility or Driver Extensions only after it has asked. If an Accessibility app is still not listed, click + and add it from Applications. Company apps come from Fleet (Fleet Desktop menu bar → My device → Self service).
 
-`manualsteps` is the fish function for `scripts/manual-steps.sh`, installed with the others in `fish/functions/`. With no arguments it runs `check`. Any arguments pass through (`manualsteps list`, `manualsteps open`, `manualsteps open --all`, `manualsteps check`, `manualsteps --help`), and the exit status is the script's.
+`manualsteps` is the fish function for `scripts/manual-steps.sh`, installed with the others in `fish/functions/`. With no arguments it runs `check`. Any arguments pass through (`manualsteps list`, `manualsteps pending`, `manualsteps open`, `manualsteps open --all`, `manualsteps check`, `manualsteps --help`), and the exit status is the script's.
 
 ```bash
 manualsteps          # check (no arguments): ok / warn / by hand (also the "Manual steps" section of macconfig-check.sh)
 manualsteps open     # walk through the steps not yet done, opening each System Settings page (terminal only; --all for every step)
-manualsteps list     # numbered checklist
+manualsteps list     # numbered checklist (every step)
+manualsteps pending  # only steps that are not set, or that can't be checked
 ~/.dotfiles-mac/scripts/manual-steps.sh list    # numbered checklist (same as manualsteps list)
 ~/.dotfiles-mac/scripts/manual-steps.sh open    # walk through the steps not yet done, opening each System Settings page (terminal only; --all for every step)
 ~/.dotfiles-mac/scripts/manual-steps.sh check   # read-only: ok / warn / by hand (same as manualsteps)

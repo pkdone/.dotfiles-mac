@@ -32,11 +32,12 @@ covered_step_run() { # id area
   FLEET_OFFER=0
   COVERED_WARNS=""
   COVERED_OKS=""
+  COVERED_FORCE_HAND=0
   pass() { COVERED_OKS="${COVERED_OKS}$1"$'\n'; }
   warn() { COVERED_WARNS="${COVERED_WARNS}$1"$'\n'; }
   bad() { warn "$1"; }
   info() { :; }
-  note() { :; }
+  note() { COVERED_FORCE_HAND=1; }
   fixid() { :; }
   hdr() { :; }
   if [ -z "${DOT_PYTHON:-}" ]; then
@@ -60,6 +61,8 @@ covered_step_run() { # id area
 $COVERED_WARNS
 EOF
     printf 'warn|%s\n' "$detail"
+  elif [ "$COVERED_FORCE_HAND" = 1 ]; then
+    printf 'hand|\n'
   elif [ -n "$COVERED_OKS" ]; then
     detail=""
     while IFS= read -r line; do

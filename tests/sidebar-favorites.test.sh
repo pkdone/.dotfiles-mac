@@ -249,8 +249,17 @@ eq "sfl4 wins when both files exist" "ok" "${out%%|*}"
 
 rm -f "$sfl4" "$sfl3"
 out="$(HOME="$home" "$PY" "$HELPER" compare --list "$LIST")"
-eq "a missing sidebar file warns" "warn" "${out%%|*}"
+eq "a missing sidebar file is info, not a warning" "info" "${out%%|*}"
 has "a missing sidebar file names the file" "FavoriteItems.sfl4" "$out"
+has "a missing sidebar file says it can't be checked" "can't be checked" "$out"
+out="$(HOME="$home" "$MACOS" --no-color --yes --only @finder-favorites)"
+has "macos.sh reports a missing favorites file as info" "info  Finder Favorites file is missing" "$out"
+has "macos.sh says a missing favorites file can't be checked" "can't be checked" "$out"
+has "macos.sh does not count a missing favorites file as a warning" "0 warning(s)." "$out"
+miss "macos.sh does not warn when the favorites file is missing" $'\n  warn ' "$out"
+# shellcheck disable=SC2016  # the check source contains this literal
+has "macconfig prints info for a missing favorites file" 'info) info "$side_msg"' \
+  "$(cat "$DIR/checks/finder.sh")"
 
 write_sfl match "$sfl4"
 before="$(cksum "$sfl4")"

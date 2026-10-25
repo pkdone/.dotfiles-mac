@@ -135,6 +135,7 @@ fi
 say_ok()   { printf '  %sok%s    %s\n' "$C_OK"   "$C_OFF" "$1"; }
 say_chg()  { printf '  %schg%s   %s\n' "$C_CHG"  "$C_OFF" "$1"; }
 say_warn() { printf '  %swarn%s  %s\n' "$C_WARN" "$C_OFF" "$1"; }
+say_info() { printf '  info  %s\n' "$1"; }
 
 CONSIDERED=0
 CHANGED=0
@@ -761,6 +762,10 @@ apply_finder_favorites() {
     say_ok "Finder Favorites already match"
     return 0
   fi
+  if [ "$status" = info ]; then
+    say_info "${detail:-Finder Favorites cannot be checked}"
+    return 0
+  fi
   WARNINGS=$((WARNINGS + 1))
   if [ "$status" = bad ]; then
     say_warn "Finder Favorites differ ($detail). Set them in Finder; this does not change the sidebar"
@@ -1074,31 +1079,6 @@ if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (macconfig-check.sh --fix): sk
 
 cat <<'MANUAL'
 
-Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
-  - The account picture (the Dog) is checked and never changed
-  - Keyboard British input source (checked; not written). Built-in display
-    More Space is set with displayplacer when that mode is listed; otherwise
-    set it by hand. The Tahoe Night wallpaper stays by hand (there is no
-    reliable command for that system picture). Automatically adjust
-    brightness stays by hand (System Settings → Displays)
-  - Finder sidebar Favorites are checked from the sidebar file and not changed.
-    macconfig checks the Tags group collapsed, Recents hidden, and, when the
-    sidebar files name the row, Shared at the top, AirDrop and iCloud Drive
-    hidden, and your home folder, Macintosh HD, Network, and Trash visible.
-    A row the files do not name stays manual. macconfig does not change the sidebar
-  - Mouse double-click speed and secondary click (tracking 1.5 is the 7th notch
-    from Slow and scrolling 0.5 is the 5th notch from Slow; checked only —
-    defaults write is unreliable, so they are never written);
-    Trackpad Look up (checked, forceClick 0) and trackpad dragging (checked
-    only, Dragging=1 DragLock=0); MX Master 3S wheel (Natural), buttons in Logi
-    Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
-  - Accessibility grants (TCC); notification mirroring. Spotlight → Results from
-    Apps is check by hand (the toggles are not in a preference the check can
-    read). Per-app Allow Notifications is checked
-  - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
-    (leave Tailscale, 1Password, Granola, Hammerspoon, Fleet Desktop)
-  - Set Hostname (requires sudo)
-  - Power, if the sudo step above was skipped: AC sleep 0, AC display sleep
-    10 minutes, battery display sleep 2 minutes, AC wake for network access.
-    Closing the lid still sleeps the Mac. Battery idle sleep is not changed
+Still manual: the by-hand checklist is docs/manual-steps.md.
+Run scripts/manual-steps.sh pending to see what is not set yet, or scripts/manual-steps.sh open to walk through it.
 MANUAL

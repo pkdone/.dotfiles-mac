@@ -83,7 +83,7 @@ eq "manual step uses the spotlight check" "spotlight-results" \
 readme="$(cat "$DIR/docs/manual-steps.md")"
 has "Manual-steps doc names the apps that should be off" "$OFF" "$readme"
 has "Manual-steps doc names the apps that stay on" "$ON" "$readme"
-has "Manual-steps doc says the step is check by hand" "check by hand" "$readme"
+has "Manual-steps doc says the step is checked by hand" "checked by hand" "$readme"
 
 miss "the check does not export Spotlight preferences" "defaults export com.apple.Spotlight" \
   "$(cat "$DIR/lib/session-checks.sh")"

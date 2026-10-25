@@ -31,6 +31,8 @@ usage() {
   cat <<'USAGE'
 Usage: scripts/manual-steps.sh <command> [option]
   list [--markdown]    Print the manual steps as a numbered checklist (or Markdown table).
+  pending              Print only steps that are not set or can't be checked, with
+                       the same why-shown line as open. Says how many were already done.
   open [--all]         Walk through the steps one by one, opening each settings page.
                        Skips steps already verified ok unless --all. Needs a terminal.
   check [--porcelain]  Run the read-only checks: ok, warn or check by hand.
@@ -344,6 +346,46 @@ open_why() {
   esac
 }
 
+# Steps that are not set, or that can't be checked. Same why-line as open.
+# Already-done steps (ok, or covered) are counted and not printed.
+cmd_pending() {
+  local i num last="" skipped=0 shown=0 lead="" why_c=""
+  printf '%sManual steps still to do%s\n' "$C_HDR" "$C_OFF"
+  i=0
+  while [ "$i" -lt "$N" ]; do
+    num=$((i + 1))
+    run_check "${S_CHECK[$i]}" "${S_ID[$i]}"
+    if [ "$R_STATUS" = ok ] || [ "$R_STATUS" = covered ]; then
+      skipped=$((skipped + 1))
+      i=$((i + 1))
+      continue
+    fi
+    shown=$((shown + 1))
+    if [ "${S_GROUP[$i]}" != "$last" ]; then
+      if [ -n "$last" ]; then printf '\n'; fi
+      group_heading "${S_GROUP[$i]}"
+      last="${S_GROUP[$i]}"
+      lead=""
+    else
+      lead=$'\n'
+    fi
+    case "$R_STATUS" in
+      warn) why_c="$C_WARN" ;;
+      *) why_c="$C_DIM" ;;
+    esac
+    printf '%s%s%d. %s%s\n      %s%s%s\n      %s\n' \
+      "$lead" "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" \
+      "$why_c" "$(open_why)" "$C_OFF" \
+      "${S_WHERE[$i]}"
+    i=$((i + 1))
+  done
+  echo
+  if [ "$shown" = 0 ]; then
+    echo "Nothing left to set by hand."
+  fi
+  printf 'Skipped %d already done.\n' "$skipped"
+}
+
 open_target() {  # target
   local t="$1"
   case "$t" in
@@ -459,7 +501,7 @@ main() {
   case "$cmd" in -h|--help|'') usage; [ -n "$cmd" ]; return $? ;; esac
   shift
   case "$cmd" in
-    list|open|check|validate) ;;
+    list|pending|open|check|validate) ;;
     *) echo "Unknown command: $cmd (try --help)" >&2; return 2 ;;
   esac
   load_steps
@@ -468,6 +510,7 @@ main() {
   fi
   case "$cmd" in
     list)     cmd_list "$@" ;;
+    pending)  cmd_pending ;;
     open)     cmd_open "$@" ;;
     check)    cmd_check "$@" ;;
     validate) cmd_validate ;;

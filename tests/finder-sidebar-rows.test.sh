@@ -209,5 +209,29 @@ has "an unreadable archive stays by hand" "stay by hand" "$out"
 writers="$(grep -nE 'open\(.*["'\'']wb["'\'']|plistlib.dump' "$HELPER" || true)"
 eq "helper does not write a sidebar file" "" "$writers"
 
+# A good sidebar with no FavoriteItems file: rows pass, but the manual step
+# stays on screen because Favorites can't be checked yet.
+run_mode good >/dev/null
+fav_dir="$home/Library/Application Support/com.apple.sharedfilelist"
+mkdir -p "$fav_dir"
+cp "$tmp/side/top.sfl4" "$fav_dir/com.apple.LSSharedFileList.TopSidebarSection.sfl4"
+cp "$tmp/side/volumes.sfl4" "$fav_dir/com.apple.LSSharedFileList.FavoriteVolumes.sfl4"
+rm -f "$fav_dir"/com.apple.LSSharedFileList.FavoriteItems.sfl*
+printf '%s\n' \
+  'finder-sidebar|Login Items & Finder|Finder sidebar rows|Finder → Settings → Sidebar|app:Finder|@macconfig:finder' \
+  > "$tmp/step.list"
+mkdir -p "$tmp/bin"
+printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/open"
+chmod +x "$tmp/bin/open"
+open_out="$(printf 's\n' | HOME="$home" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$tmp/step.list" PATH="$tmp/bin:$PATH" \
+  "$DIR/scripts/manual-steps.sh" open 2>"$tmp/open.err")"
+eq "open of a missing FavoriteItems file exits 0" 0 "$?"
+eq "open stderr stays empty" "" "$(cat "$tmp/open.err")"
+has "a missing FavoriteItems file is still shown" "Finder sidebar rows" "$open_out"
+has "a missing FavoriteItems file can't be checked" \
+  "Can't check this automatically. If it's already set, press s." "$open_out"
+miss "a missing FavoriteItems file is not treated as unset" "Not set yet" "$open_out"
+
 printf 'finder-sidebar-rows tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

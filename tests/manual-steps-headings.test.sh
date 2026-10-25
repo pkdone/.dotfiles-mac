@@ -264,5 +264,15 @@ eq "no tty skips the walk-through" \
   "$notty_out"
 miss "no tty does not print a heading" "Mixed" "$notty_out"
 
+pending_out="$(MANUAL_STEPS_LIST="$tmp/steps.list" "$MS" pending 2>"$tmp/pending.err")"
+eq "pending exits 0" 0 "$?"
+eq "pending stderr stays empty" "" "$(cat "$tmp/pending.err")"
+has "pending shows a step that is not set" "Not set yet: not found at /no/such/manual-steps-app" "$pending_out"
+has "pending shows a step that can't be checked" \
+  "Can't check this automatically. If it's already set, press s." "$pending_out"
+has "pending says how many were already done" "Skipped 3 already done." "$pending_out"
+miss "pending hides a step that already passes" "Present app" "$pending_out"
+miss "pending hides a covered step" "Already covered elsewhere" "$pending_out"
+
 printf 'manual-steps headings tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
