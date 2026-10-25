@@ -180,10 +180,24 @@ edge-light|Video calls|Edge Light Off|Start a video call (or open Photo Booth / 
 home-printer|Printer|Add the home printer HP ENVY 6000 series|System Settings → Printers & Scanners → click Add Printer, Scanner or Fax… → Default tab → choose HP ENVY 6000 series (Bonjour Multifunction, only shown when on the home network) → leave Use: HP ENVY 6000 series → Add|x-apple.systempreferences:com.apple.Print-Scan-Settings.extension|home-printer
 
 # ---- Notifications & Spotlight ----
-notifications-mirroring|Notifications & Spotlight|Notifications Off when mirroring or sharing the display|System Settings → Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
-# Bundle ids live in lib/notifications-off.list. macconfig-check.sh reads the
-# usernoted plist and never writes it. Mirroring stays the row above.
-notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Tailscale, Logi Options+, Cog, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig:notifications
+# Notification Centre is the block at the top of System Settings → Notifications.
+# Show previews, when display is sleeping, when screen is locked, and when
+# mirroring or sharing the display are not per-app flags. Per-app
+# content_visibility is that app's own preview (Default, Never, When Unlocked,
+# Always), not the Show previews menu. ~/Library/Preferences/com.apple.ncprefs.plist
+# is not the macOS 27 store. No key here has been shown to match these four
+# controls. Leave the checks empty. Do not warn because a guessed key is missing,
+# and do not write a plist.
+notifications-previews|Notifications & Spotlight|Show previews: When Unlocked|System Settings → Notifications → Notification Center → click the Show previews menu → When Unlocked|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
+notifications-display-sleep|Notifications & Spotlight|When display is sleeping off|System Settings → Notifications → Notification Center → turn off when display is sleeping|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
+notifications-lock-screen|Notifications & Spotlight|When screen is locked on|System Settings → Notifications → Notification Center → turn on when screen is locked|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
+notifications-mirroring|Notifications & Spotlight|Notifications Off when mirroring or sharing the display|System Settings → Notifications → Notification Center → click the menu for when mirroring or sharing the display → Notifications Off|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
+# Bundle ids live in lib/notifications-off.list (Calendar, FaceTime, Game Center,
+# Home, Tips, Wallet, Messages). macconfig-check.sh reads the usernoted plist
+# and never writes it. Messages may say Critical in the list: Allow notifications
+# is off and Critical Alerts stay allowed, which counts as off. The four
+# Notification Centre rows above stay by hand.
+notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, FaceTime, Game Center, Home, Tips, Wallet, Messages|System Settings → Notifications → Calendar → turn off Allow notifications. System Settings → Notifications → FaceTime → turn off Allow notifications. System Settings → Notifications → Game Center → turn off Allow notifications. System Settings → Notifications → Home → turn off Allow notifications. System Settings → Notifications → Tips → turn off Allow notifications. System Settings → Notifications → Wallet → turn off Allow notifications. System Settings → Notifications → Messages → turn off Allow notifications. Messages may say Critical in the list: Allow notifications is off and Critical Alerts stay allowed, so leave that as it is|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig:notifications
 spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, and System Settings on.|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----

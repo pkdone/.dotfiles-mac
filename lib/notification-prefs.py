@@ -28,12 +28,15 @@ Sources for bit 25, set = on:
   https://github.com/Tembeon/hush
 - ncmanager (older com.apple.ncprefs): allow_notifications = 1 << 25.
 
-macOS 27 samples from this Mac agree. Bit 25 is clear on every app in
-lib/notifications-off.list (Slack, Spotify, Teams and Cursor Nightly share
-276832270; Calendar 814219286; FaceTime 278929416; Game Center 5109194758;
-Home 830996486; Mail 276824078; Tips 294125584; Wallet 814219270) and set on
-Chrome (com.google.Chrome, 41951246). Hammerspoon (8396822) is clear too; it
-is reviewed, not required off.
+macOS 27 samples from this Mac agree. Bit 25 is clear on the Off-list apps
+that were sampled (Calendar 814219286; FaceTime 278929416; Game Center
+5109194758; Home 830996486; Tips 294125584; Wallet 814219270) and set on
+Chrome (com.google.Chrome, 41951246). Messages (com.apple.MobileSMS) is on
+the Off list too. System Settings shows "Critical" for it when Allow
+Notifications is off and Critical Alerts stay allowed. That is off, not
+drift: any other bit, including a critical-alerts bit, is ignored. The Off
+list is only those seven apps. Hammerspoon (8396822) is clear on bit 25 too;
+it is reviewed, not required off.
 
 To recalibrate: toggle Allow Notifications for one app in System Settings,
 read that app's flags again, and set ALLOW_NOTIFICATIONS_BIT to the bit that
@@ -145,6 +148,11 @@ def alert_style(flags: object) -> str | None:
 
 
 def allow_bit_set(flags: object) -> bool | None:
+    """True when Allow Notifications is on.
+
+    Other bits are not drift. Messages can show "Critical" in System Settings
+    (Allow Notifications off, Critical Alerts still allowed) and still be off.
+    """
     if isinstance(flags, bool) or not isinstance(flags, int):
         return None
     return ((flags >> ALLOW_NOTIFICATIONS_BIT) & 1) == 1
