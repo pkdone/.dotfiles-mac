@@ -32,6 +32,12 @@ CLICK = (
     "Show these tags in the sidebar (Red, Orange, Yellow, Green, Blue, "
     "Purple, Grey, Work, Home, Important)."
 )
+# Those boxes are FavoriteTagNames. They do not write ShowRecentTags.
+RECENT = (
+    "Unticking those named tag boxes does not turn recent tags off. "
+    "Recent tags are separate: Finder → Settings → Sidebar → hide Recent Tags "
+    "if that row is listed."
+)
 FIX = " macconfig does not change the sidebar."
 MISSING = object()
 
@@ -119,13 +125,19 @@ def judge(prefs: dict) -> tuple[str, str]:
         if flag is None:
             return (
                 "info",
-                "ShowRecentTags is not a yes or no value, so the sidebar "
-                f"tags stay by hand. {CLICK}{FIX}",
+                "ShowRecentTags is not a yes or no value, so recent tags "
+                f"stay by hand. {RECENT}{FIX}",
             )
         if flag:
             problems.append(
                 "ShowRecentTags is on, so recent tags can still appear in the sidebar."
             )
+            remedy = f"{RECENT}"
+            if names is MISSING or (isinstance(names, list) and any(
+                isinstance(item, str) and item.strip() for item in names
+            )):
+                remedy = f"{CLICK} {RECENT}"
+            return "warn", " ".join(problems) + " " + remedy + FIX
     if problems:
         return "warn", " ".join(problems) + " " + CLICK + FIX
     return "ok", "No tags are shown in the Finder sidebar."

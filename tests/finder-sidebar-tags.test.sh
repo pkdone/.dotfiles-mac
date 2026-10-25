@@ -42,6 +42,8 @@ elif kind == "empty-recent-on":
     data = {"FavoriteTagNames": [], "ShowRecentTags": True}
 elif kind == "named":
     data = {"FavoriteTagNames": ["Red", "Work", "Important"]}
+elif kind == "both":
+    data = {"FavoriteTagNames": ["Red"], "ShowRecentTags": True}
 elif kind == "missing-key":
     data = {"ShowHardDrivesOnDesktop": False}
 elif kind == "bad-type":
@@ -69,7 +71,11 @@ write_plist empty-recent-on
 out="$(run)"
 eq "recent tags on warns" "warn" "${out%%|*}"
 has "recent tags on names the key" "ShowRecentTags is on" "$out"
-has "a warning names the Tags pane" "Finder → Settings → Tags" "$out"
+has "recent tags says the named boxes do not turn them off" \
+  "does not turn recent tags off" "$out"
+has "recent tags names the Sidebar row" "hide Recent Tags" "$out"
+miss "recent tags are not fixed by unticking the named boxes again" \
+  "untick every box" "$out"
 
 write_plist named
 out="$(run)"
@@ -78,6 +84,14 @@ has "listed tags names Red" "Red" "$out"
 has "listed tags names Work" "Work" "$out"
 has "listed tags names Important" "Important" "$out"
 has "listed tags says to untick them" "untick every box" "$out"
+miss "listed tags do not mention recent tags" "recent tags" "$out"
+
+write_plist both
+out="$(run)"
+eq "listed tags and recent tags both warn" "warn" "${out%%|*}"
+has "both warnings still say to untick the boxes" "untick every box" "$out"
+has "both warnings say the boxes do not turn recent tags off" \
+  "does not turn recent tags off" "$out"
 
 write_plist missing-key
 out="$(run)"
@@ -107,9 +121,14 @@ writers="$(grep -nE 'open\(.*["'\'']wb["'\'']|plistlib.dump' "$HELPER" || true)"
 eq "helper does not write a preference" "" "$writers"
 miss "helper does not call defaults write" "defaults write" "$(cat "$HELPER")"
 
-has "manual step says no tags are shown" "No tags are shown in the sidebar." \
+has "manual step says no tags are shown" "No tags are shown in the sidebar, including recent tags." \
   "$(awk -F'|' '$1=="finder-sidebar" { print $3; exit }' "$DIR/lib/manual-steps.list")"
 has "manual step names the Tags pane" "Finder → Settings → Tags" \
+  "$(awk -F'|' '$1=="finder-sidebar" { print $4; exit }' "$DIR/lib/manual-steps.list")"
+has "manual step says the tag boxes do not turn recent tags off" \
+  "do not turn recent tags off" \
+  "$(awk -F'|' '$1=="finder-sidebar" { print $4; exit }' "$DIR/lib/manual-steps.list")"
+has "manual step names Recent Tags" "hide Recent Tags" \
   "$(awk -F'|' '$1=="finder-sidebar" { print $4; exit }' "$DIR/lib/manual-steps.list")"
 miss "manual step no longer says Shared is first" "first visible" \
   "$(awk -F'|' '$1=="finder-sidebar" { print; exit }' "$DIR/lib/manual-steps.list")"

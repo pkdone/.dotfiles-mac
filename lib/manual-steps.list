@@ -188,7 +188,7 @@ spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Boo
 
 # ---- Login Items & Finder ----
 login-items-off|Login Items & Finder|Keep ChatGPT Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:login-items
-finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents and Shared stay hidden, and, when the sidebar files name the row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. No tags are shown in the sidebar. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar. Tags: Finder → Settings → Tags → untick every box under Show these tags in the sidebar (Red, Orange, Yellow, Green, Blue, Purple, Grey, Work, Home, Important)|app:Finder|@macconfig:finder
+finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents and Shared stay hidden, and, when the sidebar files name the row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. No tags are shown in the sidebar, including recent tags. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar (hide Recent Tags if that row is listed; the tag boxes do not turn recent tags off). Tags: Finder → Settings → Tags → untick every box under Show these tags in the sidebar (Red, Orange, Yellow, Green, Blue, Purple, Grey, Work, Home, Important)|app:Finder|@macconfig:finder
 
 # ---- App settings ----
 # Raycast is set by hand: the launcher hotkey, then Clipboard History.
