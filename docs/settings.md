@@ -56,7 +56,7 @@ A broken link is restored by `macconfig-check.sh --fix`. An override file is rep
 
 **Raycast: partly readable.** Raycast keeps almost everything in an encrypted database (`~/Library/Application Support/com.raycast.macos/raycast-enc.sqlite`). The only setting readable from `defaults` is the launcher hotkey: `com.raycast.macos raycastGlobalHotkey` = `Shift-Control-Command-15`, where key code 15 is R. The manual-steps check for that step reads it automatically.
 
-The Finder hotkey (Shift+Control+Command+F) and the Clipboard History settings (Control+Command+V, 1-day history, 1Password and 1Password for Safari excluded) live only in the encrypted database, so they stay **by hand**.
+Clipboard History (Control+Command+V, 1-day history, 1Password and 1Password for Safari excluded) lives only in the encrypted database, so it stays **by hand**. Shift+Control+Command+F brings Finder to the front from Hammerspoon (`hammerspoon/finder_hotkey.lua`). If the Raycast backup being imported still has a Finder hotkey on Shift+Control+Command+F, unbind it in Raycast so it doesn't clash with Hammerspoon (manual step `raycast-finder-unbind`).
 
 Raycast's supported backup is **Export Settings & Data**, a passphrase-encrypted `.rayconfig` file (Raycast → Settings → Advanced → Export, or Scheduled Backup). Restoring it is a GUI step: Import Settings & Data, then tick **Settings, Aliases & Hotkeys**. The export also holds clipboard history, AI chats, notes, MCP servers and extension settings (which can include tokens), so it is **never stored in this repo**. `*.rayconfig` is gitignored. Keep it in a synced folder via Scheduled Backup instead. Writing the hotkey back with `defaults write` isn't a supported restore (Raycast holds it in memory and in its database), so the step stays manual (`raycast-import` / `raycast-hotkey` in [Manual steps](manual-steps.md)).
 
@@ -85,7 +85,7 @@ Finder and Trash tidy rows in that list remove Trash items after 30 days (`com.a
 
 Finder sidebar Favorites are `lib/sidebar-favorites.list` (Applications, Desktop, Developer, Documents, Downloads, Movies, Music, Pictures). `macos.sh` and `macconfig-check.sh` read `~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.FavoriteItems.sfl4` (or `.sfl3`, or `.sfl2`, whichever file this Mac has) and compare the file favorites with that list. A match is left alone. A difference is a warning. Nothing writes the sidebar file: Homebrew has no `mysides` formula or cask, and editing that file directly is not reliable, so `macconfig --fix` does not change Favorites. The Tags group stays collapsed (`SidebarTagsSctionDisclosedState`; Apple spells it that way). Recents stays hidden. Shared at the top, AirDrop and iCloud Drive hidden, and the Locations rows (your home folder, Macintosh HD, Network, Trash) are checked when the sidebar files name them. A row the files do not name stays by hand. `ShowRecentTags` and `SidebarShowingiCloudDesktop` are not checked: their values on this Mac were not confirmed, so pinning them would warn on a good setup. `macconfig --fix` does not change the sidebar.
 
-Show Finder is the menu shortcut Cmd-Ctrl-Shift-F (`com.apple.finder` `NSUserKeyEquivalents`, added with `-dict-add` so other menu shortcuts stay). That is the same keys as the Raycast Finder hotkey, which stays a manual step because it is not in `defaults`. Double-clicking a window's title bar fills the window (`AppleActionOnDoubleClick` = `Fill`). If the older minimize-on-double-click key is set, `macos.sh` deletes it.
+Show Finder is the menu shortcut Cmd-Ctrl-Shift-F (`com.apple.finder` `NSUserKeyEquivalents`, added with `-dict-add` so other menu shortcuts stay). Hammerspoon uses the same keys to bring Finder to the front from any app (`hammerspoon/finder_hotkey.lua`). Double-clicking a window's title bar fills the window (`AppleActionOnDoubleClick` = `Fill`). If the older minimize-on-double-click key is set, `macos.sh` deletes it.
 
 The built-in display's More Space mode is set by `macos.sh` with `displayplacer` (Homebrew formula `displayplacer`) when that mode is listed for the panel in `lib/display-resolution.list` (14": `1800 x 1169`, 16": `2056 x 1329`). The current refresh rate is kept when a scaled mode at that rate exists. External displays are left on their current mode. A missing `displayplacer` or a missing mode is a warning and stays the manual step (System Settings → Displays). `macconfig --fix` uses the same path. An unlisted panel size, or no built-in panel, is left alone.
 
@@ -171,12 +171,7 @@ Default Gemini shortcuts (`Option + Space` / `Option + Shift + Space`) clash wit
 
 Move Raycast off `Option + Space` (clashes with ChatGPT): Settings → General → Raycast Hotkey → `Shift + Control + Command + R`.
 
-To bind a global hotkey for activating Finder from anywhere:
-1. Open Raycast (`Shift + Control + Command + R`)
-2. Type **Finder** until "Finder" appears as a command result
-3. Highlight it and press `Command + K` (Actions menu)
-4. Choose **Configure Application…**
-5. Click the **Record Hotkey** field and press `Shift + Control + Command + F`
+Finder comes to the front with `Shift + Control + Command + F` in Hammerspoon ([Shortcuts](../SHORTCUTS.md#hammerspoon)). If the Raycast backup being imported still has a Finder hotkey on Shift+Control+Command+F, unbind it in Raycast so it doesn't clash with Hammerspoon.
 
 To enable Clipboard History:
 1. Open Raycast and run the **Clipboard History** command once

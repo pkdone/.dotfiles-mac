@@ -70,7 +70,7 @@ cask "cursor"
 cask "cursor-cli"     # Cursor CLI → cursor-agent (not bare agent)
 cask "coteditor"
 cask "karabiner-elements"
-cask "hammerspoon"   # Lua automation (hammerspoon/ → ~/.hammerspoon; Sidecar → Slack)
+cask "hammerspoon"   # Lua automation (hammerspoon/ → ~/.hammerspoon; Sidecar → Slack, Finder hotkey)
 cask "microsoft-teams"
 cask "raycast"
 cask "1password-cli"  # 1Password CLI (op)

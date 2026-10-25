@@ -10,7 +10,7 @@ The one-paste block for a fresh Mac is at the top of the README. This is the res
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
-- `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua` and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
+- `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `sidecar_slack.lua`, `finder_hotkey.lua`, and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
 - `lib/` — data for the scripts (`macos-defaults.list`, `dock-apps.list`, `desktop-bindings.list`, `desktop-bindings.py`, `url-handlers.list`, `file-handlers.list`, `file-handlers.py`, `auto-brightness.py`, `ac-sleep.py`, `unwanted-apps.list`, `links.list`, `hostname`, `finder-sidebar-recents.py`, `finder-sidebar-rows.py`, `finder-sidebar-rows.list`, `btm-login-items.py`, `login-items-allow.list`, `crash-reports.py`, `mdm-apps.list`, `manual-steps.list`, `autofix.list`, `logi-expected.list`, `logi-settings.py`, `notification-prefs.py`, `notifications-off.list`, `notifications-reviewed.list`, `display-resolution.py`, `display-resolution.list`, `user-picture.py`, `user-picture.sha256`, `autofix-lib.sh`, `defaults-lib.sh`, `session-checks.sh`, `join-names.sh`, `brew-missing-hint.sh`, `dotfiles-log.sh`, `brew-bundle.sh`)
@@ -144,7 +144,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 
 **Goal:** hold-Fn/Globe must never start the mic (Dictation / Apple Intelligence). The scripted settings and the Karabiner rules are in [Settings](settings.md#keyboard-dictation-fn). What a macOS Software Update does to these hotkeys, and how to reload a LaunchAgent on this Mac, is in [Troubleshooting](troubleshooting.md#after-a-macos-software-update).
 
-## Hammerspoon (Sidecar → Slack)
+## Hammerspoon
 
 [Hammerspoon](https://www.hammerspoon.org/) (Brewfile cask `hammerspoon`) runs small Lua automations. `hammerspoon/` → `~/.hammerspoon/` as a **directory** symlink (`lib/links.list`), so `init.lua` and its sibling modules load straight from the repo. `init.lua` just loads the modules listed in `MODULES`; add new automations as their own `*.lua` file there. It also sets: start at login, menu-bar icon only (no Dock icon), no crash-report upload, and loads `hs.ipc` so the `hs` CLI works.
 
@@ -155,6 +155,8 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **Manual toggle / test:** `Shift + Control + Option + Command + S`.
 - Screen names are logged to the Hammerspoon Console (menu-bar icon → Console). Status from a terminal: `hs -c 'loaded.sidecar_slack.status()'`. If your iPad shows up under another name: `hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad', '<name>'}); hs.reload()"`.
 - `macconfig-check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, warns if Hammerspoon isn't running, and (Manual steps section) warns if it lacks Device Control and Data Access. `macos.sh` / `macconfig-check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
+
+**`finder_hotkey.lua`** brings Finder to the front from any app. `Shift + Control + Command + F` launches Finder, or focuses it when it is already running (`hs.application.launchOrFocus("Finder")`). If the Raycast backup being imported still has a Finder hotkey on those keys, unbind it in Raycast so it doesn't clash with Hammerspoon (manual step `raycast-finder-unbind` in [Manual steps](manual-steps.md)). The shortcut is also in [Shortcuts](../SHORTCUTS.md#hammerspoon).
 
 **Manual once (TCC):** System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27) → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](manual-steps.md).)
 

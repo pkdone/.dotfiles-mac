@@ -130,9 +130,9 @@ finder-sidebar|Login Items & Finder|Finder sidebar (macconfig checks this): the 
 
 # ---- App settings ----
 gemini-shortcuts|App settings|Gemini shortcuts: Mini chat Control+Option+G, Full chat Control+Option+Shift+G (defaults clash with ChatGPT)|Gemini → Settings → Shortcuts|app:Gemini|
-raycast-import|App settings|Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the three Raycast items below by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings)|Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup)|app:Raycast|
+raycast-import|App settings|Raycast: on a new Mac, import your .rayconfig backup (tick Settings, Aliases & Hotkeys), or set the Raycast hotkey and Clipboard History by hand; keep Scheduled Backup on (never in this repo: it holds clipboard history and extension settings)|Raycast → Import Settings & Data (backups: Raycast → Settings → Advanced → Export / Scheduled Backup)|app:Raycast|
+raycast-finder-unbind|App settings|If the Raycast backup still has a Finder hotkey on Shift+Control+Command+F, unbind it in Raycast so it doesn't clash with Hammerspoon|Raycast → type Finder → Command+K → Configure Application… → clear the hotkey|app:Raycast|
 raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|Raycast → Settings → General → Raycast Hotkey|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15
-raycast-finder-hotkey|App settings|Raycast: Finder hotkey Shift+Control+Command+F|Raycast → type Finder → Command+K → Configure Application… → Record Hotkey|app:Raycast|
 raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|Raycast → Settings → Extensions → Clipboard History|app:Raycast|
 
 # ---- Modes (Hammerspoon menu-bar switcher; see docs/modes.md) ----

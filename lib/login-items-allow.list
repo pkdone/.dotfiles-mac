@@ -16,7 +16,7 @@
 
 # ---- Tools this repo sets up (Brewfile / links.list) ----
 team|G43BCU2T37|Karabiner-Elements agents and daemons (Core-Service, VirtualHIDDevice)
-bundle|org.hammerspoon.Hammerspoon|Hammerspoon opens at login (Sidecar → Slack)
+bundle|org.hammerspoon.Hammerspoon|Hammerspoon opens at login (Sidecar → Slack, Finder hotkey)
 bundle|com.raycast.macos|Raycast opens at login
 team|QED4VVPZWA|Logi Options+ agents and updater
 bundle|com.mitchellh.ghostty|Ghostty opens at login
