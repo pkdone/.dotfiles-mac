@@ -58,10 +58,24 @@ bad="$(printf '%s\n' "$pending" | awk -v cant="$CANT" '
 ' "$tmp/ids.txt" -)"
 eq "no step with a check id is labelled can't-check" "" "$bad"
 
-# British layout: missing key is not set yet, and macconfig reports the same warn.
+# British layout. Selected cannot be read; Enabled names British. macconfig
+# and manualsteps both pass. A title does not claim a check that failed.
 mkdir -p "$tmp/bin"
 cat > "$tmp/bin/defaults" <<'EOF'
 #!/bin/sh
+[ "$1" = read ] || exit 1
+key="$3"
+if [ "$key" = AppleEnabledInputSources ]; then
+  cat <<'PLIST'
+(
+    {
+        InputSourceKind = "Keyboard Layout";
+        "KeyboardLayout Name" = British;
+    }
+)
+PLIST
+  exit 0
+fi
 exit 1
 EOF
 cat > "$tmp/bin/open" <<'EOF'
@@ -73,18 +87,26 @@ printf '%s\n' \
   'input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british' \
   > "$tmp/british.list"
 brit="$(PATH="$tmp/bin:$PATH" MANUAL_STEPS_LIST="$tmp/british.list" "$MS" check --porcelain 2>"$tmp/brit.err")"
-eq "missing British layout warns" "warn" "$(printf '%s\n' "$brit" | cut -d'|' -f1)"
-has "missing British layout names the reason" "no British keyboard layout is selected" "$brit"
+eq "Enabled British passes when Selected cannot be read" "ok" "$(printf '%s\n' "$brit" | cut -d'|' -f1)"
+has "Enabled British names the layout" "British keyboard layout only" "$brit"
 brit_open="$(printf 's\n' | PATH="$tmp/bin:$PATH" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
   MANUAL_STEPS_LIST="$tmp/british.list" "$MS" open 2>"$tmp/britopen.err")"
-has "open says the British layout is not set yet" \
-  "Not set yet: no British keyboard layout is selected" "$brit_open"
+miss "open skips a British layout it could read" "Keyboard input source" "$brit_open"
 miss "open does not say the British layout can't be checked" "$CANT" "$brit_open"
 mac="$(PATH="$tmp/bin:$PATH" NO_COLOR=1 MANUAL_STEPS_LIST="$tmp/british.list" \
   "$DIR/macconfig-check.sh" --only manual --no-color 2>"$tmp/britmac.err")" || true
-has "macconfig warns on the British layout" "no British keyboard layout is selected" "$mac"
-miss "macconfig does not leave the British layout as check by hand" "check by hand" \
-  "$(printf '%s\n' "$mac" | grep -F 'Keyboard input source' || true)"
+has "macconfig passes the British layout" "British keyboard layout only" "$mac"
+miss "macconfig does not say it cannot read the selected sources" \
+  "can't read the selected input sources" "$mac"
+miss "the British step title does not claim an unread check" \
+  "macconfig checks the selected layout" \
+  "$(awk -F'|' '$1=="input-british"{print $3}' "$LIST")"
+miss "the pointer step title does not say macconfig checks the slider" \
+  "macconfig checks this" \
+  "$(awk -F'|' '$1=="pointer-size"{print $3}' "$LIST")"
+miss "the pointer step title does not say set the slider by hand" \
+  "set the slider by hand" \
+  "$(awk -F'|' '$1=="pointer-size"{print $3}' "$LIST")"
 
 # Per-app notifications. Off (or not registered yet) is done, even when some
 # other app is only an info line. On is not set yet. The section function and

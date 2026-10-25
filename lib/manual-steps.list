@@ -97,7 +97,7 @@ trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off
 # not a page of its own. defaults write of Dragging/DragLock does not reliably
 # change that sheet, so this stays a check only. Paul wants dragging On, without drag lock.
 trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Without Drag Lock)|System Settings → Accessibility → Pointer Control → click Trackpad Options… (opens a sheet) → Use trackpad for dragging On (Without Drag Lock) → Done|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0
-pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal. Set the slider by hand.|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
+pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
 # Tracking speed and scrolling speed are readable, but defaults write does not
 # reliably drive System Settings → Mouse on recent macOS, so they stay a check
 # only (warn on drift; macconfig-check.sh --fix does not write them).

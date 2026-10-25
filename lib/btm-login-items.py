@@ -314,7 +314,14 @@ def matches(rule: dict, it: dict) -> bool:
     if t == "Label":
         return it["id"] == v
     if t == "LabelPrefix":
-        return it["id"].startswith(v)
+        # The launchd label, the recorded name, and the raw identifier.
+        # koi.security.* is stored as koi.security.mdm.plist and shown as
+        # koi.security.mdm.sh.
+        return any(
+            text.startswith(v)
+            for text in (it["id"], it.get("name") or "", it.get("identifier") or "")
+            if text
+        )
     return False
 
 

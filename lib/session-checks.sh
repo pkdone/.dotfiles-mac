@@ -33,17 +33,28 @@ check_pointer_size() {
   fi
 }
 
-# The selected input sources must be the British keyboard layout, plus any
-# non-layout entries macOS keeps (Press and Hold, and similar). Another
-# keyboard layout is a warning. Nothing here is written.
+# The keyboard layout must be British only. Press and Hold and similar
+# non-layout entries are fine. Another keyboard layout is a warning.
+# Nothing here is written.
 check_input_british() {
-  local src layouts name bad
-  # A missing key means British is not selected. That is not set yet, not
-  # an unreadable setting. defaults is on every Mac; if it is missing, the
-  # layout still is not confirmed.
-  if ! command -v defaults >/dev/null 2>&1 \
-    || ! src="$(defaults read com.apple.HIToolbox AppleSelectedInputSources 2>/dev/null)"; then
-    res warn "no British keyboard layout is selected"
+  local src="" text="" key got=0 layouts name bad
+  # Both keys hold input sources. On this Mac AppleSelectedInputSources can
+  # fail to read while AppleEnabledInputSources still names the layout.
+  # KeyboardLayout Name British is the layout. Press and Hold and other
+  # non-layout entries are fine. Nothing here is written.
+  if ! command -v defaults >/dev/null 2>&1; then
+    res hand "could not read AppleEnabledInputSources or AppleSelectedInputSources"
+    return
+  fi
+  for key in AppleEnabledInputSources AppleSelectedInputSources; do
+    if text="$(defaults read com.apple.HIToolbox "$key" 2>/dev/null)"; then
+      src="${src}
+${text}"
+      got=1
+    fi
+  done
+  if [ "$got" = 0 ]; then
+    res hand "could not read AppleEnabledInputSources or AppleSelectedInputSources"
     return
   fi
   layouts="$(printf '%s\n' "$src" | awk '

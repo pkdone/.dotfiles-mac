@@ -48,7 +48,7 @@ bundle|com.northpolesec.santa.syncservice|Santa sync service
 bundle|com.northpolesec.santa.metricservice|Santa metric service
 team|H2YVZWCZNF|Formal
 bundle|com.formal.desktop|Formal
-label|koi.security.mdm|koi security MDM agent (koi.security.mdm.plist)
+label-prefix|koi.security.|koi security MDM (koi.security.*, including the koi.security.mdm.sh daemon and koi.security.mdm.plist). Company MDM items stay on. Do not turn them off
 team|BJ4HAAB9B3|Zoom daemon
 bundle|us.zoom.ZoomDaemon|Zoom daemon
 team|EQHXZ8M8AV|Google Chrome, including its background updater
