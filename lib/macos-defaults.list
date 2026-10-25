@@ -92,8 +92,10 @@ org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload cra
 # Look up & data detectors is checked on manual step trackpad-lookup
 # (NSGlobalDomain com.apple.trackpad.forceClick = 0). It is not written here.
 # Accessibility dragging (Dragging=1, DragLock=0) stays a check there too: defaults write
-# does not reliably drive System Settings → Accessibility → Pointer Control → Trackpad Options.
-# Mouse tracking (com.apple.mouse.scaling = 1.5) and scrolling (com.apple.scrollwheel.scaling = 0.5)
+# does not reliably drive the Trackpad Options… sheet
+# (System Settings → Accessibility → Pointer Control).
+# Mouse tracking (com.apple.mouse.scaling = 1.5, 7th notch from Slow) and scrolling
+# (com.apple.scrollwheel.scaling = 0.5, 5th notch from Slow)
 # stay a check on manual step mouse-settings for the same reason. Do not add those keys here.
 # The gesture keys below are the same two trackpad domains as tap to click, so they are
 # written the same way. Natural scrolling is on. Swipe between pages with a scroll is off.

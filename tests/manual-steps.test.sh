@@ -125,6 +125,12 @@ done
 steps_text="$(cat "$LIST")"
 has "look up stays a manual note" "trackpad-lookup|Trackpad, mouse & pointer|Trackpad: Look up & data detectors Off|" "$steps_text"
 has "dragging stays a check" "defaults:com.apple.AppleMultitouchTrackpad:Dragging=1,DragLock=0" "$steps_text"
+has "dragging names the Trackpad Options sheet" \
+  "click Trackpad Options… (opens a sheet)" "$(grep '^trackpad-dragging|' "$LIST")"
+has "input sources name the Edit sheet" \
+  "click Edit… next to Input Sources (opens a sheet)" "$(grep '^input-british|' "$LIST")"
+has "focus names the Add Focus sheet" \
+  "click Add Focus… (opens a sheet)" "$(grep '^mode-focus-modes|' "$LIST")"
 miss "look up note does not mention Force Click" "Force Click" "$(grep '^trackpad-lookup|' "$LIST")"
 
 # Exact rows macos.sh applies and macconfig-check.sh checks. restart=logout.
@@ -146,17 +152,56 @@ miss "dragging is not written by macos.sh" '|Dragging|' "$(grep -v '^#' "$DEF")"
 miss "drag lock is not written by macos.sh" '|DragLock|' "$(grep -v '^#' "$DEF")"
 
 # Mouse tracking and scrolling are a check only (same idea as dragging).
+# The step names slider notches: 1.5 is the 7th from Slow, 0.5 the 5th.
 mouse_row="$(grep '^mouse-settings|' "$LIST")"
 has "mouse step checks tracking speed" "com.apple.mouse.scaling=1.5" "$mouse_row"
 has "mouse step checks scrolling speed" "com.apple.scrollwheel.scaling=0.5" "$mouse_row"
-has "mouse step still names double-click" "Double-click" "$mouse_row"
-has "mouse step still names secondary click" "secondary click" "$mouse_row"
+has "mouse step names the tracking notch" "7th notch from Slow" "$mouse_row"
+has "mouse step names the scrolling notch" "5th notch from Slow" "$mouse_row"
+has "mouse step still names double-click" "Double-Click Speed" "$mouse_row"
+has "mouse step still names Click Right Side" "Click Right Side" "$mouse_row"
+has "mouse warning names the tracking notch" "7th notch from Slow" \
+  "$(awk -F'|' '$1 == "mouse-settings" { print $4; exit }' "$DIR/../lib/autofix.list")"
+has "mouse warning names the scrolling notch" "5th notch from Slow" \
+  "$(awk -F'|' '$1 == "mouse-settings" { print $4; exit }' "$DIR/../lib/autofix.list")"
 miss "mouse scaling is not written by macos.sh" 'com.apple.mouse.scaling' "$(grep -v '^#' "$DEF")"
 miss "scrollwheel scaling is not written by macos.sh" 'com.apple.scrollwheel.scaling' "$(grep -v '^#' "$DEF")"
 eq "mouse-settings is check-only Needs Paul" "PAUL|" \
   "$(awk -F'|' '$1 == "mouse-settings" { print $2 "|" $3; exit }' "$DIR/../lib/autofix.list")"
 has "a mouse warn is tagged mouse-settings" 'mouse-settings) fixid mouse-settings' \
   "$(cat "$DIR/../checks/manual.sh")"
+
+# Logi Options+ 2.9: backup stays under Settings → Other. Sign in first, and
+# restore from the same page on a new Mac.
+logi_row="$(grep '^logi-cloud-backup|' "$LIST")"
+has "logi backup path stays Settings Other" \
+  "Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices" \
+  "$logi_row"
+has "logi backup says sign in first" "sign in to your Logi account first" "$logi_row"
+has "logi backup names restore" "Restore settings from backup (same page) on a new Mac if needed" "$logi_row"
+
+# No .rayconfig: import is optional, then hotkey and Clipboard History.
+# Finder unbind is only after an import. Scheduled Backup is its own step.
+raycast_ids="$(awk -F'|' '$1 ~ /^raycast-/ { printf "%s ", $1 }' "$LIST")"
+eq "raycast steps: import, then the two by-hand steps, then unbind, then backup" \
+  "raycast-ax raycast-import raycast-hotkey raycast-clipboard raycast-finder-unbind raycast-scheduled-backup " \
+  "$raycast_ids"
+import_row="$(grep '^raycast-import|' "$LIST")"
+has "import is optional" "Only if you have a .rayconfig backup" "$import_row"
+has "import says skip to the next two" "Skip this and do the next two steps" "$import_row"
+has "import path ticks the backup boxes" "tick Settings, Aliases & Hotkeys" "$import_row"
+has "hotkey path records the shortcut" \
+  "Settings (Command+,) → General → click Raycast Hotkey → press Shift+Control+Command+R" \
+  "$(grep '^raycast-hotkey|' "$LIST")"
+has "clipboard path records the command hotkey" \
+  "row of type Command (not the Extension row) click Record Hotkey → press Control+Command+V" \
+  "$(grep '^raycast-clipboard|' "$LIST")"
+has "clipboard path sets history and exclusions" \
+  "Keep History to 1 Day and add 1Password and 1Password for Safari" \
+  "$(grep '^raycast-clipboard|' "$LIST")"
+has "scheduled backup stays out of the repo" \
+  "Scheduled Backup (to a synced folder, never this repo)" \
+  "$(grep '^raycast-scheduled-backup|' "$LIST")"
 
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \

@@ -96,7 +96,7 @@ PY
       if ! printf '%s\n' "$modes_fnames" | grep -Fxq "$f"; then modes_fmiss="$modes_fmiss $f"; fi
     done
     if [ -n "$modes_fmiss" ]; then
-      warn "Focus modes missing:$modes_fmiss — System Settings → Focus → Add Focus… (manual step mode-focus-modes)"
+      warn "Focus modes missing:$modes_fmiss — System Settings → Focus → click Add Focus… (opens a sheet) → Custom (manual step mode-focus-modes)"
     else
       pass "Focus modes exist:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
     fi

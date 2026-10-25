@@ -64,7 +64,7 @@ repo-file|PAUL||a repo script is missing — restore it from git (dotfiles git s
 login-items|PAUL||login items — System Settings → General → Login Items & Extensions
 tcc|PAUL||privacy permission (TCC) — System Settings → Privacy & Security
 manual-step|PAUL||manual step (permission / sign-in) — scripts/manual-steps.sh open
-mouse-settings|PAUL||Mouse tracking speed (NSGlobalDomain com.apple.mouse.scaling = 1.5) and scrolling speed (com.apple.scrollwheel.scaling = 0.5) — System Settings → Mouse. Check-only: writing these is unreliable on recent macOS, so --fix never writes them. Double-click and secondary click stay in the manual step
+mouse-settings|PAUL||Mouse tracking speed (NSGlobalDomain com.apple.mouse.scaling = 1.5, 7th notch from Slow) and scrolling speed (com.apple.scrollwheel.scaling = 0.5, 5th notch from Slow) — System Settings → Mouse. Check-only: writing these is unreliable on recent macOS, so --fix never writes them. Double-click and secondary click stay in the manual step
 pointer-size|PAUL||Pointer size one notch above Normal (com.apple.universalaccess mouseDriverCursorSize, about 1.4; accept 1.2-2.0) — System Settings → Accessibility → Display → Pointer. Check-only (manual step pointer-size): --fix never writes it
 input-british|PAUL||British keyboard layout only (com.apple.HIToolbox AppleSelectedInputSources). Other entries that are not a keyboard layout, such as Press and Hold, are fine. Check-only (manual step input-british): --fix never writes defaults
 gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Check-only: --fix never runs gh auth login

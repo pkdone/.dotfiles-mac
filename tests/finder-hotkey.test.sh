@@ -56,7 +56,7 @@ has "module binds the hotkey" 'hs.hotkey.bind(M.mods, M.key, M.press)' "$src"
 list="$(cat "$LIST")"
 miss "old Raycast Finder hotkey step is gone" "raycast-finder-hotkey|" "$list"
 has "unbind note is a manual step" \
-  "raycast-finder-unbind|App settings|If the Raycast backup still has a Finder hotkey on Shift+Control+Command+F, unbind it in Raycast so it doesn't clash with Hammerspoon|" \
+  "raycast-finder-unbind|App settings|Only if you imported a backup: if it still has a Finder hotkey on Shift+Control+Command+F, unbind it so it doesn't clash with Hammerspoon|" \
   "$list"
 has "Raycast launcher hotkey stays" \
   "raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|" \
