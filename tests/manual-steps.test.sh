@@ -269,5 +269,76 @@ mouse_out="$(PATH="$raydir:$PATH" MANUAL_STEPS_LIST="$raydir/mouse.list" "$MS" c
 eq "a missing mouse key still warns" warn "$(printf '%s\n' "$mouse_out" | cut -d'|' -f1)"
 rm -rf "$raydir"
 
+# Control Centre tiles (Edit Controls) stay a check-by-hand step. The layout
+# file keeps old module instances, so there is no macconfig check and nothing
+# writes a plist. The walk-through uses the empty-check label.
+cc_row="$(grep '^control-centre-controls|' "$LIST")"
+eq "control-centre row exists" 1 "$(printf '%s\n' "$cc_row" | grep -c .)"
+eq "control-centre group" "Menu bar" "$(printf '%s\n' "$cc_row" | cut -d'|' -f2)"
+eq "control-centre title" \
+  "Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display and Sound." \
+  "$(printf '%s\n' "$cc_row" | cut -d'|' -f3)"
+eq "control-centre where" \
+  "Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it." \
+  "$(printf '%s\n' "$cc_row" | cut -d'|' -f4)"
+eq "control-centre opens nothing" "" "$(printf '%s\n' "$cc_row" | cut -d'|' -f5)"
+eq "control-centre check is empty" "" "$(printf '%s\n' "$cc_row" | cut -d'|' -f6)"
+cc_prev="$(awk -F'|' '
+  $1 ~ /^#/ || $1 ~ /^[[:space:]]*$/ { next }
+  $1 == "control-centre-controls" { print prev; exit }
+  { prev = $1 }
+' "$LIST")"
+eq "control-centre follows the menu bar allow-list" "menubar-third-party-hide" "$cc_prev"
+has "control-centre comment forbids a macconfig check" \
+  "Do not add a macconfig check and do not write that plist." \
+  "$(awk '
+    /^control-centre-controls\|/ { exit }
+    { buf = buf $0 "\n" }
+    END { print buf }
+  ' "$LIST")"
+
+# shellcheck disable=SC2016  # needles are markdown, compared literally
+has "manual-steps doc names the Control Centre step" 'manual step `control-centre-controls`' "$doc"
+has "manual-steps doc names the layout file" \
+  'com.apple.controlcenter.bentoboxes.<host UUID>.plist' "$doc"
+has "manual-steps doc names the nested format" "undocumented nested binary format" "$doc"
+has "manual-steps doc names the date the file was stale" "On 25 Oct 2026" "$doc"
+has "manual-steps doc names the stale modules" "still listed AirDrop and FocusModes" "$doc"
+has "manual-steps doc says a tile cannot be read" \
+  "so it can't tell whether a tile is showing." "$doc"
+has "manual-steps doc writes nothing" "Nothing writes that file. The step stays by hand." "$doc"
+has "manual-steps doc lists Control Centre tiles with the other by-hand settings" \
+  "the Control Centre tiles" "$doc"
+has "table row is by hand" \
+  "| Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display and Sound. | Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it. | by hand |" \
+  "$doc"
+
+cc_checks="$(cat "$DIR"/../checks/*.sh "$DIR/../macos.sh" "$DIR/../macconfig-check.sh")"
+miss "no control-centre fixid" "fixid control-centre" "$cc_checks"
+miss "checks do not name the layout file" "bentoboxes" "$cc_checks"
+eq "autofix has no control-centre row" "" \
+  "$(awk -F'|' '$1 == "control-centre-controls" { print; exit }' "$DIR/../lib/autofix.list")"
+miss "manual-steps.sh does not special-case Control Centre" "control-centre-controls" \
+  "$(cat "$MS")"
+
+ccdir="$(mktemp -d)"
+printf '%s\n' "$cc_row" > "$ccdir/cc.list"
+mkdir -p "$ccdir/bin"
+cat > "$ccdir/bin/open" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$ccdir/bin/open"
+cc_porc="$(NO_COLOR=1 MANUAL_STEPS_LIST="$ccdir/cc.list" "$MS" check --porcelain 2>"$ccdir/porc.err")"
+eq "control centre porcelain is by hand" "hand" "$(printf '%s\n' "$cc_porc" | cut -d'|' -f1)"
+eq "control centre porcelain has no detail" "" "$(printf '%s\n' "$cc_porc" | awk -F'|' '{ print $5 }')"
+cc_pending="$(NO_COLOR=1 MANUAL_STEPS_LIST="$ccdir/cc.list" "$MS" pending 2>"$ccdir/pending.err")"
+has "control centre pending says it can't be checked" "Can't check this automatically" "$cc_pending"
+cc_open="$(printf 's\n' | PATH="$ccdir/bin:$PATH" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$ccdir/cc.list" "$MS" open 2>"$ccdir/open.err")"
+has "control centre open says it can't be checked" "Can't check this automatically" "$cc_open"
+has "control centre open has nothing to open" "(nothing to open)" "$cc_open"
+rm -rf "$ccdir"
+
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
