@@ -29,6 +29,9 @@ out="$("$MS" validate 2>&1)"; rc=$?
 eq "real list validates" 0 "$rc"
 [ "$rc" -eq 0 ] || printf '%s\n' "$out"
 
+eq "apple-account step is gone" "" "$(awk -F'|' '$1 == "apple-account" { print; exit }' "$LIST")"
+eq "icloud-sync step is gone" "" "$(awk -F'|' '$1 == "icloud-sync" { print; exit }' "$LIST")"
+
 rows="$(grep -cEv '^[[:space:]]*(#|$)' "$LIST")"
 listed="$("$MS" list | grep -cE '^ +[0-9]+\. ')"
 eq "list prints one numbered line per row" "$rows" "$listed"
@@ -48,6 +51,9 @@ eq "docs/manual-steps.md matches lib/manual-steps.list" 0 "$rc"
 doc_rows="$(grep -E '^\| [0-9]+ \|' "$DIR/../docs/manual-steps.md")"
 eq "docs/manual-steps.md table matches lib/manual-steps.list" \
   "$("$MS" list --markdown | grep -E '^\| [0-9]+ \|')" "$doc_rows"
+doc="$(cat "$DIR/../docs/manual-steps.md")"
+eq "manual-steps doc does not name Apple Account" "" "$(printf '%s\n' "$doc" | grep -F 'Apple Account' || true)"
+eq "manual-steps doc does not mention iCloud Keychain" "" "$(printf '%s\n' "$doc" | grep -F 'iCloud Keychain' || true)"
 
 # ---- malformed rows are reported ------------------------------------------
 tmp="$(mktemp)"

@@ -27,9 +27,9 @@
 #                                           lib/logi-settings.py; never written)
 #            @macconfig-check.sh                      verified by its own macconfig-check.sh section (not repeated here)
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
-#            | app-store | spotlight-results
+#            | spotlight-results
 #                                           named checks. pointer-size, input-british, op-cli,
-#                                           gh-auth, app-store, and spotlight-results live in
+#                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
 #                                           prints that result in Manual steps and does not run the
 #                                           checks again. A warning keeps the step id (Needs Paul).
@@ -40,9 +40,6 @@
 
 # ---- Sign-ins ----
 gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
-apple-account|Sign-ins|Sign in with your Apple Account (your @icloud.com Apple ID)|System Settings → Apple Account|x-apple.systempreferences:com.apple.systempreferences.AppleIDSettings|
-icloud-sync|Sign-ins|iCloud: Photos, iCloud Drive, Messages and other unused sync Off; Passwords (iCloud Keychain) and Find My On|System Settings → Apple Account → iCloud|x-apple.systempreferences:com.apple.systempreferences.AppleIDSettings|
-app-store|Sign-ins|Sign in to the App Store. Keynote and Numbers need App Store sign-in. macconfig checks this with mas list|App Store → Store → Sign In|macappstore://|app-store
 
 # ---- Company apps (MDM) ----
 mdm-apps|Company apps (MDM)|Install the company apps from Iru Self Service (Kandji), not Homebrew. The names are in lib/mdm-apps.list|Applications → Iru Self Service|app:Iru Self Service|@macconfig-check.sh
@@ -117,7 +114,7 @@ notifications-mirroring|Notifications & Spotlight|Notifications Off when mirrori
 # Bundle ids live in lib/notifications-off.list. macconfig-check.sh reads the
 # usernoted plist and never writes it. Mirroring stays the row above.
 notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Kandji, Tailscale, Logi Options+, Cog, Gemini, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
-spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Keynote, Mail, Messages, Music, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, System Settings, and WhatsApp on. Check this page by hand (macconfig cannot read the toggles)|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
+spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, System Settings, and WhatsApp on. Check this page by hand (macconfig cannot read the toggles)|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----
 login-items-off|Login Items & Finder|Keep ChatGPT, Gemini and GeminiAppLauncher Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig-check.sh

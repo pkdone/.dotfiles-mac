@@ -52,9 +52,7 @@ Command-line tools and desktop apps listed in the Brewfile. The first setup inst
 
 ### Mac App Store
 
-Apps the Brewfile installs with `mas`. Sign in to the App Store first, or the install fails. If one of these is missing, it needs App Store sign-in.
-
-**Apps:** Keynote and Numbers.
+No apps currently come from the Mac App Store. This Mac can't sign in with a personal Apple ID.
 
 ### Company apps (Iru Self Service)
 

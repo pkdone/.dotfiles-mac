@@ -18,7 +18,7 @@ else
     verbose="$(brew bundle check --no-upgrade --file "$DOTDIR/Brewfile" --verbose 2>&1 || true)"
     hint="$(brew_missing_hint "$verbose")"
     if [ -z "$hint" ]; then
-      hint="Homebrew packages: run brewsync. Mac App Store apps: needs App Store sign-in."
+      hint="Homebrew packages: run brewsync."
     fi
     printf '%s\n' "$hint" | sed 's/^/          /'
     printf '%s\n' "$verbose" | sed 's/^/          /' || true

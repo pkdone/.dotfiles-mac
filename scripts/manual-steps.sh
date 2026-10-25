@@ -22,7 +22,7 @@ set -uo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
 TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"
-NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth app-store spotlight-results "
+NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results "
 
 usage() {
   cat <<'USAGE'
@@ -116,7 +116,7 @@ check_spec_ok() {
 R_STATUS=""; R_DETAIL=""
 res() { R_STATUS="$1"; R_DETAIL="$2"; }
 
-# British input, pointer size, gh auth, op whoami, App Store, and Spotlight.
+# British input, pointer size, gh auth, op whoami, and Spotlight.
 # macconfig-check.sh prints this script's result and does not run these again.
 # shellcheck source=../lib/session-checks.sh disable=SC1091
 . "$DOTDIR/lib/session-checks.sh"
@@ -230,7 +230,6 @@ run_check() {  # spec
     input-british)    check_input_british ;;
     op-cli)           check_op_cli ;;
     gh-auth)          check_gh_auth ;;
-    app-store)        check_app_store ;;
     spotlight-results) check_spotlight_results ;;
     *)                res hand "unknown check '$spec'" ;;
   esac

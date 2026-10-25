@@ -814,7 +814,7 @@ if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (macconfig-check.sh --fix): sk
 cat <<'MANUAL'
 
 Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
-  - Apple Account sign-in. The account picture (the Dog) is checked and never changed
+  - The account picture (the Dog) is checked and never changed
   - Keyboard British input source (checked; not written). Built-in display
     More Space and the Tahoe Night wallpaper are checked and never changed
   - Finder sidebar Favorites are checked from the sidebar file and not changed.

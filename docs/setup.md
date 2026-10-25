@@ -6,7 +6,7 @@ The one-paste block for a fresh Mac is at the top of the README. This is the res
 
 ## What's in the repo
 
-- `Brewfile` — Homebrew formulae, casks, and Mac App Store apps
+- `Brewfile` — Homebrew formulae and casks. Nothing is installed from the Mac App Store
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
@@ -52,7 +52,7 @@ The same block is at the top of [README.md](../README.md#setup).
 
 > _Manual — no script installs these; do them by hand._
 
-Homebrew formulae and casks, and the Mac App Store apps (Keynote and Numbers), come from the Brewfile. Company apps come from Iru Self Service. The exact lists are in [Where apps come from](../README.md#where-apps-come-from).
+Homebrew formulae and casks come from the Brewfile. No apps currently come from the Mac App Store, because this Mac can't sign in with a personal Apple ID. Company apps come from Iru Self Service. The exact lists are in [Where apps come from](../README.md#where-apps-come-from).
 
 These two are not in those lists. Set them up by hand after bootstrapping:
 
@@ -121,7 +121,7 @@ git pull && ./macconfig-check.sh --fix
 
 `prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `macconfig-check.sh` drifts if they reappear.
 
-The Mac App Store apps this repo wants are Keynote and Numbers. They are `mas` lines in the Brewfile, so `brew bundle` keeps that set, and they need App Store sign-in. WhatsApp is the Homebrew cask `whatsapp`. Company apps are `lib/mdm-apps.list`, installed from Iru Self Service, not the Brewfile.
+Nothing in this repo is installed from the Mac App Store. This Mac can't sign in with a personal Apple ID, so the Brewfile has no `mas` app lines. WhatsApp is the Homebrew cask `whatsapp`. Company apps are `lib/mdm-apps.list`, installed from Iru Self Service, not the Brewfile.
 
 ```bash
 ~/.dotfiles-mac/prune-apps.sh --dry-run   # preview
@@ -305,7 +305,7 @@ The checklist, the checks, and the notes under the table are in [Manual steps](m
 | Script | What it does, and when to run it |
 |------|------|
 | `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
-| `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, rendered login LaunchAgents, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). If `brew bundle check` fails and stdin is a terminal, it opens the App Store, asks you to sign in, and retries `brew bundle install` once; a non-interactive run keeps the warning. Also `mkdir -p ~/Pictures/Screenshots` (the screenshot save location; existing files are not moved). Renders `launchagents/*.plist` into `~/Library/LaunchAgents` (`@HOME@` → `$HOME`) and bootout/bootstraps each job. Safe to re-run — repoints symlinks, backs up any real file in the way of a symlink. |
+| `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, rendered login LaunchAgents, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). If `brew bundle` leaves an entry uninstalled, it warns and points at `brewsync`. Also `mkdir -p ~/Pictures/Screenshots` (the screenshot save location; existing files are not moved). Renders `launchagents/*.plist` into `~/Library/LaunchAgents` (`@HOME@` → `$HOME`) and bootout/bootstraps each job. Safe to re-run — repoints symlinks, backs up any real file in the way of a symlink. |
 | `macconfig-check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. `--fix` (optionally with `--dry-run`) also applies the SAFE fixes from `lib/autofix.list`, re-checks, and lists Fixed / Needs Paul. Run any time (especially after a macOS update), or use the `macconfig` fish function. Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
 | `check.sh` | Shim that execs `macconfig-check.sh` with the same arguments, stdin, and exit status. Kept so existing callers (the scheduled `~/.dotfiles-mac/check.sh --fix --no-color`, plus muscle memory) stay valid. |
 | `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, CotEditor theme/font, Finder sidebar Recents, the Show Finder shortcut, and power settings (sudo `pmset`, skipped when sudo isn't available or isn't wanted). Finder Favorites are checked from the sidebar file and not changed. `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `macconfig-check.sh --fix` uses. Creates `~/Pictures/Screenshots` with `mkdir -p` before writing `com.apple.screencapture location`. Idempotent. |

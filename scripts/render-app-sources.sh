@@ -51,11 +51,18 @@ mdm_names() {
 }
 
 render() {
-  local tools apps mas_apps company
+  local tools apps mas_apps company mas_body
   tools="$(names_of brew | join_and)"
   apps="$(names_of cask | join_and)"
   mas_apps="$(names_of mas | join_and)"
   company="$(mdm_names | join_and)"
+  if [ -n "$mas_apps" ]; then
+    mas_body="Apps the Brewfile installs with \`mas\`.
+
+**Apps:** ${mas_apps}."
+  else
+    mas_body="No apps currently come from the Mac App Store. This Mac can't sign in with a personal Apple ID."
+  fi
   cat <<EOF
 ## Where apps come from
 
@@ -71,9 +78,7 @@ Command-line tools and desktop apps listed in the Brewfile. The first setup inst
 
 ### Mac App Store
 
-Apps the Brewfile installs with \`mas\`. Sign in to the App Store first, or the install fails. If one of these is missing, it needs App Store sign-in.
-
-**Apps:** ${mas_apps}.
+${mas_body}
 
 ### Company apps (Iru Self Service)
 

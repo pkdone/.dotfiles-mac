@@ -92,15 +92,9 @@ cask "cog-app"
 cask "kid3"
 cask "yubico-authenticator"  # Yubico Authenticator
 
-# ---- Mac App Store (mas; needs App Store sign-in) -----------------------
-# If one of these is missing, it needs App Store sign-in.
-# Only Keynote and Numbers. 1Password for Safari (id 1569813296) and
-# Okta Extension App (id 1439967473) are not listed: this Mac can't sign in
-# to the App Store with a personal Apple ID, and they are not in
-# lib/mdm-apps.list (a missing-app warning would be noise).
+# ---- Mac App Store -------------------------------------------------------
+# No App Store apps currently. This Mac can't sign in with a personal Apple ID.
+# brew "mas" above stays: prune-apps.sh uses `mas uninstall`.
 # Unwanted App Store apps (GarageBand, iMovie, Pages) are lib/unwanted-apps.list.
 # WhatsApp is the cask above. Okta Verify and 1Password desktop are
 # lib/mdm-apps.list (Iru Self Service). mas can't upgrade those copies.
-# Apple iWork kept installed (not pruned); declare so brew bundle cleanup stays clean.
-mas "Keynote", id: 409183694
-mas "Numbers", id: 409203825

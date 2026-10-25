@@ -39,6 +39,9 @@ has "manual step says macconfig checks this" "macconfig checks this" \
   "$(awk -F'|' '$1 == "user-picture" { print $3; exit }' "$DIR/lib/manual-steps.list")"
 eq "user-picture is report-only" "PAUL|" \
   "$(awk -F'|' '$1 == "user-picture" { print $2 "|" $3; exit }' "$DIR/lib/autofix.list")"
+footer="$(awk '/^Still manual/,/^MANUAL$/' "$DIR/macos.sh")"
+has "footer says the account picture is checked" "The account picture (the Dog) is checked and never changed" "$footer"
+miss "footer does not ask for Apple Account sign-in" "Apple Account" "$footer"
 
 printf 'JPEGPhoto:\n ff d8 ff d9\n' > "$tmp/tiny.txt"
 tiny_hash="$("$PY" - "$tmp/tiny.txt" <<'PY'

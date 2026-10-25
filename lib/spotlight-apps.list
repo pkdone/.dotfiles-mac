@@ -1,5 +1,5 @@
 # Spotlight → System Settings → Spotlight → Results from Apps that should be off.
-# Alphabetical by the name shown in that list. 17 apps.
+# Alphabetical by the name shown in that list. 15 apps.
 # macconfig does not read the on/off toggles: com.apple.Spotlight
 # EnabledPreferenceRules is the list of rows, and a row stays after the
 # toggle is turned off. The manual step is check by hand. Nothing is written.
@@ -11,12 +11,10 @@
 Books|com.apple.iBooksX
 Calendar|com.apple.iCal
 Contacts|com.apple.AddressBook
-Keynote|com.apple.iWork.Keynote
 Mail|com.apple.mail
 Messages|com.apple.MobileSMS
 Music|com.apple.Music
 Notes|com.apple.Notes
-Numbers|com.apple.iWork.Numbers
 Photos|com.apple.Photos
 Podcasts|com.apple.podcasts
 Reminders|com.apple.reminders

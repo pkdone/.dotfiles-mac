@@ -41,7 +41,7 @@ file-handler|SAFE|fileext|Finder double-click defaults from lib/file-handlers.li
 
 # ---- PAUL: report only, never automated ----
 brew|PAUL||installing / uninstalling / updating apps — brewsync (the routine runs it separately)
-app-install|PAUL||an app is missing — install it (Brewfile / brewsync, App Store or Self Service)
+app-install|PAUL||an app is missing — install it (Brewfile / brewsync, or Iru Self Service)
 developer-folder|PAUL||~/Developer is missing — install.sh creates it
 unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
 dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
@@ -69,7 +69,6 @@ pointer-size|PAUL||Pointer size one notch above Normal (com.apple.universalacces
 input-british|PAUL||British keyboard layout only (com.apple.HIToolbox AppleSelectedInputSources). Other entries that are not a keyboard layout, such as Press and Hold, are fine. Check-only (manual step input-british): --fix never writes defaults
 gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Check-only: --fix never runs gh auth login
 1password-cli|PAUL||1Password CLI (op whoami) — manual step 1password-cli. Missing app or CLI is a warning. Installed but not signed in (needs an unlock) is info, not a warning. --fix never runs op
-app-store|PAUL||App Store signed in (mas list) — manual step app-store. Check-only: --fix never signs in
 finder-favorites|PAUL||Finder sidebar Favorites compared with lib/sidebar-favorites.list by reading FavoriteItems.sfl4 (or sfl3/sfl2). Check-only: writing the sidebar file is not reliable, and mysides is not a Homebrew formula or cask, so --fix never changes Favorites
 finder-sidebar|PAUL||Finder sidebar rows named in the top sidebar section and FavoriteVolumes (Shared first, AirDrop and iCloud Drive hidden, home / Macintosh HD / Network / Trash visible). Check-only: --fix never writes those files. A row the files do not name stays by hand
 spotlight-results|PAUL||Spotlight → Results from Apps: the apps in lib/spotlight-apps.list should be off (App Store, Calculator, Dictionary, System Settings, and WhatsApp stay on). EnabledPreferenceRules is the row list, not the on/off state, so this is check by hand, not a warning. --fix never writes Spotlight
