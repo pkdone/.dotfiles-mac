@@ -30,6 +30,9 @@ markdown|CotEditor|com.coteditor.CotEditor
 sh|CotEditor|com.coteditor.CotEditor
 bash|CotEditor|com.coteditor.CotEditor
 zsh|CotEditor|com.coteditor.CotEditor
+# No app declares a UTI for .fish on a fresh Mac. duti then fails with
+# error -50 on a dyn.* type. That is a warning and is not drift. The row
+# stays so the next run sets CotEditor once some app declares the type.
 fish|CotEditor|com.coteditor.CotEditor
 conf|CotEditor|com.coteditor.CotEditor
 ini|CotEditor|com.coteditor.CotEditor

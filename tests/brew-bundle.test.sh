@@ -559,5 +559,108 @@ root_rc=$?
 eq "helper refuses root" 1 "$root_rc"
 has "helper root message" "refusing to run as root" "$root_out"
 
+# DOTFILES_BREW_RETRY_DELAY is unset, not 0. Tests above always export 0, which
+# hid an unbound-variable crash under set -u. sleep is a stub so the default
+# 2 second wait does not really wait. A retry proves the default is used.
+new_case unsetdelay
+cp "$tmp/full.Brewfile" "$brewfile"
+printf '%s\n' raycast > "$STUB_DIR/fail-bundle"
+cat > "$case_bin/sleep" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "$STUB_DIR/sleep.log"
+exit 0
+EOF
+chmod +x "$case_bin/sleep"
+# shellcheck disable=SC2016  # $1 and $2 belong to the inner bash
+out="$(
+  unset DOTFILES_BREW_RETRY_DELAY
+  HOME="$case_home" \
+    PATH="$case_bin:/usr/bin:/bin" \
+    STUB_DIR="$STUB_DIR" \
+    DOTFILES_INTERACTIVE=0 \
+    DOTFILES_SUDO_KEEPALIVE_SECS=60 \
+    bash -c 'set -uo pipefail; . "$1"; brew_bundle_main --file "$2"' _ \
+      "$DIR/lib/brew-bundle.sh" "$brewfile" 2>&1
+)"
+rc=$?
+eq "unset retry delay exits 0" 0 "$rc"
+miss "unset retry delay is not an unbound variable" "unbound variable" "$out"
+has "unset retry delay waits the default 2s" "Waiting 2s before the retry" "$out"
+eq "unset retry delay stubs sleep 2" "2" "$(cat "$STUB_DIR/sleep.log")"
+check "unset retry delay still installed jq" grep -qxF "formula jq" "$STUB_DIR/installed"
+check "unset retry delay installed the retried cask" grep -qxF "cask raycast" "$STUB_DIR/installed"
+
+# Same unset variable, nothing missing, so sleep is not called at all.
+new_case unsetclean
+cp "$tmp/full.Brewfile" "$brewfile"
+cat > "$case_bin/sleep" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "$STUB_DIR/sleep.log"
+exit 0
+EOF
+chmod +x "$case_bin/sleep"
+# shellcheck disable=SC2016  # $1 and $2 belong to the inner bash
+out="$(
+  env -u DOTFILES_BREW_RETRY_DELAY \
+    HOME="$case_home" \
+    PATH="$case_bin:/usr/bin:/bin" \
+    STUB_DIR="$STUB_DIR" \
+    DOTFILES_INTERACTIVE=0 \
+    DOTFILES_SUDO_KEEPALIVE_SECS=60 \
+    bash -c 'set -uo pipefail; . "$1"; brew_bundle_main --file "$2"' _ \
+      "$DIR/lib/brew-bundle.sh" "$brewfile" 2>&1
+)"
+rc=$?
+eq "unset delay with nothing missing exits 0" 0 "$rc"
+miss "clean unset delay is not an unbound variable" "unbound variable" "$out"
+has "clean unset delay reports success" "All Brewfile entries are installed." "$out"
+eq "clean unset delay does not sleep" "" "$(cat "$STUB_DIR/sleep.log" 2>/dev/null || true)"
+check "clean unset delay installed jq" grep -qxF "formula jq" "$STUB_DIR/installed"
+
+# mktemp failing is a stop, not a successful install and not "entries missing".
+new_case notmp
+cp "$tmp/full.Brewfile" "$brewfile"
+cat > "$case_bin/mktemp" <<'EOF'
+#!/bin/sh
+echo "mktemp failed" >&2
+exit 1
+EOF
+chmod +x "$case_bin/mktemp"
+out="$(
+  env -u DOTFILES_BREW_RETRY_DELAY \
+    HOME="$case_home" \
+    PATH="$case_bin:/usr/bin:/bin" \
+    STUB_DIR="$STUB_DIR" \
+    DOTFILES_INTERACTIVE=0 \
+    DOTFILES_SUDO_KEEPALIVE_SECS=60 \
+    "$SCRIPT" --file "$brewfile" 2>&1
+)"
+rc=$?
+eq "a failed temp directory exits 3" 3 "$rc"
+has "a failed temp directory says the install stopped" "Couldn't create a temporary directory" "$out"
+miss "a failed temp directory does not claim success" "All Brewfile entries are installed." "$out"
+miss "a failed temp directory does not claim entries are missing" "still missing" "$out"
+
+# set -u exits this shell. The || around brew_bundle_main does not catch it.
+# The exit trap reports the stop and returns 3, which install.sh and brewsync
+# treat as "the install itself failed", not as named missing packages.
+new_case crashed
+cp "$tmp/full.Brewfile" "$brewfile"
+out="$(
+  env -u DOTFILES_BREW_RETRY_DELAY -u DOTFILES_BREW_TRAP_UNSET \
+    DOTFILES_BREW_TRAP_PROBE=1 \
+    HOME="$case_home" \
+    PATH="$case_bin:/usr/bin:/bin" \
+    STUB_DIR="$STUB_DIR" \
+    DOTFILES_INTERACTIVE=0 \
+    DOTFILES_SUDO_KEEPALIVE_SECS=60 \
+    "$SCRIPT" --file "$brewfile" 2>&1
+)"
+rc=$?
+eq "a bundle crash exits 3" 3 "$rc"
+has "a bundle crash says it stopped" "Brewfile install stopped before it could finish." "$out"
+miss "a bundle crash does not claim entries are missing" "still missing" "$out"
+miss "a bundle crash does not claim success" "All Brewfile entries are installed." "$out"
+
 printf 'brew-bundle tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

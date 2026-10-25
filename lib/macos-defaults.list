@@ -97,6 +97,10 @@ org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload cra
 # stay a check on manual step mouse-settings for the same reason. Do not add those keys here.
 # The gesture keys below are the same two trackpad domains as tap to click, so they are
 # written the same way. Natural scrolling is on. Swipe between pages with a scroll is off.
+# A fresh Mac may store these 0/1 keys as booleans. Boolean true is 1 and false
+# is 0. That is the same value, not a type mismatch. When the value differs, the
+# write uses the type already stored (`-bool` when the key is a boolean). The
+# numbers below stay the intended values. A gesture code of 2 or 3 is not a boolean.
 com.apple.AppleMultitouchTrackpad|Clicking|int|1|logout|Trackpad|Tap to click|`1` (On)
 com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking|int|1|logout|Trackpad|Tap to click (Bluetooth trackpad)|`1` (On)
 NSGlobalDomain|com.apple.mouse.tapBehavior|int|1|logout|Trackpad|Tap to click behavior|`1` (On)

@@ -25,6 +25,10 @@ has() {  # description needle haystack
   case "$3" in *"$2"*) pass=$((pass + 1)) ;; *)
     fail=$((fail + 1)); printf 'FAIL: %s\n  missing: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;; esac
 }
+miss() {  # description needle haystack
+  case "$3" in *"$2"*) fail=$((fail + 1)); printf 'FAIL: %s\n  unexpected: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;;
+    *) pass=$((pass + 1)) ;; esac
+}
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -58,8 +62,11 @@ def save(db):
 argv = sys.argv[1:]
 fail_s = set(filter(None, os.environ.get("DUTI_S_FAIL", "").split(",")))
 lie_s = set(filter(None, os.environ.get("DUTI_S_LIE", "").split(",")))
+dyn_exts = set(filter(None, os.environ.get("DUTI_DYN_EXTS", "").split(",")))
+s_dyn = set(filter(None, os.environ.get("DUTI_S_DYN", "").split(",")))
 x_error = os.environ.get("DUTI_X_ERROR", "")
 lag = int(os.environ.get("DUTI_X_LAG", "0"))
+DYN = "dyn.ah62d4qmxhk2x43xmsrya"
 DECLARED = {
     "html": ["public.html"],
     "htm": ["public.html"],
@@ -73,6 +80,12 @@ def bare(typed):
 
 if len(argv) == 2 and argv[0] == "-e":
     ext = bare(argv[1])
+    if ext in dyn_exts:
+        if os.environ.get("DUTI_E_BARE") == "1":
+            sys.stdout.write(DYN + "\n")
+        else:
+            sys.stdout.write("identifier: %s\n" % DYN)
+        raise SystemExit(0)
     for ident in DECLARED.get(ext, ["public.plain-text"]):
         sys.stdout.write("identifier: %s\n" % ident)
     raise SystemExit(0)
@@ -120,6 +133,9 @@ if len(argv) == 4 and argv[0] == "-s":
         if not ext:
             sys.stderr.write("unexpected duti -s shape\n")
             raise SystemExit(2)
+        if ext in dyn_exts or ext in s_dyn:
+            sys.stderr.write("failed to set %s as handler for %s (error -50)\n" % (bundle, DYN))
+            raise SystemExit(1)
         if ext in fail_s:
             sys.stderr.write("%s does not conform to any UTI hierarchy\n" % ext)
             raise SystemExit(1)
@@ -159,6 +175,9 @@ export DUTI_LOG="$tmp/duti.log"
 export DUTI_DB="$tmp/db.json"
 export DUTI_S_FAIL=""
 export DUTI_S_LIE=""
+export DUTI_DYN_EXTS=""
+export DUTI_S_DYN=""
+export DUTI_E_BARE=""
 export DUTI_X_ERROR=""
 export DUTI_X_LAG=0
 export FILE_HANDLERS_SETTLE_SECS=5
@@ -410,6 +429,50 @@ out="$(run "$REAL_LIST")"
 eq "real list has no drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
 eq "real list pinnable rows ok" 21 "$(printf '%s\n' "$out" | grep -c '^ok|')"
 eq "real list has no info rows" 0 "$(printf '%s\n' "$out" | grep -c '^info|')"
+
+# .fish has no declared UTI. The check does not call that drift, and apply
+# warns instead of failing. A later -50 on dyn.* is the same warning when
+# duti -e did not already say the type was dynamic.
+export DUTI_DYN_EXTS=fish
+printf '%s\n' 'fish|CotEditor|com.coteditor.CotEditor' 'txt|CotEditor|com.coteditor.CotEditor' > "$tmp/fish.list"
+"$PY" -c 'import json,sys; json.dump({"txt":"com.coteditor.CotEditor"}, open(sys.argv[1],"w"))' "$DUTI_DB"
+: > "$DUTI_LOG"
+out="$(run "$tmp/fish.list")"; rc=$?
+eq "dynamic .fish check exits 0" 0 "$rc"
+has "dynamic .fish is a named warning" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
+eq "dynamic .fish is not drift" "" "$(printf '%s\n' "$out" | grep '^bad|fish|' || true)"
+has "a declared type is still checked" "ok|txt|.txt -> CotEditor / com.coteditor.CotEditor" "$out"
+: > "$DUTI_LOG"
+out="$(run --apply "$tmp/fish.list")"; rc=$?
+eq "dynamic .fish apply exits 0" 0 "$rc"
+has "dynamic .fish apply warns" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
+eq "dynamic .fish apply does not claim a change" "" "$(printf '%s\n' "$out" | grep '^chg|fish|' || true)"
+eq "dynamic .fish apply does not call duti -s" "" "$(s_calls "$DUTI_LOG" | grep -F '".fish"' || true)"
+has "txt was already set" "ok|txt|.txt already CotEditor / com.coteditor.CotEditor" "$out"
+
+export DUTI_E_BARE=1
+out="$(run "$tmp/fish.list")"
+has "a bare dyn UTI is the same warning" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
+export DUTI_E_BARE=""
+export DUTI_DYN_EXTS=""
+
+export DUTI_S_DYN=fish
+: > "$DUTI_LOG"
+out="$(run --apply --only fish "$tmp/fish.list")"; rc=$?
+eq "error -50 on dyn.* exits 0" 0 "$rc"
+has "error -50 on dyn.* is the named warning" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
+has "error -50 still tried duti -s" '["-s", "com.coteditor.CotEditor", ".fish", "all"]' "$(s_calls "$DUTI_LOG")"
+export DUTI_S_DYN=""
+
+# handlers.sh prints that warning, not an error, and keeps going.
+export DUTI_DYN_EXTS=fish
+: > "$DUTI_LOG"
+fish_dry="$("$DIR/handlers.sh" --dry-run)"
+fish_dry_rc=$?
+eq "handlers dry-run with .fish exits 0" 0 "$fish_dry_rc"
+has "handlers names the .fish skip" "warn    no app declares a file type for .fish yet; skipped" "$fish_dry"
+miss "handlers does not call the .fish skip an error" "error   " "$fish_dry"
+export DUTI_DYN_EXTS=""
 
 # handlers.sh --dry-run uses the same helper (bootstrap step 6). URL schemes
 # hit the fake duti's -d and come back unset; file rows are already applied.

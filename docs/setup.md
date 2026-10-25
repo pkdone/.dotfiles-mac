@@ -42,7 +42,7 @@ Each run of `bootstrap.sh`, `install.sh`, and `brewsync` is copied to `~/Library
 
 Before the Brewfile is installed, setup checks that this Mac can reach github.com and formulae.brew.sh, that the Xcode Command Line Tools are installed (`xcode-select -p`, and it offers `xcode-select --install` when they are missing), that at least 10 GB is free, and that `brew doctor` is not reporting a serious problem. A harmless doctor note does not stop setup. A failed check stops before any install and says what to fix.
 
-If one Brewfile entry fails, that entry is tried once more (`brew install` for a tool, `brew install --cask --adopt` for an app) and the others still install. Anything still missing is printed with the Homebrew error, when there is one, and the exact command to install it. `--adopt` takes over an app that is already in `/Applications` instead of stopping because the app is already there.
+If one Brewfile entry fails, that entry is tried once more (`brew install` for a tool, `brew install --cask --adopt` for an app) and the others still install. Anything still missing is printed with the Homebrew error, when there is one, and the exact command to install it. If the install step itself stops before it can name a package, setup says the Brewfile install failed and points at the log under `~/Library/Logs/dotfiles/`. `brewsync` prints the same failure and the log path, still upgrades and cleans up, and exits with an error. `--adopt` takes over an app that is already in `/Applications` instead of stopping because the app is already there.
 
 A package installer that needs an admin password (Karabiner-Elements is one) asks for it once at the start when you are in a terminal, and keeps that password fresh until the script exits. A non-interactive run skips the prompt and says that those installers may fail. Do not run these scripts as root.
 
@@ -123,7 +123,7 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 git pull && ./macconfig-check.sh --fix
 ```
 
-`.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`.
+`.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`. `.fish` often has no declared file type, so `duti` fails with error -50 on a dynamic UTI. That is a warning and is skipped, and the check does not call it drift. The row stays, so once some app declares a type for `.fish` the next run sets CotEditor.
 
 ## Unwanted apps (GarageBand, iMovie, Pages)
 
@@ -378,7 +378,7 @@ dotpush "your message"
 |------|------|
 | `macconfig` | Checks this Mac's config settings against the repo (`macconfig-check.sh`). Arguments pass through: `macconfig`, `macconfig --fix`, `macconfig --no-color` |
 | `manualsteps` | By-hand settings (`scripts/manual-steps.sh`). No arguments runs `check`. Arguments pass through: `manualsteps list`, `manualsteps open`, `manualsteps open --all`, `manualsteps --help` |
-| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile. A missing entry is retried once, and an app already in `/Applications` is adopted. Sets `HOMEBREW_NO_ASK` for that run only, so Homebrew 7 does not ask "Do you want to proceed?"; a hand-typed `brew upgrade` still asks. Writes `~/Library/Logs/dotfiles/brewsync-YYYYMMDD-HHMMSS.log` |
+| `brewsync` | Installs, upgrades, and cleans up Homebrew packages from the Brewfile. A missing entry is retried once, and an app already in `/Applications` is adopted. If that install step stops before it can name a package, `brewsync` says so and prints the log path, then still upgrades and cleans up, and exits with an error. Sets `HOMEBREW_NO_ASK` for that run only, so Homebrew 7 does not ask "Do you want to proceed?"; a hand-typed `brew upgrade` still asks. Writes `~/Library/Logs/dotfiles/brewsync-YYYYMMDD-HHMMSS.log` |
 | `dotpush <message>` | Commits and pushes all dotfile changes to GitHub in one command |
 | `edit <file>` | Opens a file in CotEditor |
 

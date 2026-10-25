@@ -578,52 +578,76 @@ brew_on_exit() {
 brew_bundle_main() {
   local file="$HOME/.dotfiles-mac/Brewfile" install_hb=0
   local missing collect_rc delay n bundle_log kind name
+  # Set again before every intentional return. A crash leaves this at 0 so
+  # scripts/brew-bundle-install.sh can tell a stop from a finished report.
+  export BREW_BUNDLE_HANDLED=0
   while [ $# -gt 0 ]; do
     case "$1" in
       --file)
         if [ $# -lt 2 ]; then
           echo "brew-bundle-install.sh: --file needs a path" >&2
+          BREW_BUNDLE_HANDLED=1
           return 2
         fi
         file="$2"
         shift 2
         ;;
       --install-homebrew) install_hb=1; shift ;;
-      -h|--help) brew_bundle_usage; return 0 ;;
+      -h|--help) brew_bundle_usage; BREW_BUNDLE_HANDLED=1; return 0 ;;
       *)
         echo "Unknown argument: $1 (try --help)" >&2
+        BREW_BUNDLE_HANDLED=1
         return 2
         ;;
     esac
   done
   if [ ! -r "$file" ]; then
     echo "Brewfile not found: $file" >&2
+    BREW_BUNDLE_HANDLED=1
     return 2
   fi
 
-  case "${DOTFILES_BREW_RETRY_DELAY:-2}" in
-    ''|*[!0-9]*) DOTFILES_BREW_RETRY_DELAY=2 ;;
+  # Copy the default into delay before validating. A case on ${VAR:-2} does
+  # not assign VAR, so when the variable is unset the valid default 2 matches
+  # no branch and a later bare read of VAR dies under set -u.
+  delay="${DOTFILES_BREW_RETRY_DELAY:-2}"
+  case "$delay" in
+    ''|*[!0-9]*) delay=2 ;;
   esac
-  delay="$DOTFILES_BREW_RETRY_DELAY"
 
   # Homebrew 7 asks before install. This script answers for itself only.
   export HOMEBREW_NO_ASK=1
 
   if ! brew_preflight_network; then
+    BREW_BUNDLE_HANDLED=1
     return 2
   fi
   if ! brew_preflight_clt; then
+    BREW_BUNDLE_HANDLED=1
     return 2
   fi
   if ! brew_preflight_disk; then
+    BREW_BUNDLE_HANDLED=1
     return 2
   fi
   if ! brew_ensure_homebrew "$install_hb"; then
+    BREW_BUNDLE_HANDLED=1
     return 2
   fi
   brew_preflight_doctor
 
-  BREW_TMP="$(mktemp -d)"
+  # set -e is off while this function is called as `cmd || rc=$?`, so a failed
+  # mktemp would otherwise leave BREW_TMP empty and the run could claim success.
+  if ! BREW_TMP="$(mktemp -d)"; then
+    echo "Couldn't create a temporary directory, so the Brewfile install stopped." >&2
+    BREW_BUNDLE_HANDLED=1
+    return 3
+  fi
+  if [ -z "${BREW_TMP:-}" ] || [ ! -d "$BREW_TMP" ]; then
+    echo "Couldn't create a temporary directory, so the Brewfile install stopped." >&2
+    BREW_BUNDLE_HANDLED=1
+    return 3
+  fi
   mkdir -p "$BREW_TMP/retries"
   bundle_log="$BREW_TMP/bundle.out"
   : > "$bundle_log"
@@ -638,10 +662,12 @@ brew_bundle_main() {
   missing="$(cat "$BREW_TMP/missing")"
   if [ "$collect_rc" -eq 0 ]; then
     echo "All Brewfile entries are installed."
+    BREW_BUNDLE_HANDLED=1
     return 0
   fi
   if [ "$collect_rc" -eq 3 ]; then
     brew_report_unparsed "$file"
+    BREW_BUNDLE_HANDLED=1
     return 1
   fi
 
@@ -668,12 +694,15 @@ brew_bundle_main() {
   missing="$(cat "$BREW_TMP/missing")"
   if [ "$collect_rc" -eq 0 ]; then
     echo "All Brewfile entries are installed."
+    BREW_BUNDLE_HANDLED=1
     return 0
   fi
   if [ "$collect_rc" -eq 3 ]; then
     brew_report_unparsed "$file"
+    BREW_BUNDLE_HANDLED=1
     return 1
   fi
   brew_report_missing "$missing" "$bundle_log" "$BREW_TMP/retries"
+  BREW_BUNDLE_HANDLED=1
   return 1
 }

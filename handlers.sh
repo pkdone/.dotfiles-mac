@@ -111,6 +111,7 @@ apply_file_handlers() {
         changed=1 ;;
       dry) printf 'would   %s\n' "$msg" ;;
       info) printf 'info    %s\n' "$msg" ;;
+      warn) printf 'warn    %s\n' "$msg" ;;
       *)   printf 'error   %s\n' "${msg:-$status}" >&2 ;;
     esac
   done <<< "$file_out"

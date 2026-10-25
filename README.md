@@ -23,7 +23,7 @@ gh auth status || gh auth login
 
 What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md).
 
-Each run of `bootstrap.sh` and `install.sh` writes a log under `~/Library/Logs/dotfiles/` (for example `install-20260101-120000.log`) and prints that path when it finishes. Logs older than 30 days are removed. A failed Homebrew app is retried once and does not stop the others. Setup then names anything still missing and the command to install it. An app that is already in `/Applications` is adopted instead of failing. In a terminal, setup asks once for an admin password when a package installer needs it. It stops early, with a plain explanation, if the network, the Xcode Command Line Tools, or free disk space is not ready.
+Each run of `bootstrap.sh` and `install.sh` writes a log under `~/Library/Logs/dotfiles/` (for example `install-20260101-120000.log`) and prints that path when it finishes. Logs older than 30 days are removed. A failed Homebrew app is retried once and does not stop the others. Setup then names anything still missing and the command to install it. If that install step itself stops before it can name a package, setup says the Brewfile install failed and points at the log. An app that is already in `/Applications` is adopted instead of failing. In a terminal, setup asks once for an admin password when a package installer needs it. It stops early, with a plain explanation, if the network, the Xcode Command Line Tools, or free disk space is not ready.
 
 ### 2. Manual steps
 
@@ -84,7 +84,7 @@ What the check's output means, including the Mac health summary at the end, is e
 
 ### brewsync
 
-`brewsync` installs, upgrades and cleans up Homebrew packages from the Brewfile. It retries a missing entry once, adopts an app that is already in `/Applications`, and writes a log under `~/Library/Logs/dotfiles/`. Run it after you change the Brewfile, or when a package is out of date.
+`brewsync` installs, upgrades and cleans up Homebrew packages from the Brewfile. It retries a missing entry once, adopts an app that is already in `/Applications`, and writes a log under `~/Library/Logs/dotfiles/`. If that install step stops before it can name a package, `brewsync` says so and prints the log path, then still upgrades and cleans up, and exits with an error. Run it after you change the Brewfile, or when a package is out of date.
 
 ```bash
 brewsync           # install, upgrade and clean up Homebrew packages from the Brewfile

@@ -349,6 +349,95 @@ has "a failing activateSettings warns" "activateSettings -u failed" "$out"
 has "a failing activateSettings keeps the logout item" "TrackpadCornerSecondaryClick" "$(cat "$logout")"
 ACTIVATE_RC=0
 
+# The four keys a fresh Mac stores as booleans. Desired values are unchanged
+# (int 0/1). A matching boolean is not a type mismatch. A different boolean
+# is written with -bool, not -int.
+printf '%s\n' \
+  'com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking|bool|1' \
+  'com.apple.AppleMultitouchTrackpad|Clicking|bool|1' \
+  'com.apple.AppleMultitouchTrackpad|TrackpadRightClick|bool|0' \
+  'com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerDrag|bool|0' \
+  'com.apple.AppleMultitouchTrackpad|ForceSuppressed|bool|0' \
+  > "$state"
+DOTFILES_ACTIVATE_SETTINGS="$bin/activateSettings"
+ACTIVATE_RC=0
+out="$(run_macos \
+  --only 'com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking' \
+  --only 'com.apple.AppleMultitouchTrackpad|Clicking' \
+  --only 'com.apple.AppleMultitouchTrackpad|TrackpadRightClick' \
+  --only 'com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerDrag' \
+  --only 'com.apple.AppleMultitouchTrackpad|ForceSuppressed')"
+rc=$?
+eq "boolean trackpad matches exit 0" 0 "$rc"
+has "boolean tap to click matches" \
+  "com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking — already set: 1 (left alone)" "$out"
+has "boolean right click off matches" \
+  "com.apple.AppleMultitouchTrackpad TrackpadRightClick — already set: 0 (left alone)" "$out"
+has "boolean three-finger drag off matches" \
+  "com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag — already set: 0 (left alone)" "$out"
+has "boolean haptics on matches" \
+  "com.apple.AppleMultitouchTrackpad ForceSuppressed — already set: 0 (left alone)" "$out"
+miss "matching booleans are not a type mismatch" "type mismatch" "$out"
+eq "matching booleans are not rewritten" "" "$(writes)"
+eq "matching booleans do not reload settings" "" "$(cat "$alog")"
+
+printf 'com.apple.AppleMultitouchTrackpad|TrackpadRightClick|bool|1\n' > "$state"
+out="$(run_macos --only 'com.apple.AppleMultitouchTrackpad|TrackpadRightClick')"
+rc=$?
+eq "boolean right click on exits 0" 0 "$rc"
+has "boolean right click on is changed" \
+  "com.apple.AppleMultitouchTrackpad TrackpadRightClick — changed: 1 -> 0" "$out"
+miss "a boolean that needs changing is not a type mismatch" "type mismatch" "$out"
+eq "a boolean that needs changing is written with -bool" \
+  "W|com.apple.AppleMultitouchTrackpad|TrackpadRightClick|-bool|false" "$(writes)"
+eq "a changed boolean trackpad reloads settings" "-u" "$(cat "$alog")"
+
+run_defaults_check() {
+  HOME="$tmp/check-home" DOTDIR="$DIR" PATH="$bin:$BASE_PATH" \
+    DEFAULTS_LOG="$dlog" DEFAULTS_STATE="$state" \
+    bash -c '
+      set -uo pipefail
+      hdr() { :; }
+      fixid() { :; }
+      pass() { printf "PASS %s\n" "$1"; }
+      bad() { printf "BAD %s\n" "$1"; }
+      warn() { printf "WARN %s\n" "$1"; }
+      CHECKED=0
+      # shellcheck disable=SC1091
+      . "$1/lib/defaults-lib.sh"
+      # shellcheck disable=SC1091
+      . "$1/checks/defaults.sh"
+    ' bash "$DIR"
+}
+mkdir -p "$tmp/check-home"
+printf '%s\n' \
+  'com.apple.driver.AppleBluetoothMultitouch.trackpad|Clicking|bool|1' \
+  'com.apple.AppleMultitouchTrackpad|Clicking|bool|1' \
+  'com.apple.AppleMultitouchTrackpad|TrackpadRightClick|bool|0' \
+  'com.apple.AppleMultitouchTrackpad|TrackpadThreeFingerDrag|bool|0' \
+  'com.apple.AppleMultitouchTrackpad|ForceSuppressed|bool|0' \
+  > "$state"
+check="$(run_defaults_check)"
+has "check passes boolean tap to click" \
+  "PASS com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking = 1" "$check"
+has "check passes boolean right click off" \
+  "PASS com.apple.AppleMultitouchTrackpad TrackpadRightClick = 0" "$check"
+has "check passes boolean three-finger drag off" \
+  "PASS com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag = 0" "$check"
+has "check passes boolean haptics on" \
+  "PASS com.apple.AppleMultitouchTrackpad ForceSuppressed = 0" "$check"
+miss "check does not call a matching boolean a type mismatch" \
+  "Clicking — type mismatch" "$check"
+miss "check does not call right click a type mismatch" \
+  "TrackpadRightClick — type mismatch" "$check"
+
+printf 'com.apple.AppleMultitouchTrackpad|TrackpadRightClick|bool|1\n' > "$state"
+check="$(run_defaults_check)"
+has "check names a boolean that needs changing" \
+  "BAD com.apple.AppleMultitouchTrackpad TrackpadRightClick = 1 (expected 0)" "$check"
+miss "check does not call that difference a type mismatch" \
+  "TrackpadRightClick — type mismatch" "$check"
+
 # ---- More Space ---------------------------------------------------------
 PROFILER_JSON="$tmp/not-more-space.json"
 DISPLAYPLACER_LIST="$tmp/placer.txt"

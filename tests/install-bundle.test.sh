@@ -35,6 +35,9 @@ has "delegates the Brewfile to the helper" 'scripts/brew-bundle-install.sh' "$sr
 # shellcheck disable=SC2016
 has "checks the Brewfile after install" 'brew bundle check --no-upgrade --file "$file"' "$helper"
 has "partial failure points at brewsync" 'run brewsync' "$src"
+has "a crashed bundle step says it failed" 'the Brewfile install failed before it could finish' "$src"
+has "a crashed bundle step points at the log" 'DOTFILES_LOG_FILE' "$src"
+has "a finished partial failure still names the entries" 'The Brewfile entries named above are still missing.' "$src"
 miss "generic some-entries message is gone" 'some Brewfile entries did not install' "$src$helper"
 miss "does not open the App Store" 'macappstore://' "$src"
 # shellcheck disable=SC2016

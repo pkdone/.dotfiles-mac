@@ -16,7 +16,8 @@
 #
 # Each run is copied to ~/Library/Logs/dotfiles/install-YYYYMMDD-HHMMSS.log.
 # The Brewfile install retries a missing entry once and names anything still
-# missing. Do not run this script as root.
+# missing. If that step itself stops before it can name anything, the summary
+# says the install failed and points at the log. Do not run this script as root.
 #
 set -euo pipefail
 
@@ -145,12 +146,20 @@ git -C "$DOTFILES" config core.hooksPath hooks
 echo ""
 if [ "$bundle_rc" -eq 0 ]; then
   echo "✅ Dotfiles are in place. Run macconfig (or ./macconfig-check.sh) any time to verify."
-elif [ "$bundle_rc" -ge 2 ]; then
+elif [ "$bundle_rc" -eq 1 ]; then
+  echo "⚠️  Dotfiles are in place. The Brewfile entries named above are still missing."
+  echo "    For anything still missing, run brewsync."
+elif [ "$bundle_rc" -eq 2 ]; then
   echo "⚠️  Dotfiles are in place, but Homebrew install did not start. The reason is above."
   echo "    Fix that, then run brewsync (or run this script again)."
 else
-  echo "⚠️  Dotfiles are in place. The Brewfile entries named above are still missing."
-  echo "    For anything still missing, run brewsync."
+  echo "⚠️  Dotfiles are in place, but the Brewfile install failed before it could finish."
+  if [ -n "${DOTFILES_LOG_FILE:-}" ]; then
+    echo "    No missing package was named above. The log is ${DOTFILES_LOG_FILE}"
+  else
+    echo "    No missing package was named above. The log is under ~/Library/Logs/dotfiles/."
+  fi
+  echo "    Fix that, then run brewsync (or run this script again)."
 fi
 
 # ---- manual steps -------------------------------------------------------

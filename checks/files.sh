@@ -22,6 +22,9 @@ else
       ok)   CHECKED=$((CHECKED + 1)); fixid file-handler "$ext"; pass "$msg" ;;
       bad)  CHECKED=$((CHECKED + 1)); fixid file-handler "$ext"; bad "$msg" ;;
       info) note "$msg" ;;
+      # No declared file type (dyn.* / duti error -50). Not drift, and --fix
+      # does not call duti. handlers.sh prints the same sentence as a warning.
+      warn) note "$msg" ;;
       *)    CHECKED=$((CHECKED + 1)); fixid tooling; warn "${msg:-$ext}" ;;
     esac
   done < <("$PY" "$DOTDIR/lib/file-handlers.py" "$FILE_HANDLERS_LIST")

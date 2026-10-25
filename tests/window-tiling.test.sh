@@ -278,12 +278,22 @@ eq "margins write is -bool false" \
 eq "margins repair restarts nothing" "" "$(cat "$klog")"
 miss "margins repair does not restart Dock" "Dock" "$(cat "$klog")"
 
-# A wrong stored type is skipped, never clobbered.
+# Integer 0 is boolean false. Margins are pinned false, so this matches.
 printf 'com.apple.WindowManager|EnableTiledWindowMargins|int|0\n' > "$state"
 out="$(run_macos)"
 rc=$?
+eq "integer 0 margins exit 0" 0 "$rc"
+has "integer 0 margins match boolean false" \
+  "com.apple.WindowManager EnableTiledWindowMargins — already set: 0 (left alone)" "$out"
+miss "integer 0 margins are not a type mismatch" "type mismatch" "$out"
+eq "matching integer 0 is not rewritten" "" "$(writes | grep EnableTiledWindowMargins || true)"
+
+# A non-0/1 integer is still a type mismatch and is not clobbered.
+printf 'com.apple.WindowManager|EnableTiledWindowMargins|int|2\n' > "$state"
+out="$(run_macos)"
+rc=$?
 eq "type mismatch still exits 0" 0 "$rc"
-has "integer 0 is a type mismatch" \
+has "integer 2 is a type mismatch" \
   "com.apple.WindowManager EnableTiledWindowMargins — type mismatch (expected boolean, found integer); skipping" "$out"
 eq "type mismatch writes no margins value" "" "$(writes | grep EnableTiledWindowMargins || true)"
 eq "type mismatch restarts nothing" "" "$(cat "$klog")"
