@@ -82,8 +82,8 @@ load_steps() {
       groups_done="$groups_done|$group|"; last_group="$group"
     fi
     case "$target" in
-      ''|x-apple.systempreferences:?*|https://?*|macappstore://*|app:?*) ;;
-      *) ERRORS+=("line $lineno: open '$target' must be x-apple.systempreferences:, https://, macappstore:// or app:") ;;
+      ''|x-apple.systempreferences:?*|https://?*|macappstore://*|app:?*|safari:https://?*) ;;
+      *) ERRORS+=("line $lineno: open '$target' must be x-apple.systempreferences:, https://, safari:https://, macappstore:// or app:") ;;
     esac
     check_spec_ok "$chk" || ERRORS+=("line $lineno: unknown check '$chk'")
     S_ID+=("$id"); S_GROUP+=("$group"); S_TITLE+=("$title"); S_WHERE+=("$where")
@@ -587,6 +587,12 @@ open_target() {  # target
       fleet_open_self_service || true
       ;;
     app:*) open -a "${t#app:}" 2>/dev/null || echo "      (couldn't open ${t#app:} — open it by hand)" ;;
+    # https:// follows the default browser, which this repo sets to Chrome.
+    # File → Add to Dock exists only in Safari, so a Safari web app must not
+    # go through that default.
+    safari:https://*)
+      open -a Safari "${t#safari:}" 2>/dev/null || echo "      (couldn't open ${t#safari:} in Safari — open it by hand)"
+      ;;
     *)     open "$t" 2>/dev/null || echo "      (couldn't open $t — open it by hand)" ;;
   esac
 }

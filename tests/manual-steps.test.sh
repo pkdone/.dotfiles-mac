@@ -355,6 +355,9 @@ has "whatsapp step names macconfig --fix" "macconfig --fix" "$wa_where"
 has "whatsapp step puts it between Slack and Granola" "between Slack and Granola on Desktop 1" "$wa_where"
 eq "whatsapp step check is the named check" "whatsapp-web" \
   "$(awk -F'|' '$1=="whatsapp-web" { print $6; exit }' "$LIST")"
+eq "whatsapp step opens in Safari, not the default browser" \
+  "safari:https://web.whatsapp.com" \
+  "$(awk -F'|' '$1=="whatsapp-web" { print $5; exit }' "$LIST")"
 eq "whatsapp step does not hard-code a web app UUID" "" \
   "$(awk -F'|' '$1=="whatsapp-web" { print }' "$LIST" | grep -E 'WebApp\.[0-9A-Fa-f]{8}-' || true)"
 miss "notifications-off does not list WhatsApp Web" "WhatsApp" \
@@ -418,6 +421,25 @@ wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
   MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
 has "open says a wrong bundle id is not set yet" "Not set yet:" "$wa_open"
 miss "a wrong bundle id is not labelled can't-check" "$CANT" "$wa_open"
+
+# Chrome is the default https handler. Add to Dock exists only in Safari,
+# so the walk-through must pass -a Safari and not a bare URL.
+cat > "$wa_bin/open" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "${OPEN_LOG:?}"
+exit 0
+EOF
+chmod +x "$wa_bin/open"
+printf '%s\n' \
+  'whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web|Open Safari|safari:https://web.whatsapp.com|whatsapp-web' \
+  > "$wa_dir/safari.list"
+write_webapp ""
+: > "$wa_dir/open.log"
+printf '\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
+  OPEN_LOG="$wa_dir/open.log" MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$wa_dir/safari.list" "$MS" open >/dev/null
+eq "walk-through opens the page in Safari" "-a Safari https://web.whatsapp.com" \
+  "$(cat "$wa_dir/open.log")"
 rm -rf "$wa_dir"
 
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
