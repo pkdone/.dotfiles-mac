@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 #
-# The README "Where apps come from" section is generated from the Brewfile and
-# lib/mdm-apps.list. A missing app's message names that same source.
-# 1Password for Safari and Okta Extension App are in neither source.
+# The README names the three places apps come from. It does not list the apps,
+# and it does not give an exact count of manual steps.
+# 1Password for Safari and Okta Extension App are in neither the Brewfile nor
+# lib/mdm-apps.list.
 # Run: ./tests/app-sources.test.sh
 #
 set -uo pipefail
@@ -31,7 +32,7 @@ miss() {
 }
 
 out="$("$RENDER" --check 2>&1)"; rc=$?
-eq "README app-sources section matches the sources" 0 "$rc"
+eq "README app-sources note matches the sources" 0 "$rc"
 [ "$rc" -eq 0 ] || printf '%s\n' "$out"
 
 section="$(awk '
@@ -40,39 +41,43 @@ section="$(awk '
   grab { print }
 ' "$README")"
 
-tools="$(sed -nE 's/^brew "([^"]+)".*/\1/p' "$DIR/Brewfile" | join_and)"
-casks="$(sed -nE 's/^cask "([^"]+)".*/\1/p' "$DIR/Brewfile" | join_and)"
 mas_apps="$(sed -nE 's/^mas "([^"]+)".*/\1/p' "$DIR/Brewfile" | join_and)"
-company="$(awk -F'|' '
-  /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
-  { name = $1; gsub(/^[[:space:]]+|[[:space:]]+$/, "", name); if (name != "") print name }
-' "$DIR/lib/mdm-apps.list" | join_and)"
-
-line_of() {
-  printf '%s\n' "$section" | awk -v label="$1" 'index($0, label) == 1 { print; exit }'
-}
-eq "command-line tools match the Brewfile" "**Command-line tools:** ${tools}." "$(line_of '**Command-line tools:**')"
-eq "desktop apps match the Brewfile" "**Desktop apps:** ${casks}." "$(line_of '**Desktop apps:**')"
-
-store="$(printf '%s\n' "$section" | awk '
-  $0 == "### Mac App Store" { on = 1; next }
-  $0 == "### Company apps (Fleet Self service)" { on = 0 }
-  on { print }
-')"
 eq "Brewfile has no Mac App Store apps" "" "$mas_apps"
-has "Mac App Store source says no apps" "No apps currently come from the Mac App Store." "$store"
-has "Mac App Store source explains the Apple ID limit" "can't sign in with a personal Apple ID" "$store"
-miss "Mac App Store source lists no apps" "**Apps:**" "$store"
-miss "Mac App Store source does not ask for sign-in" "App Store sign-in" "$store"
-miss "App Store section does not name 1Password for Safari" "1Password for Safari" "$store"
-miss "App Store section does not name Okta Extension" "Okta Extension" "$store"
-has "company apps match lib/mdm-apps.list" "**Apps:** ${company}." "$section"
-tick='`'
-has "Homebrew missing says run brewsync" "run ${tick}brewsync${tick}" "$section"
-has "company missing says Fleet Self service" "install it from Fleet Self service" "$section"
-has "company apps name the Fleet menu path" "Fleet Desktop menu bar → My device → Self service" "$section"
-has "Safari extensions are called out as unlisted" "1Password for Safari and Okta Extension App are not in any of these lists" "$section"
+has "note names Homebrew" "Homebrew, via the Brewfile, is for most apps and command-line tools." "$section"
+has "note names Fleet Self service" "Fleet Self service is for company-managed apps that can't be installed unattended; setup prompts you to install them." "$section"
+has "note says nothing comes from the Mac App Store" "Nothing is installed from the Mac App Store now" "$section"
+has "note explains the Apple ID limit" "can't sign in with a personal Apple ID" "$section"
+miss "note is not a dedicated section" "## Where apps come from" "$section"
+miss "note does not list command-line tools" "**Command-line tools:**" "$section"
+miss "note does not list desktop apps" "**Desktop apps:**" "$section"
+miss "note does not list apps" "**Apps:**" "$section"
+miss "note does not name a Homebrew cask" "ghostty" "$section"
+miss "note does not name a company app" "Okta Verify" "$section"
+miss "note does not ask for sign-in" "App Store sign-in" "$section"
+miss "note does not name 1Password for Safari" "1Password for Safari" "$section"
+miss "note does not name Okta Extension" "Okta Extension" "$section"
 miss "README does not mention check.sh" "check.sh" "$(cat "$README")"
+
+# An exact integer count would go stale each time a step is added. The README
+# says "about 40" / "about 10" instead, and this test must not require a
+# particular integer.
+readme="$(cat "$README")"
+has "README approximates the manual-step count" "About 40 manual steps" "$readme"
+has "README approximates the by-eye count" "about 10 you confirm by eye" "$readme"
+exact="$(printf '%s\n' "$readme" | grep -E '[0-9]+ (manual steps|settings) have to be set by hand|[0-9]+ you confirm by eye' | grep -vi 'about ' || true)"
+eq "README does not pin an exact manual-step count" "" "$exact"
+
+mas_brew="$(mktemp)"
+printf '%s\n' 'mas "Example Store App", id: 1' > "$mas_brew"
+mas_note="$(APP_SOURCES_BREWFILE="$mas_brew" "$RENDER" --stdout)"
+has "a Mac App Store line is described in general" "Brewfile installs with" "$mas_note"
+miss "a Mac App Store line is not listed by name" "Example Store App" "$mas_note"
+miss "a Mac App Store line does not say nothing is installed" "Nothing is installed from the Mac App Store now" "$mas_note"
+rm -f "$mas_brew"
+
+has "setup still explains the unlisted Safari extensions" \
+  "1Password for Safari and Okta Extension App are not in the Brewfile" \
+  "$(cat "$DIR/docs/setup.md")"
 
 mas_lines="$(grep -E '^mas ' "$DIR/Brewfile" || true)"
 eq "Brewfile has no mas installs" "" "$mas_lines"

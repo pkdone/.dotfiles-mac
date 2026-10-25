@@ -18,13 +18,42 @@ covered_step_file() { # area
   return 1
 }
 
+# One line, messages separated by "; ". Blank lines are dropped.
+# The text is data, so it is not expanded again.
+covered_join() { # multiline string
+  printf '%s\n' "$1" | awk '
+    NF {
+      if (out != "") out = out "; "
+      out = out $0
+    }
+    END { printf "%s", out }
+  '
+}
+
+# What the check actually reads, when the step also has a part left by hand.
+covered_checked_part() { # id
+  case "$1" in
+    finder-sidebar) printf '%s' "the sidebar rows the files name" ;;
+    notifications-apps) printf '%s' "Allow Notifications for the listed apps" ;;
+    karabiner-login-items) printf '%s' "the Karabiner background items that can be read" ;;
+    mode-focus-modes) printf '%s' "the Focus modes that can be read" ;;
+    mode-hammerspoon-alerts) printf '%s' "Hammerspoon's notification style" ;;
+    user-picture) printf '%s' "the account picture" ;;
+    *) printf '%s' "the part this check can read" ;;
+  esac
+}
+
 # Prints status|detail. status is ok, warn, or hand. detail may contain '|'.
 # Read-only. Does not prompt (FLEET_OFFER=0). The step function's own stdout
-# is discarded; pass/warn/bad record the lines macconfig would print.
+# is discarded; pass/warn/bad/info/note record the lines macconfig would print.
+# A listed app that has never posted a notification ("nothing to turn off")
+# counts as done. A third-party app that is only flagged for review is not
+# part of the manual step. Any other info or note is a part the check does
+# not cover: the step stays up, and the detail names the part that was checked.
 covered_step_run() { # id area
-  local id="$1" area="$2" file fn detail line
+  local id="$1" area="$2" file fn detail line partial
   file="$(covered_step_file "$area")" || {
-    printf '%s\n' "hand|"
+    printf '%s\n' "hand|this check is not wired"
     return 0
   }
   fn="check_step_$(printf '%s' "$id" | tr '-' '_')"
@@ -32,15 +61,20 @@ covered_step_run() { # id area
   FLEET_OFFER=0
   COVERED_WARNS=""
   COVERED_OKS=""
-  COVERED_FORCE_HAND=0
+  COVERED_PARTIAL=""
   COVERED_DOES_NOT_APPLY=0
   pass() { COVERED_OKS="${COVERED_OKS}$1"$'\n'; }
   warn() { COVERED_WARNS="${COVERED_WARNS}$1"$'\n'; }
   bad() { warn "$1"; }
-  # info is "could not verify, still by hand" (an unreadable store, no dscl).
   # skip is "this check does not apply" (a clamshell, an unlisted panel).
-  info() { COVERED_FORCE_HAND=1; }
-  note() { COVERED_FORCE_HAND=1; }
+  info() {
+    case "$1" in
+      *"nothing to turn off"*) COVERED_OKS="${COVERED_OKS}$1"$'\n' ;;
+      *"third-party app is not in"*) ;;
+      *) COVERED_PARTIAL="${COVERED_PARTIAL}$1"$'\n' ;;
+    esac
+  }
+  note() { info "$1"; }
   skip() { COVERED_DOES_NOT_APPLY=1; }
   fixid() { :; }
   hdr() { :; }
@@ -52,21 +86,24 @@ covered_step_run() { # id area
   . "$file"
   unset MACCONFIG_CHECKS_DEFINE_ONLY
   if ! command -v "$fn" >/dev/null 2>&1; then
-    printf '%s\n' "hand|"
+    printf '%s\n' "hand|this check is not wired"
     return 0
   fi
   "$fn" >/dev/null 2>&1 || true
   if [ -n "$COVERED_WARNS" ]; then
-    detail=""
-    while IFS= read -r line; do
-      [ -n "$line" ] || continue
-      if [ -z "$detail" ]; then detail="$line"; else detail="$detail; $line"; fi
-    done <<EOF
-$COVERED_WARNS
-EOF
+    detail="$(covered_join "$COVERED_WARNS")"
+    if [ -n "$COVERED_PARTIAL" ]; then
+      partial="$(covered_join "$COVERED_PARTIAL")"
+      detail="$detail. Still by hand: $partial"
+    fi
     printf 'warn|%s\n' "$detail"
-  elif [ "$COVERED_FORCE_HAND" = 1 ]; then
-    printf 'hand|\n'
+  elif [ -n "$COVERED_PARTIAL" ]; then
+    partial="$(covered_join "$COVERED_PARTIAL")"
+    if [ -n "$COVERED_OKS" ]; then
+      printf 'hand|Checked: %s. Still by hand: %s\n' "$(covered_checked_part "$id")" "$partial"
+    else
+      printf 'hand|%s\n' "$partial"
+    fi
   elif [ -n "$COVERED_OKS" ]; then
     detail=""
     while IFS= read -r line; do
@@ -80,6 +117,6 @@ EOF
   elif [ "$COVERED_DOES_NOT_APPLY" = 1 ]; then
     printf 'ok|\n'
   else
-    printf 'hand|\n'
+    printf 'hand|this check did not report a result\n'
   fi
 }

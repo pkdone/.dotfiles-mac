@@ -214,6 +214,44 @@ company_msg="$(awk '/li_detail. = company-team/,/else/' "$DIR/checks/health.sh")
 has "a company-team warning says to add it to the allow list" "Add it to lib/login-items-allow.list" "$company_msg"
 miss "a company-team warning does not say to turn it off" "turn it Off" "$company_msg"
 
+koi="$("$PY" - "$DIR/lib/btm-login-items.py" "$DIR/lib/login-items-allow.list" "$tmp/koi.btm" <<'PY'
+import importlib.util, io, plistlib, sys
+from contextlib import redirect_stdout
+from pathlib import Path
+mod_path, allow, items_path = sys.argv[1:]
+spec = importlib.util.spec_from_file_location("btm_login_items", mod_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+plistlib.dump({
+    "$version": 100000,
+    "$archiver": "NSKeyedArchiver",
+    "$top": {"root": "items"},
+    "$objects": ["$null", {
+        "disposition": 0xB,
+        "type": 0x10,
+        "name": "koi.security.mdm.sh",
+        "identifier": "koi.security.mdm.plist",
+        "bundleIdentifier": "",
+        "developerName": "",
+        "teamIdentifier": "",
+        "url": "file:///bin",
+        "executablePath": "/usr/local/bin/koi.security.mdm.sh",
+        "container": "",
+    }],
+}, open(items_path, "wb"))
+buf = io.StringIO()
+with redirect_stdout(buf):
+    mod.audit(allow, None, [Path(items_path)])
+sys.stdout.write(buf.getvalue())
+PY
+)"
+eq "koi security MDM daemon is allow-listed" allow "$(printf '%s\n' "$koi" | cut -d'|' -f1)"
+eq "koi security MDM daemon keeps its name" "koi.security.mdm.sh" "$(printf '%s\n' "$koi" | cut -d'|' -f3)"
+eq "koi security MDM daemon keeps its plist id" "koi.security.mdm.plist" "$(printf '%s\n' "$koi" | cut -d'|' -f6)"
+has "allow list matches koi.security.*" "label-prefix|koi.security.|" "$(cat "$DIR/lib/login-items-allow.list")"
+allow_branch="$(awk '/^[[:space:]]*allow\)/,/^[[:space:]]*mdm\)/' "$DIR/checks/health.sh")"
+miss "an allow-listed item is not told to turn Off" "turn it Off" "$allow_branch"
+
 has "allow list mentions Cursor BackgroundActivityCheck" \
   "com.todesktop.230313mzl4w4u92.BackgroundActivityCheck" "$(cat "$DIR/lib/login-items-allow.list")"
 has "allow list mentions Cursor Nightly" \

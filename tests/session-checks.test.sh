@@ -117,9 +117,33 @@ run_check check_input_british
 eq "another layout is a warning" warn "$R_STATUS"
 has "another layout names it" "ABC" "$R_DETAIL"
 
-rm -f "$tmp/defaults/com.apple.HIToolbox.AppleSelectedInputSources"
+rm -f "$tmp/defaults/com.apple.HIToolbox.AppleSelectedInputSources" \
+  "$tmp/defaults/com.apple.HIToolbox.AppleEnabledInputSources"
 run_check check_input_british
-eq "unreadable input sources are by hand" hand "$R_STATUS"
+eq "neither input-source key is check by hand" hand "$R_STATUS"
+eq "neither input-source key names both keys" \
+  "could not read AppleEnabledInputSources or AppleSelectedInputSources" "$R_DETAIL"
+miss "neither input-source key uses the old selected-only message" \
+  "can't read the selected input sources" "$R_DETAIL"
+
+# Selected cannot be read. Enabled still names British. That is the layout.
+rm -f "$tmp/defaults/com.apple.HIToolbox.AppleSelectedInputSources"
+cat > "$tmp/defaults/com.apple.HIToolbox.AppleEnabledInputSources" <<'EOF'
+(
+    {
+        InputSourceKind = "Keyboard Layout";
+        "KeyboardLayout Name" = British;
+        "KeyboardLayout ID" = 2;
+    },
+    {
+        "Bundle ID" = "com.apple.PressAndHold";
+        InputSourceKind = "Non Keyboard Input Method";
+    }
+)
+EOF
+run_check check_input_british
+eq "Enabled British is ok when Selected cannot be read" ok "$R_STATUS"
+eq "Enabled British detail" "British keyboard layout only" "$R_DETAIL"
 
 pointer 1.4
 run_check check_pointer_size

@@ -150,8 +150,10 @@ if ! command -v dscl >/dev/null 2>&1; then
   pic_open="$(printf 's\n' | HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
     MANUAL_STEPS_LIST="$tmp/pic.list" PATH="$tmp/bin:$PATH" "$MS" open 2>"$tmp/picopen.err")"
   has "open still shows the account picture when it cannot be read" "Account picture" "$pic_open"
-  has "open says the account picture can't be checked" \
-    "Can't check this automatically. If it's already set, press s." "$pic_open"
+  has "open names why the account picture stays by hand" \
+    "dscl not found — the account picture stays by hand" "$pic_open"
+  miss "a checked account picture is not labelled can't-check" \
+    "Can't check this automatically" "$pic_open"
 fi
 
 # Every @macconfig step: manualsteps check and the shared function agree.
