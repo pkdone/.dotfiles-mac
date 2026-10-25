@@ -152,14 +152,14 @@ write_plist "$tmp/sample.plist" "$SAMPLE"
 out="$(run "$tmp/sample.plist")"; rc=$?
 eq "sample exits 0" 0 "$rc"
 eq "sample snapshot" "$(cat <<'EOF'
-ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=814219286)
-ok|com.apple.FaceTime|FaceTime (com.apple.FaceTime): Allow Notifications is off (flags=278929416)
-ok|com.apple.gamecenter|Game Center (com.apple.gamecenter): Allow Notifications is off (flags=5109194758)
-ok|com.apple.Home|Home (com.apple.Home): Allow Notifications is off (flags=830996486)
-ok|com.apple.tips|Tips (com.apple.tips): Allow Notifications is off (flags=294125584)
-ok|com.apple.Passbook|Wallet (com.apple.Passbook): Allow Notifications is off (flags=814219270)
+ok|com.apple.iCal|Calendar (com.apple.iCal): flags=814219286, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.FaceTime|FaceTime (com.apple.FaceTime): flags=278929416, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.gamecenter|Game Center (com.apple.gamecenter): flags=5109194758, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.Home|Home (com.apple.Home): flags=830996486, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.tips|Tips (com.apple.tips): flags=294125584, bit 25 clear, not confirmed off in System Settings
+ok|com.apple.Passbook|Wallet (com.apple.Passbook): flags=814219270, bit 25 clear, not confirmed off in System Settings
 info|com.apple.MobileSMS|Messages (com.apple.MobileSMS): not registered for notifications yet, nothing to turn off
-info|com.example.newapp|com.example.newapp: third-party app is not in lib/notifications-reviewed.list or lib/notifications-off.list (Allow Notifications is off (flags=1)) — review it in System Settings → Notifications, then add the bundle id to one of those lists
+info|com.example.newapp|com.example.newapp: third-party app is not in lib/notifications-reviewed.list or lib/notifications-off.list (flags=1, bit 25 clear, not confirmed off in System Settings) — review it in System Settings → Notifications, then add the bundle id to one of those lists
 ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=8396822, bit 4 set, bit 3 clear)
 EOF
 )" "$out"
@@ -235,9 +235,29 @@ has "Hammerspoon on with Alerts still passes the style check" \
 # not require that bit either way. Bit 25 clear is enough.
 write_plist "$tmp/messages-critical.plist" '{"apps": [{"bundle-id": "com.apple.MobileSMS", "flags": 67108864}]}'
 messages_critical="$(run "$tmp/messages-critical.plist")"
-has "Messages Critical is off" \
-  "ok|com.apple.MobileSMS|Messages (com.apple.MobileSMS): Allow Notifications is off (flags=67108864)" \
+has "Messages Critical is not called off" \
+  "ok|com.apple.MobileSMS|Messages (com.apple.MobileSMS): flags=67108864, bit 25 clear, not confirmed off in System Settings" \
   "$messages_critical"
+miss "Messages Critical does not say is off" "is off" "$messages_critical"
+# pdone-mac2. 268443662 is badge, sound, and banner, bit 25 clear.
+# System Settings showed Tailscale on. The same flags on Logi Options+ are
+# not called off either. 310386702 is the on-row (bit 25 set).
+write_plist "$tmp/tailscale-flags.plist" '{
+  "apps": [
+    {"bundle-id": "com.apple.iCal", "flags": 268443662},
+    {"bundle-id": "io.tailscale.ipn.macsys", "flags": 268443662},
+    {"bundle-id": "com.logi.cp-dev-mgr", "flags": 268443662},
+    {"bundle-id": "io.tailscale.ipn.macos", "flags": 310386702}
+  ]
+}'
+tail_flags="$(run "$tmp/tailscale-flags.plist")"
+has "Tailscale's flags are not called off" \
+  "ok|com.apple.iCal|Calendar (com.apple.iCal): flags=268443662, bit 25 clear, not confirmed off in System Settings" \
+  "$tail_flags"
+miss "flags 268443662 are not reported as off" "is off" "$tail_flags"
+miss "macsys Tailscale is not a warning" "warn|io.tailscale.ipn.macsys|" "$tail_flags"
+miss "Logi Options+ is not a warning" "warn|com.logi.cp-dev-mgr|" "$tail_flags"
+miss "App Store Tailscale on is not drift" "io.tailscale.ipn.macos" "$tail_flags"
 miss "Messages Critical is not a warning" "warn|com.apple.MobileSMS|" "$messages_critical"
 write_plist "$tmp/messages-on.plist" '{"apps": [{"bundle-id": "com.apple.MobileSMS", "flags": 100663296}]}'
 messages_on="$(run "$tmp/messages-on.plist")"
@@ -258,7 +278,7 @@ printf 'com.google.Chrome # Chrome\n' > "$tmp/reviewed.list"
 write_plist "$tmp/slack-on.plist" "$SLACK_ON"
 out="$(run "$tmp/slack-on.plist" "$tmp/off.list" "$tmp/reviewed.list")"
 eq "bit 25 set is a warning" \
-  "ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=814219286)
+  "ok|com.apple.iCal|Calendar (com.apple.iCal): flags=814219286, bit 25 clear, not confirmed off in System Settings
 warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is on (flags=310386702, bit 25 set) — System Settings → Notifications → turn it off. macconfig-check.sh --fix does not change this
 info|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): not registered for notifications yet, so the Alerts style can't be checked until Hammerspoon has posted a notification" \
   "$out"
@@ -317,7 +337,7 @@ has "the bit alone means allowed" "bit 25 set" "$out"
 
 write_plist "$tmp/zero.plist" '{"apps": [{"bundle-id": "com.apple.iCal", "flags": 0}]}'
 out="$(run "$tmp/zero.plist" "$tmp/off.list" "$tmp/reviewed.list")"
-has "zero flags means off" "ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=0)" "$out"
+has "zero flags are not called off" "ok|com.apple.iCal|Calendar (com.apple.iCal): flags=0, bit 25 clear, not confirmed off in System Settings" "$out"
 
 write_plist "$tmp/binary.plist" "$SLACK_ON" binary
 eq "binary plist matches xml" "$(run "$tmp/slack-on.plist" "$tmp/off.list" "$tmp/reviewed.list")" \

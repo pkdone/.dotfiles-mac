@@ -29,7 +29,14 @@ com.northpolesec.santa # Santa (company tool; never require off)
 com.sentinelone.SentinelAgent # SentinelAgent (company tool; never require off)
 com.tinyspeck.slackmacgap # Slack
 com.spotify.client # Spotify
-io.tailscale.ipn.macsys # Tailscale
+# Tailscale's System Settings row may not be io.tailscale.ipn.macsys.
+# That id read flags=268443662 (bit 25 clear) while Settings showed
+# Tailscale on. The other ids are the App Store app and the two
+# network extensions. None of them are required off.
+io.tailscale.ipn.macsys # Tailscale standalone
+io.tailscale.ipn.macos # Tailscale Mac App Store
+io.tailscale.ipn.macsys.network-extension # Tailscale standalone extension
+io.tailscale.ipn.macos.network-extension # Tailscale App Store extension
 us.zoom.xos # Zoom
 # Reviewed earlier. Not required off, so on is allowed.
 com.logi.cp-dev-mgr # Logi Options+
