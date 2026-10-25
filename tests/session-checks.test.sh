@@ -219,6 +219,10 @@ eq "gh-auth check name" "gh-auth" \
   "$(awk -F'|' '$1 == "gh-auth" { print $6; exit }' "$LIST")"
 eq "1password-cli check name" "op-cli" \
   "$(awk -F'|' '$1 == "1password-cli" { print $6; exit }' "$LIST")"
+eq "1password-cli step names op signin then op whoami" \
+  "Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal" \
+  "$(awk -F'|' '$1 == "1password-cli" { print $3; exit }' "$LIST")"
+has "op check still runs op whoami" "with_timeout 8 op whoami" "$(cat "$LIB")"
 eq "pointer-size check name" "pointer-size" \
   "$(awk -F'|' '$1 == "pointer-size" { print $6; exit }' "$LIST")"
 eq "no app-store manual step" "" \

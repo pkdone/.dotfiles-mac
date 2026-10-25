@@ -52,6 +52,23 @@ doc_rows="$(grep -E '^\| [0-9]+ \|' "$DIR/../docs/manual-steps.md")"
 eq "docs/manual-steps.md table matches lib/manual-steps.list" \
   "$("$MS" list --markdown | grep -E '^\| [0-9]+ \|')" "$doc_rows"
 doc="$(cat "$DIR/../docs/manual-steps.md")"
+ax_where="$(awk -F'|' '$1 == "hammerspoon-ax" || $1 == "karabiner-ax" || $1 == "raycast-ax" { print $1 "|" $4 }' "$LIST")"
+eq "accessibility steps use Privacy & Security → Accessibility" \
+  "$(printf '%s\n' \
+    'hammerspoon-ax|System Settings → Privacy & Security → Accessibility → Hammerspoon' \
+    'karabiner-ax|System Settings → Privacy & Security → Accessibility' \
+    'raycast-ax|System Settings → Privacy & Security → Accessibility → Raycast')" \
+  "$ax_where"
+eq "step paths do not use the newer page name" "" \
+  "$(awk -F'|' '$4 ~ /Device Control/ { print }' "$LIST")"
+eq "newer page name is mentioned once, in the manual-steps doc" 1 \
+  "$(grep -c 'Device Control and Data Access' "$DIR/../docs/manual-steps.md")"
+eq "setup doc uses Accessibility for that page" "" \
+  "$(grep -F 'Device Control' "$DIR/../docs/setup.md" || true)"
+eq "settings doc uses Accessibility for that page" "" \
+  "$(grep -F 'Device Control' "$DIR/../docs/settings.md" || true)"
+eq "README does not use the newer page name" "" \
+  "$(grep -F 'Device Control' "$DIR/../README.md" || true)"
 eq "manual-steps doc does not name Apple Account" "" "$(printf '%s\n' "$doc" | grep -F 'Apple Account' || true)"
 eq "manual-steps doc does not mention iCloud Keychain" "" "$(printf '%s\n' "$doc" | grep -F 'iCloud Keychain' || true)"
 

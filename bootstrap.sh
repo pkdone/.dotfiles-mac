@@ -14,6 +14,10 @@
 # It ends by printing the manual steps (lib/manual-steps.list: permissions, sign-ins,
 # by-hand settings) and, on a terminal, offering scripts/manual-steps.sh open.
 #
+# A step that exits non-zero is recorded. Later steps still run, including that
+# manual-steps list and walk-through. The end of the run names the failed steps
+# and the log path, then exits with an error.
+#
 # Every underlying script is idempotent, so bootstrap.sh is safe to re-run — an
 # already-configured machine is a no-op. The scripts can still be run individually;
 # this is just the guided "do everything" entrypoint.
@@ -46,6 +50,8 @@ Usage: bootstrap.sh [--dry-run] [--yes]
   Run the full machine setup in order: install.sh, shell.sh, hostname.sh,
   macos.sh, dock.sh, handlers.sh, prune-apps.sh — each behind a confirmation prompt. Idempotent and safe
   to re-run. Ends with the checklist of manual steps (scripts/manual-steps.sh).
+  A step that fails is recorded. Later steps still run. At the end the failed
+  steps and the log path are printed, and this script exits with an error.
   --dry-run    Preview every step (each script's own preview mode); change nothing.
   --yes, -y    Don't prompt before each step (sub-scripts may still prompt for sudo).
   -h, --help   Show this help.
@@ -115,22 +121,32 @@ done
 # step NUM "label" SCRIPT PREVIEW_FLAG
 #   PREVIEW_FLAG is the script's own preview option (--dry-run, --list), or "" for a
 #   script with no preview mode (install.sh) — that one is described, not run, in --dry-run.
+#
+# set -e is on, and the log wrapper tees this whole script. A bare non-zero
+# status from a step would exit here, close that tee, and skip every later
+# step including the manual-steps list. Capture the status instead. The
+# wrapper still exits with the status printed at the end of the run.
+# FAILED_STEPS holds "step N script (exit C)" for each failure.
+FAILED_STEPS=()
 step() {
   local num="$1" label="$2" script="$3" preview="$4" precheck="${5:-}"
+  local rc=0
   banner "$num/7  $label"
   if [ -n "$precheck" ]; then "$precheck"; fi
   if [ "$DRYRUN" = 1 ]; then
     if [ -n "$preview" ]; then
-      "$DOTDIR/$script" "$preview"
+      "$DOTDIR/$script" "$preview" || rc=$?
     else
       echo "  (dry-run) would run $script — it has no preview mode and makes changes."
     fi
-    return 0
-  fi
-  if confirm "Run $script now?"; then
-    "$DOTDIR/$script"
+  elif confirm "Run $script now?"; then
+    "$DOTDIR/$script" || rc=$?
   else
     echo "  skipped."
+  fi
+  if [ "$rc" -ne 0 ]; then
+    echo "  $script failed (exit $rc). Continuing with the remaining steps."
+    FAILED_STEPS+=("step $num $script (exit $rc)")
   fi
 }
 
@@ -149,7 +165,13 @@ step 7 "prune-apps.sh — remove unwanted apps"         prune-apps.sh --dry-run
 
 banner "Done"
 if [ "$DRYRUN" = 1 ]; then
-  echo "Dry run only — nothing was changed. Re-run without --dry-run to apply."
+  if [ "${#FAILED_STEPS[@]}" -gt 0 ]; then
+    echo "Dry run only — nothing was changed. Some previews failed. The list is at the end."
+  else
+    echo "Dry run only — nothing was changed. Re-run without --dry-run to apply."
+  fi
+elif [ "${#FAILED_STEPS[@]}" -gt 0 ]; then
+  echo "Setup finished with failed steps. The manual steps are below. The list of failed steps is at the end."
 else
   echo "Setup complete. Run macconfig (or ./macconfig-check.sh) to verify the machine matches the repo."
 fi
@@ -183,4 +205,18 @@ fi
 # (trackpad rows are omitted when activateSettings -u succeeded).
 if [ "$DRYRUN" != 1 ]; then
   dotfiles_print_logout_notice "$C_HDR" "$C_OFF"
+fi
+
+if [ "${#FAILED_STEPS[@]}" -gt 0 ]; then
+  echo ""
+  echo "These steps failed. Setup still ran the rest, including the manual steps."
+  for item in "${FAILED_STEPS[@]}"; do
+    echo "  - $item"
+  done
+  if [ -n "${DOTFILES_LOG_FILE:-}" ]; then
+    echo "Log file: ${DOTFILES_LOG_FILE}"
+  else
+    echo "Log file: ~/Library/Logs/dotfiles/ (this run did not open a log)"
+  fi
+  exit 1
 fi

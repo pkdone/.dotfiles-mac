@@ -13,12 +13,18 @@ Check (the default) is read-only. One line per extension, fields separated by `|
 "Failed to get default application" on stderr, exit 2: that extension is unset.
 
 `--apply` sets each drifted row with `duti -s <bundle-id> .<ext> all`, plus any
-extra UTIs named on the row (`uti:…`). It then polls `duti -x` until the new
-handler shows up or the settle window ends (`FILE_HANDLERS_SETTLE_SECS`,
-default 5 seconds). Launch Services often applies the change after duti
-returns. Point `FILE_HANDLERS_CLOCK` at a file to use that file as the clock:
-each pause adds to the file instead of sleeping, so a busy machine cannot
-use up the window. Leave it unset to use real time.
+extra UTIs named on the row (`uti:…`). It then polls `duti -x` every half
+second until the new handler shows up or the settle window ends
+(`FILE_HANDLERS_SETTLE_SECS`, default 20 seconds). Launch Services often
+applies the change after duti returns, and a just-installed app can take
+longer than a few seconds. If the window ends and the handler is still the
+old one, the set is tried once more. When `duti -s` succeeded but macOS has
+not caught up, the row is a warning ("set .ext to App, but macOS has not
+picked it up yet; run macconfig later to confirm") and the command still
+exits 0. A real `duti -s` error is a failure. Point `FILE_HANDLERS_CLOCK` at
+a file to use that file as the clock: each pause adds to the file instead of
+sleeping, so a busy machine cannot use up the window. Leave it unset to use
+real time.
 `--dry-run` changes nothing. `--only` is a comma-separated list of extensions.
 
 Rows marked `unpinnable` (no declared UTI; duti error -50 on the dynamic UTI)
@@ -57,6 +63,8 @@ BROWSER_UTIS = {"public.html", "public.xhtml"}
 BUILTIN_SCHEMES = {
     "http", "https", "mailto", "ftp", "ftps", "file",
 }
+# How often to re-read duti -x while waiting for Launch Services.
+SETTLE_POLL_SECS = 0.5
 
 
 def emit(status: str, ext: str, message: str) -> None:
@@ -65,11 +73,11 @@ def emit(status: str, ext: str, message: str) -> None:
 
 
 def settle_seconds() -> float:
-    raw = os.environ.get("FILE_HANDLERS_SETTLE_SECS", "5")
+    raw = os.environ.get("FILE_HANDLERS_SETTLE_SECS", "20")
     try:
         return max(0.0, float(raw))
     except ValueError:
-        return 5.0
+        return 20.0
 
 
 def _clock_path() -> str:
@@ -313,7 +321,42 @@ def wait_for_handler(duti: str, ext: str, bundle: str) -> tuple[str, str]:
             return last_have, ""
         if clock_now() >= deadline:
             return last_have, last_err
-        clock_pause(0.25)
+        clock_pause(SETTLE_POLL_SECS)
+
+
+def set_handler(duti: str, bundle: str, ext: str, extra: tuple[str, ...]) -> str:
+    """Run duti -s for the extra UTIs and the extension.
+
+    Returns "" when every call exits 0, otherwise the error text to report.
+    """
+    for uti in extra:
+        rc, _so, se = run_duti([duti, "-s", bundle, uti, "all"])
+        if rc != 0:
+            detail = se.strip().replace("\n", " ") or f"exit {rc}"
+            return f"duti -s {bundle} {uti} all failed: {detail}"
+    rc, _so, se = run_duti([duti, "-s", bundle, f".{ext}", "all"])
+    if rc != 0:
+        detail = se.strip().replace("\n", " ") or f"exit {rc}"
+        return f"duti -s {bundle} .{ext} all failed: {detail}"
+    return ""
+
+
+def classify_set_failure(ext: str, failed: str) -> tuple[str, str]:
+    """A dynamic-UTI -50 is a skip. Any other duti -s error is a failure."""
+    if duti_dynamic_param_error(failed):
+        return "warn", no_declared_type_message(ext)
+    return "fail", failed
+
+
+def handler_matches(have: str, err: str, bundle: str) -> bool:
+    return not err and have == bundle
+
+
+def not_picked_up_message(ext: str, app: str) -> str:
+    return (
+        f"set .{ext} to {app}, but macOS has not picked it up yet;"
+        " run macconfig later to confirm"
+    )
 
 
 def apply_rows(duti: str, rows, tokens: list[str], schemes: set[str], dry_run: bool):
@@ -355,31 +398,23 @@ def apply_rows(duti: str, rows, tokens: list[str], schemes: set[str], dry_run: b
             extra_note = f" plus {', '.join(extra)}" if extra else ""
             out.append(("dry", ext, f".{ext}: {shown} -> {label(app, bundle)}{extra_note}"))
             continue
-        failed = ""
-        for uti in extra:
-            rc, _so, se = run_duti([duti, "-s", bundle, uti, "all"])
-            if rc != 0:
-                detail = se.strip().replace("\n", " ") or f"exit {rc}"
-                failed = f"duti -s {bundle} {uti} all failed: {detail}"
-                break
-        if not failed:
-            rc, _so, se = run_duti([duti, "-s", bundle, f".{ext}", "all"])
-            if rc != 0:
-                detail = se.strip().replace("\n", " ") or f"exit {rc}"
-                failed = f"duti -s {bundle} .{ext} all failed: {detail}"
+        failed = set_handler(duti, bundle, ext, extra)
         if failed:
-            if duti_dynamic_param_error(failed):
-                out.append(("warn", ext, no_declared_type_message(ext)))
-            else:
-                out.append(("fail", ext, failed))
+            status, message = classify_set_failure(ext, failed)
+            out.append((status, ext, message))
             continue
         have_after, err_after = wait_for_handler(duti, ext, bundle)
-        if err_after or have_after != bundle:
-            still = have_after or "unset"
-            detail = err_after or f"duti -x still shows {still}"
-            out.append((
-                "fail", ext,
-                f"duti -s {bundle} .{ext} all did not stick after {settle_seconds():g}s: {detail}"))
+        if not handler_matches(have_after, err_after, bundle):
+            # duti accepted the change and Launch Services has not caught up.
+            # Try once more. A real duti -s error on that retry still fails.
+            failed = set_handler(duti, bundle, ext, extra)
+            if failed:
+                status, message = classify_set_failure(ext, failed)
+                out.append((status, ext, message))
+                continue
+            have_after, err_after = wait_for_handler(duti, ext, bundle)
+        if not handler_matches(have_after, err_after, bundle):
+            out.append(("warn", ext, not_picked_up_message(ext, app)))
             continue
         out.append(("chg", ext, f".{ext}: {shown} -> {label(app, bundle)}"))
     for token in tokens:

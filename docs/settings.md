@@ -41,7 +41,7 @@ What a macOS Software Update does to these hotkeys, and how to reload a LaunchAg
 - Menu bar icon hidden: `global.show_in_menu_bar` and `show_profile_name_in_menu_bar` are both `false` in `karabiner/karabiner.json` (the directory symlink's `~/.config/karabiner/karabiner.json`). `macconfig-check.sh` reads that file with python3 and drifts if either is not false. Restore is git (`karabiner-rules` in `lib/autofix.list`); `--fix` does not rewrite it
 - `macconfig-check.sh` drifts if the dir symlink, Fn-kill rule, Finder Trash rule, or menu bar icon setting is missing
 
-**Manual once (TCC / DriverKit):** Driver Extensions + Device Control and Data Access (Karabiner-Core-Service) — see [Manual steps](manual-steps.md) (`karabiner-driver`, `karabiner-ax`; `macconfig-check.sh` verifies the driver and the Core-Service grant). Allow in the Background is checked too: Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon must be enabled and allowed. Karabiner-Elements Privileged Daemons v2 may stay disabled. The check reads the same background-item records `sfltool dumpbtm` prints, and it does not change them. If those records cannot be read, it tries `sfltool dumpbtm` for a few seconds and, if that does not finish, leaves the step as info. Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
+**Manual once (TCC / DriverKit):** Driver Extensions + Privacy & Security → Accessibility (Karabiner-Core-Service) — see [Manual steps](manual-steps.md) (`karabiner-driver`, `karabiner-ax`; `macconfig-check.sh` verifies the driver and the Core-Service grant). Allow in the Background is checked too: Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon must be enabled and allowed. Karabiner-Elements Privileged Daemons v2 may stay disabled. The check reads the same background-item records `sfltool dumpbtm` prints, and it does not change them. If those records cannot be read, it tries `sfltool dumpbtm` for a few seconds and, if that does not finish, leaves the step as info. Karabiner 16+ does not need Input Monitoring. If DriverKit never enables, work MDM/EDR may be blocking Team ID `G43BCU2T37`.
 
 ## App settings as code (Ghostty, Raycast)
 
@@ -175,7 +175,7 @@ Finder comes to the front with `Shift + Control + Command + F` in Hammerspoon ([
 
 To enable Clipboard History:
 1. Open Raycast and run the **Clipboard History** command once
-2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Device Control and Data Access (Accessibility before macOS 27) → enable Raycast)
+2. Grant Accessibility permission if prompted (System Settings → Privacy & Security → Accessibility → enable Raycast)
 3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard", then in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V`.
    - Avoid `Command + Shift + V` (paste without formatting) and `Command + Option + V` (Finder paste-as-move).
 4. Set **Keep History For** to 1 Day

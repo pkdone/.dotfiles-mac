@@ -23,7 +23,7 @@ The one-paste block for a fresh Mac is at the top of the README. This is the res
 
 ## Bootstrap
 
-On a fresh Mac, paste this block. It installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon), installs the GitHub CLI, signs in when `gh auth status` is not already ok, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste it again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
+On a fresh Mac, paste this block. It installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon), installs the GitHub CLI, signs in when `gh auth status` is not already ok, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste it again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. If one of those steps fails, bootstrap records it and keeps going, including the manual-steps list and the offer to walk through them. At the end it prints the failed steps and the log path, and exits with an error. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
 
 ```bash
 command -v brew >/dev/null 2>&1 || {
@@ -67,7 +67,7 @@ These two are not in those lists. Set them up by hand after bootstrapping:
 - **Cursor Nightly** — download and install it from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. The Brewfile installs only the stable Cursor, so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome app. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
 
-Company apps are the names in `lib/mdm-apps.list`. Install each one from Iru Self Service (Kandji), not Homebrew. Okta Verify is an App Store copy owned by `root:wheel` (id 490179405). `mas` cannot upgrade that copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`, so it stays out of the Brewfile. The 1Password desktop app is company-managed too. Its CLI (`1password-cli` / `op`) stays in the Brewfile. In the app, turn on Settings → Developer → Integrate with 1Password CLI.
+Company apps are the names in `lib/mdm-apps.list`. Install each one from Iru Self Service (Kandji), not Homebrew. Okta Verify is an App Store copy owned by `root:wheel` (id 490179405). `mas` cannot upgrade that copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`, so it stays out of the Brewfile. The 1Password desktop app is company-managed too. Its CLI (`1password-cli` / `op`) stays in the Brewfile. In the app, turn on Settings → Developer → Integrate with 1Password CLI, then run `op signin` and then `op whoami` in a terminal.
 
 1Password for Safari and Okta Extension App are not in the Brewfile and not in `lib/mdm-apps.list`. This Mac can't sign in to the App Store with a personal Apple ID, and it isn't known whether Iru installs those Safari extensions. They are left out so a missing copy does not raise a warning.
 
@@ -123,6 +123,8 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 git pull && ./macconfig-check.sh --fix
 ```
 
+The `duti` command can return before macOS shows the new app, especially when that app was just installed. The script checks every half second for up to 20 seconds, and tries the set once more if it still has not changed. When duti accepted the change and macOS has not caught up, that is a warning and setup keeps going. Run macconfig later to confirm. An actual duti error still fails that extension.
+
 `.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`. `.fish` often has no declared file type, so `duti` fails with error -50 on a dynamic UTI. That is a warning and is skipped, and the check does not call it drift. The row stays, so once some app declares a type for `.fish` the next run sets CotEditor.
 
 ## Unwanted apps (GarageBand, iMovie, Pages)
@@ -154,11 +156,11 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - Does nothing if Slack isn't running. Screen changes are debounced and only real Sidecar on/off transitions act.
 - **Manual toggle / test:** `Shift + Control + Option + Command + S`.
 - Screen names are logged to the Hammerspoon Console (menu-bar icon → Console). Status from a terminal: `hs -c 'loaded.sidecar_slack.status()'`. If your iPad shows up under another name: `hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad', '<name>'}); hs.reload()"`.
-- `macconfig-check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, warns if Hammerspoon isn't running, and (Manual steps section) warns if it lacks Device Control and Data Access. `macos.sh` / `macconfig-check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
+- `macconfig-check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, warns if Hammerspoon isn't running, and (Manual steps section) warns if it lacks Accessibility. `macos.sh` / `macconfig-check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
 
 **`finder_hotkey.lua`** brings Finder to the front from any app. `Shift + Control + Command + F` launches Finder, or focuses it when it is already running (`hs.application.launchOrFocus("Finder")`). If the Raycast backup being imported still has a Finder hotkey on those keys, unbind it in Raycast so it doesn't clash with Hammerspoon (manual step `raycast-finder-unbind` in [Manual steps](manual-steps.md)). The shortcut is also in [Shortcuts](../SHORTCUTS.md#hammerspoon).
 
-**Manual once (TCC):** System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27) → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](manual-steps.md).)
+**Manual once (TCC):** System Settings → Privacy & Security → **Accessibility** → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](manual-steps.md).)
 
 ## Modes (menu-bar switcher)
 
@@ -237,7 +239,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 | Repo-managed symlink missing or pointing elsewhere | `ln -sfn` to the repo file, **only** when the target is a symlink or missing. A real file in the way is never overwritten; that becomes Needs Paul |
 | Hammerspoon not running | `open -g -a Hammerspoon` |
 | Dock "Assign To" pins (`lib/desktop-bindings.list`) | `lib/desktop-bindings.py --apply`: writes `com.apple.spaces` `app-bindings` (bundle id → that Desktop's current Space UUID on the main display; Desktop 1 is `""`; `none` deletes the key), backs the domain up first, and restarts Dock only if a pin changed. A pin whose Desktop doesn't exist is left for you — Spaces are never created |
-| Finder double-click apps (`lib/file-handlers.list`) | `lib/file-handlers.py --apply`: `duti -s <bundle> .<ext> all` for each drifted extension, then polls `duti -x` for a few seconds. Refuses browser types (`html`, `public.html`) and URL schemes |
+| Finder double-click apps (`lib/file-handlers.list`) | `lib/file-handlers.py --apply`: `duti -s <bundle> .<ext> all` for each drifted extension, then checks `duti -x` every half second for up to 20 seconds and tries once more if needed. When duti accepted the change and macOS has not caught up, that is a warning. Refuses browser types (`html`, `public.html`) and URL schemes |
 
 **Needs Paul: reported, never automated**
 
@@ -315,7 +317,7 @@ The checklist, the checks, and the notes under the table are in [Manual steps](m
 
 | Script | What it does, and when to run it |
 |------|------|
-| `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
+| `bootstrap.sh` | Guided full setup: runs `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh` in order, prompting before each. A failed step is recorded and the later steps still run, including the manual-steps list. The end of the run names any failed steps and the log, then exits with an error. `--dry-run` previews all steps, `--yes` skips prompts. Idempotent. |
 | `install.sh` | The dotfiles layer of a fresh-machine setup: preflight, symlinks, rendered login LaunchAgents, Brewfile, `mise` trust, and enabling the pre-push hook; ends with the manual-steps checklist. Does *not* set shell/hostname/defaults/Dock (those are `bootstrap.sh`). Before `brew bundle` it checks the network, the Xcode Command Line Tools, free disk (10 GB), and serious `brew doctor` issues. A failed Brewfile entry is retried once (`brew install`, or `brew install --cask --adopt` for an app) and does not stop the others. Anything still missing is named, with the Homebrew error when there is one and the command to install it, and the summary points at `brewsync`. Writes `~/Library/Logs/dotfiles/install-YYYYMMDD-HHMMSS.log`. Also `mkdir -p ~/Pictures/Screenshots` (the screenshot save location; existing files are not moved). Renders `launchagents/*.plist` into `~/Library/LaunchAgents` (`@HOME@` → `$HOME`) and bootout/bootstraps each job. Safe to re-run — repoints symlinks, backs up any real file in the way of a symlink, and does not reinstall a Brewfile entry that is already there. |
 | `scripts/brew-bundle-install.sh` | Install the Brewfile. `install.sh` and `brewsync` call it. Retries each missing entry once, adopts an existing app when Homebrew supports `--adopt`, and names anything still missing. `--install-homebrew` installs Homebrew when `brew` is not on PATH. |
 | `macconfig-check.sh` | Read-only drift check vs the repo (incl. Brewfile extras, FileVault, pending software updates, Mac health, and the manual-steps checks). `--health-json` prints a JSON summary instead. `--fix` (optionally with `--dry-run`) also applies the SAFE fixes from `lib/autofix.list`, re-checks, and lists Fixed / Needs Paul. Run any time (especially after a macOS update), or use the `macconfig` fish function. Exits non-zero on drift. Login Items + Finder Recents need Full Disk Access for the terminal you run it from (Ghostty); Grok Bot already has this for the weekday 9am check. |
