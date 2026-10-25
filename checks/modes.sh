@@ -22,12 +22,6 @@ check_step_mode_focus_shortcuts() {
     return 0
   fi
   modes_need="$(grep -oE "(on|off)[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/^[a-z]+[[:space:]]*=[[:space:]]*'//; s/'\$//" | sort -u)"
-  # Mode Upcoming Meetings is a Shortcut on this Mac. The mode switcher does
-  # not run it. shortcuts list still has to show it (manual step mode-focus-shortcuts).
-  if ! printf '%s\n' "$modes_need" | grep -Fxq 'Mode Upcoming Meetings'; then
-    modes_need="${modes_need}
-Mode Upcoming Meetings"
-  fi
   if ! command -v shortcuts >/dev/null 2>&1; then
     fixid tooling; warn "shortcuts CLI not found — can't check the Focus Shortcuts"
   elif ! modes_have="$(with_timeout 15 shortcuts list </dev/null 2>/dev/null)"; then
