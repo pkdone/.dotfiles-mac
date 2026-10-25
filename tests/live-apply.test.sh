@@ -231,7 +231,10 @@ Resolutions for rotation 0:
   mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
 EOF
 
-BASE_PATH="${PATH:-/usr/bin:/bin}"
+# Stub directory first, then only /usr/bin and /bin. The host PATH is not
+# used: a Homebrew displayplacer there would run when the stub is hidden,
+# and the not-More-Space fixture would change this machine's displays.
+BASE_PATH="/usr/bin:/bin"
 DARK='NSGlobalDomain|AppleInterfaceStyle'
 TRACK='com.apple.AppleMultitouchTrackpad|TrackpadCornerSecondaryClick'
 SPACES='com.apple.spaces|spans-displays'
@@ -388,8 +391,11 @@ eq "a failing displayplacer still exits 0" 0 "$rc"
 has "a failing displayplacer warns" "displayplacer failed" "$out"
 DISPLAYPLACER_RC=0
 
-# Hide the stub. command -v must not find it.
+# Hide the stub. PATH has no Homebrew bin, so command -v must miss it
+# instead of running a displayplacer already installed on this Mac.
 mv "$bin/displayplacer" "$bin/displayplacer.off"
+found="$(PATH="$bin:$BASE_PATH" command -v displayplacer || true)"
+eq "hiding the stub leaves no displayplacer on PATH" "" "$found"
 out="$(run_macos --only @display-more-space)"
 rc=$?
 eq "a missing displayplacer still exits 0" 0 "$rc"
