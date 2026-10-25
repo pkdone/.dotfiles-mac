@@ -43,9 +43,9 @@ section="$(awk '
 
 mas_apps="$(sed -nE 's/^mas "([^"]+)".*/\1/p' "$DIR/Brewfile" | join_and)"
 eq "Brewfile has no Mac App Store apps" "" "$mas_apps"
-has "note names Homebrew" "Homebrew, via the Brewfile, is for most apps and command-line tools." "$section"
-has "note names Fleet Self service" "Fleet Self service is for company-managed apps that can't be installed unattended; setup prompts you to install them." "$section"
-has "note says nothing comes from the Mac App Store" "Nothing is installed from the Mac App Store now" "$section"
+has "note names Homebrew" "Homebrew, via the Brewfile, for most apps and command-line tools." "$section"
+has "note names Fleet Self service" "Fleet Self service, for company-managed apps that can't be installed unattended. Setup prompts you to install them." "$section"
+has "note says nothing comes from the Mac App Store" "Nothing is installed from it now" "$section"
 has "note explains the Apple ID limit" "can't sign in with a personal Apple ID" "$section"
 miss "note is not a dedicated section" "## Where apps come from" "$section"
 miss "note does not list command-line tools" "**Command-line tools:**" "$section"
