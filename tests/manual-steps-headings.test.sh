@@ -105,20 +105,20 @@ key_prompt() { printf '      [Enter] open%s, s skip, q quit: ' "$1"; }
   printf '%s\n' "Walking through the manual steps. Enter = done/next, s = skip, q = quit."
   printf '\n%s\n' "Mixed"
   printf '%s\n' "3. Missing app" \
-    "      Not set yet: not found at /no/such/manual-steps-app" \
+    "      NOTSET: Not found at /no/such/manual-steps-app" \
     "      On disk"
   key_prompt ""
   printf '\n\n%s\n' "Todo"
   printf '%s\n' "4. Do the first thing" \
-    "      Can't check this automatically. If it's already set, press s." \
+    "      MANUAL: Can't check this automatically. If it's already set, press s." \
     "      System Settings pane"
   key_prompt ""
   printf '\n%s\n' "5. Do the second thing"
   printf '%s\n' \
-    "      Can't check this automatically. If it's already set, press s." \
+    "      MANUAL: Can't check this automatically. If it's already set, press s." \
     "      Nowhere in particular"
   key_prompt " (nothing to open)"
-  printf '\n%s\n' "Done. Run scripts/manual-steps.sh check (or ./macconfig-check.sh) to confirm."
+  printf '\n%s\n' "Done. Run manualsteps check (or macconfig) to confirm."
 } > "$tmp/expect-open.txt"
 
 {
@@ -135,17 +135,17 @@ key_prompt() { printf '      [Enter] open%s, s skip, q quit: ' "$1"; }
   key_prompt " (nothing to open)"
   printf '\n%s\n' "3. Missing app"
   printf '%s\n' \
-    "      Not set yet: not found at /no/such/manual-steps-app" \
+    "      NOTSET: Not found at /no/such/manual-steps-app" \
     "      On disk"
   key_prompt ""
   printf '\n\n%s\n' "Todo"
   printf '%s\n' "4. Do the first thing" \
-    "      Can't check this automatically. If it's already set, press s." \
+    "      MANUAL: Can't check this automatically. If it's already set, press s." \
     "      System Settings pane"
   key_prompt ""
   printf '\n%s\n' "5. Do the second thing"
   printf '%s\n' \
-    "      Can't check this automatically. If it's already set, press s." \
+    "      MANUAL: Can't check this automatically. If it's already set, press s." \
     "      Nowhere in particular"
   key_prompt " (nothing to open)"
   printf '\n\n%s\n' "Covered"
@@ -153,20 +153,20 @@ key_prompt() { printf '      [Enter] open%s, s skip, q quit: ' "$1"; }
     "      Already done, shown because of --all" \
     "      Own section"
   key_prompt " (nothing to open)"
-  printf '\n%s\n' "Done. Run scripts/manual-steps.sh check (or ./macconfig-check.sh) to confirm."
+  printf '\n%s\n' "Done. Run manualsteps check (or macconfig) to confirm."
 } > "$tmp/expect-all.txt"
 
 {
   printf '%s\n' "Walking through the manual steps. Enter = done/next, s = skip, q = quit."
   printf '\n%s\n' "Mixed"
   printf '%s\n' "3. Missing app" \
-    "      Not set yet: not found at /no/such/manual-steps-app" \
+    "      NOTSET: Not found at /no/such/manual-steps-app" \
     "      On disk"
   key_prompt ""
   printf '      Press Enter when done: '
   printf '\n\n%s\n' "Todo"
   printf '%s\n' "4. Do the first thing" \
-    "      Can't check this automatically. If it's already set, press s." \
+    "      MANUAL: Can't check this automatically. If it's already set, press s." \
     "      System Settings pane"
   key_prompt ""
   printf '%s\n' "Stopped at step 4."
@@ -250,7 +250,7 @@ eq "open with nothing left says so" \
   "Walking through the manual steps. Enter = done/next, s = skip, q = quit.
 Nothing to do: every checkable step already passes (use --all to see them all).
 
-Done. Run scripts/manual-steps.sh check (or ./macconfig-check.sh) to confirm." \
+Done. Run manualsteps check (or macconfig) to confirm." \
   "$none_out"
 
 # Without the hook, a pipe is not a terminal and the walk-through does not run.
@@ -267,9 +267,9 @@ miss "no tty does not print a heading" "Mixed" "$notty_out"
 pending_out="$(MANUAL_STEPS_LIST="$tmp/steps.list" "$MS" pending 2>"$tmp/pending.err")"
 eq "pending exits 0" 0 "$?"
 eq "pending stderr stays empty" "" "$(cat "$tmp/pending.err")"
-has "pending shows a step that is not set" "Not set yet: not found at /no/such/manual-steps-app" "$pending_out"
+has "pending shows a step that is not set" "NOTSET: Not found at /no/such/manual-steps-app" "$pending_out"
 has "pending shows a step that can't be checked" \
-  "Can't check this automatically. If it's already set, press s." "$pending_out"
+  "MANUAL: Can't check this automatically. If it's already set, press s." "$pending_out"
 has "pending says how many were already done" "Skipped 3 already done." "$pending_out"
 miss "pending hides a step that already passes" "Present app" "$pending_out"
 miss "pending hides a covered step" "Already covered elsewhere" "$pending_out"

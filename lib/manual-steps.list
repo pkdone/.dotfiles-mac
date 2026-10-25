@@ -169,8 +169,8 @@ user-picture|Display, keyboard & desktop|Set your user picture to the Dog. A dif
 # and reading that file is permission denied. RingLightHelper's group
 # (group.com.apple.ringlight) holds no preferences. The check only tries to
 # read. It never writes. Because the state cannot be read, the step is always
-# shown, with the why-line "can't be checked, so always shown". macconfig
-# lists it as check by hand. open launches Photo Booth so the camera is on
+# shown. The why-line is MANUAL: Can't be checked, so always shown. macconfig
+# uses that same line. open launches Photo Booth so the camera is on
 # and Video Effects appears in Control Centre.
 edge-light|Video calls|Edge Light Off|Start a video call (or open Photo Booth / FaceTime) so the camera is on → click Control Centre in the menu bar → Video Effects → click Edge Light so it is Off|app:Photo Booth|edge-light
 
@@ -188,7 +188,7 @@ spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Boo
 
 # ---- Login Items & Finder ----
 login-items-off|Login Items & Finder|Keep ChatGPT Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:login-items
-finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents stays hidden, and, when the sidebar files name the row, Shared is the first visible row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar|app:Finder|@macconfig:finder
+finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents and Shared stay hidden, and, when the sidebar files name the row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. No tags are shown in the sidebar. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar. Tags: Finder → Settings → Tags → untick every box under Show these tags in the sidebar (Red, Orange, Yellow, Green, Blue, Purple, Grey, Work, Home, Important)|app:Finder|@macconfig:finder
 
 # ---- App settings ----
 # Raycast is set by hand: the launcher hotkey, then Clipboard History.

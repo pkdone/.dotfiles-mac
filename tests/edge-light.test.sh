@@ -3,8 +3,8 @@
 # Edge Light is Off. The on/off state cannot be read: the protected Control
 # Centre video-effects file is permission denied, and RingLightHelper's group
 # holds no preferences. The check never writes. The step is always shown, with
-# the why-line "can't be checked, so always shown". macconfig lists it as
-# check by hand, the same way manualsteps does.
+# the why-line "MANUAL: Can't be checked, so always shown". macconfig lists
+# it with that same MANUAL: line.
 # Run: ./tests/edge-light.test.sh
 #
 set -uo pipefail
@@ -33,6 +33,7 @@ miss() {
 
 CLICK="Start a video call (or open Photo Booth / FaceTime) so the camera is on → click Control Centre in the menu bar → Video Effects → click Edge Light so it is Off"
 WHY="can't be checked, so always shown"
+SHOWN="MANUAL: Can't be checked, so always shown. If it's already set, press s."
 AV_NAME="group.com.apple.secure-control-center-preferences.av.plist"
 
 tmp="$(mktemp -d)"
@@ -134,7 +135,7 @@ open_out="$(printf 's\n' | HOME="$home" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
   "$MS" open 2>"$tmp/open.err")"
 has "open shows Edge Light" "Edge Light Off" "$open_out"
 has "open shows the click-by-click text" "$CLICK" "$open_out"
-has "open says it can't be checked, so always shown" "$WHY" "$open_out"
+has "open says it can't be checked, so always shown" "$SHOWN" "$open_out"
 miss "open does not skip Edge Light as already done" "Already done, shown because of --all" "$open_out"
 miss "open hides the step that already passes" "Present app" "$open_out"
 
@@ -142,15 +143,17 @@ pending_out="$(HOME="$home" NO_COLOR=1 EDGE_LIGHT_AV_PLIST="$tmp/denied.plist" \
   EDGE_LIGHT_RINGLIGHT_DIR="$tmp/ring-empty" MANUAL_STEPS_LIST="$tmp/steps.list" \
   "$MS" pending 2>"$tmp/pending.err")"
 has "pending shows Edge Light" "Edge Light Off" "$pending_out"
-has "pending uses the same why-line" "$WHY" "$pending_out"
+has "pending uses the same why-line" "$SHOWN" "$pending_out"
 miss "pending hides the step that already passes" "Present app" "$pending_out"
 
 # macconfig's Manual steps section prints check by hand for that same result.
 mac_out="$(HOME="$home" NO_COLOR=1 EDGE_LIGHT_AV_PLIST="$tmp/denied.plist" \
   EDGE_LIGHT_RINGLIGHT_DIR="$tmp/ring-empty" MANUAL_STEPS_LIST="$tmp/steps.list" \
   "$DIR/macconfig-check.sh" --only manual --no-color 2>"$tmp/mac.err")" || true
-has "macconfig lists Edge Light as check by hand" \
-  "Edge Light Off — check by hand ($WHY)" "$mac_out"
+has "macconfig lists Edge Light as MANUAL" \
+  "Edge Light Off — $SHOWN" "$mac_out"
+miss "macconfig does not say check by hand twice" "check by hand" \
+  "$(printf '%s\n' "$mac_out" | grep -F 'Edge Light' || true)"
 miss "macconfig does not call Edge Light drift" "DRIFT" "$(printf '%s\n' "$mac_out" | grep -F 'Edge Light' || true)"
 
 # Repo wiring.
@@ -183,7 +186,7 @@ has "manual-steps doc says permission denied" "permission denied" "$doc"
 has "manual-steps doc names the RingLightHelper group" "group.com.apple.ringlight" "$doc"
 has "manual-steps doc says nothing writes" "Nothing writes either place." "$doc"
 has "manual-steps doc says the step is always shown" "always shown" "$doc"
-has "manual-steps doc says macconfig lists it as check by hand" "lists it as check by hand" "$doc"
+has "manual-steps doc says macconfig lists it as MANUAL" "lists it as \`MANUAL:\`" "$doc"
 has "table includes the click-by-click text" "$CLICK" "$doc"
 has "table row is by hand" "| Edge Light Off | $CLICK | by hand |" "$doc"
 

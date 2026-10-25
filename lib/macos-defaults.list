@@ -32,6 +32,10 @@ com.apple.dock|wvous-br-modifier|int|0|Dock|Dock|Hot Corner bottom-right modifie
 # restart=Dock, same as the com.apple.dock rows above (killall Dock only if a value changed).
 com.apple.dock|minimize-to-application|bool|true|Dock|Dock|Minimize windows into application icon|`true` (On)
 com.apple.dock|no-bouncing|bool|true|Dock|Dock|Animate opening applications|`true` (Off — no bounce)
+# Hold a window at the screen edge for 5 seconds before it moves to the next
+# desktop. Dragging to the edge still snaps the window into a tile straight
+# away. Checked on pdone-mac2 (Tahoe). restart=Dock, same as the rows above.
+com.apple.dock|workspaces-edge-delay|float|5|Dock|Dock|Delay before a window moves to the next desktop|`5` (seconds)
 com.apple.spaces|spans-displays|bool|false|logout|Dock|Displays have separate Spaces|`false` (separate Spaces On)
 # Switching to an app moves to a Space that already has its windows.
 NSGlobalDomain|AppleSpacesSwitchOnActivate|bool|true|logout|Dock|Switch to a Space with open windows|`true` (On)
@@ -45,9 +49,12 @@ com.apple.finder|ShowStatusBar|bool|true|Finder|Finder|Show Status Bar|`true` (O
 # Apple's own spelling of this key drops the e in Section. 0 / false keeps the
 # Tags group in the sidebar closed. Recents hidden is the sidebar Recents
 # check. Shared, AirDrop, iCloud Drive, and the Locations rows are checked
-# when the sidebar files name them (lib/finder-sidebar-rows.list). A row the
-# files do not name stays by hand. ShowRecentTags and
-# SidebarShowingiCloudDesktop are not pinned: their values were not confirmed.
+# when the sidebar files name them (lib/finder-sidebar-rows.list). Shared
+# stays hidden. A row the files do not name stays by hand. Tags in the
+# sidebar are FavoriteTagNames, read by lib/finder-sidebar-tags.py and not
+# written here (the list type is an array). ShowRecentTags is read only when
+# the key is present. SidebarShowingiCloudDesktop is not pinned: its value
+# was not confirmed.
 com.apple.finder|SidebarTagsSctionDisclosedState|bool|false|Finder|Finder|Tags group in the sidebar|`false` (closed)
 # Finder and Trash tidy. Finder restart so open windows pick the prefs up.
 # DSDontWriteNetworkStores: the domain may not exist yet; defaults write creates it.

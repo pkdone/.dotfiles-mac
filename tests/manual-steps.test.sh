@@ -366,15 +366,15 @@ cc_porc="$(NO_COLOR=1 MANUAL_STEPS_LIST="$ccdir/cc.list" "$MS" check --porcelain
 eq "control centre porcelain is by hand" "hand" "$(printf '%s\n' "$cc_porc" | cut -d'|' -f1)"
 eq "control centre porcelain has no detail" "" "$(printf '%s\n' "$cc_porc" | awk -F'|' '{ print $5 }')"
 cc_pending="$(NO_COLOR=1 MANUAL_STEPS_LIST="$ccdir/cc.list" "$MS" pending 2>"$ccdir/pending.err")"
-has "control centre pending says it can't be checked" "Can't check this automatically" "$cc_pending"
+has "control centre pending says it can't be checked" "MANUAL: Can't check this automatically" "$cc_pending"
 cc_open="$(printf 's\n' | PATH="$ccdir/bin:$PATH" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
   MANUAL_STEPS_LIST="$ccdir/cc.list" "$MS" open 2>"$ccdir/open.err")"
-has "control centre open says it can't be checked" "Can't check this automatically" "$cc_open"
+has "control centre open says it can't be checked" "MANUAL: Can't check this automatically" "$cc_open"
 has "control centre open has nothing to open" "(nothing to open)" "$cc_open"
 rm -rf "$ccdir"
 
 # WhatsApp Web: done when the Safari web app exists and its bundle id has the
-# prefix. Missing is "Not set yet", not "Can't check this automatically".
+# prefix. Missing is "NOTSET:", not "Can't check this automatically".
 # Linking the phone is named in the step because it cannot be read.
 wa_where="$(awk -F'|' '$1=="whatsapp-web" { print $4; exit }' "$LIST")"
 has "whatsapp step opens Safari to the site" "https://web.whatsapp.com" "$wa_where"
@@ -424,7 +424,7 @@ wa_check() {
   HOME="$wa_dir/home" PATH="$wa_bin:$PATH" MANUAL_STEPS_LIST="$wa_dir/steps.list" \
     "$MS" check --porcelain
 }
-CANT="Can't check this automatically"
+CANT="MANUAL: Can't check this automatically"
 write_webapp ""
 wa_out="$(wa_check)"; wa_rc=$?
 eq "a missing WhatsApp Web warns" warn "$(printf '%s\n' "$wa_out" | cut -d'|' -f1)"
@@ -432,8 +432,8 @@ eq "a missing WhatsApp Web exits 1" 1 "$wa_rc"
 has "a missing WhatsApp Web names the path" "not found at ~/Applications/WhatsApp Web.app" "$wa_out"
 wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
   MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
-has "open says WhatsApp Web is not set yet" "Not set yet:" "$wa_open"
-has "open names the missing app" "not found at ~/Applications/WhatsApp Web.app" "$wa_open"
+has "open says WhatsApp Web is not set yet" "NOTSET:" "$wa_open"
+has "open names the missing app" "Not found at ~/Applications/WhatsApp Web.app" "$wa_open"
 miss "a missing WhatsApp Web is not labelled can't-check" "$CANT" "$wa_open"
 
 write_webapp "com.apple.Safari.WebApp.11111111-2222-3333-4444-555555555555"
@@ -452,7 +452,7 @@ eq "a non-Safari bundle id warns" warn "$(printf '%s\n' "$wa_out" | cut -d'|' -f
 has "a non-Safari bundle id names the prefix" "does not start with com.apple.Safari.WebApp." "$wa_out"
 wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
   MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
-has "open says a wrong bundle id is not set yet" "Not set yet:" "$wa_open"
+has "open says a wrong bundle id is not set yet" "NOTSET:" "$wa_open"
 miss "a wrong bundle id is not labelled can't-check" "$CANT" "$wa_open"
 
 # Chrome is the default https handler. Add to Dock exists only in Safari,

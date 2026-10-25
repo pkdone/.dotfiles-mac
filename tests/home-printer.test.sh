@@ -110,7 +110,7 @@ open_out="$(printf 's\n' | LPSTAT_P='printer Other is idle' LPSTAT_V='' \
   PATH="$bin:$PATH" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/steps.list" \
   "$MS" open)"
 has "open shows the step when the printer is missing" "Add the home printer HP ENVY 6000 series" "$open_out"
-has "open says not set yet" "Not set yet:" "$open_out"
+has "open says not set yet" "NOTSET:" "$open_out"
 has "open says it can only be added at home" "home network" "$open_out"
 has "open names Printers and Scanners" "Printers & Scanners" "$open_out"
 

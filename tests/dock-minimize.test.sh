@@ -47,6 +47,10 @@ eq "no-bouncing restarts Dock" Dock "$(field com.apple.dock no-bouncing 5)"
 eq "minimize-to-application area is Dock" Dock "$(field com.apple.dock minimize-to-application 6)"
 eq "no-bouncing area is Dock" Dock "$(field com.apple.dock no-bouncing 6)"
 
+eq "workspaces-edge-delay is 5 seconds" 'com.apple.dock|workspaces-edge-delay|float|5|Dock|Dock|Delay before a window moves to the next desktop|' \
+  "$(awk -F'|' '$1=="com.apple.dock" && $2=="workspaces-edge-delay" { print $1"|"$2"|"$3"|"$4"|"$5"|"$6"|"$7"|"; exit }' "$LIST")"
+eq "workspaces-edge-delay restarts Dock" Dock "$(field com.apple.dock workspaces-edge-delay 5)"
+has "settings names the desktop switch delay" "workspaces-edge-delay" "$(cat "$DIR/docs/settings.md")"
 eq "dock tilesize stays exactly 28" 'com.apple.dock|tilesize|float|28|Dock|Dock|Icon size|' \
   "$(awk -F'|' '$1=="com.apple.dock" && $2=="tilesize" { print $1"|"$2"|"$3"|"$4"|"$5"|"$6"|"$7"|"; exit }' "$LIST")"
 eq "autohide stays out of macos-defaults" "" \
@@ -77,6 +81,10 @@ has "list prints minimize into application icon" \
 # shellcheck disable=SC2016  # needle is Markdown from macos.sh --list, compared literally
 has "list prints no bouncing" \
   '| Dock | Animate opening applications | `com.apple.dock no-bouncing` | `true` (Off — no bounce) |' \
+  "$list_out"
+# shellcheck disable=SC2016  # needle is Markdown from macos.sh --list, compared literally
+has "list prints the desktop switch delay" \
+  '| Dock | Delay before a window moves to the next desktop | `com.apple.dock workspaces-edge-delay` | `5` (seconds) |' \
   "$list_out"
 # shellcheck disable=SC2016  # needle is Markdown from macos.sh --list, compared literally
 has "list still prints tilesize 28" \

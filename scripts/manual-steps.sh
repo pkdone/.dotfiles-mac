@@ -136,6 +136,8 @@ res() { R_STATUS="$1"; R_DETAIL="$2"; }
 . "$DOTDIR/lib/fleet-apps.sh"
 # shellcheck source=../lib/covered-steps.sh disable=SC1091
 . "$DOTDIR/lib/covered-steps.sh"
+# shellcheck source=../lib/why-shown.sh disable=SC1091
+. "$DOTDIR/lib/why-shown.sh"
 
 # Allowed in the system TCC database? Reading it needs Full Disk Access for whatever
 # runs this (Ghostty / Grok Bot); without it, fall back to check by hand.
@@ -445,8 +447,8 @@ run_check() {  # spec [id]
         ok) res ok "$detail" ;;
         warn) res warn "$detail" ;;
         *)
-          # Keep the check's own words. An empty detail would be printed as
-          # "Can't check this automatically", which is only for a step with no check.
+          # Keep the check's own words. An empty detail is the MANUAL line
+          # for a step with no check. A check always leaves its own words.
           if [ -n "$detail" ]; then
             res hand "$detail"
           else
@@ -509,33 +511,14 @@ cmd_list() {
     printf '      %s%s%s\n' "$C_DIM" "${S_WHERE[$i]}" "$C_OFF"
     i=$((i + 1))
   done
-  printf '\nscripts/manual-steps.sh check   shows which are already done (also part of ./macconfig-check.sh)\n'
-  printf 'scripts/manual-steps.sh open    walks through the rest, opening each settings page\n'
+  printf '\nmanualsteps check   shows which are already done (also part of macconfig)\n'
+  printf 'manualsteps open    walks through the rest, opening each settings page\n'
 }
 
 # Why this step is on the walk-through. Uses the check just run (R_STATUS / R_DETAIL).
+# NOTSET: the check says it is not set. MANUAL: it can't be checked.
 open_why() {
-  case "$R_STATUS" in
-    warn)
-      if [ -n "$R_DETAIL" ]; then
-        printf '%s' "Not set yet: $R_DETAIL"
-      else
-        printf '%s' "Not set yet"
-      fi
-      ;;
-    ok|covered)
-      printf '%s' "Already done, shown because of --all"
-      ;;
-    *)
-      # Empty detail is a step with no check. A check always leaves its own
-      # words here, including Edge Light and a step that is only partly covered.
-      if [ -n "$R_DETAIL" ]; then
-        printf '%s' "$R_DETAIL"
-      else
-        printf '%s' "Can't check this automatically. If it's already set, press s."
-      fi
-      ;;
-  esac
+  why_shown_line "$R_STATUS" "$R_DETAIL"
 }
 
 # Steps that are not set, or that can't be checked. Same why-line as open.
@@ -648,7 +631,7 @@ cmd_open() {
   done
   if [ "$todo" = 0 ]; then echo "Nothing to do: every checkable step already passes (use --all to see them all)."; fi
   echo ""
-  echo "Done. Run scripts/manual-steps.sh check (or ./macconfig-check.sh) to confirm."
+  echo "Done. Run manualsteps check (or macconfig) to confirm."
 }
 
 cmd_check() {
