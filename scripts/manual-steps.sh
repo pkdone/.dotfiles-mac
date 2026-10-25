@@ -25,7 +25,7 @@ set -uo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
 TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"
-NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer tailscale-signin "
+NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer tailscale-signin edge-light "
 
 usage() {
   cat <<'USAGE'
@@ -303,6 +303,31 @@ check_home_printer() {
   res warn "HP ENVY 6000 series is not in the printer list. It can only be added on the home network"
 }
 
+# edge-light — lib/edge-light.py only tries to read. The on/off state on this
+# Mac is in the protected Control Centre video-effects plist (permission
+# denied). RingLightHelper's group holds no preferences. Nothing is written.
+# The result is always check by hand, so open and pending always show the step.
+check_edge_light() {
+  local py="" p line status detail
+  for p in "$(command -v python3 2>/dev/null)" /opt/homebrew/bin/python3 /usr/bin/python3; do
+    if [ -n "$p" ] && [ -x "$p" ]; then py="$p"; break; fi
+  done
+  if [ -z "$py" ] || [ ! -r "$DOTDIR/lib/edge-light.py" ]; then
+    res hand "can't be checked, so always shown"
+    return
+  fi
+  line="$(with_timeout 15 "$py" "$DOTDIR/lib/edge-light.py" </dev/null 2>/dev/null || true)"
+  status="${line%%|*}"
+  detail="${line#*|}"
+  if [ -z "$detail" ] || [ "$detail" = "$line" ]; then
+    detail="can't be checked, so always shown"
+  fi
+  case "$status" in
+    hand) res hand "$detail" ;;
+    *) res hand "can't be checked, so always shown" ;;
+  esac
+}
+
 # remove-widgets — lib/desktop-widgets.py reads widgets.instances in the
 # notificationcenterui plist. It does not write that file and does not kill
 # NotificationCenter or chronod. ok when no widget is placed, so `open` skips
@@ -385,6 +410,7 @@ run_check() {  # spec [id]
     gh-auth)          check_gh_auth ;;
     spotlight-results) check_spotlight_results ;;
     remove-widgets)   check_remove_widgets ;;
+    edge-light)       check_edge_light ;;
     home-printer)     check_home_printer ;;
     tailscale-signin) check_tailscale_signin ;;
     *)                res hand "unknown check '$spec'" ;;
@@ -402,7 +428,8 @@ cmd_list() {
     i=0
     while [ "$i" -lt "$N" ]; do
       case "${S_CHECK[$i]}" in
-        '') auto="by hand" ;;
+        # edge-light runs, but it cannot read the setting, so the row stays by hand.
+        ''|edge-light) auto="by hand" ;;
         '@macconfig-check.sh'|@macconfig:*) auto="macconfig-check.sh" ;;
         *) auto="auto" ;;
       esac
@@ -440,7 +467,13 @@ open_why() {
       printf '%s' "Already done, shown because of --all"
       ;;
     *)
-      printf '%s' "Can't check this automatically. If it's already set, press s."
+      # Edge Light (and any check that reports this exact detail) cannot be
+      # read at all, so the walk-through always includes it.
+      if [ "$R_DETAIL" = "can't be checked, so always shown" ]; then
+        printf '%s' "can't be checked, so always shown"
+      else
+        printf '%s' "Can't check this automatically. If it's already set, press s."
+      fi
       ;;
   esac
 }

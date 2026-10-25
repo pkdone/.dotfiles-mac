@@ -34,6 +34,7 @@
 #            @macconfig-check.sh            legacy: report covered, do not run a section
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
 #            | spotlight-results | remove-widgets | home-printer | tailscale-signin
+#            | edge-light
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
@@ -54,6 +55,13 @@
 #                                           tailscale-signin reads `status --json`
 #                                           and prints only the state and the
 #                                           login name. It never prints keys.
+#                                           edge-light only tries to read the
+#                                           protected Control Centre video-effects
+#                                           file and RingLightHelper's group.
+#                                           The file is permission denied and the
+#                                           group holds no preferences, so the
+#                                           result is check by hand. open always
+#                                           shows the step. Nothing is written.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Company apps (MDM) ----
@@ -146,6 +154,18 @@ input-british|Display, keyboard & desktop|Keyboard input source: British (maccon
 # Click wallpaper to reveal desktop stays out.
 remove-widgets|Display, keyboard & desktop|Remove every widget from the desktop: Control-click (or right-click) each widget → Remove Widget.|Desktop (reveal the desktop if the widgets are hidden)||remove-widgets
 user-picture|Display, keyboard & desktop|Set your user picture to the Dog (macconfig checks this). A different picture is a warning. macconfig does not change it|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig:display
+
+# ---- Video calls ----
+# Edge Light lights the edges of the screen like a ring light while the camera
+# is on. Paul wants it Off. On pdone-mac2 the on/off state is in
+# ~/Library/Group Containers/group.com.apple.secure-control-center-preferences/Library/Preferences/group.com.apple.secure-control-center-preferences.av.plist
+# and reading that file is permission denied. RingLightHelper's group
+# (group.com.apple.ringlight) holds no preferences. The check only tries to
+# read. It never writes. Because the state cannot be read, the step is always
+# shown, with the why-line "can't be checked, so always shown". macconfig
+# lists it as check by hand. open launches Photo Booth so the camera is on
+# and Video Effects appears in Control Centre.
+edge-light|Video calls|Edge Light Off|Start a video call (or open Photo Booth / FaceTime) so the camera is on → click Control Centre in the menu bar → Video Effects → click Edge Light so it is Off|app:Photo Booth|edge-light
 
 # ---- Printer ----
 # Read-only: lpstat -p, or lpstat -v if -p does not name the queue.

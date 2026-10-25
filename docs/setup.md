@@ -60,7 +60,7 @@ A package installer that needs an admin password (Karabiner-Elements is one) ask
 
 > _Manual — no script installs these; do them by hand._
 
-Homebrew formulae and casks come from the Brewfile. No apps currently come from the Mac App Store, because this Mac can't sign in with a personal Apple ID. Company apps come from Fleet Self service. The exact lists are in [Where apps come from](../README.md#where-apps-come-from).
+Homebrew formulae and casks come from the Brewfile. No apps currently come from the Mac App Store, because this Mac can't sign in with a personal Apple ID. Company apps come from Fleet Self service. The README names these three sources without listing each app.
 
 These two are not in those lists. Set them up by hand after bootstrapping:
 
