@@ -67,7 +67,7 @@
 # ---- Company apps (MDM) ----
 mdm-apps|Company apps (MDM)|Install the company apps from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not Homebrew. The names are in lib/mdm-apps.list|Fleet Desktop menu bar → My device → Self service|app:Fleet Desktop|@macconfig:mdm
 1password-signin|Company apps (MDM)|Sign in to 1Password and unlock it|1Password app|app:1Password|
-1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal|1Password → Settings → Developer|app:1Password|op-cli
+1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin once in a terminal|1Password → Settings → Developer|app:1Password|op-cli
 
 # ---- Sign-ins ----
 gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth

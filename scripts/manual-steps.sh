@@ -128,7 +128,7 @@ check_spec_ok() {
 R_STATUS=""; R_DETAIL=""
 res() { R_STATUS="$1"; R_DETAIL="$2"; }
 
-# British input, pointer size, gh auth, op whoami, and Spotlight.
+# British input, pointer size, gh auth, 1Password CLI, and Spotlight.
 # macconfig-check.sh prints this script's result and does not run these again.
 # shellcheck source=../lib/session-checks.sh disable=SC1091
 . "$DOTDIR/lib/session-checks.sh"
