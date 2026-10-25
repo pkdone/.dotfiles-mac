@@ -8,6 +8,8 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 
 This file is generated from `lib/manual-steps.list`. Edit the list, then run `scripts/render-manual-steps-doc.sh`.
 
+Hammerspoon, Karabiner-Elements, and Raycast are under System Settings → Privacy & Security → Accessibility (called Device Control and Data Access on newer macOS).
+
 `manualsteps` is the fish function for `scripts/manual-steps.sh`, installed with the others in `fish/functions/`. With no arguments it runs `check`. Any arguments pass through (`manualsteps list`, `manualsteps open`, `manualsteps open --all`, `manualsteps check`, `manualsteps --help`), and the exit status is the script's.
 
 ```bash
@@ -31,11 +33,11 @@ British input (`com.apple.HIToolbox` `AppleSelectedInputSources`, the keyboard l
 | 4 | Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal | 1Password → Settings → Developer | auto |
 | 5 | Install Cursor Nightly (separate app, next to the stable Cursor) | cursor.com/nightlydownload | auto |
 | 6 | Install YouTube Music as a Chrome app | Chrome → music.youtube.com → ⋮ → Cast, save, and share → Install page as app | auto |
-| 7 | Allow Hammerspoon (Sidecar → Slack), then restart it and choose Reload Config | System Settings → Privacy & Security → Device Control and Data Access → Hammerspoon | auto |
+| 7 | Allow Hammerspoon (Sidecar → Slack), then restart it and choose Reload Config | System Settings → Privacy & Security → Accessibility → Hammerspoon | auto |
 | 8 | Enable the Karabiner DriverKit VirtualHIDDevice driver | System Settings → General → Login Items & Extensions → Driver Extensions | auto |
-| 9 | Allow Karabiner-Elements and Karabiner-Core-Service | System Settings → Privacy & Security → Device Control and Data Access | auto |
+| 9 | Allow Karabiner-Elements and Karabiner-Core-Service | System Settings → Privacy & Security → Accessibility | auto |
 | 10 | Allow Karabiner-Elements to run in the background (macconfig checks this: Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon are enabled and allowed). Karabiner-Elements Privileged Daemons v2 may stay disabled. macconfig does not change this | System Settings → General → Login Items & Extensions → Allow in the Background | macconfig-check.sh |
-| 11 | Allow Raycast (needed for Clipboard History) | System Settings → Privacy & Security → Device Control and Data Access → Raycast | auto |
+| 11 | Allow Raycast (needed for Clipboard History) | System Settings → Privacy & Security → Accessibility → Raycast | auto |
 | 12 | Give Ghostty Full Disk Access (lets macconfig-check.sh read Login Items and Finder Recents) | System Settings → Privacy & Security → Full Disk Access → Ghostty | auto |
 | 13 | Give Grok Bot Full Disk Access (for its unattended macconfig-check.sh runs) | System Settings → Privacy & Security → Full Disk Access → Grok Bot | auto |
 | 14 | Trackpad: Look up & data detectors Off | System Settings → Trackpad → Point & Click | auto |

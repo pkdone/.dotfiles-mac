@@ -172,7 +172,7 @@ check_hammerspoon_ax() {
     # pipe (launchd/agent runs) and would otherwise wait forever.
     case "$(with_timeout 6 hs -q -t 3 -c 'hs.accessibilityState()' </dev/null 2>/dev/null)" in
       true)  res ok "granted (live, via hs)"; return ;;
-      false) res warn "not granted — enable it, then restart Hammerspoon"; return ;;
+      false) res warn "not granted — System Settings → Privacy & Security → Accessibility, then restart Hammerspoon"; return ;;
     esac
   fi
   # Not running, or hs.ipc unavailable: fall back to the TCC database.

@@ -156,11 +156,11 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - Does nothing if Slack isn't running. Screen changes are debounced and only real Sidecar on/off transitions act.
 - **Manual toggle / test:** `Shift + Control + Option + Command + S`.
 - Screen names are logged to the Hammerspoon Console (menu-bar icon → Console). Status from a terminal: `hs -c 'loaded.sidecar_slack.status()'`. If your iPad shows up under another name: `hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad', '<name>'}); hs.reload()"`.
-- `macconfig-check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, warns if Hammerspoon isn't running, and (Manual steps section) warns if it lacks Device Control and Data Access. `macos.sh` / `macconfig-check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
+- `macconfig-check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, warns if Hammerspoon isn't running, and (Manual steps section) warns if it lacks Accessibility. `macos.sh` / `macconfig-check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
 
 **`finder_hotkey.lua`** brings Finder to the front from any app. `Shift + Control + Command + F` launches Finder, or focuses it when it is already running (`hs.application.launchOrFocus("Finder")`). If the Raycast backup being imported still has a Finder hotkey on those keys, unbind it in Raycast so it doesn't clash with Hammerspoon (manual step `raycast-finder-unbind` in [Manual steps](manual-steps.md)). The shortcut is also in [Shortcuts](../SHORTCUTS.md#hammerspoon).
 
-**Manual once (TCC):** System Settings → Privacy & Security → **Device Control and Data Access** (called Accessibility before macOS 27) → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](manual-steps.md).)
+**Manual once (TCC):** System Settings → Privacy & Security → **Accessibility** → enable **Hammerspoon**; restart Hammerspoon after granting (it can't move windows or send keys without it), then menu-bar icon → **Reload Config**. Test by turning Sidecar on and off. (Step `hammerspoon-ax` in [Manual steps](manual-steps.md).)
 
 ## Modes (menu-bar switcher)
 
