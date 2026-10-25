@@ -40,6 +40,7 @@ else
           1password-cli) fixid 1password-cli ;;
           spotlight-results) fixid spotlight-results ;;
           remove-widgets) fixid remove-widgets ;;
+          tailscale-signin) fixid tailscale-signin ;;
           *) fixid manual-step ;;
         esac
         warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)"

@@ -25,7 +25,7 @@ set -uo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
 TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"
-NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer "
+NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer tailscale-signin "
 
 usage() {
   cat <<'USAGE'
@@ -209,6 +209,72 @@ check_karabiner_driver() {
   fi
 }
 
+# tailscale-signin — read `status --json` only. Never log in, and never
+# print an auth key or a node key. The app binary is preferred; `tailscale`
+# on PATH is the fallback. ok only when BackendState is Running and the
+# logged-in LoginName is paul.done@anysphere.co.
+check_tailscale_signin() {
+  local bin="" json="" parsed="" state="" login="" py=""
+  if [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+    bin=/Applications/Tailscale.app/Contents/MacOS/Tailscale
+  elif command -v tailscale >/dev/null 2>&1; then
+    bin=tailscale
+  else
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  py="$(command -v python3 2>/dev/null || true)"
+  if [ -z "$py" ]; then
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  json="$(with_timeout 15 "$bin" status --json 2>/dev/null || true)"
+  if [ -z "$json" ]; then
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  parsed="$(printf '%s' "$json" | "$py" -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    data = json.loads(raw)
+except Exception:
+    print("bad|")
+    raise SystemExit(0)
+if not isinstance(data, dict):
+    print("bad|")
+    raise SystemExit(0)
+state = data.get("BackendState")
+state = state if isinstance(state, str) else ""
+login = ""
+users = data.get("User")
+self_node = data.get("Self")
+uid = self_node.get("UserID") if isinstance(self_node, dict) else None
+if isinstance(users, dict) and uid is not None:
+    user = users.get(str(uid))
+    if isinstance(user, dict):
+        name = user.get("LoginName")
+        if isinstance(name, str):
+            login = name
+print(state.replace("|", "/") + "|" + login.replace("|", "/"))
+' 2>/dev/null || true)"
+  state="${parsed%%|*}"
+  login="${parsed#*|}"
+  if [ -z "$parsed" ] || [ "$state" = bad ]; then
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  if [ "$state" = Running ] && [ "$login" = "paul.done@anysphere.co" ]; then
+    res ok "Tailscale is running as paul.done@anysphere.co"
+    return
+  fi
+  if [ -n "$login" ] && [ "$login" != "paul.done@anysphere.co" ]; then
+    res warn "signed in as $login, want paul.done@anysphere.co"
+    return
+  fi
+  res warn "Tailscale is ${state:-not running}"
+}
+
 # home-printer — read lpstat only. Never add a queue.
 # ok when a queue name contains HP_ENVY_6000 or "HP ENVY 6000".
 # Otherwise warn: it can only be added on the home network.
@@ -312,6 +378,7 @@ run_check() {  # spec [id]
     spotlight-results) check_spotlight_results ;;
     remove-widgets)   check_remove_widgets ;;
     home-printer)     check_home_printer ;;
+    tailscale-signin) check_tailscale_signin ;;
     *)                res hand "unknown check '$spec'" ;;
   esac
 }

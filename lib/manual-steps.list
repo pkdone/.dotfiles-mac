@@ -33,7 +33,7 @@
 #                                           does not count it again.
 #            @macconfig-check.sh            legacy: report covered, do not run a section
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
-#            | spotlight-results | remove-widgets | home-printer
+#            | spotlight-results | remove-widgets | home-printer | tailscale-signin
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
@@ -51,15 +51,19 @@
 #                                           only when a widget is placed. home-printer only reads
 #                                           lpstat. It never adds a queue. The HP ENVY 6000 series
 #                                           is visible on Bonjour only on the home network.
+#                                           tailscale-signin reads `status --json`
+#                                           and prints only the state and the
+#                                           login name. It never prints keys.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
-
-# ---- Sign-ins ----
-gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
 
 # ---- Company apps (MDM) ----
 mdm-apps|Company apps (MDM)|Install the company apps from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not Homebrew. The names are in lib/mdm-apps.list|Fleet Desktop menu bar → My device → Self service|app:Fleet Desktop|@macconfig:mdm
 1password-signin|Company apps (MDM)|Sign in to 1Password and unlock it|1Password app|app:1Password|
 1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal|1Password → Settings → Developer|app:1Password|op-cli
+
+# ---- Sign-ins ----
+gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
+tailscale-signin|Sign-ins|Open Tailscale, turn it on, and sign in as paul.done@anysphere.co|Open Tailscale from Applications (it comes from Fleet Self service) → click the Tailscale icon in the menu bar → click Log in (or turn the Connected switch on) → choose sign in with your work account and use paul.done@anysphere.co → finish sign-in in the browser|app:Tailscale|tailscale-signin
 
 # ---- Apps not in the Brewfile ----
 cursor-nightly|Apps not in the Brewfile|Install Cursor Nightly (separate app, next to the stable Cursor)|cursor.com/nightlydownload|https://cursor.com/nightlydownload|app:/Applications/Cursor Nightly.app
