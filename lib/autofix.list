@@ -37,7 +37,7 @@ coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
 launchagent|SAFE|launchagent|repo LaunchAgent rendered from launchagents/ (@HOME@ -> $HOME) and loaded; a plist that differs from the repo is rewritten and reloaded with launchctl bootout then bootstrap
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
 hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon)
-desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; restarts Dock)
+desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; an @APP@ path reads CFBundleIdentifier and a missing app is not written; restarts Dock)
 file-handler|SAFE|fileext|Finder double-click defaults from lib/file-handlers.list (duti -s BUNDLE .ext all; an extension with only a dyn.* UTI is skipped, not drift)
 display-more-space|SAFE|macos|Built-in display More Space. macos.sh runs displayplacer for the built-in panel only (14" 1800x1169, 16" 2056x1329 from lib/display-resolution.list), keeping the current refresh rate when that scaled mode exists. External displays are repeated unchanged. A missing displayplacer or a missing mode stays the manual step (System Settings → Displays)
 

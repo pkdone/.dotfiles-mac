@@ -43,7 +43,7 @@ The full checklist, and how to add a step, is in [Manual steps](docs/manual-step
 Apps and tools come from three places. Homebrew, via the Brewfile, is for most apps and command-line tools. Fleet Self service is for company-managed apps that can't be installed unattended; setup prompts you to install them. Nothing is installed from the Mac App Store now, because this Mac can't sign in with a personal Apple ID.
 <!-- END app-sources -->
 
-WhatsApp is not installed because the company's app policy blocks it on company Macs.
+WhatsApp is not installed because the company's app policy blocks it on company Macs. WhatsApp Web is used instead, as a Safari web app, set up by a manual step.
 Gemini is not installed because the company's app policy blocks it on company Macs.
 
 ## Everyday commands

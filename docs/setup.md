@@ -62,10 +62,11 @@ A package installer that needs an admin password (Karabiner-Elements is one) ask
 
 Homebrew formulae and casks come from the Brewfile. No apps currently come from the Mac App Store, because this Mac can't sign in with a personal Apple ID. Company apps come from Fleet Self service. The README names these three sources without listing each app.
 
-These two are not in those lists. Set them up by hand after bootstrapping:
+These are not in those lists. Set them up by hand after bootstrapping:
 
 - **Cursor Nightly** — download and install it from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. The Brewfile installs only the stable Cursor, so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome app. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
+- **WhatsApp Web** — a Safari web app. The company's app policy blocks the WhatsApp app, so this is the website instead. In Safari, open `https://web.whatsapp.com` (a normal page, not a blank tab or a Private window), then **File → Add to Dock…**. Keep the name "WhatsApp Web" and the WhatsApp icon. On the Android phone, WhatsApp → ⋮ → Linked devices → Link a device, and scan the QR code. Linking the phone can't be checked from this repo. The click-by-click list is manual step `whatsapp-web`.
 
 Company apps are the names in `lib/mdm-apps.list`. Zoom and 1Password are required, and so is every other name in that list. Install each one from Fleet Self service, not Homebrew. Fleet Desktop, the menu-bar app, has a My device item. Choose Self service there. The page needs company single sign-on, so nothing in this repo installs those apps unattended, and it does not call the Fleet API.
 
@@ -109,6 +110,8 @@ Pin the apps to the Dock in order (idempotent; uses `dockutil` from the Brewfile
 ~/.dotfiles-mac/dock.sh --list   # preview the apps and their order
 ~/.dotfiles-mac/dock.sh          # apply
 ```
+
+Left to right, the order is Slack, WhatsApp Web, Granola, Google Chrome, Ghostty, CotEditor, Cursor, Cursor Nightly, Grok Bot, Spotify, YouTube Music. WhatsApp Web is the Safari web app from the manual step above (`~/Applications/WhatsApp Web.app`). If that app is not there yet, `dock.sh` skips it and says it is missing because the manual step hasn't been done. The other apps are still pinned. Run `dock.sh` again after the manual step.
 
 ## URL handlers (Chrome, not Apple apps)
 
@@ -243,7 +246,7 @@ The split lives in one place, `lib/autofix.list`. Every drift or warning in `mac
 | Repo LaunchAgent not loaded, or the installed plist differs from the rendered repo copy | `scripts/install-launchagent.sh` writes `launchagents/*.plist` with `@HOME@` replaced by `$HOME`. `scripts/load-launchagent.sh` then bootstraps the job if it isn't loaded. If the installed bytes differed (including an old symlink), it `launchctl bootout`s and `bootstrap`s so launchd picks up `WatchPaths`. `install.sh` always reloads |
 | Repo-managed symlink missing or pointing elsewhere | `ln -sfn` to the repo file, **only** when the target is a symlink or missing. A real file in the way is never overwritten; that becomes Needs Paul |
 | Hammerspoon not running | `open -g -a Hammerspoon` |
-| Dock "Assign To" pins (`lib/desktop-bindings.list`) | `lib/desktop-bindings.py --apply`: writes `com.apple.spaces` `app-bindings` (bundle id → that Desktop's current Space UUID on the main display; Desktop 1 is `""`; `none` deletes the key), backs the domain up first, and restarts Dock only if a pin changed. A pin whose Desktop doesn't exist is left for you — Spaces are never created |
+| Dock "Assign To" pins (`lib/desktop-bindings.list`) | `lib/desktop-bindings.py --apply`: writes `com.apple.spaces` `app-bindings` (bundle id → that Desktop's current Space UUID on the main display; Desktop 1 is `""`; `none` deletes the key), backs the domain up first, and restarts Dock only if a pin changed. A pin whose Desktop doesn't exist is left for you — Spaces are never created. A bundle field that starts with `@APP@` reads `CFBundleIdentifier` from that app. WhatsApp Web is Desktop 1, and its Safari web-app UUID is read from the app rather than stored here. If the app is missing, the check says it is not set up yet and does not write a pin |
 | Finder double-click apps (`lib/file-handlers.list`) | `lib/file-handlers.py --apply`: `duti -s <bundle> .<ext> all` for each drifted extension, then checks `duti -x` every half second for up to 20 seconds and tries once more if needed. When duti accepted the change and macOS has not caught up, that is a warning. Refuses browser types (`html`, `public.html`) and URL schemes |
 
 **Needs Paul: reported, never automated**
@@ -364,7 +367,7 @@ dotpush "your message"
 - **New packages:** add to `Brewfile`, run `brewsync`. `macconfig-check.sh` warns on brew/cask/MAS installs that aren’t declared (does not auto-remove them).
 - **Managed macOS settings:** edit `lib/macos-defaults.list`, then run `macos.sh` (use `defaults-diff.sh` to find the key first).
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
-- **Desktop assignments:** edit `lib/desktop-bindings.list` (`1`..`N` = Desktop N on the main display, `none` = not assigned), then run `macconfig-check.sh --fix`. That writes `com.apple.spaces` `app-bindings`, resolving Desktop N to the current Space UUID (Desktop 1 is `""`; Desktops 2+ change if Spaces are recreated) and restarts the Dock only if a pin changed. If that Desktop doesn't exist yet, the pin is left for you — the fix never creates Spaces.
+- **Desktop assignments:** edit `lib/desktop-bindings.list` (`1`..`N` = Desktop N on the main display, `none` = not assigned), then run `macconfig --fix`. That writes `com.apple.spaces` `app-bindings`, resolving Desktop N to the current Space UUID (Desktop 1 is `""`; Desktops 2+ change if Spaces are recreated) and restarts the Dock only if a pin changed. If that Desktop doesn't exist yet, the pin is left for you — the fix never creates Spaces. Slack, WhatsApp Web and Granola are Desktop 1. Chrome is Desktop 2. Cursor, Cursor Nightly and Grok Bot are Desktop 3. Spotify and YouTube Music are Desktop 4. Ghostty and CotEditor are not assigned. WhatsApp Web's bundle id is an `@APP@` path: the id is read from `~/Applications/WhatsApp Web.app` when you check or fix, because Safari puts a new UUID in it each time the web app is created. If the app is not there yet, the check says it is not set up yet (manual step `whatsapp-web`) and `macconfig --fix` does not write a pin for it.
 - **URL handlers:** edit `lib/url-handlers.list`, then run `handlers.sh`.
 - **Finder file handlers:** edit `lib/file-handlers.list` (extension, app, bundle id; optional `unpinnable` or `uti:…`; role is always `all`), then run `macconfig-check.sh --fix` (or `handlers.sh` on a fresh setup). That runs `duti -s <bundle-id> .<ext> all` for whatever drifted. Do not add `html` — it switches the default browser.
 - **Display auto-brightness:** Off. `macconfig-check.sh` reads it with `corebrightnessdiag status-info` (no sudo). Turn it off in System Settings → Displays. `--fix` does not write it. True Tone and Slightly dim the display on battery are left alone.

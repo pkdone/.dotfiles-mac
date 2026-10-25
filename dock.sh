@@ -18,14 +18,15 @@ DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2; exit 1; }; }
 require_file "$DOTDIR/lib/dock-apps.list"
 
-# The Dock app list lives in lib/dock-apps.list (one "Display name | path" per line;
-# see that file's header for details). Loaded so the list is a single source of truth
-# shared with macconfig-check.sh. Blank/# lines are skipped by the read loops.
+# The Dock app list lives in lib/dock-apps.list (one "Display name | path" per line,
+# with an optional "manual:<step-id>" field; see that file's header). Loaded so the
+# list is a single source of truth shared with macconfig-check.sh. Blank/# lines are
+# skipped by the read loops. A manual-step app that is not on disk yet is skipped.
 APPS="$(<"$DOTDIR/lib/dock-apps.list")"
 
 list_apps() {
-  local n=0 name path
-  while IFS='|' read -r name path; do
+  local n=0 name path manual
+  while IFS='|' read -r name path manual; do
     case "$name" in ''|'#'*) continue ;; esac
     n=$((n + 1))
     printf '%2d. %s\n' "$n" "$name"
@@ -59,7 +60,7 @@ echo "🧹 Clearing the Dock..."
 dockutil --remove all --no-restart >/dev/null
 
 echo "📌 Pinning apps in order..."
-while IFS='|' read -r name path; do
+while IFS='|' read -r name path manual; do
   case "$name" in ''|'#'*) continue ;; esac
   path="${path/@HOME@/$HOME}"
   # A path containing * is a glob; expand it to the first match. Literal paths pass through.
@@ -70,6 +71,8 @@ while IFS='|' read -r name path; do
   if [ -e "$path" ]; then
     dockutil --add "$path" --no-restart >/dev/null
     echo "  added $name"
+  elif [ -n "${manual:-}" ]; then
+    echo "  [skip] $name is missing because the manual step hasn't been done (${manual#manual:})"
   else
     echo "  [skip] not installed: $name"
   fi

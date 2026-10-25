@@ -1,8 +1,12 @@
 # Dock apps, in left-to-right order. Loaded by dock.sh (and read by macconfig-check.sh).
-# Format (pipe-delimited): Display name | app path
+# Format (pipe-delimited): Display name | app path | optional manual step
 #   @HOME@ -> $HOME at runtime. A * in the path is a glob and must not contain spaces.
+#   The third field is optional. `manual:<step-id>` means the app is created by that
+#   manual step. If it is missing, dock.sh skips it and the Dock check says the
+#   manual step hasn't been done. That is not drift. Other missing apps stay drift.
 # Blank lines and lines beginning with # are ignored.
 Slack|/Applications/Slack.app
+WhatsApp Web|@HOME@/Applications/WhatsApp Web.app|manual:whatsapp-web
 Granola|/Applications/Granola.app
 Google Chrome|/Applications/Google Chrome.app
 Ghostty|/Applications/Ghostty.app

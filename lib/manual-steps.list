@@ -34,7 +34,7 @@
 #            @macconfig-check.sh            legacy: report covered, do not run a section
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
 #            | spotlight-results | remove-widgets | home-printer | tailscale-signin
-#            | edge-light
+#            | edge-light | whatsapp-web
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
@@ -62,6 +62,11 @@
 #                                           group holds no preferences, so the
 #                                           result is check by hand. open always
 #                                           shows the step. Nothing is written.
+#                                           whatsapp-web: ~/Applications/WhatsApp Web.app
+#                                           exists and its CFBundleIdentifier
+#                                           starts with com.apple.Safari.WebApp.
+#                                           The UUID in that id is not stored.
+#                                           Linking the phone cannot be read.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Company apps (MDM) ----
@@ -76,6 +81,7 @@ tailscale-signin|Sign-ins|Open Tailscale, turn it on, and sign in as paul.done@a
 # ---- Apps not in the Brewfile ----
 cursor-nightly|Apps not in the Brewfile|Install Cursor Nightly (separate app, next to the stable Cursor)|cursor.com/nightlydownload|https://cursor.com/nightlydownload|app:/Applications/Cursor Nightly.app
 youtube-music|Apps not in the Brewfile|Install YouTube Music as a Chrome app|Chrome → music.youtube.com → ⋮ → Cast, save, and share → Install page as app|https://music.youtube.com|app:@HOME@/Applications/Chrome Apps.localized/YouTube Music.app
+whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web as a Safari web app and link your Android phone|Open Safari → go to https://web.whatsapp.com → File → Add to Dock… (only on a normal web page, not a blank tab or a Private window) → keep the name "WhatsApp Web" and the WhatsApp icon → Add. On the Android phone: WhatsApp → ⋮ → Linked devices → Link a device → scan the QR code. Linking the phone can't be checked. Then run dock.sh, then macconfig --fix, so WhatsApp Web sits between Slack and Granola on Desktop 1.|https://web.whatsapp.com|whatsapp-web
 
 # ---- Privacy & Security permissions ----
 hammerspoon-ax|Privacy & Security permissions|Allow Hammerspoon, then restart it and choose Reload Config|Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|hammerspoon-ax

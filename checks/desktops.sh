@@ -14,6 +14,9 @@ if PY="$(dot_python)"; then
     case "$status" in
       ok)  pass "$msg" ;;
       bad) fixid desktop-assign "$bundle"; bad "$msg" ;;
+      # The app path is not installed yet (a manual step). Not drift, and
+      # --fix does not write a pin for it. skip prints an info line.
+      skip) skip "$msg" ;;
       *)   fixid tooling; warn "${msg:-$bundle}" ;;
     esac
   done < <("$PY" "$DOTDIR/lib/desktop-bindings.py" "$DOTDIR/lib/desktop-bindings.list")
