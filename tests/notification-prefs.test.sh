@@ -79,7 +79,6 @@ SAMPLE='{
     {"bundle-id": "com.google.Chrome.framework.AlertNotificationService", "flags": 33554432},
     {"bundle-id": "us.zoom.xos", "flags": 33554432},
     {"bundle-id": "com.mitchellh.ghostty", "flags": 33554432},
-    {"bundle-id": "net.whatsapp.WhatsApp", "flags": 33554432},
     {"bundle-id": "com.anthropic.claudefordesktop", "flags": 33554432},
     {"bundle-id": "com.todesktop.230313mzl4w4u92", "flags": 33554432},
     {"bundle-id": "com.electron.dockerdesktop", "flags": 33554432},
@@ -151,7 +150,6 @@ for quiet in \
   com.google.Chrome.framework.AlertNotificationService \
   us.zoom.xos \
   com.mitchellh.ghostty \
-  net.whatsapp.WhatsApp \
   com.anthropic.claudefordesktop \
   com.todesktop.230313mzl4w4u92 \
   com.electron.dockerdesktop

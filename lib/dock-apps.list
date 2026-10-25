@@ -1,11 +1,8 @@
 # Dock apps, in left-to-right order. Loaded by dock.sh (and read by macconfig-check.sh).
 # Format (pipe-delimited): Display name | app path
-#   WhatsApp's bundle name carries a hidden left-to-right mark (U+200E), so its path is
-#   a glob; it contains no spaces, so it expands cleanly at add time.
-#   @HOME@ -> $HOME at runtime.
+#   @HOME@ -> $HOME at runtime. A * in the path is a glob and must not contain spaces.
 # Blank lines and lines beginning with # are ignored.
 Slack|/Applications/Slack.app
-WhatsApp|/Applications/*WhatsApp.app
 Granola|/Applications/Granola.app
 Google Chrome|/Applications/Google Chrome.app
 Ghostty|/Applications/Ghostty.app

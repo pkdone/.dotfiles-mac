@@ -20,7 +20,7 @@ import argparse
 import sys
 
 
-STAY_ON = "App Store, Calculator, Dictionary, System Settings, and WhatsApp"
+STAY_ON = "App Store, Calculator, Dictionary, and System Settings"
 
 
 def load_apps(path: str) -> list[tuple[str, str]]:

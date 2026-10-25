@@ -92,7 +92,7 @@ precheck_dock() {
   while IFS='|' read -r name path; do
     case "$name" in ''|'#'*) continue ;; esac
     path="${path/@HOME@/$HOME}"
-    # Expand the one globbed path (WhatsApp) the same way dock.sh does.
+    # Expand a globbed path the same way dock.sh does.
     # shellcheck disable=SC2086  # intentional: unquoted $path lets the glob expand
     case "$path" in *'*'*) set -- $path; path="$1" ;; esac
     [ -e "$path" ] || missing+=("$name")

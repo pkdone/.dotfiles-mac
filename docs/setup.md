@@ -129,7 +129,7 @@ git pull && ./macconfig-check.sh --fix
 
 `prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `macconfig-check.sh` drifts if they reappear.
 
-Nothing in this repo is installed from the Mac App Store. This Mac can't sign in with a personal Apple ID, so the Brewfile has no `mas` app lines. WhatsApp is the Homebrew cask `whatsapp`. Company apps are `lib/mdm-apps.list`, installed from Iru Self Service, not the Brewfile.
+Nothing in this repo is installed from the Mac App Store. This Mac can't sign in with a personal Apple ID, so the Brewfile has no `mas` app lines. Company apps are `lib/mdm-apps.list`, installed from Iru Self Service, not the Brewfile.
 
 ```bash
 ~/.dotfiles-mac/prune-apps.sh --dry-run   # preview

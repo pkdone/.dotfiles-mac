@@ -85,7 +85,6 @@ cask "spotify"
 cask "sonos"          # Sonos S2 desktop controller
 cask "granola"
 cask "slack"
-cask "whatsapp"
 cask "acorn"
 cask "docker-desktop"
 cask "multipass"
@@ -97,5 +96,5 @@ cask "yubico-authenticator"  # Yubico Authenticator
 # No App Store apps currently. This Mac can't sign in with a personal Apple ID.
 # brew "mas" above stays: prune-apps.sh uses `mas uninstall`.
 # Unwanted App Store apps (GarageBand, iMovie, Pages) are lib/unwanted-apps.list.
-# WhatsApp is the cask above. Okta Verify and 1Password desktop are
+# Okta Verify and 1Password desktop are
 # lib/mdm-apps.list (Iru Self Service). mas can't upgrade those copies.

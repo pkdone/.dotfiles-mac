@@ -425,7 +425,7 @@ local function bundleName(bundle)
   local info = hs.application.infoForBundleID(bundle)
   return (info and (info.CFBundleDisplayName or info.CFBundleName)) or bundle
 end
-local function cleanName(n)   -- WhatsApp's name carries a left-to-right mark (U+200E)
+local function cleanName(n)   -- strip a left-to-right or right-to-left mark from an app name
   return (n:gsub('\226\128[\142\143]', ''))
 end
 

@@ -56,13 +56,15 @@ eq('duration hours', '2h 05m', ms.formatDuration(125 * 60))
 
 -- ---- dry-run plans -----------------------------------------------------------------------
 local snap = { current = 'Normal', changes = {}, shortcuts = {},
-  running = { ['net.whatsapp.WhatsApp'] = true, ['com.tinyspeck.slackmacgap'] = true, ['com.granola.app'] = true },
-  hidden = {}, names = { ['net.whatsapp.WhatsApp'] = 'WhatsApp', ['com.tinyspeck.slackmacgap'] = 'Slack',
+  running = { ['com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod'] = true,
+              ['com.tinyspeck.slackmacgap'] = true, ['com.granola.app'] = true },
+  hidden = {}, names = { ['com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod'] = 'YouTube Music',
+                         ['com.tinyspeck.slackmacgap'] = 'Slack',
                          ['com.spotify.client'] = 'Spotify', ['com.granola.app'] = 'Granola' } }
 local wc = ms.plan(cfg, 'WebConf', snap)
 ok('WebConf: dry-run header', wc[1]:find('dry run, nothing changed', 1, true))
 ok('WebConf: state written first', has(wc, 'write state.json'))
-ok('WebConf: quits WhatsApp', has(wc, 'quit WhatsApp politely'))
+ok('WebConf: quits YouTube Music', has(wc, 'quit YouTube Music politely'))
 ok('WebConf: Spotify not running', has(wc, 'quit Spotify: not running, skip'))
 ok('WebConf: hides Slack', has(wc, 'hide Slack'))
 ok('WebConf: missing Focus Shortcut noted', has(wc, "Shortcut 'Mode WebConf On' (MISSING"))
