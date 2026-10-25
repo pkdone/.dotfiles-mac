@@ -1,4 +1,6 @@
-# Company-managed apps, installed by hand from Iru Self Service (Kandji).
+# Company-managed apps. Install each one from Fleet Self service
+# (Fleet Desktop menu bar → My device → Self service). Every name in
+# this list is required, including Zoom and 1Password.
 # This file is that source. scripts/render-app-sources.sh reads the names into
 # the README section "Where apps come from". Do not declare these in the
 # Brewfile — mas can't upgrade root:wheel App Store copies
@@ -7,9 +9,11 @@
 # Format: Name | /Applications/….app | optional-mas-id
 # Blank lines and # comments ignored.
 #
-# A missing app is a warning: install from Iru Self Service.
+# A missing app is a warning: install from Fleet Self service.
+# Setup and macconfig can open that page. They do not install the app.
+# The page needs company single sign-on. Do not call the Fleet API.
 # Do not add 1Password for Safari (id 1569813296) or Okta Extension App
-# (id 1439967473). It isn't known whether Iru installs them, and a
+# (id 1439967473). It isn't known whether Fleet installs them, and a
 # missing-app warning would be noise.
 # Okta Verify is company-managed (App Store id 490179405). mas can't upgrade it.
 Okta Verify|/Applications/Okta Verify.app|490179405

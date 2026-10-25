@@ -80,13 +80,13 @@ Command-line tools and desktop apps listed in the Brewfile. The first setup inst
 
 ${mas_body}
 
-### Company apps (Iru Self Service)
+### Company apps (Fleet Self service)
 
-Company-managed apps. Install each one yourself from Iru Self Service (Kandji). The names are in \`lib/mdm-apps.list\`. They are not in the Brewfile. If one of these is missing, install it from Iru Self Service.
+Company-managed apps. Every name below is required, including Zoom and 1Password. Install each one yourself from Fleet's My device page: Fleet Desktop menu bar → My device → Self service. The names are in \`lib/mdm-apps.list\`. They are not in the Brewfile. If one of these is missing, install it from Fleet Self service. Setup can open that page for you. It does not install the apps on its own, because the page needs company single sign-on.
 
 **Apps:** ${company}.
 
-1Password for Safari and Okta Extension App are not in any of these lists. This Mac can't sign in to the App Store with a personal Apple ID, and it isn't known whether Iru installs those Safari extensions. They are left out so a missing copy does not raise a warning.
+1Password for Safari and Okta Extension App are not in any of these lists. This Mac can't sign in to the App Store with a personal Apple ID, and it isn't known whether Fleet installs those Safari extensions. They are left out so a missing copy does not raise a warning.
 
 Cursor Nightly and YouTube Music are installed by hand. They are not Homebrew apps and not company apps. See [Setup](docs/setup.md#apps-not-in-the-brewfile).
 EOF

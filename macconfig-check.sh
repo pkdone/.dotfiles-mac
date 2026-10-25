@@ -2,7 +2,9 @@
 #
 # macconfig-check.sh — verifier. By default read-only: reports drift between this machine and the
 # repo's desired state WITHOUT changing anything. Exits non-zero if any drift is found, so
-# it's usable in a pre-push hook or CI later. With --fix it also applies the SAFE fixes
+# it's usable in a pre-push hook or CI later. A missing company app is a warning, not drift.
+# In a terminal the MDM section offers to open Fleet Self service. That does not install
+# the app, and --fix does not either. With --fix it also applies the SAFE fixes
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
@@ -129,7 +131,9 @@ Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]] [--on
                  With --fix it also carries fixed[] and needs_paul[] (would_fix[] on a dry run).
   --fix          Apply the SAFE fixes from lib/autofix.list for the drift found (reversible
                  preference writes only), re-check, and print Fixed / Needs Paul lists.
-                 Exit status reflects the drift left after the fixes.
+                 Exit status reflects the drift left after the fixes. A missing company
+                 app stays a warning. In a terminal the check offers to open Fleet
+                 Self service first. --fix does not install it.
   --dry-run      With --fix: show what would be fixed; change nothing.
   --only AREA[,AREA]
                  Run only these areas, in the usual order (not the order you type).

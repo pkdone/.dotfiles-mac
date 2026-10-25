@@ -19,7 +19,6 @@ com.tinyspeck.slackmacgap # Slack
 com.spotify.client # Spotify
 com.apple.tips # Tips
 com.apple.Passbook # Wallet
-io.kandji.Kandji # Kandji
 io.tailscale.ipn.macsys # Tailscale
 com.logi.cp-dev-mgr # Logi Options+
 org.cogx.cog # Cog

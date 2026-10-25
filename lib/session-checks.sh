@@ -90,7 +90,7 @@ check_input_british() {
 # SESSION_CHECKS_OP_APP overrides the app path in tests.
 check_op_cli() {
   local app="${SESSION_CHECKS_OP_APP:-/Applications/1Password.app}"
-  if [ ! -d "$app" ]; then res warn "1Password.app not installed (Iru Self Service)"; return; fi
+  if [ ! -d "$app" ]; then res warn "1Password.app not installed (Fleet Self service)"; return; fi
   if ! command -v op >/dev/null 2>&1; then res warn "op CLI not installed (brew bundle)"; return; fi
   if with_timeout 8 op whoami </dev/null >/dev/null 2>&1; then
     res ok "op whoami works through the app"

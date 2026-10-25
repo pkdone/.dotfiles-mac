@@ -1059,7 +1059,7 @@ Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
     Apps is check by hand (the toggles are not in a preference the check can
     read). Per-app Allow Notifications is checked
   - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
-    (leave Tailscale, 1Password, Granola, Hammerspoon, Kandji/company agents)
+    (leave Tailscale, 1Password, Granola, Hammerspoon, Fleet Desktop)
   - Set Hostname (requires sudo)
   - Power, if the sudo step above was skipped: AC sleep 0, AC display sleep
     10 minutes, battery display sleep 2 minutes, AC wake for network access.

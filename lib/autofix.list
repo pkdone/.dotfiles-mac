@@ -42,7 +42,7 @@ display-more-space|SAFE|macos|Built-in display More Space. macos.sh runs display
 
 # ---- PAUL: report only, never automated ----
 brew|PAUL||installing / uninstalling / updating apps — brewsync (the routine runs it separately)
-app-install|PAUL||an app is missing — install it (Brewfile / brewsync, or Iru Self Service)
+app-install|PAUL||an app is missing — install it (Brewfile / brewsync, or Fleet Self service)
 developer-folder|PAUL||~/Developer is missing — install.sh creates it
 unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
 dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
@@ -74,7 +74,7 @@ finder-sidebar|PAUL||Finder sidebar rows named in the top sidebar section and Fa
 spotlight-results|PAUL||Spotlight → Results from Apps: the apps in lib/spotlight-apps.list should be off (App Store, Calculator, Dictionary, and System Settings stay on). EnabledPreferenceRules is the row list, not the on/off state, so this is check by hand, not a warning. --fix never writes Spotlight
 wallpaper|PAUL||Desktop picture Tahoe Night (Landscape), asset CF6347E2-4F81-4410-8892-4830991B6C5A in the wallpaper store. Check-only: it is a wallpaper-catalog asset, not a file System Events can select, and the wallpaper store is not written. --fix never changes the picture
 user-picture|PAUL||Account picture is the Dog. SHA-256 in lib/user-picture.sha256, from the JPEGPhoto on the user account. Check-only: --fix never changes the picture
-mdm|PAUL||MDM / company-managed — Iru Self Service (Kandji) or IT
+mdm|PAUL||MDM / company-managed — Fleet Self service (Fleet Desktop menu bar → My device) or IT. A missing app is a warning. --fix does not install it
 security|PAUL||security setting (FileVault, firewall stealth mode, automatic security updates, SSH agent and ~/.ssh modes; git commit signing only when commit.gpgsign is on) — never changed automatically
 software-update|PAUL||a pending macOS update has been waiting more than 7 days — System Settings → General → Software Update. The check reads the local Software Update plist and does not call softwareupdate
 broken-symlink|PAUL||a symlink under ~/.config, ~/Library/LaunchAgents, or a home dotfile points into the dotfiles repo but the target is missing — restore it from git or re-run install.sh. --fix does not relink these

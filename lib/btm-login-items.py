@@ -265,7 +265,7 @@ def app_items(paths):
 
 
 def mdm_rules(base: Path | None) -> list[dict]:
-    """Service Management rules pushed by MDM (Kandji etc.), from the base store."""
+    """Service Management rules pushed by MDM (Fleet), from the base store."""
     if base is None:
         return []
     objects, top = load_store(base)

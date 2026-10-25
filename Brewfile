@@ -61,7 +61,7 @@ brew "grep"
 
 # ---- Homebrew casks (brew bundle / brewsync) ----------------------------
 # If one of these is missing, run brewsync.
-# 1Password desktop is company-managed (lib/mdm-apps.list, Iru Self Service).
+# 1Password desktop is company-managed (lib/mdm-apps.list, Fleet Self service).
 # The CLI stays here.
 
 cask "ghostty"
@@ -97,4 +97,4 @@ cask "yubico-authenticator"  # Yubico Authenticator
 # brew "mas" above stays: prune-apps.sh uses `mas uninstall`.
 # Unwanted App Store apps (GarageBand, iMovie, Pages) are lib/unwanted-apps.list.
 # Okta Verify and 1Password desktop are
-# lib/mdm-apps.list (Iru Self Service). mas can't upgrade those copies.
+# lib/mdm-apps.list (Fleet Self service). mas can't upgrade those copies.

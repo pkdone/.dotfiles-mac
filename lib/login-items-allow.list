@@ -1,8 +1,8 @@
 # Login / background items that are EXPECTED to be enabled
 # (System Settings → General → Login Items & Extensions). macconfig-check.sh ("Mac health")
 # warns about any enabled item that is neither listed here nor approved by an MDM
-# Service Management rule (Kandji pushes those; lib/btm-login-items.py reads them from
-# the BTM store, so company agents such as Iru, Cyberhaven, Phorion EDR, Fleet, Formal,
+# Service Management rule (Fleet pushes those; lib/btm-login-items.py reads them from
+# the BTM store, so company agents such as Fleet Desktop, Cyberhaven, Phorion EDR, Formal,
 # Zoom, Docker, Chrome and 1Password need no row here). Items whose app no longer
 # exists are always flagged as stale, even if listed.
 #
@@ -29,9 +29,8 @@ team|X4QN7LTP59|Multipass daemon (cask multipass)
 label|com.pdone.pin-dictation-hotkey-164|this repo's LaunchAgent (launchagents/)
 
 # ---- Company / MDM apps (most are also covered by MDM rules) ----
-team|2BUA8C4S2C|1Password launcher and browser helper (Iru Self Service)
-bundle|com.okta.mobile|Okta Verify opens at login (Iru Self Service)
-team|P3FGV63VK7|Kandji / Iru agent and menu
+team|2BUA8C4S2C|1Password launcher and browser helper (Fleet Self service)
+bundle|com.okta.mobile|Okta Verify opens at login (Fleet Self service)
 team|6KKW3K37TU|Cyberhaven
 team|Z2FDA4QHGU|Phorion EDR
 team|8VBZ3948LU|Fleet orbit

@@ -26,7 +26,6 @@ com.anthropic.claudefordesktop # Claude
 com.todesktop.230313mzl4w4u92 # Cursor
 com.electron.dockerdesktop # Docker Desktop
 # Same apps as the new lib/notifications-off.list rows. The Off list still wins.
-io.kandji.Kandji # Kandji (must be Off: lib/notifications-off.list)
 io.tailscale.ipn.macsys # Tailscale (must be Off: lib/notifications-off.list)
 com.logi.cp-dev-mgr # Logi Options+ (must be Off: lib/notifications-off.list)
 org.cogx.cog # Cog (must be Off: lib/notifications-off.list)

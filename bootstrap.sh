@@ -13,6 +13,8 @@
 #
 # It ends by printing the manual steps (lib/manual-steps.list: permissions, sign-ins,
 # by-hand settings) and, on a terminal, offering scripts/manual-steps.sh open.
+# Right after install.sh it names any missing company app and, on a terminal,
+# offers to open Fleet Self service. That does not install the app.
 #
 # A step that exits non-zero is recorded. Later steps still run, including that
 # manual-steps list and walk-through. The end of the run names the failed steps
@@ -35,6 +37,8 @@ set -euo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/dotfiles-log.sh disable=SC1091
 . "$DOTDIR/lib/dotfiles-log.sh"
+# shellcheck source=lib/fleet-apps.sh disable=SC1091
+. "$DOTDIR/lib/fleet-apps.sh"
 dotfiles_refuse_root "bootstrap.sh"
 
 DRYRUN=0
@@ -49,7 +53,9 @@ for arg in "$@"; do
 Usage: bootstrap.sh [--dry-run] [--yes]
   Run the full machine setup in order: install.sh, shell.sh, hostname.sh,
   macos.sh, dock.sh, handlers.sh, prune-apps.sh — each behind a confirmation prompt. Idempotent and safe
-  to re-run. Ends with the checklist of manual steps (scripts/manual-steps.sh).
+  to re-run. After install.sh, names any missing company app and, in a terminal,
+  offers to open Fleet Self service. A missing company app is a warning, not a
+  failed step. Ends with the checklist of manual steps (scripts/manual-steps.sh).
   A step that fails is recorded. Later steps still run. At the end the failed
   steps and the log path are printed, and this script exits with an error.
   --dry-run    Preview every step (each script's own preview mode); change nothing.
@@ -156,6 +162,15 @@ echo "bootstrap.sh — $([ "$DRYRUN" = 1 ] && echo 'DRY RUN (previewing every st
 export DOTFILES_BOOTSTRAP=1
 
 step 1 "install.sh — symlinks, Brewfile, mise trust"  install.sh  ""
+# Company apps are not in the Brewfile. Name any that are missing and, on a
+# terminal, offer to open Fleet Self service. --yes and --dry-run only print
+# how to install them. A missing app is a warning; setup continues.
+if [ "$DRYRUN" = 1 ] || [ "$ASSUME_YES" = 1 ]; then
+  FLEET_OFFER=0
+else
+  FLEET_OFFER=1
+fi
+fleet_company_apps_prompt "$DOTDIR/lib/mdm-apps.list"
 step 2 "shell.sh — make fish the login shell"         shell.sh    --dry-run
 step 3 "hostname.sh — set host names"                 hostname.sh --dry-run
 step 4 "macos.sh — apply managed macOS defaults"      macos.sh    --dry-run

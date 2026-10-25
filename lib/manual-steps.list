@@ -42,7 +42,7 @@
 gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
 
 # ---- Company apps (MDM) ----
-mdm-apps|Company apps (MDM)|Install the company apps from Iru Self Service (Kandji), not Homebrew. The names are in lib/mdm-apps.list|Applications → Iru Self Service|app:Iru Self Service|@macconfig-check.sh
+mdm-apps|Company apps (MDM)|Install the company apps from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not Homebrew. The names are in lib/mdm-apps.list|Fleet Desktop menu bar → My device → Self service|app:Fleet Desktop|@macconfig-check.sh
 1password-signin|Company apps (MDM)|Sign in to 1Password and unlock it|1Password app|app:1Password|
 1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal|1Password → Settings → Developer|app:1Password|op-cli
 
@@ -121,7 +121,7 @@ user-picture|Display, keyboard & desktop|Set your user picture to the Dog (macco
 notifications-mirroring|Notifications & Spotlight|Notifications Off when mirroring or sharing the display|System Settings → Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
 # Bundle ids live in lib/notifications-off.list. macconfig-check.sh reads the
 # usernoted plist and never writes it. Mirroring stays the row above.
-notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Kandji, Tailscale, Logi Options+, Cog, Gemini, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
+notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Tailscale, Logi Options+, Cog, Gemini, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
 spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, and System Settings on. Check this page by hand (macconfig cannot read the toggles)|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----
@@ -144,4 +144,4 @@ mode-menubar-pin|Modes (menu-bar switcher)|Pin the mode-switcher menu-bar icon s
 # ---- Menu bar (third-party allow list) ----
 # Raycast, Logi Options+ and Docker have no reliable defaults key for this toggle.
 # Raycast's own menu-bar switch is not scriptable. Leave the other icons alone.
-menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are. Raycast's own menu-bar toggle isn't scriptable|System Settings → Menu Bar → Allow in the Menu Bar|x-apple.systempreferences:com.apple.ControlCenter-Settings.extension|
+menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop as they are. Raycast's own menu-bar toggle isn't scriptable|System Settings → Menu Bar → Allow in the Menu Bar|x-apple.systempreferences:com.apple.ControlCenter-Settings.extension|
