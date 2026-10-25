@@ -161,7 +161,7 @@ Cloud backup: sign in to your Logi account first, then **MX Master 3S → Settin
 
 ## Raycast
 
-Raycast is set by hand. There is no import and no export.
+Raycast is set by hand.
 
 Move Raycast off `Option + Space` (clashes with ChatGPT). Open Raycast → Settings (Command+,) → General → **Raycast Hotkey** → click the hotkey recorder and press `Shift + Control + Command + R`. Don't click the **Replace Spotlight** button next to it. That turns off Spotlight's Command+Space. `macos.sh` puts Command+Space back when it differs, and so does `macconfig --fix`.
 

@@ -180,7 +180,7 @@ has "logi backup path stays Settings Other" \
 has "logi backup says sign in first" "sign in to your Logi account first" "$logi_row"
 has "logi backup names restore" "Restore settings from backup (same page) on a new Mac if needed" "$logi_row"
 
-# Raycast is set by hand: hotkey, then Clipboard History. No import or export.
+# Raycast is set by hand: hotkey, then Clipboard History.
 raycast_ids="$(awk -F'|' '$1 ~ /^raycast-/ { printf "%s ", $1 }' "$LIST")"
 eq "raycast steps: accessibility, hotkey, clipboard" \
   "raycast-ax raycast-hotkey raycast-clipboard " \
@@ -205,6 +205,16 @@ has "clipboard path names the apps already listed" \
 miss "no raycast import step" "raycast-import|" "$steps_text"
 miss "no finder unbind step" "raycast-finder-unbind|" "$steps_text"
 miss "no scheduled backup step" "raycast-scheduled-backup|" "$steps_text"
+miss "no unbind-the-Finder-hotkey step" \
+  "Only if you imported a backup: unbind the Finder hotkey" "$steps_text"
+# Docs, the checklist, bootstrap, and macconfig do not mention a Raycast
+# backup, import, export, or .rayconfig. Logi cloud backup is a different step.
+raycast_surfaces="$(
+  cat "$DIR/../docs/"*.md "$LIST" "$DIR/../bootstrap.sh" "$DIR/../macconfig-check.sh" \
+    "$DIR/../scripts/manual-steps.sh" "$DIR/../macos.sh"
+)"
+raycast_backup_lines="$(printf '%s\n' "$raycast_surfaces" | grep -n -i -E 'raycast.{0,80}(backup|import|export|rayconfig)|(backup|import|export|rayconfig).{0,80}raycast' || true)"
+eq "no Raycast backup, import, export, or .rayconfig note" "" "$raycast_backup_lines"
 
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \
