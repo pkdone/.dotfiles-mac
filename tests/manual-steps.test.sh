@@ -129,8 +129,41 @@ has "dragging names the Trackpad Options sheet" \
   "click Trackpad Options… (opens a sheet)" "$(grep '^trackpad-dragging|' "$LIST")"
 has "input sources name the Edit sheet" \
   "click Edit… next to Input Sources (opens a sheet)" "$(grep '^input-british|' "$LIST")"
+focus_modes="$(grep '^mode-focus-modes|' "$LIST")"
 has "focus names the Add Focus sheet" \
-  "click Add Focus… (opens a sheet)" "$(grep '^mode-focus-modes|' "$LIST")"
+  "click Add Focus… (opens a sheet)" "$focus_modes"
+has "focus mode is named then given any icon" \
+  "name WebConf (or DeepWork) → pick any icon → Done → Allowed Apps → Add" "$focus_modes"
+has "WebConf Focus allows Granola" "WebConf allows Granola" "$focus_modes"
+has "DeepWork Focus allows Hammerspoon" "DeepWork allows Hammerspoon" "$focus_modes"
+has "Allowed People can stay None" "Allowed People can stay None" "$focus_modes"
+has "an app must have asked for notifications" \
+  "notification permission at least once" "$focus_modes"
+focus_shortcuts="$(grep '^mode-focus-shortcuts|' "$LIST")"
+eq "focus shortcuts where is Search Actions" \
+  'Shortcuts → + → Search Actions "Set Focus"' \
+  "$(printf '%s\n' "$focus_shortcuts" | cut -d'|' -f4)"
+has "shortcut step clicks + and renames the title" \
+  "click + in the toolbar, click the title at the top and rename it exactly" "$focus_shortcuts"
+has "shortcut step double-clicks Set Focus" \
+  "type Set Focus and double-click it" "$focus_shortcuts"
+has "shortcut step sets the blue placeholders" \
+  "Click the blue placeholder words" "$focus_shortcuts"
+has "shortcut step closes the window to save" "close the window to save" "$focus_shortcuts"
+has "Set Focus starts as Do Not Disturb" "Turn Do Not Disturb On" "$focus_shortcuts"
+has "WebConf On is until Turned Off" "Turn WebConf On until Turned Off" "$focus_shortcuts"
+has "WebConf Off turns that Focus off" '"Mode WebConf Off" is Turn WebConf Off' "$focus_shortcuts"
+has "DeepWork On is until Turned Off" "Turn DeepWork On until Turned Off" "$focus_shortcuts"
+has "DeepWork Off turns that Focus off" '"Mode DeepWork Off" is Turn DeepWork Off' "$focus_shortcuts"
+miss "shortcut step does not tell you to open Shortcuts" "open the Shortcuts app" "$focus_shortcuts"
+miss "shortcut step does not send you through Spotlight" "Spotlight" "$focus_shortcuts"
+miss "shortcut step does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$focus_shortcuts"
+miss "focus modes step does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$focus_modes"
+modes_doc="$(cat "$DIR/../docs/modes.md")"
+has "modes doc walks through Set Focus" "Turn Do Not Disturb On" "$modes_doc"
+has "modes doc names the notification ask" "notification permission at least once" "$modes_doc"
+miss "modes doc does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$modes_doc"
+miss "modes doc does not tell you to open Shortcuts" "open the Shortcuts app" "$modes_doc"
 miss "look up note does not mention Force Click" "Force Click" "$(grep '^trackpad-lookup|' "$LIST")"
 
 # Exact rows macos.sh applies and macconfig-check.sh checks. restart=logout.
