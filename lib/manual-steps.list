@@ -33,7 +33,7 @@
 #                                           does not count it again.
 #            @macconfig-check.sh            legacy: report covered, do not run a section
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
-#            | spotlight-results | remove-widgets
+#            | spotlight-results | remove-widgets | home-printer
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
@@ -48,7 +48,9 @@
 #                                           not killed). The Desktop widgets section reports
 #                                           it. Manual steps skips that duplicate when the section
 #                                           ran. open still uses the check, so the step is shown
-#                                           only when a widget is placed.
+#                                           only when a widget is placed. home-printer only reads
+#                                           lpstat. It never adds a queue. The HP ENVY 6000 series
+#                                           is visible on Bonjour only on the home network.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Sign-ins ----
@@ -140,6 +142,11 @@ input-british|Display, keyboard & desktop|Keyboard input source: British (maccon
 # Click wallpaper to reveal desktop stays out.
 remove-widgets|Display, keyboard & desktop|Remove every widget from the desktop: Control-click (or right-click) each widget → Remove Widget.|Desktop (reveal the desktop if the widgets are hidden)||remove-widgets
 user-picture|Display, keyboard & desktop|Set your user picture to the Dog (macconfig checks this). A different picture is a warning. macconfig does not change it|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig:display
+
+# ---- Printer ----
+# Read-only: lpstat -p, or lpstat -v if -p does not name the queue.
+# Nothing here adds a printer. The Bonjour name only appears on the home network.
+home-printer|Printer|Add the home printer HP ENVY 6000 series|System Settings → Printers & Scanners → click Add Printer, Scanner or Fax… → Default tab → choose HP ENVY 6000 series (Bonjour Multifunction, only shown when on the home network) → leave Use: HP ENVY 6000 series → Add|x-apple.systempreferences:com.apple.Print-Scan-Settings.extension|home-printer
 
 # ---- Notifications & Spotlight ----
 notifications-mirroring|Notifications & Spotlight|Notifications Off when mirroring or sharing the display|System Settings → Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|

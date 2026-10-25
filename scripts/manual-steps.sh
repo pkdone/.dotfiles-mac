@@ -25,7 +25,7 @@ set -uo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
 TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"
-NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets "
+NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer "
 
 usage() {
   cat <<'USAGE'
@@ -209,6 +209,26 @@ check_karabiner_driver() {
   fi
 }
 
+# home-printer — read lpstat only. Never add a queue.
+# ok when a queue name contains HP_ENVY_6000 or "HP ENVY 6000".
+# Otherwise warn: it can only be added on the home network.
+check_home_printer() {
+  local out=""
+  if ! command -v lpstat >/dev/null 2>&1; then
+    res warn "HP ENVY 6000 series is not in the printer list. It can only be added on the home network"
+    return
+  fi
+  out="$(with_timeout 10 lpstat -p 2>/dev/null || true)"
+  if ! printf '%s\n' "$out" | grep -Eq 'HP_ENVY_6000|HP ENVY 6000'; then
+    out="$(with_timeout 10 lpstat -v 2>/dev/null || true)"
+  fi
+  if printf '%s\n' "$out" | grep -Eq 'HP_ENVY_6000|HP ENVY 6000'; then
+    res ok "HP ENVY 6000 series is in the printer list"
+    return
+  fi
+  res warn "HP ENVY 6000 series is not in the printer list. It can only be added on the home network"
+}
+
 # remove-widgets — lib/desktop-widgets.py reads widgets.instances in the
 # notificationcenterui plist. It does not write that file and does not kill
 # NotificationCenter or chronod. ok when no widget is placed, so `open` skips
@@ -291,6 +311,7 @@ run_check() {  # spec [id]
     gh-auth)          check_gh_auth ;;
     spotlight-results) check_spotlight_results ;;
     remove-widgets)   check_remove_widgets ;;
+    home-printer)     check_home_printer ;;
     *)                res hand "unknown check '$spec'" ;;
   esac
 }
