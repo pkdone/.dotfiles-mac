@@ -91,15 +91,23 @@ dotfiles_log_exec() {
   if ! log="$(dotfiles_new_log "$name")"; then
     exit 1
   fi
-  if [ -t 0 ] && [ -t 1 ]; then
-    export DOTFILES_INTERACTIVE=1
-  else
-    export DOTFILES_INTERACTIVE=0
+  # bootstrap.sh logs, then runs install.sh, which logs again. The inner
+  # script's stdout is the outer tee, so it is not a tty. The outer run
+  # already recorded the real terminal. Do not clear that, or a pkg cask
+  # never gets the one sudo -v prompt.
+  if [ -z "${DOTFILES_INTERACTIVE+x}" ]; then
+    if [ -t 0 ] && [ -t 1 ]; then
+      export DOTFILES_INTERACTIVE=1
+    else
+      export DOTFILES_INTERACTIVE=0
+    fi
   fi
-  if [ -t 1 ]; then
-    export DOTFILES_STDOUT_TTY=1
-  else
-    export DOTFILES_STDOUT_TTY=0
+  if [ -z "${DOTFILES_STDOUT_TTY+x}" ]; then
+    if [ -t 1 ]; then
+      export DOTFILES_STDOUT_TTY=1
+    else
+      export DOTFILES_STDOUT_TTY=0
+    fi
   fi
   export DOTFILES_LOG_WRAPPED="$name"
   export DOTFILES_LOG_FILE="$log"

@@ -99,6 +99,35 @@ miss "log file does not contain the secret" "super-secret-token" "$(cat "$logged
 repo_logs="$(find "$DIR" -name '*.log' -not -path "$DIR/.git/*" -print || true)"
 eq "repo checkout has no log files" "" "$repo_logs"
 
+# bootstrap.sh logs, then runs install.sh, which logs again. The inner
+# stdout is a pipe. An interactive flag already set by the outer run must
+# survive that second wrapper, or sudo -v is skipped for pkg casks.
+cat > "$tmp/child.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+. "$DIR/lib/dotfiles-log.sh"
+dotfiles_log_exec child "\$@"
+printf 'child_interactive=%s child_tty=%s\n' "\${DOTFILES_INTERACTIVE}" "\${DOTFILES_STDOUT_TTY}"
+EOF
+cat > "$tmp/parent.sh" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+. "$DIR/lib/dotfiles-log.sh"
+dotfiles_log_exec parent "\$@"
+printf 'parent_interactive=%s parent_tty=%s\n' "\${DOTFILES_INTERACTIVE}" "\${DOTFILES_STDOUT_TTY}"
+"$tmp/child.sh"
+EOF
+chmod +x "$tmp/child.sh" "$tmp/parent.sh"
+nested="$(HOME="$home" DOTFILES_INTERACTIVE=1 DOTFILES_STDOUT_TTY=1 "$tmp/parent.sh" 2>&1)"
+nested_rc=$?
+eq "nested log wrappers exit 0" 0 "$nested_rc"
+has "outer log keeps interactive" "parent_interactive=1" "$nested"
+has "inner log keeps interactive" "child_interactive=1" "$nested"
+has "inner log keeps the color tty" "child_tty=1" "$nested"
+plain="$(HOME="$home" env -u DOTFILES_INTERACTIVE -u DOTFILES_STDOUT_TTY "$tmp/child.sh" 2>&1)"
+has "a fresh piped run is not interactive" "child_interactive=0" "$plain"
+has "a fresh piped run has no color tty" "child_tty=0" "$plain"
+
 # --- entry points wire the logger; root is refused before any log ---
 has "install.sh logs" "dotfiles_log_exec install" "$(cat "$DIR/install.sh")"
 has "bootstrap.sh logs" "dotfiles_log_exec bootstrap" "$(cat "$DIR/bootstrap.sh")"
