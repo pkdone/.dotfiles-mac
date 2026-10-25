@@ -17,7 +17,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **Finder and Trash tidy:** remove Trash items after 30 days (`FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and no `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`; the domain is created by the first write). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Finder
 - **Window tiling (macOS 15+):** drag a window to the left or right edge to tile (`com.apple.WindowManager EnableTilingByEdgeDrag` = true; unset on this Mac, which is the system default On) and no gap between tiled windows (`EnableTiledWindowMargins` = false; `defaults read` prints `0`). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Shortcuts are in [SHORTCUTS.md](../SHORTCUTS.md)
 - **Desktop widgets and Stage Manager:** widgets hidden on the desktop and in Stage Manager (`StandardHideWidgets` and `StageManagerHideWidgets` = true; Show Widgets → On Desktop and In Stage Manager off) and Stage Manager off (`GloballyEnabled` = false). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them through the `defaults` row in `lib/autofix.list`. `restart` is empty, so a repair restarts no process. Click wallpaper to reveal desktop (`EnableStandardClickToShowDesktop`) is not pinned
-- **Login Items:** `macconfig-check.sh` drifts if ChatGPT, Gemini, or GeminiAppLauncher are enabled at login (apps may stay installed; turn them **Off** in **System Settings → General → Login Items**)
+- **Login Items:** `macconfig-check.sh` drifts if ChatGPT is enabled at login (the app may stay installed; turn it **Off** in **System Settings → General → Login Items**)
 
 Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
 
@@ -157,15 +157,6 @@ MX Master 3S settings, all checked read-only by the **Logi Options+** section of
 | Point & Scroll → Pointer speed | Speed | 0.12 (±0.02) |
 
 Cloud backup: sign in to a Logi account in the app, then **MX Master 3S → Settings → Other** and turn on **Automatically backup all devices**; it shows **Last backup on …** underneath. Not readable locally, so manual step `logi-cloud-backup` is by hand.
-
-## Gemini
-
-Default Gemini shortcuts (`Option + Space` / `Option + Shift + Space`) clash with ChatGPT. Set via Gemini Settings → Shortcuts:
-
-| Action | Shortcut |
-|------|------|
-| Mini chat | `Control + Option + G` |
-| Full chat | `Control + Option + Shift + G` |
 
 ## Raycast
 

@@ -77,7 +77,6 @@ cask "1password-cli"  # 1Password CLI (op)
 cask "logi-options+"
 cask "chatgpt"
 cask "claude"
-cask "google-gemini"
 cask "grok-bot"       # Grok Bot desktop (AI teammates)
 cask "grok-build"     # Grok Build terminal coding agent (grok / agent)
 cask "google-chrome"

@@ -22,7 +22,6 @@ com.apple.Passbook # Wallet
 io.tailscale.ipn.macsys # Tailscale
 com.logi.cp-dev-mgr # Logi Options+
 org.cogx.cog # Cog
-com.google.GeminiMacOS # Gemini
 com.anysphere.sand # Grok Bot
 com.openai.codex # ChatGPT
 com.canonical.multipassGui # Multipass

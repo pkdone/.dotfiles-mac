@@ -26,7 +26,7 @@ else
     # The Brewfile pins names, not versions, so a *managed* package being merely
     # outdated is a soft warning (run brewsync), not drift. Match brewsync's env
     # (HOMEBREW_NO_UPGRADE_AUTO_UPDATES_CASKS=1) so self-updating casks it would never
-    # upgrade (Cursor, VS Code, Slack, Gemini, ...) aren't flagged as actionable here.
+    # upgrade (Cursor, VS Code, Slack, ...) aren't flagged as actionable here.
     outdated="$(HOMEBREW_NO_UPGRADE_AUTO_UPDATES_CASKS=1 brew outdated --quiet 2>/dev/null | grep -Fxf <(printf '%s\n' "$bf_names") || true)"
     if [ -n "$outdated" ]; then
       warn "all installed; outdated (run brewsync to update): $(printf '%s' "$outdated" | tr '\n' ' ')"

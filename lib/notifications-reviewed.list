@@ -29,7 +29,6 @@ com.electron.dockerdesktop # Docker Desktop
 io.tailscale.ipn.macsys # Tailscale (must be Off: lib/notifications-off.list)
 com.logi.cp-dev-mgr # Logi Options+ (must be Off: lib/notifications-off.list)
 org.cogx.cog # Cog (must be Off: lib/notifications-off.list)
-com.google.GeminiMacOS # Gemini (must be Off: lib/notifications-off.list)
 com.anysphere.sand # Grok Bot (must be Off: lib/notifications-off.list)
 com.openai.codex # ChatGPT (must be Off: lib/notifications-off.list)
 com.canonical.multipassGui # Multipass (must be Off: lib/notifications-off.list)

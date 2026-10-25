@@ -78,7 +78,7 @@ The desktop picture (Tahoe Night, Landscape) stays by hand. It is a system wallp
 
 Finder sidebar Favorites are checked against `lib/sidebar-favorites.list` by reading the Finder sidebar file. `macconfig --fix` does not change them. macconfig also checks the Tags group collapsed, Recents hidden, and, when the sidebar files name the row, Shared at the top, AirDrop and iCloud Drive hidden, and your home folder, Macintosh HD, Network, and Trash visible. A row the files do not name is reported as still by hand. `macconfig --fix` does not change the sidebar.
 
-Notes: Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see [Logi Options+](settings.md#logi-options)). The Finder, Logi Options+, Gemini and Raycast subsections in [Settings](settings.md) have the click-by-click detail.
+Notes: Mouse-wheel direction (Natural) is set in Logi Options+, not System Settings: the macOS natural-scrolling switch is global and also flips the trackpad. The Logi Options+ values are checked automatically (see [Logi Options+](settings.md#logi-options)). The Finder, Logi Options+ and Raycast subsections in [Settings](settings.md) have the click-by-click detail.
 EOF
 }
 
