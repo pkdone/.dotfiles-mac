@@ -82,11 +82,12 @@ check_input_british() {
   res ok "British keyboard layout only"
 }
 
-# `op whoami` never prompts: with the app integration it only reports an account this
-# terminal session has already authorised. Success proves the integration works.
-# Installed but not signed in (an unlock, or this session was never authorised)
-# is check by hand, not a warning. SESSION_CHECKS_OP_APP overrides the app path
-# in tests.
+# The manual step is to turn on the integration, run op signin, then op whoami.
+# This check only runs `op whoami`. That never prompts: with the app integration
+# it only reports an account this terminal session has already authorised.
+# Success proves the integration works. Installed but not signed in (an unlock,
+# or this session was never authorised) is check by hand, not a warning.
+# SESSION_CHECKS_OP_APP overrides the app path in tests.
 check_op_cli() {
   local app="${SESSION_CHECKS_OP_APP:-/Applications/1Password.app}"
   if [ ! -d "$app" ]; then res warn "1Password.app not installed (Iru Self Service)"; return; fi
@@ -94,7 +95,7 @@ check_op_cli() {
   if with_timeout 8 op whoami </dev/null >/dev/null 2>&1; then
     res ok "op whoami works through the app"
   else
-    res hand "installed but not signed in (an unlock may be required); run op whoami in a terminal to confirm"
+    res hand "installed but not signed in (an unlock may be required); run op signin and then op whoami in a terminal to confirm"
   fi
 }
 

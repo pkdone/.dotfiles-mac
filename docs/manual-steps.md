@@ -28,7 +28,7 @@ British input (`com.apple.HIToolbox` `AppleSelectedInputSources`, the keyboard l
 | 1 | Sign in to the GitHub CLI (needed to clone this private repo) | Terminal: gh auth login | auto |
 | 2 | Install the company apps from Iru Self Service (Kandji), not Homebrew. The names are in lib/mdm-apps.list | Applications → Iru Self Service | macconfig-check.sh |
 | 3 | Sign in to 1Password and unlock it | 1Password app | by hand |
-| 4 | Turn on Integrate with 1Password CLI, then run op whoami in a terminal | 1Password → Settings → Developer | auto |
+| 4 | Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal | 1Password → Settings → Developer | auto |
 | 5 | Install Cursor Nightly (separate app, next to the stable Cursor) | cursor.com/nightlydownload | auto |
 | 6 | Install YouTube Music as a Chrome app | Chrome → music.youtube.com → ⋮ → Cast, save, and share → Install page as app | auto |
 | 7 | Allow Hammerspoon (Sidecar → Slack), then restart it and choose Reload Config | System Settings → Privacy & Security → Device Control and Data Access → Hammerspoon | auto |

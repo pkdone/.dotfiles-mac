@@ -44,7 +44,7 @@ gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|T
 # ---- Company apps (MDM) ----
 mdm-apps|Company apps (MDM)|Install the company apps from Iru Self Service (Kandji), not Homebrew. The names are in lib/mdm-apps.list|Applications → Iru Self Service|app:Iru Self Service|@macconfig-check.sh
 1password-signin|Company apps (MDM)|Sign in to 1Password and unlock it|1Password app|app:1Password|
-1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op whoami in a terminal|1Password → Settings → Developer|app:1Password|op-cli
+1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal|1Password → Settings → Developer|app:1Password|op-cli
 
 # ---- Apps not in the Brewfile ----
 cursor-nightly|Apps not in the Brewfile|Install Cursor Nightly (separate app, next to the stable Cursor)|cursor.com/nightlydownload|https://cursor.com/nightlydownload|app:/Applications/Cursor Nightly.app
