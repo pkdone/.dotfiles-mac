@@ -371,7 +371,9 @@ has "section tags display-more-space" 'fixid display-more-space' "$section"
 # shellcheck disable=SC2016
 has "section warns on mismatch" 'warn "$disp_msg"' "$section"
 # shellcheck disable=SC2016
-has "section skips a clamshell with info" 'info "$disp_msg"' "$section"
+has "section skips a clamshell instead of walking it" 'skip "$disp_msg"' "$section"
+# shellcheck disable=SC2016  # the check source contains this literal
+has "a skip still prints as an info line" 'skip() { info "$1"; }' "$(cat "$DIR/macconfig-check.sh")"
 miss "section does not call displayplacer" 'displayplacer' "$section"
 
 printf 'display-resolution tests: %d passed, %d failed\n' "$pass" "$fail"

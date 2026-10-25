@@ -33,14 +33,15 @@ covered_step_run() { # id area
   COVERED_WARNS=""
   COVERED_OKS=""
   COVERED_FORCE_HAND=0
-  COVERED_SAW_INFO=0
+  COVERED_DOES_NOT_APPLY=0
   pass() { COVERED_OKS="${COVERED_OKS}$1"$'\n'; }
   warn() { COVERED_WARNS="${COVERED_WARNS}$1"$'\n'; }
   bad() { warn "$1"; }
-  # An info line means the check does not apply (a clamshell, an unlisted
-  # panel). It is not a setting left for the walk-through.
-  info() { COVERED_SAW_INFO=1; }
+  # info is "could not verify, still by hand" (an unreadable store, no dscl).
+  # skip is "this check does not apply" (a clamshell, an unlisted panel).
+  info() { COVERED_FORCE_HAND=1; }
   note() { COVERED_FORCE_HAND=1; }
+  skip() { COVERED_DOES_NOT_APPLY=1; }
   fixid() { :; }
   hdr() { :; }
   if [ -z "${DOT_PYTHON:-}" ]; then
@@ -76,7 +77,7 @@ EOF
 $COVERED_OKS
 EOF
     printf 'ok|%s\n' "$detail"
-  elif [ "$COVERED_SAW_INFO" = 1 ]; then
+  elif [ "$COVERED_DOES_NOT_APPLY" = 1 ]; then
     printf 'ok|\n'
   else
     printf 'hand|\n'

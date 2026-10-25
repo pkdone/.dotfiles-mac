@@ -141,6 +141,19 @@ disp_open="$(printf 's\n' | PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_
   MANUAL_STEPS_LIST="$tmp/disp.list" "$MS" open 2>"$tmp/dispopen.err")"
 miss "open skips More Space when there is no built-in display" "More Space" "$disp_open"
 
+if ! command -v dscl >/dev/null 2>&1; then
+  printf '%s\n' \
+    'user-picture|Display, keyboard & desktop|Account picture|System Settings → Users & Groups|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig:display' \
+    > "$tmp/pic.list"
+  pic_porc="$(HOME="$tmp/home" MANUAL_STEPS_LIST="$tmp/pic.list" "$MS" check --porcelain 2>"$tmp/pic.err")"
+  eq "a missing dscl stays check by hand" hand "$(printf '%s\n' "$pic_porc" | cut -d'|' -f1)"
+  pic_open="$(printf 's\n' | HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
+    MANUAL_STEPS_LIST="$tmp/pic.list" PATH="$tmp/bin:$PATH" "$MS" open 2>"$tmp/picopen.err")"
+  has "open still shows the account picture when it cannot be read" "Account picture" "$pic_open"
+  has "open says the account picture can't be checked" \
+    "Can't check this automatically. If it's already set, press s." "$pic_open"
+fi
+
 # Every @macconfig step: manualsteps check and the shared function agree.
 awk -F'|' '$1 !~ /^#/ && $6 ~ /^@macconfig:/ { print $1, substr($6, 12) }' "$LIST" > "$tmp/ids.txt"
 while read -r id area; do

@@ -73,7 +73,7 @@ check_step_display_more_space() {
       disp_msg="${disp_line#*|}"; disp_msg="${disp_msg#*|}"
       case "$disp_status" in
         ok)   pass "$disp_msg" ;;
-        info) info "$disp_msg" ;;
+        info) skip "$disp_msg" ;;
         warn)
           fixid display-more-space
           warn "$disp_msg"

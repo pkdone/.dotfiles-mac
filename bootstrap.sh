@@ -49,7 +49,10 @@ auto_brightness_needs_hand() {
   if [ ! -x "$bin" ] || [ -z "$py" ] || [ ! -r "$DOTDIR/lib/auto-brightness.py" ]; then
     return 0
   fi
-  diag="$("$bin" status-info 2>/dev/null || true)"
+  # Same bound as the display check. A stuck status-info must not hold up
+  # the checklist that follows setup.
+  diag="$(perl -e '$t = shift @ARGV; alarm $t; exec { $ARGV[0] } @ARGV or exit 127' \
+    "${AUTO_BRIGHTNESS_TIMEOUT:-15}" "$bin" status-info 2>/dev/null || true)"
   if [ -z "$diag" ]; then
     return 0
   fi
