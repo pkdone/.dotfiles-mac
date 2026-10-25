@@ -69,7 +69,7 @@ These two are not in those lists. Set them up by hand after bootstrapping:
 
 Company apps are the names in `lib/mdm-apps.list`. Zoom and 1Password are required, and so is every other name in that list. Install each one from Fleet Self service, not Homebrew. Fleet Desktop, the menu-bar app, has a My device item. Choose Self service there. The page needs company single sign-on, so nothing in this repo installs those apps unattended, and it does not call the Fleet API.
 
-Okta Verify is an App Store copy owned by `root:wheel` (id 490179405). `mas` cannot upgrade that copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`, so it stays out of the Brewfile. The 1Password desktop app is company-managed too. Its CLI (`1password-cli` / `op`) stays in the Brewfile. In the app, turn on Settings → Developer → Integrate with 1Password CLI, then run `op signin` and then `op whoami` in a terminal.
+Okta Verify is an App Store copy owned by `root:wheel` (id 490179405). `mas` cannot upgrade that copy (`No downloads initiated for ADAM ID 490179405`), which breaks `brewsync`, so it stays out of the Brewfile. The 1Password desktop app is company-managed too. Its CLI (`1password-cli` / `op`) stays in the Brewfile. In the app, turn on Settings → Developer → Integrate with 1Password CLI, then run `op signin` once in a terminal.
 
 1Password for Safari and Okta Extension App are not in the Brewfile and not in `lib/mdm-apps.list`. This Mac can't sign in to the App Store with a personal Apple ID, and it isn't known whether Fleet installs those Safari extensions. They are left out so a missing copy does not raise a warning.
 
