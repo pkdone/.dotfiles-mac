@@ -8,6 +8,8 @@
 # steps with no reliable check are info lines. Steps marked @macconfig:<area> are
 # verified by their own section above, so MACCONFIG_OWNS_SECTIONS makes them
 # covered and they are not repeated here.
+# shellcheck source=../lib/why-shown.sh disable=SC1091
+. "$DOTDIR/lib/why-shown.sh"
 hdr "Manual steps (lib/manual-steps.list)"
 fixid manual-step
 MANUAL_STEPS="$DOTDIR/scripts/manual-steps.sh"
@@ -43,9 +45,9 @@ else
           tailscale-signin) fixid tailscale-signin ;;
           *) fixid manual-step ;;
         esac
-        warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)"
+        warn "$ms_num. $ms_title — $ms_detail (manualsteps open)"
         ;;
-      hand)    info "$ms_num. $ms_title — check by hand${ms_detail:+ ($ms_detail)}" ;;
+      hand)    info "$ms_num. $ms_title — $(why_shown_line hand "$ms_detail")" ;;
       covered|'') : ;;
       *)       CHECKED=$((CHECKED + 1)); warn "manual-steps.sh: $ms_status${ms_num:+|$ms_num}" ;;
     esac

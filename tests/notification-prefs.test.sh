@@ -89,6 +89,11 @@ has "lock screen is turned on" "turn on when screen is locked" \
   "$(awk -F'|' '$1 == "notifications-lock-screen" { print $4; exit }' "$STEPS")"
 has "mirroring is Notifications Off" "Notifications Off" \
   "$(awk -F'|' '$1 == "notifications-mirroring" { print $4; exit }' "$STEPS")"
+grep -E '^notifications-(previews|display-sleep|lock-screen|mirroring)\|' "$STEPS" > "$tmp/centre.list"
+centre="$(NO_COLOR=1 MANUAL_STEPS_LIST="$tmp/centre.list" "$DIR/scripts/manual-steps.sh" pending 2>"$tmp/centre.err")"
+eq "Notification Centre steps use the MANUAL line" 4 \
+  "$(printf '%s\n' "$centre" | grep -c "MANUAL: Can't check this automatically. If it's already set, press s.")"
+miss "Notification Centre steps are not NOTSET" "NOTSET:" "$centre"
 eq "mode-hammerspoon-alerts is checked by macconfig-check.sh" "@macconfig:notifications" \
   "$(awk -F'|' '$1 == "mode-hammerspoon-alerts" { print $6; exit }' "$STEPS")"
 

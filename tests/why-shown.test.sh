@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #
 # A step with a check uses that result. Ok is skipped. Not ok says
-# "Not set yet:" and the reason. Only a step with no check says
-# "Can't check this automatically". A check that covers part of a step
-# names that part. manualsteps and the macconfig step function agree.
+# "NOTSET:" and the reason. A step that can't be checked says "MANUAL:".
+# Only a step with no check uses "Can't check this automatically".
+# A check that covers part of a step names that part. manualsteps and
+# the macconfig step function agree.
 # Run: ./tests/why-shown.test.sh
 #
 set -uo pipefail
@@ -28,7 +29,7 @@ miss() {
     *) pass=$((pass + 1)) ;; esac
 }
 
-CANT="Can't check this automatically"
+CANT="MANUAL: Can't check this automatically"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 export NO_COLOR=1
@@ -143,7 +144,7 @@ PY
   has "the warn names Allow Notifications" "Allow Notifications is on" "$on_porc"
   on_open="$(printf 's\n' | HOME="$notif_home" PATH="$tmp/bin:$PATH" NO_COLOR=1 \
     MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/notif.list" "$MS" open 2>"$tmp/onopen.err")"
-  has "open says notifications are not set yet" "Not set yet:" "$on_open"
+  has "open says notifications are not set yet" "NOTSET:" "$on_open"
   has "open names Calendar" "Calendar" "$on_open"
   miss "an on notification is not labelled can't-check" "$CANT" "$on_open"
 
@@ -157,10 +158,49 @@ PY
     "$(printf '%s\n' "$direct" | cut -d'|' -f2-)"
 fi
 
-# A step with no check still uses the can't-check line.
+# A step with no check still uses the can't-check line, under MANUAL:.
 printf '%s\n' 'plain|Group|Do this by hand|Somewhere||' > "$tmp/plain.list"
 plain="$(MANUAL_STEPS_LIST="$tmp/plain.list" "$MS" pending 2>"$tmp/plain.err")"
 has "a step with no check says it can't be checked" "$CANT" "$plain"
+has "a step with no check keeps the press s guidance" "press s." "$plain"
+
+# shellcheck source=../lib/why-shown.sh disable=SC1091
+. "$DIR/lib/why-shown.sh"
+eq "warn detail is NOTSET" "NOTSET: Shortcuts missing: 'Mode WebConf On'" \
+  "$(why_shown_line warn "Shortcuts missing: 'Mode WebConf On'")"
+eq "an empty warn is still NOTSET" "NOTSET: Not set yet" "$(why_shown_line warn "")"
+eq "an empty hand line is the generic MANUAL line" \
+  "MANUAL: Can't check this automatically. If it's already set, press s." \
+  "$(why_shown_line hand "")"
+eq "edge light is MANUAL and starts with a capital" \
+  "MANUAL: Can't be checked, so always shown. If it's already set, press s." \
+  "$(why_shown_line hand "can't be checked, so always shown")"
+eq "a check-by-hand prefix is not repeated" \
+  "MANUAL: Results from Apps toggles are not in a preference this check can read. If it's already set, press s." \
+  "$(why_shown_line hand "check by hand: Results from Apps toggles are not in a preference this check can read")"
+eq "a partial check stays MANUAL and keeps both parts" \
+  "MANUAL: Checked: the sidebar rows the files name. Still by hand: the favorites file. If it's already set, press s." \
+  "$(why_shown_line hand "Checked: the sidebar rows the files name. Still by hand: the favorites file.")"
+eq "a stored-key miss starts with a capital" \
+  "MANUAL: RaycastGlobalHotkey is not stored, so this can't be checked. If it's already set, press s." \
+  "$(why_shown_line hand "raycastGlobalHotkey is not stored, so this can't be checked")"
+eq "an already-done step keeps its own sentence" \
+  "Already done, shown because of --all" "$(why_shown_line ok "installed")"
+
+# Every reason on the real pending list uses one of the two labels.
+bad_why="$(printf '%s\n' "$pending" | awk '
+  /^[0-9]+\. / {
+    getline why
+    gsub(/^ +/, "", why)
+    if (why !~ /^(NOTSET|MANUAL): /) { print why; next }
+    rest = why
+    sub(/^(NOTSET|MANUAL): /, "", rest)
+    start = substr(rest, 1, 1)
+    if (start !~ /[A-Z0-9]/) print why
+    if (why ~ /^MANUAL:/ && index(why, "press s") == 0) print why
+  }
+')"
+eq "every pending reason is NOTSET or MANUAL, capitalised, and MANUAL says press s" "" "$bad_why"
 
 printf 'why-shown tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

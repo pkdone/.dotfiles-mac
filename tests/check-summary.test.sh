@@ -52,7 +52,7 @@ Summary
   ✔ ok           139 / 139
   ✖ drift          0
   ⚠ warnings       0
-  ✋ by hand      20   (scripts/manual-steps.sh list)
+  ✋ by hand      20   (manualsteps list)
   All good" "$(render 139 139 0 0 20 0 0 0 0 0 0 0)"
 
 eq "drift + warning, two of them SAFE" "
@@ -60,7 +60,7 @@ Summary
   ✔ ok           136 / 139
   ✖ drift          2
   ⚠ warnings       1
-  ✋ by hand      20   (scripts/manual-steps.sh list)
+  ✋ by hand      20   (manualsteps list)
   → run ./macconfig-check.sh --fix to repair 2 safe item(s)
   3 need attention (2 drift, 1 warning)" \
   "$(render 139 136 2 1 20 0 0 2 1 0 0 0 defaults symlink brew)"
@@ -74,7 +74,7 @@ Summary
   ✔ ok           137 / 139
   ✖ drift          0   (was 1 before --fix)
   ⚠ warnings       1
-  ✋ by hand      20   (scripts/manual-steps.sh list)
+  ✋ by hand      20   (manualsteps list)
   ↻ fixed          1
   ☞ needs Paul     1
   1 needs attention (1 warning)" "$(render 139 137 1 1 20 1 0 0 1 1 1 0 defaults brew)"
@@ -97,7 +97,7 @@ Summary
   ✔ ok           178 / 180
   ✖ drift          1
   ⚠ warnings       1
-  ✋ by hand      22   (scripts/manual-steps.sh list)
+  ✋ by hand      22   (manualsteps list)
   → run ./macconfig-check.sh --fix to repair 1 safe item(s)
   2 need attention (1 drift, 1 warning)
     - drift  Symlinks: ~/.gitconfig -> elsewhere (expected repo) (fix: symlink)
@@ -113,7 +113,7 @@ Summary
   ✔ ok           139 / 139
   ✖ drift          0
   ⚠ warnings       0
-  ✋ by hand      20   (scripts/manual-steps.sh list)
+  ✋ by hand      20   (manualsteps list)
   All good" "$clean_out"
 eq "clean has no attention bullet" "" "$(printf '%s\n' "$clean_out" | grep -F 'should not appear' || true)"
 
@@ -161,7 +161,7 @@ Summary
   ✔ ok           179 / 180
   ✖ drift          0   (was 1 before --fix)
   ⚠ warnings       1
-  ✋ by hand      22   (scripts/manual-steps.sh list)
+  ✋ by hand      22   (manualsteps list)
   ↻ fixed          1
   ☞ needs Paul     1
   1 needs attention (1 warning)

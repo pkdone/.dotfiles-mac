@@ -7,10 +7,11 @@
 #
 # A row the files do not name stays by hand. The Tags group collapsed is the
 # defaults key SidebarTagsSctionDisclosedState (Apple's spelling). Recents
-# hidden is the Finder sidebar Recents check. Neither is repeated here.
-# Blank lines and lines beginning with # are ignored.
+# hidden is the Finder sidebar Recents check. Tags in the sidebar are
+# lib/finder-sidebar-tags.py (FavoriteTagNames). None of those is repeated
+# here. Shared stays hidden. Blank lines and lines beginning with # are ignored.
 
-shared|top|first
+shared|top|hidden
 airdrop|either|hidden
 icloud|either|hidden
 home|volumes|visible

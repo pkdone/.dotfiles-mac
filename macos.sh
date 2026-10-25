@@ -1083,5 +1083,5 @@ if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (macconfig-check.sh --fix): sk
 cat <<'MANUAL'
 
 Still manual: the by-hand checklist is docs/manual-steps.md.
-Run scripts/manual-steps.sh pending to see what is not set yet, or scripts/manual-steps.sh open to walk through it.
+Run manualsteps pending to see what is not set yet, or manualsteps open to walk through it.
 MANUAL

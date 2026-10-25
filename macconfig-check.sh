@@ -840,7 +840,7 @@ printf '\n%sSummary%s\n' "$C_HDR" "$C_OFF"
 sum_row "✔" 1 "ok"       "$OKS"     "$S_OK_COL" " / $CHECKED"
 sum_row "✖" 1 "drift"    "$S_DRIFT" "$C_BAD"    "$S_DRIFT_NOTE"
 sum_row "⚠" 1 "warnings" "$S_WARN"  "$C_WARN"   "$S_WARN_NOTE"
-sum_row "✋" 2 "by hand"  "$HAND"    ""         "   (scripts/manual-steps.sh list)"
+sum_row "✋" 2 "by hand"  "$HAND"    ""         "   (manualsteps list)"
 if [ "$FIX" = 1 ]; then
   if [ "$DRY_RUN" = 1 ]; then
     sum_row "↻" 1 "would fix" "${#WOULD_FIX[@]}" "$C_OK" "   (dry run: nothing changed)"

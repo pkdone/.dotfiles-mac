@@ -132,7 +132,7 @@ open_out="$(printf 's\n' | TAILSCALE_JSON="$(json_for NeedsLogin '')" \
   "$MS" open)"
 has "open shows the step when Tailscale needs login" \
   "Open Tailscale, turn it on, and sign in as paul.done@anysphere.co" "$open_out"
-has "open says not set yet" "Not set yet:" "$open_out"
+has "open says not set yet" "NOTSET:" "$open_out"
 miss "open does not print the auth key" "$AUTH" "$open_out"
 
 open_ok="$(printf 's\n' | TAILSCALE_JSON="$(json_for Running paul.done@anysphere.co)" \

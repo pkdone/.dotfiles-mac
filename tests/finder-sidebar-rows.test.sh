@@ -130,7 +130,7 @@ user = os.path.basename(home.rstrip("/"))
 if mode == "good":
     top = [
         ("Recents", b"Recents\x00myDocuments.cannedSearch", True),
-        ("Shared", None, False),
+        ("Shared", None, True),
         ("AirDrop", None, True),
         (None, b"\x00com~apple~CloudDocs\x00", True),
     ]
@@ -153,7 +153,7 @@ elif mode == "drift":
         ("Trash", None, True),
     ]
 elif mode == "partial":
-    top = [("Shared", None, False)]
+    top = [("Shared", None, True)]
     volumes = [("Macintosh HD", None, False)]
 else:
     raise SystemExit("unknown mode " + mode)
@@ -169,8 +169,9 @@ run_mode() { # mode
 }
 
 out="$(run_mode good)"
-eq "shared at the top passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$2=="shared"{print $1}')"
-has "shared pass says first visible" "first visible row" "$out"
+eq "hidden shared passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$2=="shared"{print $1}')"
+has "shared pass says it is hidden" "Shared is hidden" "$out"
+miss "shared is not required to be first" "first visible" "$out"
 eq "airdrop hidden passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$2=="airdrop"{print $1}')"
 eq "icloud marker hidden passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$2=="icloud"{print $1}')"
 eq "home by path passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$2=="home"{print $1}')"
@@ -184,8 +185,9 @@ run_mode good >/dev/null
 eq "a passing read does not rewrite the sidebar files" "$before" "$(cksum "$tmp/side/top.sfl4"; cksum "$tmp/side/volumes.sfl4")"
 
 out="$(run_mode drift)"
-eq "shared behind airdrop warns" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$2=="shared"{print $1}')"
-has "shared warn names the row in front" "AirDrop" "$out"
+eq "visible shared warns" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$2=="shared"{print $1}')"
+has "visible shared says to hide it" "Hide it" "$(printf '%s\n' "$out" | awk -F'|' '$2=="shared"')"
+miss "visible shared is not judged by position" "first visible" "$(printf '%s\n' "$out" | awk -F'|' '$2=="shared"')"
 eq "visible airdrop warns" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$2=="airdrop"{print $1}')"
 eq "visible icloud warns" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$2=="icloud"{print $1}')"
 eq "hidden home warns" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$2=="home"{print $1}')"
@@ -223,7 +225,14 @@ printf '%s\n' \
 mkdir -p "$tmp/bin"
 printf '#!/bin/sh\nexit 0\n' > "$tmp/bin/open"
 chmod +x "$tmp/bin/open"
+# Tags are a separate read. Pin an empty FavoriteTagNames so this host's
+# Finder preferences do not turn the step into NOTSET.
+"$PY" - "$tmp/tags.plist" <<'PY'
+import plistlib, sys
+plistlib.dump({"FavoriteTagNames": []}, open(sys.argv[1], "wb"))
+PY
 open_out="$(printf 's\n' | HOME="$home" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
+  FINDER_TAGS_PLIST="$tmp/tags.plist" \
   MANUAL_STEPS_LIST="$tmp/step.list" PATH="$tmp/bin:$PATH" \
   "$DIR/scripts/manual-steps.sh" open 2>"$tmp/open.err")"
 eq "open of a missing FavoriteItems file exits 0" 0 "$?"
@@ -235,9 +244,11 @@ has "a missing FavoriteItems file names the part still by hand" \
   "Still by hand:" "$open_out"
 has "a missing FavoriteItems file names the favorites file" \
   "FavoriteItems" "$open_out"
+has "a missing FavoriteItems file is MANUAL" "MANUAL:" "$open_out"
+has "a missing FavoriteItems file keeps press s" "press s." "$open_out"
 miss "a missing FavoriteItems file is not labelled can't-check" \
   "Can't check this automatically" "$open_out"
-miss "a passing row check is not labelled not set yet" "Not set yet" "$open_out"
+miss "a passing row check is not labelled not set yet" "NOTSET:" "$open_out"
 
 printf 'finder-sidebar-rows tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
