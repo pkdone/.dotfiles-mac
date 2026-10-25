@@ -51,6 +51,7 @@ exit 0
 EOF
 cat > "$bin/tailscale" <<'EOF'
 #!/bin/sh
+printf '%s\n' "BE_CLI=${TAILSCALE_BE_CLI-}" >> "${TAILSCALE_LOG:?}"
 if [ "${1:-}" = status ] && [ "${2:-}" = --json ]; then
   printf '%s' "${TAILSCALE_JSON-}"
   exit "${TAILSCALE_RC:-0}"
@@ -61,7 +62,8 @@ chmod +x "$bin/open" "$bin/tailscale"
 printf '%s\n' \
   'tailscale-signin|Sign-ins|Open Tailscale, turn it on, and sign in as paul.done@anysphere.co|Open Tailscale|app:Tailscale|tailscale-signin' \
   > "$tmp/steps.list"
-export NO_COLOR=1
+export NO_COLOR=1 TAILSCALE_LOG="$tmp/tailscale.log" MANUAL_STEPS_TAILSCALE_BIN="$bin/tailscale"
+: > "$TAILSCALE_LOG"
 AUTH='tskey-auth-SECRETVALUE'
 NODE='nodekey:SECRETVALUE'
 
@@ -87,6 +89,7 @@ check() {
 
 out="$(check "$(json_for Running paul.done@anysphere.co)")"
 eq "running as Paul is ok" ok "$(printf '%s\n' "$out" | cut -d'|' -f1)"
+has "the CLI is forced even when the app binary is used" "BE_CLI=1" "$(cat "$TAILSCALE_LOG")"
 has "running as Paul names the account" "paul.done@anysphere.co" "$out"
 miss "running as Paul does not print the auth key" "$AUTH" "$out"
 miss "running as Paul does not print the node key" "$NODE" "$out"
@@ -110,8 +113,8 @@ out="$(check 'not-json')"
 eq "unreadable status is check by hand" hand "$(printf '%s\n' "$out" | cut -d'|' -f1)"
 miss "unreadable status does not echo the body" "not-json" "$out"
 
-rm -f "$bin/tailscale"
-out="$(PATH="$bin:$PATH" MANUAL_STEPS_LIST="$tmp/steps.list" "$MS" check --porcelain)"
+out="$(MANUAL_STEPS_TAILSCALE_BIN="$tmp/no-such-tailscale" PATH="$bin:$PATH" \
+  MANUAL_STEPS_LIST="$tmp/steps.list" "$MS" check --porcelain)"
 eq "a missing CLI is check by hand" hand "$(printf '%s\n' "$out" | cut -d'|' -f1)"
 has "a missing CLI says it can't be run" "can't be run" "$out"
 

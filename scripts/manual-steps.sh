@@ -211,15 +211,23 @@ check_karabiner_driver() {
 
 # tailscale-signin — read `status --json` only. Never log in, and never
 # print an auth key or a node key. The app binary is preferred; `tailscale`
-# on PATH is the fallback. ok only when BackendState is Running and the
-# logged-in LoginName is paul.done@anysphere.co.
+# on PATH is the fallback. MANUAL_STEPS_TAILSCALE_BIN overrides that path
+# in tests. TAILSCALE_BE_CLI=1 keeps the app binary in CLI mode so a
+# non-terminal run does not open the Tailscale window.
+# ok only when BackendState is Running and the logged-in LoginName is
+# paul.done@anysphere.co.
 check_tailscale_signin() {
   local bin="" json="" parsed="" state="" login="" py=""
-  if [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+  if [ -n "${MANUAL_STEPS_TAILSCALE_BIN+x}" ]; then
+    bin="$MANUAL_STEPS_TAILSCALE_BIN"
+  elif [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
     bin=/Applications/Tailscale.app/Contents/MacOS/Tailscale
   elif command -v tailscale >/dev/null 2>&1; then
-    bin=tailscale
+    bin="$(command -v tailscale)"
   else
+    bin=""
+  fi
+  if [ -z "$bin" ] || [ ! -x "$bin" ]; then
     res hand "Tailscale CLI can't be run"
     return
   fi
@@ -228,7 +236,7 @@ check_tailscale_signin() {
     res hand "Tailscale CLI can't be run"
     return
   fi
-  json="$(with_timeout 15 "$bin" status --json 2>/dev/null || true)"
+  json="$(TAILSCALE_BE_CLI=1 with_timeout 15 "$bin" status --json 2>/dev/null || true)"
   if [ -z "$json" ]; then
     res hand "Tailscale CLI can't be run"
     return
