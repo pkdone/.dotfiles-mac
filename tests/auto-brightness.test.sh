@@ -96,5 +96,46 @@ eq "plist after a header still parses" "ok||Automatically adjust brightness is o
 stdin_out="$("$PY" "$HELPER" < "$tmp/off.plist")"
 eq "stdin matches --plist" "ok||Automatically adjust brightness is off (CBAutoBrightnessEnabled=false, DisplayBrightnessAuto=0)" "$stdin_out"
 
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/corebrightnessdiag" <<'EOF'
+#!/bin/sh
+[ "${1:-}" = status-info ] || exit 1
+cat "${AB_PLIST:?}"
+EOF
+chmod +x "$tmp/bin/corebrightnessdiag"
+bright() {
+  (
+    BOOTSTRAP_DEFINE_ONLY=1
+    AUTO_BRIGHTNESS_DIAG="${2:-$tmp/bin/corebrightnessdiag}"
+    export AB_PLIST="$1"
+    # shellcheck disable=SC1091
+    . "$DIR/bootstrap.sh"
+    if auto_brightness_needs_hand; then echo hand; else echo ok; fi
+  )
+}
+eq "bootstrap stays quiet when auto-brightness is already off" "ok" "$(bright "$tmp/off.plist")"
+eq "bootstrap names auto-brightness when it is on" "hand" "$(bright "$tmp/on.plist")"
+eq "bootstrap names auto-brightness when the reading can't be parsed" "hand" "$(bright "$tmp/bad.plist")"
+eq "bootstrap names auto-brightness when the tool is missing" "hand" \
+  "$(bright "$tmp/off.plist" "$tmp/bin/missing-diag")"
+# A shell script clears the alarm. corebrightnessdiag is a real program, so
+# the stand-in is Perl, which keeps the timer.
+cat > "$tmp/bin/slowdiag" <<'EOF'
+#!/usr/bin/perl
+sleep 30;
+EOF
+chmod +x "$tmp/bin/slowdiag"
+slow_start=$(date +%s)
+slow_out="$(
+  BOOTSTRAP_DEFINE_ONLY=1 \
+  AUTO_BRIGHTNESS_DIAG="$tmp/bin/slowdiag" \
+  AUTO_BRIGHTNESS_TIMEOUT=1 \
+  bash -c '. "$1"; if auto_brightness_needs_hand; then echo hand; else echo ok; fi' _ "$DIR/bootstrap.sh"
+)"
+slow_end=$(date +%s)
+eq "a stuck brightness read still names the step" hand "$slow_out"
+eq "a stuck brightness read stops within the timeout" 1 \
+  "$([ $((slow_end - slow_start)) -lt 8 ] && echo 1 || echo 0)"
+
 printf 'auto-brightness tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

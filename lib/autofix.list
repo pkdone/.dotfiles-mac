@@ -28,7 +28,8 @@
 defaults|SAFE|macos|macOS default from lib/macos-defaults.list (Dock icon size / recents / minimize into app / no bouncing — restart Dock, Finder, Trash, Screenshots, Spaces, menu bar, Trackpad, window tiling, Stage Manager, desktop widgets, …)
 dictation-164|SAFE|macos|dictation hotkey 164 re-pinned by scripts/pin-dictation-hotkey-164.sh
 quicknote-190|SAFE|macos|Quick Note hotkey 190 (Globe/Fn+Q) disabled by scripts/pin-quicknote-hotkey-190.sh
-finder-icon-view|SAFE|macos|Finder icon view 72/13 re-pinned by scripts/pin-finder-icon-view.sh
+spotlight-64|SAFE|macos|Spotlight hotkey 64 (Command+Space) restored by scripts/pin-spotlight-hotkey-64.sh when it differs. No LaunchAgent. The script runs activateSettings -u
+finder-icon-view|SAFE|macos|Finder icon view 72/13 and Sort By Name (arrangeBy=name) re-pinned by scripts/pin-finder-icon-view.sh. Desktop view is not written
 finder-recents|SAFE|macos|Finder sidebar Recents hidden by lib/finder-sidebar-recents.py
 finder-show|SAFE|macos|Finder menu shortcut Show Finder set to Cmd-Ctrl-Shift-F (NSUserKeyEquivalents, -dict-add)
 titlebar-double-click|SAFE|macos|delete AppleMiniaturizeOnDoubleClick when it is set, so double-click fills the window (AppleActionOnDoubleClick Fill is the defaults row)
@@ -69,6 +70,7 @@ pointer-size|PAUL||Pointer size one notch above Normal (com.apple.universalacces
 input-british|PAUL||British keyboard layout only (com.apple.HIToolbox AppleSelectedInputSources). Other entries that are not a keyboard layout, such as Press and Hold, are fine. Check-only (manual step input-british): --fix never writes defaults
 gh-auth|PAUL||GitHub CLI signed in (gh auth status) — manual step gh-auth. Check-only: --fix never runs gh auth login
 1password-cli|PAUL||1Password CLI (op whoami) — manual step 1password-cli. Missing app or CLI is a warning. Installed but not signed in (needs an unlock) is info, not a warning. --fix never runs op
+tailscale-signin|PAUL||Tailscale sign-in — manual step tailscale-signin. Reads status --json only (Running and LoginName paul.done@anysphere.co). --fix never signs in and never prints auth keys or node keys
 finder-favorites|PAUL||Finder sidebar Favorites compared with lib/sidebar-favorites.list by reading FavoriteItems.sfl4 (or sfl3/sfl2). Check-only: writing the sidebar file is not reliable, and mysides is not a Homebrew formula or cask, so --fix never changes Favorites
 finder-sidebar|PAUL||Finder sidebar rows named in the top sidebar section and FavoriteVolumes (Shared first, AirDrop and iCloud Drive hidden, home / Macintosh HD / Network / Trash visible). Check-only: --fix never writes those files. A row the files do not name stays by hand
 spotlight-results|PAUL||Spotlight → Results from Apps: the apps in lib/spotlight-apps.list should be off (App Store, Calculator, Dictionary, and System Settings stay on). EnabledPreferenceRules is the row list, not the on/off state, so this is check by hand, not a warning. --fix never writes Spotlight

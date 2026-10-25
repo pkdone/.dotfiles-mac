@@ -36,7 +36,7 @@ eq "14-inch More Space prefix" "3024x1964|1800 x 1169" \
   "$(grep -E '^3024x1964\|' "$LIST")"
 eq "16-inch More Space prefix" "3456x2234|2056 x 1329" \
   "$(grep -E '^3456x2234\|' "$LIST")"
-eq "display-more-space is checked by macconfig-check.sh" "@macconfig-check.sh" \
+eq "display-more-space is checked by macconfig-check.sh" "@macconfig:display" \
   "$(awk -F'|' '$1 == "display-more-space" { print $6; exit }' "$STEPS")"
 eq "display-more-space is fixed by macos.sh" "SAFE|macos" \
   "$(awk -F'|' '$1 == "display-more-space" { print $2 "|" $3; exit }' "$DIR/lib/autofix.list")"
@@ -371,7 +371,9 @@ has "section tags display-more-space" 'fixid display-more-space' "$section"
 # shellcheck disable=SC2016
 has "section warns on mismatch" 'warn "$disp_msg"' "$section"
 # shellcheck disable=SC2016
-has "section skips a clamshell with info" 'info "$disp_msg"' "$section"
+has "section skips a clamshell instead of walking it" 'skip "$disp_msg"' "$section"
+# shellcheck disable=SC2016  # the check source contains this literal
+has "a skip still prints as an info line" 'skip() { info "$1"; }' "$(cat "$DIR/macconfig-check.sh")"
 miss "section does not call displayplacer" 'displayplacer' "$section"
 
 printf 'display-resolution tests: %d passed, %d failed\n' "$pass" "$fail"

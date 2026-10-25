@@ -52,7 +52,7 @@ has "bootstrap names auto-brightness before the checklist" \
 has "bootstrap logout notice is the helper" "dotfiles_print_logout_notice" "$(cat "$DIR/bootstrap.sh")"
 order="$(awk '
   /Still by hand: Automatically adjust brightness Off/ { b = NR }
-  /"\$MANUAL_STEPS" list/ { l = NR }
+  /"\$MANUAL_STEPS" pending/ { l = NR }
   /dotfiles_print_logout_notice/ { n = NR }
   END { if (b && l && n && b < l && l < n) print "ok"; else print "bad" }
 ' "$DIR/bootstrap.sh")"

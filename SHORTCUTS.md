@@ -80,7 +80,7 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 
 #### Hammerspoon
 
-Hammerspoon binds this in `hammerspoon/finder_hotkey.lua`, which `init.lua` loads. Pressing the keys launches Finder, or brings it to the front when Finder is already running. If a Raycast backup still has a Finder hotkey on the same keys, unbind it in Raycast so the two don't clash.
+Hammerspoon binds this in `hammerspoon/finder_hotkey.lua`, which `init.lua` loads. Pressing the keys launches Finder, or brings it to the front when Finder is already running.
 
 | Action | Shortcut |
 |------|------|

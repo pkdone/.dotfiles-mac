@@ -235,7 +235,7 @@ def read_favorites(path: str) -> tuple[str, object]:
                 "System Settings → Privacy & Security → Full Disk Access",
             )
         if exc.errno == errno.ENOENT:
-            return ("warn", f"Finder Favorites file is missing ({path})")
+            return ("info", f"Finder Favorites file is missing ({tilde(path)})")
         return ("warn", f"can't read Finder Favorites ({exc.strerror})")
     except (plistlib.InvalidFileException, ValueError, TypeError) as exc:
         return ("warn", f"could not read Finder Favorites ({exc})")
@@ -330,7 +330,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         path = args.sfl or favorite_file(os.environ.get("HOME", ""))
         if not args.sfl and not os.path.isfile(path):
-            emit_status("warn", f"Finder Favorites file is missing ({path})")
+            emit_status(
+                "info",
+                "Finder Favorites file is missing ("
+                + tilde(path)
+                + "). Finder may not create it until the sidebar is edited,"
+                " so this can't be checked",
+            )
             return 0
         status, payload = read_favorites(path)
         if status != "ok" or not isinstance(payload, list):

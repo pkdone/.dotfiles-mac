@@ -8,7 +8,7 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH; commit signing only when it is on), account picture (the Dog), placed desktop widgets (notificationcenterui widgets.instances, read-only), Karabiner background items, Finder sidebar rows the sidebar files name, Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, British input, GitHub CLI, 1Password CLI, pointer size, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + Spotlight shortcut (Command+Space, no LaunchAgent) + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH; commit signing only when it is on), account picture (the Dog), placed desktop widgets (notificationcenterui widgets.instances, read-only), Karabiner background items, Finder sidebar rows the sidebar files name, Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, British input, GitHub CLI, 1Password CLI, pointer size, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
@@ -196,6 +196,9 @@ bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); record drift "$1"; attn_push 
 warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  record warn "$1";  attn_push warn "$1";  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
 info() { HAND=$((HAND + 1));   printf '  info  %s\n' "$1"; }   # check-by-hand item: not drift, not a warning
 note() { printf '  info  %s\n' "$1"; }                         # FYI line: not counted anywhere
+# Same printed line as info. manualsteps treats skip as "does not apply"
+# (a clamshell display, an unlisted panel) and does not walk that step.
+skip() { info "$1"; }
 
 # with_timeout SECS CMD... — macOS has no timeout(1) by default; perl's alarm survives
 # exec, so CMD is killed (status 142) if it runs longer than SECS.
@@ -508,6 +511,7 @@ if [ "$FIX" = 1 ]; then
       defaults)         pat="${2%%|*} ${2#*|} —" ;;
       dictation-164)    pat="dictation hotkey 164" ;;
       quicknote-190)    pat="Quick Note hotkey 190" ;;
+      spotlight-64)     pat="Spotlight hotkey 64" ;;
       coteditor)        pat="CotEditor" ;;
       finder-recents)   pat="Finder sidebar Recents" ;;
       finder-icon-view) pat="Finder icon view defaults" ;;

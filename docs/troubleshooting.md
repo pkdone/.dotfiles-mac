@@ -2,11 +2,19 @@
 
 See [README.md](../README.md).
 
-The dictation and Quick Note pin values, and the Karabiner rules, are in [Settings](settings.md#keyboard-dictation-fn).
+The dictation and Quick Note pin values, Spotlight's Command+Space, and the Karabiner rules, are in [Settings](settings.md#keyboard-dictation-fn).
 
 ## After a macOS Software Update
 
-**After a macOS Software Update:** Apple often rewrites `com.apple.symbolichotkeys` and resets hotkey 164 to the unbound default (`enabled=0`, `type=standard`, `parameters=(65535,65535,0)`). That is what happened after Tahoe **26.7** / **27.0**. The same rewrite turns Quick Note hotkey 190 back on. Two LaunchAgents (`com.pdone.pin-dictation-hotkey-164` and `com.pdone.pin-quicknote-hotkey-190`) run the pin scripts at login (`RunAtLoad`) and again when `~/Library/Preferences/com.apple.symbolichotkeys.plist` changes (`WatchPaths`). launchd does not expand `~` or `$HOME`, so the repo plists store that path as `@HOME@`. `install.sh` and `macconfig-check.sh --fix` write a regular file under `~/Library/LaunchAgents` with `/Users/<you>` filled in. They are not symlinks. `ThrottleInterval` is 10 seconds, so a burst of writes starts each agent at most once per 10 seconds. Each pin script reads the hotkey and calls `defaults write` only when the value differs. A correct value does not touch the plist, so the watch cannot loop. A repair write changes the plist once more; launchd runs the agent again after the throttle, that run sees the right value and leaves it alone. The weekday drift check and `macos.sh` remain backups. Other managed `defaults` usually survive; this nested hotkey map does not.
+**After a macOS Software Update:** Apple often rewrites `com.apple.symbolichotkeys` and resets hotkey 164 to the unbound default (`enabled=0`, `type=standard`, `parameters=(65535,65535,0)`). That is what happened after Tahoe **26.7** / **27.0**. The same rewrite turns Quick Note hotkey 190 back on. Two LaunchAgents (`com.pdone.pin-dictation-hotkey-164` and `com.pdone.pin-quicknote-hotkey-190`) run the pin scripts at login (`RunAtLoad`) and again when `~/Library/Preferences/com.apple.symbolichotkeys.plist` changes (`WatchPaths`). launchd does not expand `~` or `$HOME`, so the repo plists store that path as `@HOME@`. `install.sh` and `macconfig-check.sh --fix` write a regular file under `~/Library/LaunchAgents` with `/Users/<you>` filled in. They are not symlinks. `ThrottleInterval` is 10 seconds, so a burst of writes starts each agent at most once per 10 seconds. Each pin script reads the hotkey and calls `defaults write` only when the value differs. A correct value does not touch the plist, so the watch cannot loop. A repair write changes the plist once more; launchd runs the agent again after the throttle, that run sees the right value and leaves it alone. The weekday drift check and `macos.sh` remain backups. Other managed `defaults` usually survive; this nested hotkey map does not. The same rewrite can turn off Spotlight's Command+Space (hotkey 64). That one has no LaunchAgent. `macconfig --fix` writes it back. See [Spotlight Command+Space](#spotlight-commandspace).
+
+## Spotlight Command+Space
+
+**Command+Space should open Spotlight.** That is symbolic hotkey 64: enabled, type standard, parameters (32, 49, 1048576). Raycast's hotkey recorder has a Replace Spotlight button next to Raycast Hotkey. Clicking it turns hotkey 64 off (`enabled=0`), and Command+Space stops opening Spotlight.
+
+There is no LaunchAgent for this hotkey. Dictation (164) and Quick Note (190) are re-pinned at login. Spotlight is not. `macos.sh` sets hotkey 64 only when it differs. `macconfig --fix` writes it and runs `activateSettings -u`.
+
+To put it back by hand: System Settings → Keyboard → Keyboard Shortcuts… → Spotlight → tick Show Spotlight search (Command+Space) → Done.
 
 ## Reloading a LaunchAgent on this Mac
 
@@ -21,7 +29,7 @@ Power settings that need sudo (manual step `ac-sleep`):
 - on battery, the display sleeps after 2 minutes (`sudo pmset -b displaysleep 2`)
 - on mains power, wake for network access is on (`sudo pmset -c womp 1`)
 
-Closing the lid still sleeps the Mac. Battery idle sleep is not changed. The screen still locks. `macconfig-check.sh` reads `pmset -g custom` and warns when one of those values is different. A company MDM reset often puts the sleep timer back. `--fix` does not run the commands, because they need sudo. `macos.sh` may run them and skips them when sudo is not available or you answer no. Run the manual step again in a terminal.
+Closing the lid still sleeps the Mac. Battery idle sleep is not changed. The screen still locks. `macconfig-check.sh` reads `pmset -g custom` and warns when one of those values is different. A Fleet reset often puts the sleep timer back. `--fix` does not run the commands, because they need sudo. `macos.sh` may run them and skips them when sudo is not available or you answer no. Run the manual step again in a terminal.
 
 The `macos.sh` step that runs the same command is in [Settings](settings.md#macos-defaults).
 

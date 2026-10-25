@@ -2,8 +2,10 @@
 # (System Settings → General → Login Items & Extensions). macconfig-check.sh ("Mac health")
 # warns about any enabled item that is neither listed here nor approved by an MDM
 # Service Management rule (Fleet pushes those; lib/btm-login-items.py reads them from
-# the BTM store, so company agents such as Fleet Desktop, Cyberhaven, Phorion EDR, Formal,
-# Zoom, Docker, Chrome and 1Password need no row here). Items whose app no longer
+# the BTM store). An MDM rule may not name every helper, so SentinelOne, Santa,
+# Formal, koi, the Zoom daemon and Chrome are listed here too. A new item whose
+# team id is already on an MDM Service Management rule is not told to turn off:
+# add that item to this list. Items whose app no longer
 # exists are always flagged as stale, even if listed.
 #
 # Format (pipe-delimited): type | value | note
@@ -29,6 +31,28 @@ team|X4QN7LTP59|Multipass daemon (cask multipass)
 label|com.pdone.pin-dictation-hotkey-164|this repo's LaunchAgent (launchagents/)
 
 # ---- Company / MDM apps (most are also covered by MDM rules) ----
+# Team rows cover every item from that developer. Bundle and label rows cover
+# an item the store records without a team id.
+team|4AYE5J54KN|SentinelOne
+bundle|com.sentinelone.agent|SentinelOne agent
+bundle|com.sentinelone.sentinel-helper|SentinelOne helper
+bundle|com.sentinelone.sentineld|SentinelOne daemon
+bundle|com.sentinelone.sentineld-guard|SentinelOne daemon guard
+bundle|com.sentinelone.sentineld-helper|SentinelOne daemon helper
+bundle|com.sentinelone.sentineld-shell|SentinelOne daemon shell
+bundle|com.sentinelone.sentinel-extensions|SentinelOne extensions
+team|ZMCG7MLDV9|Santa
+bundle|com.northpolesec.santa|Santa
+bundle|com.northpolesec.santa.bundleservice|Santa bundle service
+bundle|com.northpolesec.santa.syncservice|Santa sync service
+bundle|com.northpolesec.santa.metricservice|Santa metric service
+team|H2YVZWCZNF|Formal
+bundle|com.formal.desktop|Formal
+label|koi.security.mdm|koi security MDM agent (koi.security.mdm.plist)
+team|BJ4HAAB9B3|Zoom daemon
+bundle|us.zoom.ZoomDaemon|Zoom daemon
+team|EQHXZ8M8AV|Google Chrome, including its background updater
+bundle|com.google.Chrome|Google Chrome
 team|2BUA8C4S2C|1Password launcher and browser helper (Fleet Self service)
 bundle|com.okta.mobile|Okta Verify opens at login (Fleet Self service)
 team|6KKW3K37TU|Cyberhaven

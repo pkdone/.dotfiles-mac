@@ -52,12 +52,10 @@ src="$(cat "$DIR/hammerspoon/finder_hotkey.lua")"
 has "module focuses Finder by name" 'hs.application.launchOrFocus(M.app)' "$src"
 has "module binds the hotkey" 'hs.hotkey.bind(M.mods, M.key, M.press)' "$src"
 
-# ---- Raycast no longer owns the hotkey; the clash note stays ----
+# ---- Raycast no longer owns the Finder hotkey ----
 list="$(cat "$LIST")"
 miss "old Raycast Finder hotkey step is gone" "raycast-finder-hotkey|" "$list"
-has "unbind note is a manual step" \
-  "raycast-finder-unbind|App settings|Only if you imported a backup: if it still has a Finder hotkey on Shift+Control+Command+F, unbind it so it doesn't clash with Hammerspoon|" \
-  "$list"
+miss "finder unbind step is gone" "raycast-finder-unbind|" "$list"
 has "Raycast launcher hotkey stays" \
   "raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|" \
   "$list"

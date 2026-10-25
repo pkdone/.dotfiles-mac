@@ -10,6 +10,12 @@
 # System Events to turn dark mode on immediately when it is not already on.
 # A missing Automation permission is a warning. No logout.
 NSGlobalDomain|AppleInterfaceStyle|string|Dark||Appearance|Theme|`Dark`
+# Graphite. AppleAccentColor -1 is Appearance → Theme → Colour: Graphite.
+# AppleHighlightColor stays unset so the highlight follows the accent. Do not
+# write it. A change may need a logout, or each app opened again, before every
+# window shows Graphite. restart=logout, so that note is printed only when the
+# value changed.
+NSGlobalDomain|AppleAccentColor|int|-1|logout|Appearance|Theme colour|`Graphite`
 com.apple.dock|tilesize|float|28|Dock|Dock|Icon size|`28` (exact)
 com.apple.dock|show-recents|bool|false|Dock|Dock|Show recent apps|`false` (Off)
 com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Off)

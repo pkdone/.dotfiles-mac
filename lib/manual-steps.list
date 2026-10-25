@@ -25,9 +25,15 @@
 #            logi:<id>[,<id>]               Logi Options+ values match lib/logi-expected.list
 #                                           (read from a temp copy of settings.db by
 #                                           lib/logi-settings.py; never written)
-#            @macconfig-check.sh                      verified by its own macconfig-check.sh section (not repeated here)
+#            @macconfig:<area>            same read-only check as that macconfig-check.sh
+#                                           section (mdm, karabiner, display, power,
+#                                           notifications, login-items, finder, modes).
+#                                           manualsteps open/check run that step's
+#                                           function. macconfig's Manual steps section
+#                                           does not count it again.
+#            @macconfig-check.sh            legacy: report covered, do not run a section
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
-#            | spotlight-results | remove-widgets
+#            | spotlight-results | remove-widgets | home-printer | tailscale-signin
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
@@ -42,16 +48,22 @@
 #                                           not killed). The Desktop widgets section reports
 #                                           it. Manual steps skips that duplicate when the section
 #                                           ran. open still uses the check, so the step is shown
-#                                           only when a widget is placed.
+#                                           only when a widget is placed. home-printer only reads
+#                                           lpstat. It never adds a queue. The HP ENVY 6000 series
+#                                           is visible on Bonjour only on the home network.
+#                                           tailscale-signin reads `status --json`
+#                                           and prints only the state and the
+#                                           login name. It never prints keys.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
+
+# ---- Company apps (MDM) ----
+mdm-apps|Company apps (MDM)|Install the company apps from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not Homebrew. The names are in lib/mdm-apps.list|Fleet Desktop menu bar → My device → Self service|app:Fleet Desktop|@macconfig:mdm
+1password-signin|Company apps (MDM)|Sign in to 1Password and unlock it|1Password app|app:1Password|
+1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal|1Password → Settings → Developer|app:1Password|op-cli
 
 # ---- Sign-ins ----
 gh-auth|Sign-ins|Sign in to the GitHub CLI (needed to clone this private repo)|Terminal: gh auth login||gh-auth
-
-# ---- Company apps (MDM) ----
-mdm-apps|Company apps (MDM)|Install the company apps from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not Homebrew. The names are in lib/mdm-apps.list|Fleet Desktop menu bar → My device → Self service|app:Fleet Desktop|@macconfig-check.sh
-1password-signin|Company apps (MDM)|Sign in to 1Password and unlock it|1Password app|app:1Password|
-1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal|1Password → Settings → Developer|app:1Password|op-cli
+tailscale-signin|Sign-ins|Open Tailscale, turn it on, and sign in as paul.done@anysphere.co|Open Tailscale from Applications (it comes from Fleet Self service) → click the Tailscale icon in the menu bar → click Log in (or turn the Connected switch on) → choose sign in with your work account and use paul.done@anysphere.co → finish sign-in in the browser|app:Tailscale|tailscale-signin
 
 # ---- Apps not in the Brewfile ----
 cursor-nightly|Apps not in the Brewfile|Install Cursor Nightly (separate app, next to the stable Cursor)|cursor.com/nightlydownload|https://cursor.com/nightlydownload|app:/Applications/Cursor Nightly.app
@@ -61,7 +73,7 @@ youtube-music|Apps not in the Brewfile|Install YouTube Music as a Chrome app|Chr
 hammerspoon-ax|Privacy & Security permissions|Allow Hammerspoon, then restart it and choose Reload Config|Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|hammerspoon-ax
 karabiner-driver|Privacy & Security permissions|Turn on the Karabiner driver|Open Karabiner-Elements first so it asks for its driver. Then System Settings → General → Login Items & Extensions: scroll to Extensions, choose By Category, click ⓘ next to Driver Extensions, and turn on .Karabiner-VirtualHIDDevice-Manager (org.pqrs.Karabiner-DriverKit-VirtualHIDDevice). Enter your password if asked, then click Done|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|karabiner-driver
 karabiner-ax|Privacy & Security permissions|Allow Karabiner-Elements and Karabiner-Core-Service|Open Karabiner-Elements first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|tcc:Accessibility:org.pqrs.Karabiner-Core-Service
-karabiner-login-items|Privacy & Security permissions|Allow Karabiner-Elements to run in the background. macconfig checks this and does not change it|Open Karabiner-Elements first. System Settings → General → Login Items & Extensions → Allow in the Background. Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon should be enabled and allowed. Karabiner-Elements Privileged Daemons v2 may stay disabled|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig-check.sh
+karabiner-login-items|Privacy & Security permissions|Allow Karabiner-Elements to run in the background. macconfig checks this and does not change it|Open Karabiner-Elements first. System Settings → General → Login Items & Extensions → Allow in the Background. Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon should be enabled and allowed. Karabiner-Elements Privileged Daemons v2 may stay disabled|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:karabiner
 raycast-ax|Privacy & Security permissions|Allow Raycast for Clipboard History|Open Raycast first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|tcc:Accessibility:com.raycast.macos
 ghostty-fda|Privacy & Security permissions|Give Ghostty Full Disk Access|Open Ghostty first. System Settings → Privacy & Security → Full Disk Access → Ghostty. This lets macconfig read Login Items and Finder Recents|x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles|tcc:SystemPolicyAllFiles:com.mitchellh.ghostty
 grokbot-fda|Privacy & Security permissions|Give Grok Bot Full Disk Access|Open Grok Bot first. System Settings → Privacy & Security → Full Disk Access → Grok Bot. Needed for its unattended macconfig runs|x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles|tcc:SystemPolicyAllFiles:com.anysphere.sand
@@ -95,23 +107,23 @@ logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in to your Logi 
 # admin password, and the saved value is the root-owned CoreBrightness plist.
 # bootstrap.sh calls this step out when it prints the manual steps. open jumps
 # to System Settings → Displays. True Tone and battery dim stay as they are.
-auto-brightness|Display, keyboard & desktop|Automatically adjust brightness Off. This stays by hand: it needs an admin password and the saved setting is root-owned. Leave True Tone and Slightly dim the display on battery as they are|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
+auto-brightness|Display, keyboard & desktop|Automatically adjust brightness Off. This stays by hand: it needs an admin password and the saved setting is root-owned. Leave True Tone and Slightly dim the display on battery as they are|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
 # More Space is _spdisplays_resolution starting with the value for this panel
 # size in lib/display-resolution.list (14" 1800 x 1169, 16" 2056 x 1329).
 # macos.sh sets it with displayplacer on the built-in panel only. An unlisted
 # panel size or a clamshell Mac (no built-in panel) is an info skip. If
 # displayplacer is missing or the mode is not listed, set it by hand here.
-display-more-space|Display, keyboard & desktop|Built-in display: More Space. macos.sh sets this with displayplacer when that mode is listed for the built-in panel (14 inch 1800x1169, 16 inch 2056x1329). External displays are not changed. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
+display-more-space|Display, keyboard & desktop|Built-in display: More Space. macos.sh sets this with displayplacer when that mode is listed for the built-in panel (14 inch 1800x1169, 16 inch 2056x1329). External displays are not changed. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
 # Tahoe Night (Landscape) is a wallpaper-catalog asset, not a file under
 # /System/Library/Desktop Pictures. System Events "set picture" cannot select
 # that asset, and the wallpaper store is not written.
-wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). Set it by hand. There is no reliable command for this system picture (it is a wallpaper-catalog asset, not a file), and the wallpaper store is not written. macconfig warns if it is a different picture|System Settings → Wallpaper|x-apple.systempreferences:com.apple.Wallpaper-Settings.extension|@macconfig-check.sh
+wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). Set it by hand. There is no reliable command for this system picture (it is a wallpaper-catalog asset, not a file), and the wallpaper store is not written. macconfig warns if it is a different picture|System Settings → Wallpaper|x-apple.systempreferences:com.apple.Wallpaper-Settings.extension|@macconfig:display
 # Mains power: sleep 0, display sleep 10 minutes, wake for network access on.
 # Battery: display sleep 2 minutes. Battery idle sleep is not changed.
 # Closing the lid still sleeps the Mac. The screen still locks.
 # macconfig-check.sh reads `pmset -g custom` and warns. --fix does not run sudo.
 # macos.sh may run the sudo pmset commands and skips them when sudo is not available.
-ac-sleep|Display, keyboard & desktop|On mains power the Mac does not sleep on its own, the display sleeps after 10 minutes, and wake for network access is on. On battery the display sleeps after 2 minutes. Closing the lid still sleeps the Mac. Battery idle sleep is not changed|Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1||@macconfig-check.sh
+ac-sleep|Display, keyboard & desktop|On mains power the Mac does not sleep on its own, the display sleeps after 10 minutes, and wake for network access is on. On battery the display sleeps after 2 minutes. Closing the lid still sleeps the Mac. Battery idle sleep is not changed|Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1||@macconfig:power
 # Charge Limit 80% (macOS Tahoe 26.4 or later, Apple silicon laptops).
 # Apple documents this only in System Settings. There is no pmset or defaults
 # write. The Shortcuts action Set Battery Charge Limit is not a shell command.
@@ -133,33 +145,34 @@ input-british|Display, keyboard & desktop|Keyboard input source: British (maccon
 # does not write it and does not kill NotificationCenter or chronod.
 # Click wallpaper to reveal desktop stays out.
 remove-widgets|Display, keyboard & desktop|Remove every widget from the desktop: Control-click (or right-click) each widget → Remove Widget.|Desktop (reveal the desktop if the widgets are hidden)||remove-widgets
-user-picture|Display, keyboard & desktop|Set your user picture to the Dog (macconfig checks this). A different picture is a warning. macconfig does not change it|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig-check.sh
+user-picture|Display, keyboard & desktop|Set your user picture to the Dog (macconfig checks this). A different picture is a warning. macconfig does not change it|System Settings → Users & Groups → your account picture|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig:display
+
+# ---- Printer ----
+# Read-only: lpstat -p, or lpstat -v if -p does not name the queue.
+# Nothing here adds a printer. The Bonjour name only appears on the home network.
+home-printer|Printer|Add the home printer HP ENVY 6000 series|System Settings → Printers & Scanners → click Add Printer, Scanner or Fax… → Default tab → choose HP ENVY 6000 series (Bonjour Multifunction, only shown when on the home network) → leave Use: HP ENVY 6000 series → Add|x-apple.systempreferences:com.apple.Print-Scan-Settings.extension|home-printer
 
 # ---- Notifications & Spotlight ----
 notifications-mirroring|Notifications & Spotlight|Notifications Off when mirroring or sharing the display|System Settings → Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|
 # Bundle ids live in lib/notifications-off.list. macconfig-check.sh reads the
 # usernoted plist and never writes it. Mirroring stays the row above.
-notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Tailscale, Logi Options+, Cog, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
+notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Tailscale, Logi Options+, Cog, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos|System Settings → Notifications → Application Notifications|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig:notifications
 spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, and System Settings on. Check this page by hand (macconfig cannot read the toggles)|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----
-login-items-off|Login Items & Finder|Keep ChatGPT Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig-check.sh
-finder-sidebar|Login Items & Finder|Finder sidebar (macconfig checks this): the Tags group stays collapsed, Recents stays hidden, and, when the sidebar files name the row, Shared is the first visible row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar|app:Finder|@macconfig-check.sh
+login-items-off|Login Items & Finder|Keep ChatGPT Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:login-items
+finder-sidebar|Login Items & Finder|Finder sidebar (macconfig checks this): the Tags group stays collapsed, Recents stays hidden, and, when the sidebar files name the row, Shared is the first visible row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar|app:Finder|@macconfig:finder
 
 # ---- App settings ----
-# Import is optional. Hotkey, then Clipboard History, are the next two steps:
-# do those when there is no .rayconfig. Finder unbind is only after an import.
-# Scheduled Backup is its own step so the next Mac has a file to import.
-raycast-import|App settings|Only if you have a .rayconfig backup from another Mac. No backup? Skip this and do the next two steps|Raycast → Import Settings & Data → tick Settings, Aliases & Hotkeys|app:Raycast|
-raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|Raycast → Settings (Command+,) → General → click Raycast Hotkey → press Shift+Control+Command+R|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15
-raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|Open Raycast, run Clipboard History once (allow Accessibility if asked). Settings → Extensions → search clipboard → on the Clipboard History row of type Command (not the Extension row) click Record Hotkey → press Control+Command+V. With that row selected, set Keep History to 1 Day and add 1Password and 1Password for Safari to the disabled/excluded apps|app:Raycast|
-raycast-finder-unbind|App settings|Only if you imported a backup: if it still has a Finder hotkey on Shift+Control+Command+F, unbind it so it doesn't clash with Hammerspoon|Raycast → type Finder → Command+K → Configure Application… → clear the hotkey|app:Raycast|
-raycast-scheduled-backup|App settings|Turn on Scheduled Backup so the next Mac can import it|Raycast → Settings → Advanced → Scheduled Backup (to a synced folder, never this repo)|app:Raycast|
+# Raycast is set by hand: the launcher hotkey, then Clipboard History.
+# Do not click Replace Spotlight. That turns off Command+Space (symbolic hotkey 64).
+raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|Open Raycast → Settings (Command+,) → General → Raycast Hotkey → click the hotkey recorder and press Shift+Control+Command+R. Don't click the Replace Spotlight button next to it (it turns off Spotlight's Command+Space)|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15
+raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|Open Raycast, run Clipboard History once and allow Accessibility if asked. Then Raycast Settings → Clipboard History (in the left sidebar; there is no Extensions tab) → Keep history for = 1 Day → under Disabled Applications click + and add 1Password and 1Password for Safari (Keychain Access and Passwords are already listed) → in Commands, on the Clipboard History row click Add Hotkey and press Control+Command+V|app:Raycast|
 
 # ---- Modes (Hammerspoon menu-bar switcher; see docs/modes.md) ----
-mode-focus-modes|Modes (menu-bar switcher)|Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through)|System Settings → Focus → click Add Focus… (opens a sheet) → Custom → Done|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig-check.sh
-mode-focus-shortcuts|Modes (menu-bar switcher)|Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off". Also create "Mode Upcoming Meetings". macconfig checks all five with shortcuts list|Shortcuts → + → search "Set Focus"|app:Shortcuts|@macconfig-check.sh
-mode-hammerspoon-alerts|Modes (menu-bar switcher)|Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show|System Settings → Notifications → Hammerspoon → Alerts|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig-check.sh
+mode-focus-modes|Modes (menu-bar switcher)|Create two Focus modes named WebConf and DeepWork (WebConf: allow Granola; DeepWork: allow Hammerspoon, so the end-of-session notification gets through)|System Settings → Focus → click Add Focus… (opens a sheet) → Custom → Done|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig:modes
+mode-focus-shortcuts|Modes (menu-bar switcher)|Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off". Also create "Mode Upcoming Meetings". macconfig checks all five with shortcuts list|Shortcuts → + → search "Set Focus"|app:Shortcuts|@macconfig:modes
+mode-hammerspoon-alerts|Modes (menu-bar switcher)|Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show|System Settings → Notifications → Hammerspoon → Alerts|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig:notifications
 mode-menubar-pin|Modes (menu-bar switcher)|Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind <<|Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain)||
 
 # ---- Menu bar (third-party allow list) ----

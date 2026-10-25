@@ -86,6 +86,53 @@ check_pdone_launchagents() {
   return 0
 }
 
+# One AppleSymbolicHotKeys entry, parsed the same way as hotkeys 164 and 190:
+# the "KEY = { ... };" block, then enabled, type, and the three parameter lines.
+# Sets hk_enabled, hk_type, hk_p1, hk_p2, hk_p3 (empty when the key is absent).
+read_symbolic_hotkey() { # key  plist-text
+  local key="$1" text="$2" blk
+  blk="$(printf '%s\n' "$text" | awk -v key="$key" '
+    $0 ~ "^[[:space:]]*" key " =" { grab = 1 }
+    grab { print }
+    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ { exit }
+  ')"
+  hk_enabled="$(printf '%s\n' "$blk" | awk '/enabled/ { print $3; exit }' | tr -d ';')"
+  hk_type="$(printf '%s\n' "$blk" | awk '/type/ { print $3; exit }' | tr -d '";')"
+  hk_p1="$(printf '%s\n' "$blk" | awk '/parameters/ { getline; print $1; exit }' | tr -d ',')"
+  hk_p2="$(printf '%s\n' "$blk" | awk '/parameters/ { getline; getline; print $1; exit }' | tr -d ',')"
+  hk_p3="$(printf '%s\n' "$blk" | awk '/parameters/ { getline; getline; getline; print $1; exit }' | tr -d ',')"
+}
+
+# Command+Space: enabled, type=standard, parameters (32, 49, 1048576).
+spotlight_64_ok() {
+  [ "${hk_enabled:-}" = 1 ] && [ "${hk_type:-}" = standard ] \
+    && [ "${hk_p1:-}" = 32 ] && [ "${hk_p2:-}" = 49 ] && [ "${hk_p3:-}" = 1048576 ]
+}
+
+check_spotlight_hotkey() {
+  local hk
+  fixid spotlight-64
+  CHECKED=$((CHECKED + 1))
+  hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
+  if [ -z "$hk" ]; then
+    bad "symbolichotkeys not readable"
+  else
+    read_symbolic_hotkey 64 "$hk"
+    if spotlight_64_ok; then
+      pass "Command+Space opens Spotlight (hotkey 64)"
+    else
+      bad "Command+Space no longer opens Spotlight (Raycast may have taken it). Fix: System Settings → Keyboard → Keyboard Shortcuts… → Spotlight → tick Show Spotlight search (Command+Space) → Done, or run macconfig --fix"
+    fi
+  fi
+  CHECKED=$((CHECKED + 1))
+  fixid repo-file
+  if [ -x "$DOTDIR/scripts/pin-spotlight-hotkey-64.sh" ]; then
+    pass "scripts/pin-spotlight-hotkey-64.sh present"
+  else
+    bad "scripts/pin-spotlight-hotkey-64.sh missing"
+  fi
+}
+
 if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
   return 0
 fi
@@ -164,4 +211,11 @@ else
 fi
 check_repo_launchagent com.pdone.pin-quicknote-hotkey-190 \
   "re-disables 190 at login and when symbolichotkeys changes"
+
+# ---- 9b. Spotlight search (Command+Space) --------------------------------
+# Symbolic hotkey 64 is "Show Spotlight search". Desired: enabled, type=standard,
+# parameters (32, 49, 1048576). Raycast's Replace Spotlight button sets enabled=0.
+# No LaunchAgent: macos.sh and macconfig --fix write it only when it differs.
+hdr "Spotlight shortcut"
+check_spotlight_hotkey
 check_pdone_launchagents

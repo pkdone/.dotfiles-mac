@@ -28,7 +28,7 @@ miss() {
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-eq "karabiner background step is checked by macconfig" "@macconfig-check.sh" \
+eq "karabiner background step is checked by macconfig" "@macconfig:karabiner" \
   "$(awk -F'|' '$1 == "karabiner-login-items" { print $6; exit }' "$DIR/lib/manual-steps.list")"
 has "manual step says macconfig checks this" "macconfig checks this" \
   "$(awk -F'|' '$1 == "karabiner-login-items" { print $3; exit }' "$DIR/lib/manual-steps.list")"

@@ -6,8 +6,11 @@
 #   list [--markdown]   numbered checklist (or a Markdown table for docs/manual-steps.md)
 #   open [--all]        interactive walk-through: opens each step's settings page and
 #                       waits for Enter. Skips steps whose check already passes unless
-#                       --all. Prints a group heading only for a group that still has a
+#                       --all. Under each title, one line says why the step is shown.
+#                       Prints a group heading only for a group that still has a
 #                       step to show. Does nothing when stdin isn't a terminal.
+#                       A check of @macconfig:<area> runs that section's step function
+#                       once (lib/covered-steps.sh). It does not run the whole of macconfig.
 #   check [--porcelain] run each step's read-only check: ok / warn / check by hand.
 #                       Human output groups lines under the same headings as list.
 #                       --porcelain prints status|num|id|title|detail for macconfig-check.sh
@@ -22,12 +25,14 @@ set -uo pipefail
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LIST="${MANUAL_STEPS_LIST:-$DOTDIR/lib/manual-steps.list}"
 TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"
-NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets "
+NAMED_CHECKS=" hammerspoon-ax karabiner-driver pointer-size input-british op-cli gh-auth spotlight-results remove-widgets home-printer tailscale-signin "
 
 usage() {
   cat <<'USAGE'
 Usage: scripts/manual-steps.sh <command> [option]
   list [--markdown]    Print the manual steps as a numbered checklist (or Markdown table).
+  pending              Print only steps that are not set or can't be checked, with
+                       the same why-shown line as open. Says how many were already done.
   open [--all]         Walk through the steps one by one, opening each settings page.
                        Skips steps already verified ok unless --all. Needs a terminal.
   check [--porcelain]  Run the read-only checks: ok, warn or check by hand.
@@ -93,6 +98,13 @@ check_spec_ok() {
   local spec="$1" rest
   case "$spec" in
     ''|'@macconfig-check.sh') return 0 ;;
+    @macconfig:*)
+      rest="${spec#@macconfig:}"
+      case "$rest" in
+        mdm|karabiner|display|power|notifications|login-items|finder|modes) return 0 ;;
+      esac
+      return 1
+      ;;
     tcc:*)
       rest="${spec#tcc:}"
       case "$rest" in *:*) ;; *) return 1 ;; esac
@@ -122,6 +134,8 @@ res() { R_STATUS="$1"; R_DETAIL="$2"; }
 . "$DOTDIR/lib/session-checks.sh"
 # shellcheck source=../lib/fleet-apps.sh disable=SC1091
 . "$DOTDIR/lib/fleet-apps.sh"
+# shellcheck source=../lib/covered-steps.sh disable=SC1091
+. "$DOTDIR/lib/covered-steps.sh"
 
 # Allowed in the system TCC database? Reading it needs Full Disk Access for whatever
 # runs this (Ghostty / Grok Bot); without it, fall back to check by hand.
@@ -151,7 +165,7 @@ defaults_value_match() {  # actual want
 }
 
 check_defaults() {  # domain k=v[,k=v]
-  local domain="$1" pairs="$2" pair key want cur bad="" ok=""
+  local domain="$1" pairs="$2" pair key want cur bad="" ok="" unchecked=""
   if ! defaults read "$domain" >/dev/null 2>&1; then
     res hand "can't read $domain"; return
   fi
@@ -160,11 +174,14 @@ check_defaults() {  # domain k=v[,k=v]
     key="${pair%%=*}"; want="${pair#*=}"
     if cur="$(defaults read "$domain" "$key" 2>/dev/null)"; then
       if defaults_value_match "$cur" "$want"; then ok="$ok $key=$cur"; else bad="$bad $key=$cur (want $want)"; fi
+    elif [ "$domain" = com.raycast.macos ] && [ "$key" = raycastGlobalHotkey ]; then
+      # Current Raycast does not store this key, even when the hotkey is set.
+      unchecked="$unchecked $key is not stored, so this can't be checked"
     else
       bad="$bad $key not set (want $want)"
     fi
   done
-  if [ -n "$bad" ]; then res warn "${bad# }"; else res ok "${ok# }"; fi
+  if [ -n "$bad" ]; then res warn "${bad# }"; elif [ -n "$unchecked" ]; then res hand "${unchecked# }"; else res ok "${ok# }"; fi
 }
 
 check_hammerspoon_ax() {
@@ -190,6 +207,100 @@ check_karabiner_driver() {
   else
     res warn "not activated and enabled"
   fi
+}
+
+# tailscale-signin — read `status --json` only. Never log in, and never
+# print an auth key or a node key. The app binary is preferred; `tailscale`
+# on PATH is the fallback. MANUAL_STEPS_TAILSCALE_BIN overrides that path
+# in tests. TAILSCALE_BE_CLI=1 keeps the app binary in CLI mode so a
+# non-terminal run does not open the Tailscale window.
+# ok only when BackendState is Running and the logged-in LoginName is
+# paul.done@anysphere.co.
+check_tailscale_signin() {
+  local bin="" json="" parsed="" state="" login="" py=""
+  if [ -n "${MANUAL_STEPS_TAILSCALE_BIN+x}" ]; then
+    bin="$MANUAL_STEPS_TAILSCALE_BIN"
+  elif [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+    bin=/Applications/Tailscale.app/Contents/MacOS/Tailscale
+  elif command -v tailscale >/dev/null 2>&1; then
+    bin="$(command -v tailscale)"
+  else
+    bin=""
+  fi
+  if [ -z "$bin" ] || [ ! -x "$bin" ]; then
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  py="$(command -v python3 2>/dev/null || true)"
+  if [ -z "$py" ]; then
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  json="$(TAILSCALE_BE_CLI=1 with_timeout 15 "$bin" status --json 2>/dev/null || true)"
+  if [ -z "$json" ]; then
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  parsed="$(printf '%s' "$json" | "$py" -c '
+import json, sys
+raw = sys.stdin.read()
+try:
+    data = json.loads(raw)
+except Exception:
+    print("bad|")
+    raise SystemExit(0)
+if not isinstance(data, dict):
+    print("bad|")
+    raise SystemExit(0)
+state = data.get("BackendState")
+state = state if isinstance(state, str) else ""
+login = ""
+users = data.get("User")
+self_node = data.get("Self")
+uid = self_node.get("UserID") if isinstance(self_node, dict) else None
+if isinstance(users, dict) and uid is not None:
+    user = users.get(str(uid))
+    if isinstance(user, dict):
+        name = user.get("LoginName")
+        if isinstance(name, str):
+            login = name
+print(state.replace("|", "/") + "|" + login.replace("|", "/"))
+' 2>/dev/null || true)"
+  state="${parsed%%|*}"
+  login="${parsed#*|}"
+  if [ -z "$parsed" ] || [ "$state" = bad ]; then
+    res hand "Tailscale CLI can't be run"
+    return
+  fi
+  if [ "$state" = Running ] && [ "$login" = "paul.done@anysphere.co" ]; then
+    res ok "Tailscale is running as paul.done@anysphere.co"
+    return
+  fi
+  if [ -n "$login" ] && [ "$login" != "paul.done@anysphere.co" ]; then
+    res warn "signed in as $login, want paul.done@anysphere.co"
+    return
+  fi
+  res warn "Tailscale is ${state:-not running}"
+}
+
+# home-printer — read lpstat only. Never add a queue.
+# ok when a queue name contains HP_ENVY_6000 or "HP ENVY 6000".
+# Otherwise warn: it can only be added on the home network.
+check_home_printer() {
+  local out=""
+  if ! command -v lpstat >/dev/null 2>&1; then
+    res warn "HP ENVY 6000 series is not in the printer list. It can only be added on the home network"
+    return
+  fi
+  out="$(with_timeout 10 lpstat -p 2>/dev/null || true)"
+  if ! printf '%s\n' "$out" | grep -Eq 'HP_ENVY_6000|HP ENVY 6000'; then
+    out="$(with_timeout 10 lpstat -v 2>/dev/null || true)"
+  fi
+  if printf '%s\n' "$out" | grep -Eq 'HP_ENVY_6000|HP ENVY 6000'; then
+    res ok "HP ENVY 6000 series is in the printer list"
+    return
+  fi
+  res warn "HP ENVY 6000 series is not in the printer list. It can only be added on the home network"
 }
 
 # remove-widgets — lib/desktop-widgets.py reads widgets.instances in the
@@ -239,11 +350,27 @@ check_logi() {  # comma-separated ids
   esac
 }
 
-run_check() {  # spec
-  local spec="$1" rest path
+run_check() {  # spec [id]
+  local spec="$1" id="${2:-}" rest path line status detail
   case "$spec" in
     '')          res hand "" ;;
     '@macconfig-check.sh') res covered "verified by macconfig-check.sh" ;;
+    @macconfig:*)
+      # macconfig already ran the section. Do not run it again or count it twice.
+      if [ "${MACCONFIG_OWNS_SECTIONS:-}" = 1 ]; then
+        res covered "verified by macconfig-check.sh"
+        return 0
+      fi
+      line="$(covered_step_run "$id" "${spec#@macconfig:}" 2>/dev/null || true)"
+      status="${line%%|*}"
+      detail="${line#*|}"
+      detail="$(printf '%s' "$detail" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+      case "$status" in
+        ok) res ok "$detail" ;;
+        warn) res warn "$detail" ;;
+        *) res hand "" ;;
+      esac
+      ;;
     tcc:*)       rest="${spec#tcc:}"; check_tcc "${rest%%:*}" "${rest#*:}" ;;
     defaults:*)  rest="${spec#defaults:}"; check_defaults "${rest%%:*}" "${rest#*:}" ;;
     logi:*)      check_logi "${spec#logi:}" ;;
@@ -258,6 +385,8 @@ run_check() {  # spec
     gh-auth)          check_gh_auth ;;
     spotlight-results) check_spotlight_results ;;
     remove-widgets)   check_remove_widgets ;;
+    home-printer)     check_home_printer ;;
+    tailscale-signin) check_tailscale_signin ;;
     *)                res hand "unknown check '$spec'" ;;
   esac
 }
@@ -272,7 +401,11 @@ cmd_list() {
     printf '| # | Step | Where | Checked |\n|---|------|------|------|\n'
     i=0
     while [ "$i" -lt "$N" ]; do
-      case "${S_CHECK[$i]}" in '') auto="by hand" ;; '@macconfig-check.sh') auto="macconfig-check.sh" ;; *) auto="auto" ;; esac
+      case "${S_CHECK[$i]}" in
+        '') auto="by hand" ;;
+        '@macconfig-check.sh'|@macconfig:*) auto="macconfig-check.sh" ;;
+        *) auto="auto" ;;
+      esac
       printf '| %d | %s | %s | %s |\n' "$((i + 1))" "${S_TITLE[$i]}" "${S_WHERE[$i]}" "$auto"
       i=$((i + 1))
     done
@@ -293,6 +426,65 @@ cmd_list() {
   printf 'scripts/manual-steps.sh open    walks through the rest, opening each settings page\n'
 }
 
+# Why this step is on the walk-through. Uses the check just run (R_STATUS / R_DETAIL).
+open_why() {
+  case "$R_STATUS" in
+    warn)
+      if [ -n "$R_DETAIL" ]; then
+        printf '%s' "Not set yet: $R_DETAIL"
+      else
+        printf '%s' "Not set yet"
+      fi
+      ;;
+    ok|covered)
+      printf '%s' "Already done, shown because of --all"
+      ;;
+    *)
+      printf '%s' "Can't check this automatically. If it's already set, press s."
+      ;;
+  esac
+}
+
+# Steps that are not set, or that can't be checked. Same why-line as open.
+# Already-done steps (ok, or covered) are counted and not printed.
+cmd_pending() {
+  local i num last="" skipped=0 shown=0 lead="" why_c=""
+  printf '%sManual steps still to do%s\n' "$C_HDR" "$C_OFF"
+  i=0
+  while [ "$i" -lt "$N" ]; do
+    num=$((i + 1))
+    run_check "${S_CHECK[$i]}" "${S_ID[$i]}"
+    if [ "$R_STATUS" = ok ] || [ "$R_STATUS" = covered ]; then
+      skipped=$((skipped + 1))
+      i=$((i + 1))
+      continue
+    fi
+    shown=$((shown + 1))
+    if [ "${S_GROUP[$i]}" != "$last" ]; then
+      if [ -n "$last" ]; then printf '\n'; fi
+      group_heading "${S_GROUP[$i]}"
+      last="${S_GROUP[$i]}"
+      lead=""
+    else
+      lead=$'\n'
+    fi
+    case "$R_STATUS" in
+      warn) why_c="$C_WARN" ;;
+      *) why_c="$C_DIM" ;;
+    esac
+    printf '%s%s%d. %s%s\n      %s%s%s\n      %s\n' \
+      "$lead" "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" \
+      "$why_c" "$(open_why)" "$C_OFF" \
+      "${S_WHERE[$i]}"
+    i=$((i + 1))
+  done
+  echo
+  if [ "$shown" = 0 ]; then
+    echo "Nothing left to set by hand."
+  fi
+  printf 'Skipped %d already done.\n' "$skipped"
+}
+
 open_target() {  # target
   local t="$1"
   case "$t" in
@@ -307,7 +499,7 @@ open_target() {  # target
 }
 
 cmd_open() {
-  local all=0 i num reply todo=0 last="" lead=""
+  local all=0 i num reply todo=0 last="" lead="" why_c=""
   [ "${1:-}" = "--all" ] && all=1
   # Tests set MANUAL_STEPS_OPEN_TTY=1 to drive the walk-through from a pipe.
   # A real run still requires a terminal, so a non-interactive caller does nothing.
@@ -320,8 +512,8 @@ cmd_open() {
   i=0
   while [ "$i" -lt "$N" ]; do
     num=$((i + 1))
+    run_check "${S_CHECK[$i]}" "${S_ID[$i]}"
     if [ "$all" = 0 ]; then
-      run_check "${S_CHECK[$i]}"
       if [ "$R_STATUS" = ok ] || [ "$R_STATUS" = covered ]; then i=$((i + 1)); continue; fi
     fi
     todo=$((todo + 1))
@@ -336,7 +528,14 @@ cmd_open() {
     else
       lead=$'\n'
     fi
-    printf '%s%s%d. %s%s\n      %s\n' "$lead" "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" "${S_WHERE[$i]}"
+    case "$R_STATUS" in
+      warn) why_c="$C_WARN" ;;
+      *) why_c="$C_DIM" ;;
+    esac
+    printf '%s%s%d. %s%s\n      %s%s%s\n      %s\n' \
+      "$lead" "$C_HDR" "$num" "${S_TITLE[$i]}" "$C_OFF" \
+      "$why_c" "$(open_why)" "$C_OFF" \
+      "${S_WHERE[$i]}"
     printf '      [Enter] open%s, s skip, q quit: ' "$([ -n "${S_OPEN[$i]}" ] || echo ' (nothing to open)')"
     read -r reply || reply=q
     case "$reply" in
@@ -360,7 +559,7 @@ cmd_check() {
   i=0
   while [ "$i" -lt "$N" ]; do
     num=$((i + 1))
-    run_check "${S_CHECK[$i]}"
+    run_check "${S_CHECK[$i]}" "${S_ID[$i]}"
     case "$R_STATUS" in
       ok)      oks=$((oks + 1));         label="ok";       colour="$C_OK" ;;
       warn)    warns=$((warns + 1));     label="warn";     colour="$C_WARN" ;;
@@ -401,7 +600,7 @@ main() {
   case "$cmd" in -h|--help|'') usage; [ -n "$cmd" ]; return $? ;; esac
   shift
   case "$cmd" in
-    list|open|check|validate) ;;
+    list|pending|open|check|validate) ;;
     *) echo "Unknown command: $cmd (try --help)" >&2; return 2 ;;
   esac
   load_steps
@@ -410,6 +609,7 @@ main() {
   fi
   case "$cmd" in
     list)     cmd_list "$@" ;;
+    pending)  cmd_pending ;;
     open)     cmd_open "$@" ;;
     check)    cmd_check "$@" ;;
     validate) cmd_validate ;;

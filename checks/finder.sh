@@ -4,9 +4,68 @@
 # so a failing command still stops the check the way it did before the split.
 # CHECK_PART=icon|recents. The runner calls this twice so the two Finder
 # sections stay in their original places in the report.
+# scripts/manual-steps.sh calls check_step_finder_sidebar (@macconfig:finder).
+check_step_finder_sidebar() {
+  fixid finder-sidebar
+  fav_base="$HOME/Library/Application Support/com.apple.sharedfilelist"
+  fav_have=0
+  for fav_ext in sfl4 sfl3 sfl2; do
+    if [ -f "$fav_base/com.apple.LSSharedFileList.FavoriteItems.$fav_ext" ]; then
+      fav_have=1
+      break
+    fi
+  done
+  if [ "$fav_have" = 0 ]; then
+    note "Finder Favorites file is missing (~/Library/Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.FavoriteItems.sfl4). Finder may not create it until the sidebar is edited, so this can't be checked"
+  fi
+  side_rows="$DOTDIR/lib/finder-sidebar-rows.py"
+  side_rules="$DOTDIR/lib/finder-sidebar-rows.list"
+  if [ ! -r "$side_rows" ] || [ ! -r "$side_rules" ]; then
+    CHECKED=$((CHECKED + 1))
+    fixid repo-file
+    warn "sidebar row files missing — skip"
+  elif [ -z "$DOT_PYTHON" ]; then
+    info "no python3 — Finder sidebar rows stay by hand"
+  else
+    side_out="$(with_timeout 20 "$DOT_PYTHON" "$side_rows" --list "$side_rules" </dev/null 2>/dev/null || true)"
+    side_n=0
+    while IFS='|' read -r side_st side_id side_row_msg; do
+      [ -n "$side_st" ] || continue
+      case "$side_st" in
+        ok)
+          CHECKED=$((CHECKED + 1))
+          side_n=$((side_n + 1))
+          pass "$side_row_msg"
+          ;;
+        warn)
+          CHECKED=$((CHECKED + 1))
+          side_n=$((side_n + 1))
+          fixid finder-sidebar
+          warn "$side_row_msg"
+          ;;
+        info) info "$side_row_msg" ;;
+        *)
+          CHECKED=$((CHECKED + 1))
+          fixid tooling
+          warn "${side_row_msg:-$side_st}"
+          ;;
+      esac
+    done <<SIDE_ROWS
+$side_out
+SIDE_ROWS
+    if [ "$side_n" -eq 0 ] && ! printf '%s\n' "$side_out" | grep -q '^info|'; then
+      info "Finder sidebar rows could not be read, so they stay by hand"
+    fi
+  fi
+}
+
+if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
+  return 0
+fi
+
 case "${CHECK_PART:-}" in
 icon)
-# ---- 9b. Finder icon-view defaults (72 / 13) ------------------------------
+# ---- 9b. Finder icon-view defaults (72 / 13 / Sort By Name) --------------
 hdr "Finder icon view defaults"
 fixid finder-icon-view
 CHECKED=$((CHECKED + 1))
@@ -14,7 +73,7 @@ pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
 if [ ! -x "$pin" ]; then
   fixid repo-file; bad "scripts/pin-finder-icon-view.sh missing"
 elif "$pin" --check >/dev/null 2>&1; then
-  pass "Finder icon view defaults iconSize=72 textSize=13"
+  pass "Finder icon view defaults iconSize=72 textSize=13 arrangeBy=name"
 else
   bad "Finder icon view defaults drifted ($("$pin" --check 2>&1 || true)) — run macos.sh"
 fi
@@ -63,6 +122,7 @@ else
   side_msg="${side_line#*|}"
   case "$side_status" in
     ok) pass "$side_msg" ;;
+    info) info "$side_msg" ;;
     bad) warn "$side_msg — set them in Finder. macconfig --fix does not change Favorites" ;;
     *) warn "${side_msg:-Finder Favorites could not be read}" ;;
   esac
@@ -76,46 +136,7 @@ fi
 # hidden is the section above. --fix does not write the sidebar files.
 # Manual step finder-sidebar points here.
 hdr "Finder sidebar rows"
-fixid finder-sidebar
-side_rows="$DOTDIR/lib/finder-sidebar-rows.py"
-side_rules="$DOTDIR/lib/finder-sidebar-rows.list"
-if [ ! -r "$side_rows" ] || [ ! -r "$side_rules" ]; then
-  CHECKED=$((CHECKED + 1))
-  fixid repo-file
-  warn "sidebar row files missing — skip"
-elif [ -z "$DOT_PYTHON" ]; then
-  info "no python3 — Finder sidebar rows stay by hand"
-else
-  side_out="$(with_timeout 20 "$DOT_PYTHON" "$side_rows" --list "$side_rules" </dev/null 2>/dev/null || true)"
-  side_n=0
-  while IFS='|' read -r side_st side_id side_row_msg; do
-    [ -n "$side_st" ] || continue
-    case "$side_st" in
-      ok)
-        CHECKED=$((CHECKED + 1))
-        side_n=$((side_n + 1))
-        pass "$side_row_msg"
-        ;;
-      warn)
-        CHECKED=$((CHECKED + 1))
-        side_n=$((side_n + 1))
-        fixid finder-sidebar
-        warn "$side_row_msg"
-        ;;
-      info) info "$side_row_msg" ;;
-      *)
-        CHECKED=$((CHECKED + 1))
-        fixid tooling
-        warn "${side_row_msg:-$side_st}"
-        ;;
-    esac
-  done <<SIDE_ROWS
-$side_out
-SIDE_ROWS
-  if [ "$side_n" -eq 0 ] && ! printf '%s\n' "$side_out" | grep -q '^info|'; then
-    info "Finder sidebar rows could not be read, so they stay by hand"
-  fi
-fi
+check_step_finder_sidebar
 
 # ---- Show Finder menu shortcut (Cmd-Ctrl-Shift-F) ----
 # One entry in the Finder menu-shortcut dictionary. Other shortcuts in that

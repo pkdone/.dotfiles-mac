@@ -64,8 +64,8 @@ eq "driver step says to open Karabiner-Elements first" \
   "$(awk -F'|' '$1=="karabiner-driver" { print $4 }' "$LIST" | cut -d. -f1)."
 eq "step paths do not use the newer page name" "" \
   "$(awk -F'|' '$4 ~ /Device Control/ { print }' "$LIST")"
-eq "newer page name is mentioned once, in the manual-steps doc" 1 \
-  "$(grep -c 'Device Control and Data Access' "$DIR/../docs/manual-steps.md")"
+eq "manual-steps doc does not use the newer page name" "" \
+  "$(grep -F 'Device Control' "$DIR/../docs/manual-steps.md" || true)"
 eq "setup doc uses Accessibility for that page" "" \
   "$(grep -F 'Device Control' "$DIR/../docs/setup.md" || true)"
 eq "settings doc uses Accessibility for that page" "" \
@@ -180,33 +180,94 @@ has "logi backup path stays Settings Other" \
 has "logi backup says sign in first" "sign in to your Logi account first" "$logi_row"
 has "logi backup names restore" "Restore settings from backup (same page) on a new Mac if needed" "$logi_row"
 
-# No .rayconfig: import is optional, then hotkey and Clipboard History.
-# Finder unbind is only after an import. Scheduled Backup is its own step.
+# Raycast is set by hand: hotkey, then Clipboard History.
 raycast_ids="$(awk -F'|' '$1 ~ /^raycast-/ { printf "%s ", $1 }' "$LIST")"
-eq "raycast steps: import, then the two by-hand steps, then unbind, then backup" \
-  "raycast-ax raycast-import raycast-hotkey raycast-clipboard raycast-finder-unbind raycast-scheduled-backup " \
+eq "raycast steps: accessibility, hotkey, clipboard" \
+  "raycast-ax raycast-hotkey raycast-clipboard " \
   "$raycast_ids"
-import_row="$(grep '^raycast-import|' "$LIST")"
-has "import is optional" "Only if you have a .rayconfig backup" "$import_row"
-has "import says skip to the next two" "Skip this and do the next two steps" "$import_row"
-has "import path ticks the backup boxes" "tick Settings, Aliases & Hotkeys" "$import_row"
+hotkey_row="$(grep '^raycast-hotkey|' "$LIST")"
 has "hotkey path records the shortcut" \
-  "Settings (Command+,) → General → click Raycast Hotkey → press Shift+Control+Command+R" \
-  "$(grep '^raycast-hotkey|' "$LIST")"
-has "clipboard path records the command hotkey" \
-  "row of type Command (not the Extension row) click Record Hotkey → press Control+Command+V" \
-  "$(grep '^raycast-clipboard|' "$LIST")"
-has "clipboard path sets history and exclusions" \
-  "Keep History to 1 Day and add 1Password and 1Password for Safari" \
-  "$(grep '^raycast-clipboard|' "$LIST")"
-has "scheduled backup stays out of the repo" \
-  "Scheduled Backup (to a synced folder, never this repo)" \
-  "$(grep '^raycast-scheduled-backup|' "$LIST")"
+  "Open Raycast → Settings (Command+,) → General → Raycast Hotkey → click the hotkey recorder and press Shift+Control+Command+R" \
+  "$hotkey_row"
+has "hotkey step says not to replace Spotlight" \
+  "Don't click the Replace Spotlight button" \
+  "$hotkey_row"
+clip_row="$(grep '^raycast-clipboard|' "$LIST")"
+has "clipboard path uses the Clipboard History sidebar" \
+  "Raycast Settings → Clipboard History (in the left sidebar; there is no Extensions tab)" \
+  "$clip_row"
+has "clipboard path names Keep history for" "Keep history for" "$clip_row"
+has "clipboard path names Disabled Applications" "Disabled Applications" "$clip_row"
+has "clipboard path names Add Hotkey" "Add Hotkey" "$clip_row"
+has "clipboard path names the apps already listed" \
+  "Keychain Access and Passwords are already listed" \
+  "$clip_row"
+miss "no raycast import step" "raycast-import|" "$steps_text"
+miss "no finder unbind step" "raycast-finder-unbind|" "$steps_text"
+miss "no scheduled backup step" "raycast-scheduled-backup|" "$steps_text"
+miss "no unbind-the-Finder-hotkey step" \
+  "Only if you imported a backup: unbind the Finder hotkey" "$steps_text"
+# Docs, the checklist, bootstrap, and macconfig do not mention a Raycast
+# backup, import, export, or .rayconfig. Logi cloud backup is a different step.
+raycast_surfaces="$(
+  cat "$DIR/../docs/"*.md "$LIST" "$DIR/../bootstrap.sh" "$DIR/../macconfig-check.sh" \
+    "$DIR/../scripts/manual-steps.sh" "$DIR/../macos.sh"
+)"
+raycast_backup_lines="$(printf '%s\n' "$raycast_surfaces" | grep -n -i -E 'raycast.{0,80}(backup|import|export|rayconfig)|(backup|import|export|rayconfig).{0,80}raycast' || true)"
+eq "no Raycast backup, import, export, or .rayconfig note" "" "$raycast_backup_lines"
 
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \
   "$DIR/../README.md" "$DIR"/../docs/*.md "$LIST" "$DEF" "$DIR/../macos.sh" "$DIR/../lib/autofix.list" || true)"
 eq "no doc still says Force Click Off" "" "$force_off"
+
+# Current Raycast does not store raycastGlobalHotkey. A missing key is check
+# by hand. A stored value that differs is a warning. Another defaults step
+# still warns when its key is missing.
+raydir="$(mktemp -d)"
+cat > "$raydir/defaults" <<'EOF'
+#!/bin/sh
+[ "$1" = read ] || exit 1
+domain="$2"
+key="${3:-}"
+if [ "$domain" = com.raycast.macos ] && [ -z "$key" ]; then
+  exit 0
+fi
+if [ "$domain" = com.raycast.macos ]; then
+  case "${RAYCAST_KEY:-missing}" in
+    missing) exit 1 ;;
+    *) printf '%s\n' "$RAYCAST_KEY"; exit 0 ;;
+  esac
+fi
+if [ "$domain" = NSGlobalDomain ] && [ -z "$key" ]; then
+  exit 0
+fi
+exit 1
+EOF
+chmod +x "$raydir/defaults"
+printf '%s\n' \
+  'raycast-hotkey|App settings|Raycast hotkey|Raycast|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15' \
+  > "$raydir/raycast.list"
+printf '%s\n' \
+  'mouse-settings|Trackpad, mouse & pointer|Mouse|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|defaults:NSGlobalDomain:com.apple.mouse.scaling=1.5' \
+  > "$raydir/mouse.list"
+ray_status() {
+  RAYCAST_KEY="${1:-missing}" PATH="$raydir:$PATH" MANUAL_STEPS_LIST="$raydir/raycast.list" \
+    "$MS" check --porcelain 2>"$raydir/ray.err"
+}
+ray_out="$(ray_status missing)"
+ray_rc=$?
+eq "a missing Raycast hotkey is check by hand" hand "$(printf '%s\n' "$ray_out" | cut -d'|' -f1)"
+eq "a missing Raycast hotkey exits 0" 0 "$ray_rc"
+has "a missing Raycast hotkey says it can't be checked" "can't be checked" "$ray_out"
+ray_out="$(ray_status 'Option-Space')"
+eq "a different Raycast hotkey warns" warn "$(printf '%s\n' "$ray_out" | cut -d'|' -f1)"
+has "a different Raycast hotkey names the stored value" "Option-Space" "$ray_out"
+ray_out="$(ray_status 'Shift-Control-Command-15')"
+eq "the Raycast hotkey passes when stored" ok "$(printf '%s\n' "$ray_out" | cut -d'|' -f1)"
+mouse_out="$(PATH="$raydir:$PATH" MANUAL_STEPS_LIST="$raydir/mouse.list" "$MS" check --porcelain)"
+eq "a missing mouse key still warns" warn "$(printf '%s\n' "$mouse_out" | cut -d'|' -f1)"
+rm -rf "$raydir"
 
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

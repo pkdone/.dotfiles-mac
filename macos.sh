@@ -19,7 +19,8 @@
 #   --no-color  Disable ANSI colour (also honours the NO_COLOR env var).
 #   --list      Print the managed settings as a Markdown table and exit.
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
-#               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
+#               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @spotlight-64 /
+#               @coteditor /
 #               @finder-recents / @finder-icon-view / @finder-favorites /
 #               @finder-show / @titlebar-double-click / @ac-sleep /
 #               @display-more-space. Values that already match are left alone
@@ -85,7 +86,8 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
   --list       Print the managed settings as a Markdown table and exit.
   --only ID    Apply only this item (repeatable): "domain|key" from
-               lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
+               lib/macos-defaults.list, or @dictation-164, @quicknote-190, @spotlight-64,
+               @coteditor,
                @finder-recents, @finder-icon-view, @finder-favorites, @finder-show,
                @titlebar-double-click, @ac-sleep, @display-more-space. Matching
                values are left alone. Dark mode is also turned on live when it
@@ -133,6 +135,7 @@ fi
 say_ok()   { printf '  %sok%s    %s\n' "$C_OK"   "$C_OFF" "$1"; }
 say_chg()  { printf '  %schg%s   %s\n' "$C_CHG"  "$C_OFF" "$1"; }
 say_warn() { printf '  %swarn%s  %s\n' "$C_WARN" "$C_OFF" "$1"; }
+say_info() { printf '  info  %s\n' "$1"; }
 
 CONSIDERED=0
 CHANGED=0
@@ -568,6 +571,40 @@ apply_quicknote_hotkey() {
 }
 if selected @quicknote-190; then apply_quicknote_hotkey; fi
 
+# ---- Spotlight hotkey 64 (Command+Space; not a macos-defaults row) -------
+# Keep "Show Spotlight search" on Command+Space. Raycast's Replace Spotlight
+# button sets enabled=0. Write only when the value differs, including a full
+# setup (no re-assert). No LaunchAgent.
+apply_spotlight_hotkey() {
+  local pin="$DOTDIR/scripts/pin-spotlight-hotkey-64.sh"
+  CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -x "$pin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "scripts/pin-spotlight-hotkey-64.sh missing — skip Spotlight hotkey"
+    return 0
+  fi
+  if "$pin" --check >/dev/null 2>&1; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Spotlight hotkey 64 already Command+Space (dry-run)"
+    else
+      say_ok "Spotlight hotkey 64 already Command+Space (left alone)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Spotlight hotkey 64 -> Command+Space (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.symbolichotkeys"
+  ensure_backup
+  "$pin" >/dev/null
+  CHANGED=$((CHANGED + 1))
+  say_chg "Spotlight hotkey 64 -> Command+Space"
+  queue_restart logout "Spotlight shortcut (symbolic hotkey 64)"
+}
+if selected @spotlight-64; then apply_spotlight_hotkey; fi
+
 # ---- CotEditor theme + monospaced font (nested prefs via export/import) ----
 apply_coteditor() {
   local domain=com.coteditor.CotEditor
@@ -666,7 +703,10 @@ apply_finder_recents() {
 }
 if selected @finder-recents; then apply_finder_recents; fi
 
-# ---- Finder icon-view defaults (iconSize=72, textSize=13) ----
+# ---- Finder icon-view defaults (iconSize=72, textSize=13, arrangeBy=name) ----
+# Sort By Name on StandardViewSettings and FK_StandardViewSettings.
+# DesktopViewSettings is not written. A folder .DS_Store is not written.
+# The pin script restarts Finder; a real change also queues that same restart.
 apply_finder_icon_view() {
   local pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
   CONSIDERED=$((CONSIDERED + 1))
@@ -677,26 +717,26 @@ apply_finder_icon_view() {
   fi
   if "$pin" --check >/dev/null 2>&1; then
     if [ "$DRY_RUN" = 1 ]; then
-      say_ok "Finder icon view defaults iconSize=72 textSize=13 (dry-run)"
+      say_ok "Finder icon view defaults iconSize=72 textSize=13 arrangeBy=name (dry-run)"
     elif [ -n "$ONLY_IDS" ]; then
-      say_ok "Finder icon view defaults already iconSize=72 textSize=13 (left alone)"
+      say_ok "Finder icon view defaults already iconSize=72 textSize=13 arrangeBy=name (left alone)"
     else
       "$pin" >/dev/null
       REASSERTED=$((REASSERTED + 1))
-      say_ok "Finder icon view defaults already iconSize=72 textSize=13 (re-asserted)"
+      say_ok "Finder icon view defaults already iconSize=72 textSize=13 arrangeBy=name (re-asserted)"
     fi
     return 0
   fi
   if [ "$DRY_RUN" = 1 ]; then
     CHANGED=$((CHANGED + 1))
-    say_chg "Finder icon view defaults -> iconSize=72 textSize=13 (dry-run)"
+    say_chg "Finder icon view defaults -> iconSize=72 textSize=13 arrangeBy=name (dry-run)"
     return 0
   fi
   BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.finder"
   ensure_backup
   "$pin" >/dev/null
   CHANGED=$((CHANGED + 1))
-  say_chg "Finder icon view defaults -> iconSize=72 textSize=13"
+  say_chg "Finder icon view defaults -> iconSize=72 textSize=13 arrangeBy=name"
   queue_restart Finder
 }
 if selected @finder-icon-view; then apply_finder_icon_view; fi
@@ -723,6 +763,10 @@ apply_finder_favorites() {
   detail="${verdict#*|}"
   if [ "$status" = ok ]; then
     say_ok "Finder Favorites already match"
+    return 0
+  fi
+  if [ "$status" = info ]; then
+    say_info "${detail:-Finder Favorites cannot be checked}"
     return 0
   fi
   WARNINGS=$((WARNINGS + 1))
@@ -1038,31 +1082,6 @@ if [ -n "$ONLY_IDS" ]; then exit 0; fi   # --only (macconfig-check.sh --fix): sk
 
 cat <<'MANUAL'
 
-Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
-  - The account picture (the Dog) is checked and never changed
-  - Keyboard British input source (checked; not written). Built-in display
-    More Space is set with displayplacer when that mode is listed; otherwise
-    set it by hand. The Tahoe Night wallpaper stays by hand (there is no
-    reliable command for that system picture). Automatically adjust
-    brightness stays by hand (System Settings → Displays)
-  - Finder sidebar Favorites are checked from the sidebar file and not changed.
-    macconfig checks the Tags group collapsed, Recents hidden, and, when the
-    sidebar files name the row, Shared at the top, AirDrop and iCloud Drive
-    hidden, and your home folder, Macintosh HD, Network, and Trash visible.
-    A row the files do not name stays manual. macconfig does not change the sidebar
-  - Mouse double-click speed and secondary click (tracking 1.5 is the 7th notch
-    from Slow and scrolling 0.5 is the 5th notch from Slow; checked only —
-    defaults write is unreliable, so they are never written);
-    Trackpad Look up (checked, forceClick 0) and trackpad dragging (checked
-    only, Dragging=1 DragLock=0); MX Master 3S wheel (Natural), buttons in Logi
-    Options+ (checked by macconfig-check.sh, never written); Logi cloud backup
-  - Accessibility grants (TCC); notification mirroring. Spotlight → Results from
-    Apps is check by hand (the toggles are not in a preference the check can
-    read). Per-app Allow Notifications is checked
-  - Menu Bar → Allow in the Menu Bar: Raycast, Logi Options+ and Docker Off
-    (leave Tailscale, 1Password, Granola, Hammerspoon, Fleet Desktop)
-  - Set Hostname (requires sudo)
-  - Power, if the sudo step above was skipped: AC sleep 0, AC display sleep
-    10 minutes, battery display sleep 2 minutes, AC wake for network access.
-    Closing the lid still sleeps the Mac. Battery idle sleep is not changed
+Still manual: the by-hand checklist is docs/manual-steps.md.
+Run scripts/manual-steps.sh pending to see what is not set yet, or scripts/manual-steps.sh open to walk through it.
 MANUAL

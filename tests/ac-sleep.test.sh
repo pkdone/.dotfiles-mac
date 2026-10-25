@@ -171,7 +171,7 @@ eq "helper does not shell out" "" "$writers"
 eq "ac-sleep where lists the sudo commands" \
   "Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1" \
   "$(awk -F'|' '$1 == "ac-sleep" { print $4; exit }' "$STEPS")"
-eq "ac-sleep is checked by macconfig-check.sh" "@macconfig-check.sh" \
+eq "ac-sleep is checked by macconfig-check.sh" "@macconfig:power" \
   "$(awk -F'|' '$1 == "ac-sleep" { print $6; exit }' "$STEPS")"
 title="$(awk -F'|' '$1 == "ac-sleep" { print $3; exit }' "$STEPS")"
 has "manual step says the lid still sleeps" "Closing the lid still sleeps the Mac" "$title"
