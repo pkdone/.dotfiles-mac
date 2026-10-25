@@ -77,8 +77,6 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Claude Browser | Command + E (in Chrome) |
 | Claude Chat | Option, Option (double-tap) |
 | ChatGPT | Option + Space (Raycast was moved off this — see [Settings](docs/settings.md#raycast)) |
-| Gemini mini chat | Control + Option + G |
-| Gemini full chat | Control + Option + Shift + G |
 
 #### Hammerspoon
 

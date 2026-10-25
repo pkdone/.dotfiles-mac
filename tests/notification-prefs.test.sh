@@ -100,7 +100,6 @@ SAMPLE='{
     {"bundle-id": "io.tailscale.ipn.macsys", "flags": 1},
     {"bundle-id": "com.logi.cp-dev-mgr", "flags": 1},
     {"bundle-id": "org.cogx.cog", "flags": 1},
-    {"bundle-id": "com.google.GeminiMacOS", "flags": 1},
     {"bundle-id": "com.anysphere.sand", "flags": 1},
     {"bundle-id": "com.openai.codex", "flags": 1},
     {"bundle-id": "com.canonical.multipassGui", "flags": 1},
@@ -127,7 +126,6 @@ ok|com.apple.Passbook|Wallet (com.apple.Passbook): Allow Notifications is off (f
 ok|io.tailscale.ipn.macsys|Tailscale (io.tailscale.ipn.macsys): Allow Notifications is off (flags=1)
 ok|com.logi.cp-dev-mgr|Logi Options+ (com.logi.cp-dev-mgr): Allow Notifications is off (flags=1)
 ok|org.cogx.cog|Cog (org.cogx.cog): Allow Notifications is off (flags=1)
-ok|com.google.GeminiMacOS|Gemini (com.google.GeminiMacOS): Allow Notifications is off (flags=1)
 ok|com.anysphere.sand|Grok Bot (com.anysphere.sand): Allow Notifications is off (flags=1)
 ok|com.openai.codex|ChatGPT (com.openai.codex): Allow Notifications is off (flags=1)
 ok|com.canonical.multipassGui|Multipass (com.canonical.multipassGui): Allow Notifications is off (flags=1)

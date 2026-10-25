@@ -2,12 +2,12 @@
 # shellcheck disable=SC2154,SC2034
 # Sourced by macconfig-check.sh. Runs in the current shell (not a subshell)
 # so a failing command still stops the check the way it did before the split.
-# ---- 11. Login Items guard (ChatGPT / Gemini / launcher must stay Off) ----
+# ---- 11. Login Items guard (ChatGPT must stay Off) ----
 # SMAppService login items aren't safely disable-able from CLI; check only.
 hdr "Login Items (banned open-at-login)"
 fixid tooling   # helper / python problems below; the item checks are login-items
-BANNED_BUNDLES="com.openai.codex com.google.GeminiMacOS com.google.GeminiMacOS.launcher"
-BANNED_NAMES="ChatGPT Gemini GeminiAppLauncher"
+BANNED_BUNDLES="com.openai.codex"
+BANNED_NAMES="ChatGPT"
 # Prefer parsing the world-readable BTM db. `sfltool dumpbtm` can pop an admin
 # password dialog on Tahoe. This section never runs it. The Karabiner background
 # check reads the same database, and only tries sfltool with a short timeout
