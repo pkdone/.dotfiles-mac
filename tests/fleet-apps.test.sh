@@ -146,6 +146,7 @@ has "yes waits for Enter" "Press Enter after installing them." "$out"
 has "yes reports Zoom present after install" "Zoom is now present" "$out"
 has "yes warns that 1Password is still missing" "warning: 1Password missing at $ONEP" "$out"
 miss "yes does not call the missing app drift" "DRIFT" "$out"
+miss "yes does not print the device id" "$DEVICE_ID" "$out"
 
 # Same answers, reported through the check (pass / warn, never drift).
 reset_case
@@ -167,6 +168,7 @@ has "check reports Okta already present" "ok|Okta Verify present" "$out"
 has "check reports Zoom present after install" "ok|Zoom is now present" "$out"
 has "check warns 1Password is still missing" "warn|1Password missing at $ONEP" "$out"
 miss "check does not report drift" "drift|" "$out"
+miss "check does not print the device id" "$DEVICE_ID" "$out"
 unset -f pass warn bad
 
 # ---- non-interactive: name the apps and how to install them; do not open ----
@@ -179,7 +181,7 @@ miss "non-interactive does not ask" "Open Fleet Self service to install them now
 has "non-interactive names Zoom" "Zoom ($ZOOM)" "$out"
 has "non-interactive names 1Password" "1Password ($ONEP)" "$out"
 has "non-interactive prints the menu path" "Fleet Desktop menu bar → My device → Self service" "$out"
-has "non-interactive prints the self-service URL" "$SELF_URL" "$out"
+miss "non-interactive does not print the device id" "$DEVICE_ID" "$out"
 has "non-interactive warns" "warning: Zoom missing at $ZOOM" "$out"
 
 # ---- identifier missing: open Fleet Desktop, not a URL ----
@@ -230,6 +232,7 @@ has "check section header" "hdr|MDM / company apps" "$out"
 has "check names Zoom from the list" "Zoom" "$out"
 has "check names 1Password from the list" "1Password" "$out"
 miss "check script does not report drift" "drift|" "$out"
+miss "check script does not print the device id" "$DEVICE_ID" "$out"
 eq "check script opens nothing when it is not a terminal" "" "$(cat "$OPEN_LOG")"
 
 # Old product names stay out of the tree. The needles are built here so this

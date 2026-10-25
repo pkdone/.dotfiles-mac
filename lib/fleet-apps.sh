@@ -6,7 +6,9 @@
 # Fleet's device page needs company single sign-on, so this only opens it.
 # It does not call the Fleet API and it does not install anything.
 # The device id is read from the orbit identifier file on this Mac.
-# It is never written into the repo.
+# It is passed to `open` and never printed. bootstrap copies stdout into
+# ~/Library/Logs/dotfiles, so a printed id would be saved in that log.
+# The id is never written into the repo.
 
 # Tests override these. Defaults are the paths on a Fleet-managed Mac.
 # FLEET_ID_FILE         orbit device id (default /opt/orbit/identifier)
@@ -93,11 +95,9 @@ fleet_manual_path() {
 }
 
 fleet_print_how() {
-  local url
+  # The menu path only. The self-service URL contains the device id, and this
+  # text is copied into the setup log.
   printf 'Install them from Fleet Self service: %s\n' "$(fleet_manual_path)"
-  if url="$(fleet_self_service_url)"; then
-    printf '%s\n' "$url"
-  fi
 }
 
 # Open the self-service page. When the device id is missing, open Fleet
@@ -108,10 +108,10 @@ fleet_open_self_service() {
   cmd="${FLEET_OPEN_CMD:-open}"
   if url="$(fleet_self_service_url)"; then
     if "$cmd" "$url"; then
-      printf 'Opened %s\n' "$url"
+      printf 'Opened Fleet Self service.\n'
       return 0
     fi
-    printf 'Could not open %s\n' "$url"
+    printf 'Could not open Fleet Self service.\n'
     printf '%s\n' "$(fleet_manual_path)"
     return 0
   fi
