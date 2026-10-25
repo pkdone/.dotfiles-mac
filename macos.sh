@@ -3,10 +3,13 @@
 # macos.sh — apply a curated, idempotent set of macOS `defaults`.
 #
 # Reads current state first, then per setting:
-#   present, type mismatch    -> WARN, skip (never clobber a wrong-typed value)
-#   present, type ok, equal   -> re-assert (write same value), log "already set"
-#   present, type ok, differs -> write, log "changed: old -> new"
-#   missing                   -> write, log "set (was unset)"
+#   present, bool and int 0/1, same value -> equal. A re-assert uses the type
+#                                 already stored, so a boolean stays a boolean.
+#   present, bool and int 0/1, different  -> write in the type already stored
+#   present, other type mismatch          -> WARN, skip (never clobber a wrong-typed value)
+#   present, type ok, equal               -> re-assert (write same value), log "already set"
+#   present, type ok, differs             -> write, log "changed: old -> new"
+#   missing                               -> write, log "set (was unset)"
 #
 # A "set (was unset)" on a machine you've already configured can be an early
 # hint that a macOS upgrade renamed or moved a key — check the run report.
@@ -255,50 +258,44 @@ apply_setting() {  # domain key type desired restart tol [class]
   CONSIDERED=$((CONSIDERED + 1))
   desired="${desired//@HOME@/$HOME}"
   ensure_screenshot_dir "$domain" "$key" "$desired"
-  local cur curtype want_token video_flex
+  local cur curtype want_token write_type write_value
   want_token="$(type_token "$etype")"
 
   if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
     curtype="$(defaults_read_type "$domain" "$key" 2>/dev/null || true)"
     curtype="${curtype##* }"   # "Type is boolean" -> "boolean"
-    # video On is integer 1 or boolean true. Write back in the type already
-    # stored so a re-check agrees, instead of skipping a type mismatch.
-    video_flex=0
-    if [ "$domain" = com.apple.screencapture ] && [ "$key" = video ]; then
-      case "$curtype" in
-        boolean|integer) video_flex=1 ;;
-      esac
-    fi
-    if [ "$video_flex" = 1 ] && screencapture_video_matches "$curtype" "$cur" "$desired"; then
-      if [ "$DRY_RUN" = 1 ]; then
-        say_ok "$domain $key — would re-assert (already set: $cur)"
-      elif [ -n "$ONLY_IDS" ]; then
-        say_ok "$domain $key — already set: $cur (left alone)"
-      else
-        if [ "$curtype" = boolean ]; then
-          write_default "$domain" "$key" bool true
+    # Boolean true is integer 1, and boolean false is integer 0. A fresh Mac
+    # stores some 0/1 keys (the trackpad, video capture) as booleans while the
+    # list says int. That is the same value. A difference is written with the
+    # type already stored, so -bool stays -bool. Other integers are not booleans.
+    if flex_01_applicable "$curtype" "$etype" "$cur" "$desired"; then
+      write_type="$(flex_01_write_type "$curtype")"
+      write_value="$(flex_01_write_value "$write_type" "$desired")"
+      if flex_01_values_match "$cur" "$desired"; then
+        if [ "$DRY_RUN" = 1 ]; then
+          say_ok "$domain $key — would re-assert (already set: $cur)"
+        elif [ -n "$ONLY_IDS" ]; then
+          if [ "$SCREENSHOT_DIR_ACTION" = created ]; then
+            say_ok "$domain $key — already set: $cur (mkdir -p $SCREENSHOT_DIR_SHOWN)"
+          else
+            say_ok "$domain $key — already set: $cur (left alone)"
+          fi
         else
-          write_default "$domain" "$key" int "$desired"
+          write_default "$domain" "$key" "$write_type" "$write_value"
+          say_ok "$domain $key — re-asserted (already set: $cur)"
         fi
-        say_ok "$domain $key — re-asserted (already set: $cur)"
+        REASSERTED=$((REASSERTED + 1))
+        return 0
       fi
-      REASSERTED=$((REASSERTED + 1))
-      return 0
-    fi
-    if [ "$video_flex" = 1 ]; then
       if [ "$DRY_RUN" = 1 ]; then
         say_chg "$domain $key — would change: $cur -> $desired"
       else
         ensure_backup
-        if [ "$curtype" = boolean ]; then
-          write_default "$domain" "$key" bool true
-        else
-          write_default "$domain" "$key" int 1
-        fi
+        write_default "$domain" "$key" "$write_type" "$write_value"
         say_chg "$domain $key — changed: $cur -> $desired"
       fi
       CHANGED=$((CHANGED + 1))
-      queue_restart "$restart" "$domain $key"
+      queue_restart "$restart" "$domain $key" "$class"
       return 0
     fi
     if [ "$curtype" != "$want_token" ]; then

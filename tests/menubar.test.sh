@@ -227,7 +227,7 @@ eq "already-set exits 0" 0 "$rc"
 eq "already-set writes nothing" "" "$(writes)"
 eq "already-set restarts nothing" "" "$(cat "$klog")"
 
-# A wrong stored type is skipped, never clobbered, and does not restart.
+# Integer 1 is boolean true, so the battery percentage already matches.
 printf '%s\n' \
   'com.apple.controlcenter|VoiceControl|int|8' \
   'com.apple.controlcenter|Bluetooth|int|2' \
@@ -235,8 +235,23 @@ printf '%s\n' \
   > "$state"
 out="$(run_macos)"
 rc=$?
+eq "integer 1 battery percentage exits 0" 0 "$rc"
+has "integer 1 battery percentage matches boolean true" \
+  "@host/com.apple.controlcenter BatteryShowPercentage — already set: 1 (left alone)" "$out"
+miss "integer 1 battery percentage is not a type mismatch" "type mismatch" "$out"
+eq "matching integer 1 writes nothing" "" "$(writes)"
+eq "matching integer 1 restarts nothing" "" "$(cat "$klog")"
+
+# A non-0/1 integer is still a type mismatch and is not clobbered.
+printf '%s\n' \
+  'com.apple.controlcenter|VoiceControl|int|8' \
+  'com.apple.controlcenter|Bluetooth|int|2' \
+  'com.apple.controlcenter|BatteryShowPercentage|int|2' \
+  > "$state"
+out="$(run_macos)"
+rc=$?
 eq "type mismatch still exits 0" 0 "$rc"
-has "integer battery percentage is a type mismatch" \
+has "integer 2 battery percentage is a type mismatch" \
   "@host/com.apple.controlcenter BatteryShowPercentage — type mismatch (expected boolean, found integer); skipping" "$out"
 eq "type mismatch writes nothing" "" "$(writes)"
 eq "type mismatch restarts nothing" "" "$(cat "$klog")"

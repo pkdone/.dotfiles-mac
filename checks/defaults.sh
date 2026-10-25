@@ -39,20 +39,21 @@ while IFS='|' read -r domain key etype desired _restart _area _label _disp tol; 
   if cur="$(defaults_read "$domain" "$key" 2>/dev/null)"; then
     curtype="$(defaults_read_type "$domain" "$key" 2>/dev/null || true)"
     curtype="${curtype##* }"
-    # video On is integer 1 or boolean true. Either type with that value is clean.
-    video_flex=0
-    if [ "$domain" = com.apple.screencapture ] && [ "$key" = video ]; then
-      case "$curtype" in
-        boolean|integer) video_flex=1 ;;
-      esac
-    fi
-    if [ "$video_flex" = 1 ] && screencapture_video_matches "$curtype" "$cur" "$desired"; then
-      if [ "$shot_dir_missing" = 1 ]; then
-        bad "$shot_dir_msg"
+    # Boolean true is integer 1, and boolean false is integer 0. A stored
+    # boolean for a 0/1 integer (or the reverse) is the same value, not drift.
+    # A different 0/1 is value drift. macos.sh writes it with the stored type.
+    if flex_01_applicable "$curtype" "$etype" "$cur" "$desired"; then
+      if flex_01_values_match "$cur" "$desired"; then
+        if [ "$shot_dir_missing" = 1 ]; then
+          bad "$shot_dir_msg"
+        else
+          pass "$domain $key = $cur"
+        fi
       else
-        pass "$domain $key = $cur"
+        bad "$domain $key = $cur (expected $desired)"
+        if [ "$shot_dir_missing" = 1 ]; then bad "$shot_dir_msg"; fi
       fi
-    elif [ "$video_flex" = 0 ] && [ "$curtype" != "$want_token" ]; then
+    elif [ "$curtype" != "$want_token" ]; then
       bad "$domain $key — type mismatch (expected $want_token, found ${curtype:-none})"
       if [ "$shot_dir_missing" = 1 ]; then bad "$shot_dir_msg"; fi
     elif values_match "$etype" "$cur" "$desired" "$tol"; then

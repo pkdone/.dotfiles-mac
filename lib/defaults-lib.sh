@@ -37,16 +37,71 @@ values_match() {  # type actual desired [tol]
   values_equal "$1" "$2" "$3"
 }
 
-# com.apple.screencapture video is On as integer 1 or boolean true. macOS stores
-# it either way (`defaults read` prints 1 for both). The check and macos.sh treat
-# those as the same value, so a type difference is not drift and --fix does not
-# skip a value that is already On.
+# 0 or 1 when the text is a boolean or an integer 0/1. Anything else fails.
+# `defaults read` prints 0 or 1 for a boolean, and true/false for some writes.
+boolish_01() {
+  local n
+  n="$(norm_bool "$1")"
+  case "$n" in
+    0|1) printf '%s\n' "$n" ;;
+    *) return 1 ;;
+  esac
+}
+
+# True when the stored type and the list type are boolean and integer (either
+# way around) and both the stored value and the desired value are 0 or 1.
+# An integer 2 or 3 is not a boolean, so it stays a real type mismatch and is
+# not rewritten.
+flex_01_applicable() { # read-type word, our type, actual, desired
+  case "$1:$2" in
+    boolean:int|integer:bool) ;;
+    *) return 1 ;;
+  esac
+  boolish_01 "$3" >/dev/null || return 1
+  boolish_01 "$4" >/dev/null
+}
+
+# The type already stored, as a write_default type name.
+flex_01_write_type() { # read-type word
+  case "$1" in
+    boolean) printf '%s\n' bool ;;
+    integer) printf '%s\n' int ;;
+    *) return 1 ;;
+  esac
+}
+
+# Value to pass to defaults write for that stored type. Booleans are written
+# true/false. Integers are written 0/1.
+flex_01_write_value() { # write type (bool|int), desired
+  local bit
+  bit="$(boolish_01 "$2")" || return 1
+  if [ "$1" = bool ]; then
+    if [ "$bit" = 1 ]; then
+      printf '%s\n' true
+    else
+      printf '%s\n' false
+    fi
+  else
+    printf '%s\n' "$bit"
+  fi
+}
+
+# True when actual and desired are the same 0 or 1.
+flex_01_values_match() { # actual, desired
+  local a d
+  a="$(boolish_01 "$1")" || return 1
+  d="$(boolish_01 "$2")" || return 1
+  [ "$a" = "$d" ]
+}
+
+# com.apple.screencapture video is On as integer 1 or boolean true. That is
+# the same 0/1 rule as every other bool/int setting (flex_01_*).
 screencapture_video_matches() { # read-type word, actual, desired
   case "$1" in
     integer|boolean) ;;
     *) return 1 ;;
   esac
-  [ "$(norm_bool "$2")" = "$(norm_bool "$3")" ]
+  flex_01_values_match "$2" "$3"
 }
 
 type_token() {  # our type -> `defaults read-type` word

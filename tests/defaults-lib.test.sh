@@ -77,6 +77,26 @@ yes "zero tol acts exact (equal)"    values_match int 47 47 0
 no  "zero tol acts exact (unequal)"  values_match int 46 47 0
 no  "tol ignored for strings"        values_match string PfHm pfhm 5
 
+# ---- bool and int 0/1 are the same value; the write keeps the stored type ----
+yes "boolean 1 with int 1 is flexible" flex_01_applicable boolean int 1 1
+yes "integer 0 with bool false is flexible" flex_01_applicable integer bool 0 false
+yes "boolean 0 with int 0 is flexible" flex_01_applicable boolean int 0 0
+no  "the same integer type is not flexible" flex_01_applicable integer int 1 1
+no  "integer 2 is not a boolean" flex_01_applicable boolean int 2 0
+no  "stored integer 2 against a bool is not flexible" flex_01_applicable integer bool 2 false
+no  "a string store is not flexible" flex_01_applicable string int 1 1
+eq "a boolean is written as bool" bool "$(flex_01_write_type boolean)"
+eq "an integer is written as int" int "$(flex_01_write_type integer)"
+eq "bool 1 is written true" true "$(flex_01_write_value bool 1)"
+eq "bool 0 is written false" false "$(flex_01_write_value bool 0)"
+eq "bool false is written false" false "$(flex_01_write_value bool false)"
+eq "int true is written 1" 1 "$(flex_01_write_value int true)"
+eq "int false is written 0" 0 "$(flex_01_write_value int false)"
+yes "boolean 1 matches int 1" flex_01_values_match 1 1
+yes "false matches 0" flex_01_values_match false 0
+no  "1 does not match 0" flex_01_values_match 1 0
+no  "2 is not a 0/1 value" flex_01_values_match 2 0
+
 # ---- screencapture video: integer 1 and boolean true are the same On ----
 yes "video integer 1 matches desired 1" screencapture_video_matches integer 1 1
 yes "video boolean true matches desired 1" screencapture_video_matches boolean true 1

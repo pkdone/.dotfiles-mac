@@ -37,7 +37,7 @@ function brewsync --description "Install, update, and clean up Homebrew packages
     end
 
     begin
-        __brewsync_body
+        __brewsync_body "$logfile"
     end 2>&1 | tee -a "$logfile"
     set -l rc $pipestatus[1]
     echo "Log: $logfile" | tee -a "$logfile"
@@ -45,14 +45,22 @@ function brewsync --description "Install, update, and clean up Homebrew packages
 end
 
 function __brewsync_body
+    set -l logfile $argv[1]
     echo "📦 Bundling from Brewfile..."
     ~/.dotfiles-mac/scripts/brew-bundle-install.sh --file ~/.dotfiles-mac/Brewfile
     set -l bundle_rc $status
-    # 2 and above: network, disk, Command Line Tools, or Homebrew itself.
+    # 2: network, disk, Command Line Tools, or Homebrew itself.
     # Upgrading would hit the same wall, so stop after the message above.
-    if test $bundle_rc -ge 2
+    if test $bundle_rc -eq 2
         echo "Skipping upgrade and cleanup because the checks above failed."
         return $bundle_rc
+    end
+    # 3 and above: the installer stopped before it could name missing packages
+    # (a shell error such as an unset variable). Say so, name the log, and
+    # still upgrade and clean up. Exit non-zero at the end.
+    if test $bundle_rc -ge 3
+        echo "⚠️  The Brewfile install failed before it could finish. No missing package was named."
+        echo "    The log for this run is $logfile"
     end
 
     echo ""
@@ -70,6 +78,12 @@ function __brewsync_body
     echo ""
     echo "🩺 Running doctor..."
     brew doctor
+
+    if test $bundle_rc -ge 3
+        echo ""
+        echo "⚠️  The Brewfile install failed before it could finish. The log is $logfile"
+        return $bundle_rc
+    end
 
     if test $bundle_rc -ne 0
         echo ""

@@ -24,6 +24,13 @@ use up the window. Leave it unset to use real time.
 Rows marked `unpinnable` (no declared UTI; duti error -50 on the dynamic UTI)
 are reported as info and never passed to duti.
 
+An extension that is not marked unpinnable can still have no declared file
+type. `duti -e` then lists only a `dyn.*` UTI, and `duti -s` fails with
+error -50 on that dynamic UTI. That row is a warning
+("no app declares a file type for .EXT yet; skipped"), not a failure and
+not drift. The row stays in the list so a later app that declares the type
+can be set. `.fish` is the one that hits this on a fresh Mac.
+
 html / htm / xhtml, the UTIs public.html and public.xhtml, and any URL scheme
 are refused. Setting public.html switches the default web browser. URL schemes
 are `duti -s <bundle> <scheme>` with no role (`all` is error -50) and belong
@@ -42,6 +49,7 @@ import time
 EXT_RE = re.compile(r"[A-Za-z0-9]+$")
 BUNDLE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]*$")
 UTI_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z0-9.-]+$")
+DYN_UTI_RE = re.compile(r"^dyn\.[0-9a-z]+$", re.IGNORECASE)
 NO_HANDLER = "Failed to get default application"
 BROWSER_EXTS = {"html", "htm", "xhtml"}
 BROWSER_UTIS = {"public.html", "public.xhtml"}
@@ -185,16 +193,40 @@ def current_handler(duti: str, ext: str) -> tuple[str, str]:
     return "", ""
 
 
+def is_dynamic_uti(uti: str) -> bool:
+    return bool(DYN_UTI_RE.fullmatch(uti.strip()))
+
+
+def dynamic_only(utis: list[str]) -> bool:
+    """True when duti named at least one UTI and every one of them is dyn.*."""
+    return bool(utis) and all(is_dynamic_uti(uti) for uti in utis)
+
+
+def no_declared_type_message(ext: str) -> str:
+    return f"no app declares a file type for .{ext} yet; skipped"
+
+
+def duti_dynamic_param_error(text: str) -> bool:
+    """duti -s error -50 against a dynamic UTI (paramErr, nothing to set)."""
+    low = text.lower()
+    return "error -50" in low and "dyn." in low
+
+
 def extension_utis(duti: str, ext: str) -> list[str]:
     """UTIs `duti -e` declares for this extension. Empty if duti can't say."""
     rc, out, _err = run_duti([duti, "-e", ext])
-    if rc != 0 and "identifier:" not in out:
+    if rc != 0 and "identifier:" not in out and not any(
+        is_dynamic_uti(line.strip()) for line in out.splitlines()
+    ):
         return []
     found = []
     for line in out.splitlines():
         stripped = line.strip()
-        if stripped.lower().startswith("identifier:"):
+        low = stripped.lower()
+        if low.startswith("identifier:"):
             found.append(stripped.split(":", 1)[1].strip())
+        elif is_dynamic_uti(stripped):
+            found.append(stripped)
     return found
 
 
@@ -262,9 +294,12 @@ def check_rows(duti: str, rows, schemes: set[str]) -> list[tuple[str, str, str]]
             continue
         if have == bundle:
             out.append(("ok", ext, f".{ext} -> {label(app, bundle)}"))
-        else:
-            shown = have or "unset"
-            out.append(("bad", ext, f".{ext} -> {shown} (expected {label(app, bundle)})"))
+            continue
+        if dynamic_only(extension_utis(duti, ext)):
+            out.append(("warn", ext, no_declared_type_message(ext)))
+            continue
+        shown = have or "unset"
+        out.append(("bad", ext, f".{ext} -> {shown} (expected {label(app, bundle)})"))
     return out
 
 
@@ -310,6 +345,11 @@ def apply_rows(duti: str, rows, tokens: list[str], schemes: set[str], dry_run: b
         if have == bundle:
             out.append(("ok", ext, f".{ext} already {label(app, bundle)}"))
             continue
+        # Read-only. Skip the set when nothing declares a real UTI, including
+        # on a dry run, so we do not pretend the handler would change.
+        if dynamic_only(extension_utis(duti, ext)):
+            out.append(("warn", ext, no_declared_type_message(ext)))
+            continue
         shown = have or "unset"
         if dry_run:
             extra_note = f" plus {', '.join(extra)}" if extra else ""
@@ -328,7 +368,10 @@ def apply_rows(duti: str, rows, tokens: list[str], schemes: set[str], dry_run: b
                 detail = se.strip().replace("\n", " ") or f"exit {rc}"
                 failed = f"duti -s {bundle} .{ext} all failed: {detail}"
         if failed:
-            out.append(("fail", ext, failed))
+            if duti_dynamic_param_error(failed):
+                out.append(("warn", ext, no_declared_type_message(ext)))
+            else:
+                out.append(("fail", ext, failed))
             continue
         have_after, err_after = wait_for_handler(duti, ext, bundle)
         if err_after or have_after != bundle:
