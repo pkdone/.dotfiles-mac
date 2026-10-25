@@ -54,16 +54,7 @@ cat > "$tmp/bin/op" <<'EOF'
 #!/usr/bin/env bash
 exit "${OP_RC:-0}"
 EOF
-cat > "$tmp/bin/mas" <<'EOF'
-#!/usr/bin/env bash
-if [ "${MAS_RC:-0}" -ne 0 ]; then
-  printf '%s\n' "${MAS_OUT:-Not signed in}" >&2
-  exit "${MAS_RC}"
-fi
-printf '%s\n' '409183694 Keynote'
-exit 0
-EOF
-chmod +x "$tmp/bin/defaults" "$tmp/bin/gh" "$tmp/bin/op" "$tmp/bin/mas"
+chmod +x "$tmp/bin/defaults" "$tmp/bin/gh" "$tmp/bin/op"
 
 with_timeout() { shift; "$@"; }
 # shellcheck source=../lib/session-checks.sh disable=SC1091
@@ -74,7 +65,7 @@ run_check() { # function name — CHECK_PATH replaces PATH (missing-binary cases
   R_DETAIL=""
   PATH="${CHECK_PATH:-$tmp/bin:$PATH}" DEFAULTS_DIR="$tmp/defaults" \
     SESSION_CHECKS_OP_APP="$tmp/1Password.app" \
-    GH_RC="${GH_RC:-0}" OP_RC="${OP_RC:-0}" MAS_RC="${MAS_RC:-0}" \
+    GH_RC="${GH_RC:-0}" OP_RC="${OP_RC:-0}" \
     "$@"
 }
 
@@ -177,21 +168,6 @@ CHECK_PATH="$tmp/empty-bin" run_check check_gh_auth
 eq "missing gh is a warning" warn "$R_STATUS"
 unset CHECK_PATH
 
-MAS_RC=0
-run_check check_app_store
-eq "mas list success is ok" ok "$R_STATUS"
-has "mas ok names the App Store" "signed in to the App Store" "$R_DETAIL"
-
-MAS_RC=1
-run_check check_app_store
-eq "mas not signed in is a warning" warn "$R_STATUS"
-has "mas failure says not signed in" "not signed in" "$R_DETAIL"
-MAS_RC=0
-
-CHECK_PATH="$tmp/empty-bin" run_check check_app_store
-eq "missing mas is a warning" warn "$R_STATUS"
-unset CHECK_PATH
-
 OP_RC=0
 run_check check_op_cli
 eq "op whoami success is ok" ok "$R_STATUS"
@@ -220,7 +196,7 @@ miss "session checks do not touch the notification store" 'usernoted' "$lib_code
 
 # macconfig-check.sh shows the manual-steps result. It does not run the checks again.
 check_src="$(grep -v '^[[:space:]]*#' "$DIR/macconfig-check.sh" "$DIR"/checks/*.sh)"
-for fn in check_pointer_size check_input_british check_gh_auth check_op_cli check_app_store; do
+for fn in check_pointer_size check_input_british check_gh_auth check_op_cli; do
   miss "macconfig-check.sh does not call $fn" "$fn" "$check_src"
 done
 miss "nothing hides these rows from Manual steps" 'MANUAL_STEPS_COVERED' \
@@ -231,7 +207,7 @@ manual_src="$(grep -v '^[[:space:]]*#' "$DIR/checks/manual.sh")"
 # shellcheck disable=SC2016  # needle is source text, compared literally
 has "a by-hand manual step is info" 'hand)    info ' "$manual_src"
 miss "Manual steps does not report drift" 'bad "' "$manual_src"
-for id in pointer-size input-british gh-auth 1password-cli app-store; do
+for id in pointer-size input-british gh-auth 1password-cli; do
   has "a $id warning keeps its id" "$id) fixid $id" "$manual_src"
   eq "$id is Needs Paul with no fixer" "PAUL|" \
     "$(awk -F'|' -v id="$id" '$1 == id { print $2 "|" $3; exit }' "$AUTO")"
@@ -245,8 +221,8 @@ eq "1password-cli check name" "op-cli" \
   "$(awk -F'|' '$1 == "1password-cli" { print $6; exit }' "$LIST")"
 eq "pointer-size check name" "pointer-size" \
   "$(awk -F'|' '$1 == "pointer-size" { print $6; exit }' "$LIST")"
-eq "app-store check name" "app-store" \
-  "$(awk -F'|' '$1 == "app-store" { print $6; exit }' "$LIST")"
+eq "no app-store manual step" "" \
+  "$(awk -F'|' '$1 == "app-store" { print $1; exit }' "$LIST")"
 
 # Source the Manual steps section with the same fakes. Stubs replace
 # pass/warn/info so the real macconfig-check.sh machinery never runs.
@@ -256,7 +232,7 @@ run_manual() {
     set -euo pipefail
     # shellcheck disable=SC2030  # this PATH is only for the sourced section
     export PATH="$tmp/bin:$PATH" DEFAULTS_DIR="$tmp/defaults" SESSION_CHECKS_OP_APP="$tmp/1Password.app"
-    export GH_RC="${1:-0}" OP_RC="${2:-0}" MAS_RC="${4:-0}" NO_COLOR=1
+    export GH_RC="${1:-0}" OP_RC="${2:-0}" NO_COLOR=1
     export MANUAL_STEPS_LIST="${3:-$tmp/steps.list}"
     DOTDIR="$DIR"
     CHECKED=0
@@ -276,7 +252,6 @@ british_on
 pointer 1.4
 cat > "$tmp/steps.list" <<'EOF'
 gh-auth|Sign-ins|Sign in to the GitHub CLI|Terminal: gh auth login||gh-auth
-app-store|Sign-ins|Sign in to the App Store|App Store → Store → Sign In|macappstore://|app-store
 1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI|1Password → Settings → Developer|app:1Password|op-cli
 input-british|Display, keyboard & desktop|Keyboard input source: British|System Settings → Keyboard|x-apple.systempreferences:com.apple.Keyboard-Settings.extension|input-british
 pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal|System Settings → Accessibility|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
@@ -291,7 +266,7 @@ has "manual section prints British" 'Keyboard input source: British' "$out"
 has "manual section prints gh" 'Sign in to the GitHub CLI' "$out"
 has "manual section prints op" 'Integrate with 1Password CLI' "$out"
 has "manual section prints pointer" 'Pointer size one notch above Normal' "$out"
-has "manual section prints the App Store" 'Sign in to the App Store' "$out"
+miss "manual section does not print an App Store step" 'Sign in to the App Store' "$out"
 
 british_off
 out="$(run_manual 0 0)"
@@ -323,10 +298,6 @@ rmdir "$tmp/1Password.app"
 out="$(run_manual 0 0)"
 has "missing 1Password app is a warning tagged 1password-cli" 'WARN 1password-cli' "$out"
 mkdir -p "$tmp/1Password.app"
-
-out="$(run_manual 0 0 "$tmp/steps.list" 1)"
-has "mas not signed in is a warning tagged app-store" 'WARN app-store' "$out"
-miss "mas not signed in is not drift" 'DRIFT ' "$out"
 
 # No pointer-size row: that check does not run.
 cat > "$tmp/no-pointer.list" <<'EOF'

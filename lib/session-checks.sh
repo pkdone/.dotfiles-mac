@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 #
 # Read-only checks for scripts/manual-steps.sh: British input source, pointer
-# size, GitHub CLI sign-in, 1Password CLI, App Store sign-in, and Spotlight
-# app results. macconfig-check.sh prints that script's result in Manual steps
+# size, GitHub CLI sign-in, 1Password CLI, and Spotlight app results.
+# macconfig-check.sh prints that script's result in Manual steps
 # and does not source this file.
 # Each records R_STATUS (ok|warn|hand) and R_DETAIL via res(). Nothing here
 # writes a setting, runs sudo, or opens the notification store. Callers wrap
@@ -105,27 +105,6 @@ check_gh_auth() {
   else
     res warn "not signed in (or GitHub unreachable): gh auth login"
   fi
-}
-
-# `mas list` exits 0 when the App Store is signed in. It does not open the
-# store. A timeout or a "not signed in" message is a warning.
-check_app_store() {
-  local out rc low
-  if ! command -v mas >/dev/null 2>&1; then res warn "mas not installed (brew install mas)"; return; fi
-  if out="$(with_timeout 20 mas list </dev/null 2>&1)"; then
-    rc=0
-  else
-    rc=$?
-  fi
-  if [ "$rc" -eq 0 ]; then
-    res ok "signed in to the App Store"
-    return
-  fi
-  low="$(printf '%s' "$out" | tr '[:upper:]' '[:lower:]')"
-  case "$low" in
-    *"not signed in"*) res warn "not signed in to the App Store" ;;
-    *) res warn "mas list failed (${out:-exit $rc})" ;;
-  esac
 }
 
 # Spotlight → Results from Apps. The apps that should be off are

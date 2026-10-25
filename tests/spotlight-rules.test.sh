@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Spotlight Results from Apps: the 17 names in lib/spotlight-apps.list.
+# Spotlight Results from Apps: the 15 names in lib/spotlight-apps.list.
 # The check does not read the toggles. EnabledPreferenceRules is the row
 # list, and a row stays after the toggle is turned off, so that old reading
 # is check by hand rather than a warning. Nothing is written.
@@ -29,11 +29,13 @@ miss() {
     *) pass=$((pass + 1)) ;; esac
 }
 
-OFF="Books, Calendar, Contacts, Keynote, Mail, Messages, Music, Notes, Numbers, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos"
+OFF="Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos"
 ON="App Store, Calculator, Dictionary, System Settings, and WhatsApp"
 
 names="$(awk -F'|' '$1 !~ /^#/ && NF { print $1 }' "$LIST" | tr '\n' ',' | sed 's/,$//')"
-eq "seventeen apps" "Books,Calendar,Contacts,Keynote,Mail,Messages,Music,Notes,Numbers,Photos,Podcasts,Reminders,Safari,Shortcuts,Stocks,Tips,Voice Memos" "$names"
+eq "fifteen apps" "Books,Calendar,Contacts,Mail,Messages,Music,Notes,Photos,Podcasts,Reminders,Safari,Shortcuts,Stocks,Tips,Voice Memos" "$names"
+miss "Keynote is not required off" "Keynote" "$names"
+miss "Numbers is not required off" "Numbers" "$names"
 eq "Calendar bundle" "com.apple.iCal" "$(awk -F'|' '$1=="Calendar" { print $2; exit }' "$LIST")"
 eq "Contacts bundle" "com.apple.AddressBook" "$(awk -F'|' '$1=="Contacts" { print $2; exit }' "$LIST")"
 eq "Messages bundle" "com.apple.MobileSMS" "$(awk -F'|' '$1=="Messages" { print $2; exit }' "$LIST")"

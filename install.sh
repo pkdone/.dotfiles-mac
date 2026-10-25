@@ -33,17 +33,6 @@ if command -v gh >/dev/null 2>&1 && ! gh auth status >/dev/null 2>&1; then
   echo "⚠️  gh is installed but not authenticated — run 'gh auth login' if you need private repos."
 fi
 
-# shellcheck source=lib/join-names.sh disable=SC1091
-. "$DOTFILES/lib/join-names.sh"
-mas_apps="$(sed -nE 's/^mas "([^"]+)".*/\1/p' "$DOTFILES/Brewfile" | join_and)"
-if [ -n "$mas_apps" ]; then
-  echo "ℹ️  Mac App Store apps in the Brewfile (${mas_apps}) need App Store sign-in."
-  echo "    If you are not signed in, those installs fail. Homebrew packages still install."
-else
-  echo "ℹ️  The Brewfile has no Mac App Store apps."
-fi
-echo "    Anything from Homebrew that is still missing: run brewsync."
-
 # ---- symlink helper -----------------------------------------------------
 # link SRC DST: point DST at SRC. If DST is already a symlink, repoint it (idempotent).
 # If a real file/dir sits at DST, move it into a timestamped backup dir first so the
@@ -127,33 +116,13 @@ if ! command -v brew >/dev/null 2>&1; then
   echo "Homebrew not found — installing..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
-# Tolerate a partial failure (e.g. a Mac App Store app such as Keynote when not
-# signed in to the App Store): brew bundle attempts every entry, so we record
+# Tolerate a partial failure: brew bundle attempts every entry, so we record
 # the outcome and carry on to mise trust + the summary rather than letting
-# set -e abort the whole bootstrap.
-# On a terminal, a failed `brew bundle check` opens the App Store, asks Paul to sign
-# in, and retries `brew bundle install` once. Non-interactive runs keep the warning
-# below. Sign-in is the App Store UI; the mas CLI is not consulted.
+# set -e abort the whole bootstrap. A miss is a warning that points at brewsync.
 bundle_ok=1
 brew bundle --file "$DOTFILES/Brewfile" || bundle_ok=0
 if brew bundle check --file "$DOTFILES/Brewfile" >/dev/null 2>&1; then
   bundle_ok=1
-elif [ -t 0 ]; then
-  echo ""
-  echo "⚠️  Some Brewfile entries are still missing."
-  echo "    Homebrew packages: run brewsync. Mac App Store apps: needs App Store sign-in."
-  brew bundle check --file "$DOTFILES/Brewfile" --verbose 2>&1 | sed 's/^/    /' || true
-  echo "    Opening the App Store. Sign in, then this retries the install once."
-  open 'macappstore://' || echo "    (couldn't open macappstore:// — open the App Store and sign in)"
-  printf 'Sign in to the App Store, then press Enter to retry brew bundle once: '
-  read -r _ || true
-  echo "Retrying brew bundle install once..."
-  brew bundle install --file "$DOTFILES/Brewfile" || true
-  if brew bundle check --file "$DOTFILES/Brewfile" >/dev/null 2>&1; then
-    bundle_ok=1
-  else
-    bundle_ok=0
-  fi
 else
   bundle_ok=0
 fi
@@ -171,7 +140,7 @@ if [ "$bundle_ok" = 1 ]; then
   echo "✅ Dotfiles are in place. Run macconfig (or ./macconfig-check.sh) any time to verify."
 else
   echo "⚠️  Dotfiles are in place, but some Brewfile entries did not install."
-  echo "    Homebrew packages: run brewsync. Mac App Store apps: needs App Store sign-in."
+  echo "    For anything still missing, run brewsync."
   echo "    Then re-run, or run: brew bundle check --file \"$DOTFILES/Brewfile\""
 fi
 

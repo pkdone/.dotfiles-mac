@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 #
-# install.sh's Brewfile retry: a failed `brew bundle check` on a terminal opens
-# the App Store, asks for a sign-in, and retries `brew bundle install` once.
-# Non-interactive runs keep the warning. This does not execute install.sh
-# (it refuses to run off Darwin) and it does not call `mas`.
+# install.sh's Brewfile failure: a partial `brew bundle` warns and points at
+# brewsync. It does not open the App Store or retry the install. This does not
+# execute install.sh (it refuses to run off Darwin).
 # Run: ./tests/install-bundle.test.sh
 #
 set -uo pipefail
@@ -29,34 +28,13 @@ miss() {
 src="$(cat "$INSTALL")"
 # shellcheck disable=SC2016  # needles are source text, compared literally
 has "checks the Brewfile after install" 'brew bundle check --file "$DOTFILES/Brewfile"' "$src"
-has "TTY guard is stdin" '[ -t 0 ]' "$src"
-has "opens the App Store URL" "open 'macappstore://'" "$src"
+has "keeps the partial-failure warning" 'some Brewfile entries did not install' "$src"
+has "partial failure points at brewsync" 'run brewsync' "$src"
+miss "does not open the App Store" 'macappstore://' "$src"
 # shellcheck disable=SC2016
-has "retries brew bundle install once" 'brew bundle install --file "$DOTFILES/Brewfile"' "$src"
-has "keeps the non-interactive warning" 'some Brewfile entries did not install' "$src"
+miss "does not retry brew bundle install" 'brew bundle install --file' "$src"
 miss "does not call mas account" 'mas account' "$src"
-
-# The retry sits in the TTY branch, after the check, and runs once.
-order="$(awk '
-  /brew bundle check --file/ && !seen_check++ { print NR " check" }
-  /\[ -t 0 \]/ { print NR " tty" }
-  /macappstore:\/\// { print NR " open" }
-  /brew bundle install --file/ { print NR " retry" }
-' "$INSTALL")"
-check_n="$(printf '%s\n' "$order" | awk '$2 == "check" { print $1; exit }')"
-tty_n="$(printf '%s\n' "$order" | awk '$2 == "tty" { print $1; exit }')"
-open_n="$(printf '%s\n' "$order" | awk '$2 == "open" { print $1; exit }')"
-retry_n="$(printf '%s\n' "$order" | awk '$2 == "retry" { print $1; exit }')"
-# Count retries: the first `brew bundle` is not `brew bundle install`.
-retry_count="$(grep -c 'brew bundle install --file' "$INSTALL" || true)"
-eq "brew bundle install is retried once" 1 "$retry_count"
-if [ -n "$check_n" ] && [ -n "$tty_n" ] && [ -n "$open_n" ] && [ -n "$retry_n" ] \
-  && [ "$check_n" -lt "$tty_n" ] && [ "$tty_n" -lt "$open_n" ] && [ "$open_n" -lt "$retry_n" ]; then
-  pass=$((pass + 1))
-else
-  fail=$((fail + 1))
-  printf 'FAIL: retry order\n  %s\n' "$order"
-fi
+miss "does not ask for App Store sign-in" 'App Store sign-in' "$src"
 
 printf 'install-bundle tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

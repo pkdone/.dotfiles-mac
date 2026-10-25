@@ -19,9 +19,8 @@ else
     case "$ms_status" in
       ok)      CHECKED=$((CHECKED + 1)); pass "$ms_num. $ms_title${ms_detail:+ — $ms_detail}" ;;
       # Check-only rows get their own PAUL id (never --fix), the same way as
-      # mouse-settings. British input, gh auth, 1Password CLI, pointer size,
-      # and the App Store sign-in are the scripts/manual-steps.sh result,
-      # printed here once.
+      # mouse-settings. British input, gh auth, 1Password CLI, and pointer
+      # size are the scripts/manual-steps.sh result, printed here once.
       warn)
         CHECKED=$((CHECKED + 1))
         case "$ms_id" in
@@ -31,7 +30,6 @@ else
           gh-auth) fixid gh-auth ;;
           1password-cli) fixid 1password-cli ;;
           spotlight-results) fixid spotlight-results ;;
-          app-store) fixid app-store ;;
           *) fixid manual-step ;;
         esac
         warn "$ms_num. $ms_title — $ms_detail (scripts/manual-steps.sh open)"
