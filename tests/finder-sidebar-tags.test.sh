@@ -65,17 +65,14 @@ has "an empty tag list says none are shown" "No tags are shown" "$out"
 
 write_plist empty-recent-off
 out="$(run)"
-eq "recent tags off still passes" "ok" "${out%%|*}"
+eq "recent tags off does not change an empty list" "ok" "${out%%|*}"
+miss "a passing list does not mention recent tags" "ShowRecentTags" "$out"
 
 write_plist empty-recent-on
 out="$(run)"
-eq "recent tags on warns" "warn" "${out%%|*}"
-has "recent tags on names the key" "ShowRecentTags is on" "$out"
-has "recent tags says the named boxes do not turn them off" \
-  "does not turn recent tags off" "$out"
-has "recent tags names the Sidebar row" "hide Recent Tags" "$out"
-miss "recent tags are not fixed by unticking the named boxes again" \
-  "untick every box" "$out"
+eq "recent tags on does not warn when the tag boxes are clear" "ok" "${out%%|*}"
+miss "recent tags on is not a warning" "ShowRecentTags" "$out"
+miss "recent tags on does not send you back to the tag boxes" "untick every box" "$out"
 
 write_plist named
 out="$(run)"
@@ -84,20 +81,21 @@ has "listed tags names Red" "Red" "$out"
 has "listed tags names Work" "Work" "$out"
 has "listed tags names Important" "Important" "$out"
 has "listed tags says to untick them" "untick every box" "$out"
+has "listed tags name Finder Settings then Tags" "Finder → Settings → Tags" "$out"
 miss "listed tags do not mention recent tags" "recent tags" "$out"
 
 write_plist both
 out="$(run)"
-eq "listed tags and recent tags both warn" "warn" "${out%%|*}"
-has "both warnings still say to untick the boxes" "untick every box" "$out"
-has "both warnings say the boxes do not turn recent tags off" \
-  "does not turn recent tags off" "$out"
+eq "listed tags still warn when recent tags are also on" "warn" "${out%%|*}"
+has "that warning still says to untick the boxes" "untick every box" "$out"
+miss "recent tags are not part of the tag-box warning" "ShowRecentTags" "$out"
+miss "recent tags are not given a separate click path" "Recent Tags" "$out"
 
 write_plist missing-key
 out="$(run)"
 eq "a missing FavoriteTagNames warns" "warn" "${out%%|*}"
 has "a missing key names FavoriteTagNames" "FavoriteTagNames is not set" "$out"
-miss "a missing ShowRecentTags is not itself a failure" "ShowRecentTags is on" "$out"
+miss "a missing ShowRecentTags is not itself a failure" "ShowRecentTags" "$out"
 
 write_plist bad-type
 out="$(run)"
@@ -106,7 +104,8 @@ has "a non-list names the click path" "Show these tags in the sidebar" "$out"
 
 write_plist bad-recent
 out="$(run)"
-eq "a non-boolean ShowRecentTags stays by hand" "info" "${out%%|*}"
+eq "a non-boolean ShowRecentTags is ignored when the tag list is empty" "ok" "${out%%|*}"
+miss "a bad recent-tags value is not reported" "ShowRecentTags" "$out"
 
 before="$(cksum "$tmp/finder.plist")"
 run >/dev/null
@@ -121,15 +120,14 @@ writers="$(grep -nE 'open\(.*["'\'']wb["'\'']|plistlib.dump' "$HELPER" || true)"
 eq "helper does not write a preference" "" "$writers"
 miss "helper does not call defaults write" "defaults write" "$(cat "$HELPER")"
 
-has "manual step says no tags are shown" "No tags are shown in the sidebar, including recent tags." \
+has "manual step says no tags are shown" "No tags are shown in the sidebar." \
   "$(awk -F'|' '$1=="finder-sidebar" { print $3; exit }' "$DIR/lib/manual-steps.list")"
 has "manual step names the Tags pane" "Finder → Settings → Tags" \
   "$(awk -F'|' '$1=="finder-sidebar" { print $4; exit }' "$DIR/lib/manual-steps.list")"
-has "manual step says the tag boxes do not turn recent tags off" \
-  "do not turn recent tags off" \
-  "$(awk -F'|' '$1=="finder-sidebar" { print $4; exit }' "$DIR/lib/manual-steps.list")"
-has "manual step names Recent Tags" "hide Recent Tags" \
-  "$(awk -F'|' '$1=="finder-sidebar" { print $4; exit }' "$DIR/lib/manual-steps.list")"
+miss "manual step does not send recent tags to the Sidebar" "Recent Tags" \
+  "$(awk -F'|' '$1=="finder-sidebar" { print; exit }' "$DIR/lib/manual-steps.list")"
+miss "the tag check does not warn on ShowRecentTags" "ShowRecentTags is on" \
+  "$(cat "$HELPER")"
 miss "manual step no longer says Shared is first" "first visible" \
   "$(awk -F'|' '$1=="finder-sidebar" { print; exit }' "$DIR/lib/manual-steps.list")"
 eq "shared row is hidden" "hidden" \

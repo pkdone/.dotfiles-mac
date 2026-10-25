@@ -6,9 +6,10 @@ FavoriteTagNames in com.apple.finder. An empty list means every box is
 unticked. A missing key is Finder's default list, so the boxes are still
 ticked. That is a warning, not a guess.
 
-ShowRecentTags is read only when the key is present. On means recent tags
-can still appear. A missing ShowRecentTags is not a failure: that value
-was not confirmed on a good setup, and the checkbox list is FavoriteTagNames.
+ShowRecentTags is not part of this check. Finder → Settings → Tags has
+no control that turns recent tags off. The boxes on that page only change
+FavoriteTagNames, so a warning on ShowRecentTags would stay after those
+boxes were unticked.
 
 The live read is `defaults export com.apple.finder -`, which is the
 preference the system is using. --plist reads a file instead (tests).
@@ -32,12 +33,6 @@ CLICK = (
     "Show these tags in the sidebar (Red, Orange, Yellow, Green, Blue, "
     "Purple, Grey, Work, Home, Important)."
 )
-# Those boxes are FavoriteTagNames. They do not write ShowRecentTags.
-RECENT = (
-    "Unticking those named tag boxes does not turn recent tags off. "
-    "Recent tags are separate: Finder → Settings → Sidebar → hide Recent Tags "
-    "if that row is listed."
-)
 FIX = " macconfig does not change the sidebar."
 MISSING = object()
 
@@ -45,14 +40,6 @@ MISSING = object()
 def emit(status: str, message: str) -> None:
     text = message.replace("\n", " ").replace("|", "/")
     print(f"{status}|{text}")
-
-
-def as_bool(value: object) -> bool | None:
-    if isinstance(value, bool):
-        return value
-    if type(value) is int and value in (0, 1):
-        return bool(value)
-    return None
 
 
 def load_export() -> tuple[str, object]:
@@ -119,25 +106,6 @@ def judge(prefs: dict) -> tuple[str, str]:
             "FavoriteTagNames is not a list, so the sidebar tags stay by hand. "
             f"{CLICK}{FIX}",
         )
-    recent = prefs.get("ShowRecentTags", MISSING)
-    if recent is not MISSING:
-        flag = as_bool(recent)
-        if flag is None:
-            return (
-                "info",
-                "ShowRecentTags is not a yes or no value, so recent tags "
-                f"stay by hand. {RECENT}{FIX}",
-            )
-        if flag:
-            problems.append(
-                "ShowRecentTags is on, so recent tags can still appear in the sidebar."
-            )
-            remedy = f"{RECENT}"
-            if names is MISSING or (isinstance(names, list) and any(
-                isinstance(item, str) and item.strip() for item in names
-            )):
-                remedy = f"{CLICK} {RECENT}"
-            return "warn", " ".join(problems) + " " + remedy + FIX
     if problems:
         return "warn", " ".join(problems) + " " + CLICK + FIX
     return "ok", "No tags are shown in the Finder sidebar."
