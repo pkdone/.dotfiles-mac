@@ -76,7 +76,8 @@ rm -f "$empty"
 title="$(awk -F'|' '$1=="spotlight-results" { print $3; exit }' "$DIR/lib/manual-steps.list")"
 has "manual step names the apps that should be off" "$OFF" "$title"
 has "manual step names the apps that stay on" "$ON" "$title"
-has "manual step says to check by hand" "by hand" "$title"
+miss "manual step title does not say to check by hand" "Check this page by hand" "$title"
+miss "manual step title does not say macconfig cannot read the toggles" "macconfig cannot read" "$title"
 eq "manual step uses the spotlight check" "spotlight-results" \
   "$(awk -F'|' '$1=="spotlight-results" { print $6; exit }' "$DIR/lib/manual-steps.list")"
 

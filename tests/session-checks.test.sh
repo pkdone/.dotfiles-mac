@@ -119,7 +119,8 @@ has "another layout names it" "ABC" "$R_DETAIL"
 
 rm -f "$tmp/defaults/com.apple.HIToolbox.AppleSelectedInputSources"
 run_check check_input_british
-eq "unreadable input sources are by hand" hand "$R_STATUS"
+eq "a missing input source is not set yet" warn "$R_STATUS"
+eq "a missing input source names British" "no British keyboard layout is selected" "$R_DETAIL"
 
 pointer 1.4
 run_check check_pointer_size

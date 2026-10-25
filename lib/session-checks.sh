@@ -38,8 +38,13 @@ check_pointer_size() {
 # keyboard layout is a warning. Nothing here is written.
 check_input_british() {
   local src layouts name bad
-  if ! src="$(defaults read com.apple.HIToolbox AppleSelectedInputSources 2>/dev/null)"; then
-    res hand "can't read the selected input sources"; return
+  # A missing key means British is not selected. That is not set yet, not
+  # an unreadable setting. defaults is on every Mac; if it is missing, the
+  # layout still is not confirmed.
+  if ! command -v defaults >/dev/null 2>&1 \
+    || ! src="$(defaults read com.apple.HIToolbox AppleSelectedInputSources 2>/dev/null)"; then
+    res warn "no British keyboard layout is selected"
+    return
   fi
   layouts="$(printf '%s\n' "$src" | awk '
     /InputSourceKind/ {

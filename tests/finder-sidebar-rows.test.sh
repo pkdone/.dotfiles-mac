@@ -34,7 +34,7 @@ mkdir -p "$home"
 
 eq "finder sidebar step is checked by macconfig" "@macconfig:finder" \
   "$(awk -F'|' '$1 == "finder-sidebar" { print $6; exit }' "$DIR/lib/manual-steps.list")"
-has "manual step says macconfig checks this" "macconfig checks this" \
+miss "manual step title does not repeat that macconfig checks it" "macconfig checks this" \
   "$(awk -F'|' '$1 == "finder-sidebar" { print $3; exit }' "$DIR/lib/manual-steps.list")"
 eq "finder-sidebar is report-only" "PAUL|" \
   "$(awk -F'|' '$1 == "finder-sidebar" { print $2 "|" $3; exit }' "$DIR/lib/autofix.list")"
@@ -228,10 +228,16 @@ open_out="$(printf 's\n' | HOME="$home" NO_COLOR=1 MANUAL_STEPS_OPEN_TTY=1 \
   "$DIR/scripts/manual-steps.sh" open 2>"$tmp/open.err")"
 eq "open of a missing FavoriteItems file exits 0" 0 "$?"
 eq "open stderr stays empty" "" "$(cat "$tmp/open.err")"
-has "a missing FavoriteItems file is still shown" "Finder sidebar rows" "$open_out"
-has "a missing FavoriteItems file can't be checked" \
-  "Can't check this automatically. If it's already set, press s." "$open_out"
-miss "a missing FavoriteItems file is not treated as unset" "Not set yet" "$open_out"
+has "a missing FavoriteItems file is still shown" "Finder sidebar" "$open_out"
+has "a missing FavoriteItems file names the part that was checked" \
+  "Checked: the sidebar rows the files name." "$open_out"
+has "a missing FavoriteItems file names the part still by hand" \
+  "Still by hand:" "$open_out"
+has "a missing FavoriteItems file names the favorites file" \
+  "FavoriteItems" "$open_out"
+miss "a missing FavoriteItems file is not labelled can't-check" \
+  "Can't check this automatically" "$open_out"
+miss "a passing row check is not labelled not set yet" "Not set yet" "$open_out"
 
 printf 'finder-sidebar-rows tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

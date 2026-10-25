@@ -393,7 +393,15 @@ run_check() {  # spec [id]
       case "$status" in
         ok) res ok "$detail" ;;
         warn) res warn "$detail" ;;
-        *) res hand "" ;;
+        *)
+          # Keep the check's own words. An empty detail would be printed as
+          # "Can't check this automatically", which is only for a step with no check.
+          if [ -n "$detail" ]; then
+            res hand "$detail"
+          else
+            res hand "this check did not report a result"
+          fi
+          ;;
       esac
       ;;
     tcc:*)       rest="${spec#tcc:}"; check_tcc "${rest%%:*}" "${rest#*:}" ;;
@@ -467,10 +475,10 @@ open_why() {
       printf '%s' "Already done, shown because of --all"
       ;;
     *)
-      # Edge Light (and any check that reports this exact detail) cannot be
-      # read at all, so the walk-through always includes it.
-      if [ "$R_DETAIL" = "can't be checked, so always shown" ]; then
-        printf '%s' "can't be checked, so always shown"
+      # Empty detail is a step with no check. A check always leaves its own
+      # words here, including Edge Light and a step that is only partly covered.
+      if [ -n "$R_DETAIL" ]; then
+        printf '%s' "$R_DETAIL"
       else
         printf '%s' "Can't check this automatically. If it's already set, press s."
       fi
