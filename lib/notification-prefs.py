@@ -60,8 +60,9 @@ BANNER_STYLE_BIT on the other one. Then run ./tests/notification-prefs.test.sh.
 Output, one line per result, fields separated by `|`:
 
     ok|bundle-id|message       listed app, Allow Notifications is off
-    warn|bundle-id|message     listed app, allowed / missing / flags unreadable
-    info|bundle-id|message     third-party app in neither list
+    warn|bundle-id|message     listed app, allowed or flags unreadable
+    info|bundle-id|message     listed app not in the store yet, or a third-party
+                            app in neither list
     error|-|message            store or list missing, or the plist did not parse
 
 `com.apple.*` and `_SYSTEM_CENTER_*` are ignored unless listed in the Off
@@ -197,10 +198,10 @@ def report(
         flags = found.get(bundle)
         if flags is None:
             emit(
-                "warn",
+                "info",
                 bundle,
-                f"{label} ({bundle}): not in the notification store"
-                " — can't confirm Allow Notifications is off",
+                f"{label} ({bundle}): not registered for notifications yet,"
+                " nothing to turn off",
             )
             continue
         state = allowed_state(flags)
@@ -262,11 +263,11 @@ def report_hammerspoon_style(found: dict[str, list[object]]) -> None:
     )
     if flags is None:
         emit(
-            "warn",
+            "info",
             HAMMERSPOON_BUNDLE,
-            f"Hammerspoon ({HAMMERSPOON_BUNDLE}): not in the notification store"
-            " — can't confirm notification style is Alerts."
-            + where,
+            f"Hammerspoon ({HAMMERSPOON_BUNDLE}): not registered for"
+            " notifications yet, so the Alerts style can't be checked until"
+            " Hammerspoon has posted a notification",
         )
         return
     styles = [alert_style(value) for value in flags]

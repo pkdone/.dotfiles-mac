@@ -211,5 +211,53 @@ force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \
   "$DIR/../README.md" "$DIR"/../docs/*.md "$LIST" "$DEF" "$DIR/../macos.sh" "$DIR/../lib/autofix.list" || true)"
 eq "no doc still says Force Click Off" "" "$force_off"
 
+# Current Raycast does not store raycastGlobalHotkey. A missing key is check
+# by hand. A stored value that differs is a warning. Another defaults step
+# still warns when its key is missing.
+raydir="$(mktemp -d)"
+cat > "$raydir/defaults" <<'EOF'
+#!/bin/sh
+[ "$1" = read ] || exit 1
+domain="$2"
+key="${3:-}"
+if [ "$domain" = com.raycast.macos ] && [ -z "$key" ]; then
+  exit 0
+fi
+if [ "$domain" = com.raycast.macos ]; then
+  case "${RAYCAST_KEY:-missing}" in
+    missing) exit 1 ;;
+    *) printf '%s\n' "$RAYCAST_KEY"; exit 0 ;;
+  esac
+fi
+if [ "$domain" = NSGlobalDomain ] && [ -z "$key" ]; then
+  exit 0
+fi
+exit 1
+EOF
+chmod +x "$raydir/defaults"
+printf '%s\n' \
+  'raycast-hotkey|App settings|Raycast hotkey|Raycast|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15' \
+  > "$raydir/raycast.list"
+printf '%s\n' \
+  'mouse-settings|Trackpad, mouse & pointer|Mouse|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|defaults:NSGlobalDomain:com.apple.mouse.scaling=1.5' \
+  > "$raydir/mouse.list"
+ray_status() {
+  RAYCAST_KEY="${1:-missing}" PATH="$raydir:$PATH" MANUAL_STEPS_LIST="$raydir/raycast.list" \
+    "$MS" check --porcelain 2>"$raydir/ray.err"
+}
+ray_out="$(ray_status missing)"
+ray_rc=$?
+eq "a missing Raycast hotkey is check by hand" hand "$(printf '%s\n' "$ray_out" | cut -d'|' -f1)"
+eq "a missing Raycast hotkey exits 0" 0 "$ray_rc"
+has "a missing Raycast hotkey says it can't be checked" "can't be checked" "$ray_out"
+ray_out="$(ray_status 'Option-Space')"
+eq "a different Raycast hotkey warns" warn "$(printf '%s\n' "$ray_out" | cut -d'|' -f1)"
+has "a different Raycast hotkey names the stored value" "Option-Space" "$ray_out"
+ray_out="$(ray_status 'Shift-Control-Command-15')"
+eq "the Raycast hotkey passes when stored" ok "$(printf '%s\n' "$ray_out" | cut -d'|' -f1)"
+mouse_out="$(PATH="$raydir:$PATH" MANUAL_STEPS_LIST="$raydir/mouse.list" "$MS" check --porcelain)"
+eq "a missing mouse key still warns" warn "$(printf '%s\n' "$mouse_out" | cut -d'|' -f1)"
+rm -rf "$raydir"
+
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

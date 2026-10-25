@@ -354,6 +354,10 @@ def audit(allow_path: str, base, paths) -> int:
             cls, detail = "allow", ""
         elif any(matches(r, it) for r in mdm):
             cls, detail = "mdm", "approved by an MDM Service Management rule"
+        elif it["team"] and any(r.get("team") == it["team"] for r in mdm):
+            # Same developer as an MDM Service Management rule, but this item
+            # is not named by one. Do not tell the user to turn it off.
+            cls, detail = "unknown", "company-team"
         else:
             cls, detail = "unknown", ""
         fields = [cls, kind, display_name(it), it["developer"], it["team"], ident, detail]

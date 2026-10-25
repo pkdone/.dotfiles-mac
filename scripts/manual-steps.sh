@@ -165,7 +165,7 @@ defaults_value_match() {  # actual want
 }
 
 check_defaults() {  # domain k=v[,k=v]
-  local domain="$1" pairs="$2" pair key want cur bad="" ok=""
+  local domain="$1" pairs="$2" pair key want cur bad="" ok="" unchecked=""
   if ! defaults read "$domain" >/dev/null 2>&1; then
     res hand "can't read $domain"; return
   fi
@@ -174,11 +174,14 @@ check_defaults() {  # domain k=v[,k=v]
     key="${pair%%=*}"; want="${pair#*=}"
     if cur="$(defaults read "$domain" "$key" 2>/dev/null)"; then
       if defaults_value_match "$cur" "$want"; then ok="$ok $key=$cur"; else bad="$bad $key=$cur (want $want)"; fi
+    elif [ "$domain" = com.raycast.macos ] && [ "$key" = raycastGlobalHotkey ]; then
+      # Current Raycast does not store this key, even when the hotkey is set.
+      unchecked="$unchecked $key is not stored, so this can't be checked"
     else
       bad="$bad $key not set (want $want)"
     fi
   done
-  if [ -n "$bad" ]; then res warn "${bad# }"; else res ok "${ok# }"; fi
+  if [ -n "$bad" ]; then res warn "${bad# }"; elif [ -n "$unchecked" ]; then res hand "${unchecked# }"; else res ok "${ok# }"; fi
 }
 
 check_hammerspoon_ax() {

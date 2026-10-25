@@ -141,6 +141,79 @@ eq "raycast stays allow-listed" allow "$(field "com.raycast.macos" 1)"
 eq "unknown item stays unknown" unknown "$(field "com.evil.widget" 1)"
 eq "unknown item keeps its name" Widget "$(field "com.evil.widget" 3)"
 
+eq "SentinelOne team is allow-listed" allow "$(
+  "$PY" - "$DIR/lib/btm-login-items.py" "$DIR/lib/login-items-allow.list" <<'PY'
+import importlib.util, io, sys
+from contextlib import redirect_stdout
+mod_path, allow = sys.argv[1:]
+spec = importlib.util.spec_from_file_location("btm_login_items", mod_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+it = {
+    "type": 0x8, "disposition": 0xB, "name": "sentineld-helper",
+    "identifier": "8.com.sentinelone.sentineld-helper",
+    "bundle": "com.sentinelone.sentineld-helper", "id": "com.sentinelone.sentineld-helper",
+    "developer": "SentinelOne", "team": "4AYE5J54KN", "url": "file:///bin",
+    "executable": "", "parent": "", "enabled": True,
+}
+rules = mod.read_allow(allow)
+print("allow" if any(mod.matches(r, it) for r in rules) else "no")
+PY
+)"
+
+company="$("$PY" - "$DIR/lib/btm-login-items.py" "$DIR/lib/login-items-allow.list" "$tmp/company.btm" "$tmp/mdm.btm" <<'PY'
+import importlib.util, io, plistlib, sys
+from contextlib import redirect_stdout
+from pathlib import Path
+mod_path, allow, items_path, mdm_path = sys.argv[1:]
+spec = importlib.util.spec_from_file_location("btm_login_items", mod_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+plistlib.dump({
+    "$version": 100000,
+    "$archiver": "NSKeyedArchiver",
+    "$top": {"root": "items"},
+    "$objects": ["$null", {
+        "disposition": 0xB,
+        "type": 0x8,
+        "name": "New helper",
+        "identifier": "8.com.company.new-helper",
+        "bundleIdentifier": "com.company.new-helper",
+        "developerName": "Company",
+        "teamIdentifier": "NEWTEAM99",
+        "url": "file:///bin",
+        "executablePath": "",
+        "container": "",
+    }],
+}, open(items_path, "wb"))
+plistlib.dump({
+    "$version": 100000,
+    "$archiver": "NSKeyedArchiver",
+    "$top": {
+        "mdmPayloadsByIdentifier": {
+            "payload": {
+                "Rules": [{
+                    "RuleType": "BundleIdentifier",
+                    "RuleValue": "com.company.known",
+                    "TeamIdentifier": "NEWTEAM99",
+                }],
+            },
+        },
+    },
+    "$objects": ["$null"],
+}, open(mdm_path, "wb"))
+buf = io.StringIO()
+with redirect_stdout(buf):
+    mod.audit(allow, Path(mdm_path), [Path(items_path)])
+sys.stdout.write(buf.getvalue())
+PY
+)"
+eq "a new company-team helper stays unknown" unknown "$(printf '%s\n' "$company" | cut -d'|' -f1)"
+eq "a new company-team helper is marked company-team" company-team "$(printf '%s\n' "$company" | cut -d'|' -f7)"
+company_msg="$(awk '/li_detail. = company-team/,/else/' "$DIR/checks/health.sh")"
+has "a company-team warning says to add it to the allow list" "Add it to lib/login-items-allow.list" "$company_msg"
+miss "a company-team warning does not say to turn it off" "turn it Off" "$company_msg"
+
 has "allow list mentions Cursor BackgroundActivityCheck" \
   "com.todesktop.230313mzl4w4u92.BackgroundActivityCheck" "$(cat "$DIR/lib/login-items-allow.list")"
 has "allow list mentions Cursor Nightly" \

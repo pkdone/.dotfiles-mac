@@ -174,7 +174,7 @@ out="$(run "$tmp/slack-on.plist" "$tmp/off.list" "$tmp/reviewed.list")"
 eq "bit 25 set is a warning" \
   "ok|com.apple.iCal|Calendar (com.apple.iCal): Allow Notifications is off (flags=814219286)
 warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is on (flags=310386702, bit 25 set) — System Settings → Notifications → turn it off. macconfig-check.sh --fix does not change this
-warn|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): not in the notification store — can't confirm notification style is Alerts. System Settings → Notifications → Hammerspoon → Alerts. macconfig-check.sh --fix does not change this" \
+info|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): not registered for notifications yet, so the Alerts style can't be checked until Hammerspoon has posted a notification" \
   "$out"
 
 # Style bits. 8396822 is this Mac (bit 4 set, bit 3 clear = Alerts).
@@ -216,9 +216,10 @@ has "duplicate status is warn" "warn|com.tinyspeck.slackmacgap|" "$out"
 
 write_plist "$tmp/missing-app.plist" '{"apps": [{"bundle-id": "com.apple.iCal", "flags": 814219286}]}'
 out="$(run "$tmp/missing-app.plist" "$tmp/off.list" "$tmp/reviewed.list")"
-has "listed app absent from the store warns" \
-  "warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): not in the notification store — can't confirm Allow Notifications is off" \
+has "listed app absent from the store is info" \
+  "info|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): not registered for notifications yet, nothing to turn off" \
   "$out"
+miss "an unregistered app is not a warning" "warn|com.tinyspeck.slackmacgap|" "$out"
 
 write_plist "$tmp/bad-flags.plist" '{"apps": [{"bundle-id": "com.apple.iCal", "flags": "814219286"}]}'
 out="$(run "$tmp/bad-flags.plist" "$tmp/off.list" "$tmp/reviewed.list")"

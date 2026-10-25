@@ -115,6 +115,48 @@ check_step_wallpaper() {
   fi
 }
 
+# ---- 6c3. Account picture (the Dog, check-only) -------------------------
+# SHA-256 of the JPEGPhoto on the user account. The hash is
+# lib/user-picture.sha256. A different picture is a warning. --fix does not
+# change it. Manual step user-picture points here.
+check_step_user_picture() {
+  fixid user-picture
+  pic_helper="$DOTDIR/lib/user-picture.py"
+  pic_hash="$DOTDIR/lib/user-picture.sha256"
+  if [ ! -r "$pic_helper" ] || [ ! -r "$pic_hash" ]; then
+    CHECKED=$((CHECKED + 1))
+    fixid repo-file
+    warn "user picture files missing — can't check the account picture"
+  elif [ -z "$DOT_PYTHON" ]; then
+    CHECKED=$((CHECKED + 1))
+    fixid tooling
+    warn "no python3 — can't check the account picture"
+  elif ! command -v dscl >/dev/null 2>&1; then
+    info "dscl not found — the account picture stays by hand"
+  else
+    CHECKED=$((CHECKED + 1))
+    pic_dump="$(with_timeout 15 dscl . -read "/Users/$USER" JPEGPhoto 2>/dev/null || true)"
+    pic_line="$(printf '%s\n' "$pic_dump" | "$DOT_PYTHON" "$pic_helper" --expect "$pic_hash" || true)"
+    pic_status="${pic_line%%|*}"
+    pic_msg="${pic_line#*|}"; pic_msg="${pic_msg#*|}"
+    case "$pic_status" in
+      ok) pass "$pic_msg" ;;
+      *) fixid user-picture; warn "${pic_msg:-account picture check failed}" ;;
+    esac
+  fi
+}
+
+if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
+  return 0
+fi
+
+hdr "Display auto-brightness"
+check_step_auto_brightness
+hdr "Display (More Space)"
+check_step_display_more_space
+hdr "Wallpaper"
+check_step_wallpaper
+
 # ---- 6c25. Desktop widgets (removed, check-only) ------------------------
 # StandardHideWidgets hides widgets. It does not delete them. Placed widgets
 # are widgets → instances in the notificationcenterui plist, one data blob
@@ -163,46 +205,5 @@ else
   esac
 fi
 
-# ---- 6c3. Account picture (the Dog, check-only) -------------------------
-# SHA-256 of the JPEGPhoto on the user account. The hash is
-# lib/user-picture.sha256. A different picture is a warning. --fix does not
-# change it. Manual step user-picture points here.
-check_step_user_picture() {
-  fixid user-picture
-  pic_helper="$DOTDIR/lib/user-picture.py"
-  pic_hash="$DOTDIR/lib/user-picture.sha256"
-  if [ ! -r "$pic_helper" ] || [ ! -r "$pic_hash" ]; then
-    CHECKED=$((CHECKED + 1))
-    fixid repo-file
-    warn "user picture files missing — can't check the account picture"
-  elif [ -z "$DOT_PYTHON" ]; then
-    CHECKED=$((CHECKED + 1))
-    fixid tooling
-    warn "no python3 — can't check the account picture"
-  elif ! command -v dscl >/dev/null 2>&1; then
-    info "dscl not found — the account picture stays by hand"
-  else
-    CHECKED=$((CHECKED + 1))
-    pic_dump="$(with_timeout 15 dscl . -read "/Users/$USER" JPEGPhoto 2>/dev/null || true)"
-    pic_line="$(printf '%s\n' "$pic_dump" | "$DOT_PYTHON" "$pic_helper" --expect "$pic_hash" || true)"
-    pic_status="${pic_line%%|*}"
-    pic_msg="${pic_line#*|}"; pic_msg="${pic_msg#*|}"
-    case "$pic_status" in
-      ok) pass "$pic_msg" ;;
-      *) fixid user-picture; warn "${pic_msg:-account picture check failed}" ;;
-    esac
-  fi
-}
-
-if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
-  return 0
-fi
-
-hdr "Display auto-brightness"
-check_step_auto_brightness
-hdr "Display (More Space)"
-check_step_display_more_space
-hdr "Wallpaper"
-check_step_wallpaper
 hdr "User picture"
 check_step_user_picture

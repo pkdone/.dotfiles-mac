@@ -55,7 +55,7 @@ What a macOS Software Update does to these hotkeys, and how to reload a LaunchAg
 
 A broken link is restored by `macconfig-check.sh --fix`. An override file is reported but never deleted automatically.
 
-**Raycast: set by hand.** Raycast keeps almost everything in an encrypted database (`~/Library/Application Support/com.raycast.macos/raycast-enc.sqlite`). The launcher hotkey is the one setting readable from `defaults`: `com.raycast.macos raycastGlobalHotkey` = `Shift-Control-Command-15`, where key code 15 is R. The manual step checks that value. Clipboard History stays by hand. Shift+Control+Command+F brings Finder to the front from Hammerspoon (`hammerspoon/finder_hotkey.lua`).
+**Raycast: set by hand.** Raycast keeps almost everything in an encrypted database (`~/Library/Application Support/com.raycast.macos/raycast-enc.sqlite`). When `com.raycast.macos raycastGlobalHotkey` is present it should be `Shift-Control-Command-15` (key code 15 is R), and a different value is a warning. Current Raycast often does not store that key at all, even after the hotkey is set; a missing key is check by hand, not a warning. Clipboard History stays by hand. Shift+Control+Command+F brings Finder to the front from Hammerspoon (`hammerspoon/finder_hotkey.lua`).
 
 Spotlight's Command+Space is macOS symbolic hotkey 64, not a Raycast setting. The Spotlight shortcut check keeps it enabled. `macconfig --fix` writes it back. Don't click Raycast's **Replace Spotlight** button: that turns hotkey 64 off. The click path is in [Raycast](#raycast) below.
 
@@ -106,7 +106,7 @@ Run `macos.sh --list` to see the exact set of settings it manages (printed as a 
 
 ## Notifications
 
-Per-app **Allow Notifications** is checked by the **Notifications** section of `macconfig-check.sh`. An app in `lib/notifications-off.list` whose Allow Notifications is on is a warning (**Needs Paul**). A third-party app (`com.apple.*` and `_SYSTEM_CENTER_*` excluded) that isn't in that list or `lib/notifications-reviewed.list` is an `info` line, so a newly appeared app gets flagged. A missing store or a plist that doesn't parse is a warning; the check does not crash.
+Per-app **Allow Notifications** is checked by the **Notifications** section of `macconfig-check.sh`. An app in `lib/notifications-off.list` whose Allow Notifications is on is a warning (**Needs Paul**). An app that is not in the notification store has never posted a notification, so it cannot be on: that is an info line (`not registered for notifications yet, nothing to turn off`), not a warning. Hammerspoon's Alerts style is the same: until Hammerspoon has posted a notification, the style can't be checked, and that is an info line. A third-party app (`com.apple.*` and `_SYSTEM_CENTER_*` excluded) that isn't in that list or `lib/notifications-reviewed.list` is an `info` line, so a newly appeared app gets flagged. A missing store or a plist that doesn't parse is a warning; the check does not crash.
 
 On macOS 27 the store is `~/Library/Group Containers/group.com.apple.usernoted/Library/Preferences/group.com.apple.usernoted.plist` (binary plist, key `apps`). `~/Library/Preferences/com.apple.ncprefs.plist` is not used. `lib/notification-prefs.py` reads it with `python3` `plistlib` and never writes it. `--fix` does not change it.
 
