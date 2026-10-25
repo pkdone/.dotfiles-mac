@@ -5,6 +5,7 @@ Check (the default) is read-only. One line per app, fields separated by `|`:
 
     ok|bundle|message
     bad|bundle|message
+    skip||message
     warn||message
 
 macOS stores pins in com.apple.spaces `app-bindings` (bundle id -> Space UUID).
@@ -18,6 +19,13 @@ key. Other `app-bindings` entries are kept. Spaces are never created or
 reordered. The domain is backed up, then `defaults write ... -dict` replaces
 `app-bindings` (that is how a key is removed), and Dock is restarted only if
 a pin changed.
+
+A bundle field that starts with `@APP@` is an app path (`@HOME@` is `$HOME`).
+The bundle id is `CFBundleIdentifier` in that app's `Contents/Info.plist`,
+read at check and apply time. A Safari web app's id includes a per-Mac UUID,
+so the UUID is not stored in the list. If the app is not installed, the row
+is `skip` ("not set up yet", naming the optional manual-step id). That is not
+drift, and `--apply` does not write a pin for it.
 
 `--plist` / `--out` read and write a plist file instead of `defaults`, so
 this can be tested with no Dock. `DESKTOP_BINDINGS_BACKUP_DIR` overrides the
@@ -42,16 +50,69 @@ def emit(status: str, bundle: str, message: str) -> None:
     print(f"{status}|{bundle}|{text}")
 
 
-def load_rows(path: str) -> list[tuple[str, str, str]]:
+APP_MARK = "@APP@"
+
+
+def load_rows(path: str) -> list[tuple[str, str, str, str]]:
+    """Rows are (name, bundle spec, desktop, manual step id).
+
+    A bundle spec that starts with @APP@ is an app path. The real bundle id
+    is read later from Contents/Info.plist. The fourth field is optional.
+    """
     rows = []
     with open(path, encoding="utf-8") as fh:
-        for line in fh:
+        for lineno, line in enumerate(fh, 1):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            name, bundle, want = (p.strip() for p in line.split("|"))
-            rows.append((name, bundle, want))
+            parts = [p.strip() for p in line.split("|")]
+            if len(parts) == 3:
+                name, bundle, want = parts
+                step = ""
+            elif len(parts) == 4:
+                name, bundle, want, step = parts
+            else:
+                raise ValueError(f"{path}:{lineno}: expected name|bundle|desktop")
+            rows.append((name, bundle, want, step))
     return rows
+
+
+def expand_home(text: str) -> str:
+    return text.replace("@HOME@", os.environ.get("HOME", ""))
+
+
+def read_bundle_id(app_path: str) -> str:
+    plist_path = os.path.join(app_path, "Contents", "Info.plist")
+    with open(plist_path, "rb") as fh:
+        info = plistlib.load(fh)
+    bundle = info.get("CFBundleIdentifier") if isinstance(info, dict) else None
+    if not isinstance(bundle, str) or not bundle.strip():
+        raise ValueError(f"no CFBundleIdentifier in {plist_path}")
+    return bundle.strip()
+
+
+def resolve_bundle(spec: str) -> tuple[str, str]:
+    """Return (bundle id, problem).
+
+    problem is "" when spec is already a bundle id, or when an @APP@ path
+    resolved. problem is "missing" when that app is not installed. Any other
+    problem is an error string, and the pin is not written.
+    """
+    if not spec.startswith(APP_MARK):
+        return spec, ""
+    app_path = expand_home(spec[len(APP_MARK):])
+    if not os.path.isdir(app_path):
+        return "", "missing"
+    try:
+        return read_bundle_id(app_path), ""
+    except Exception as exc:  # noqa: BLE001 - report, don't crash the check
+        return "", str(exc)
+
+
+def not_setup_message(name: str, step: str) -> str:
+    if step:
+        return f"{name} is not set up yet (manual step {step})"
+    return f"{name} is not set up yet"
 
 
 def load_prefs(path: str) -> dict:
@@ -106,11 +167,18 @@ def label(desktop: str) -> str:
     return "None" if desktop == "none" else f"Desktop {desktop}"
 
 
-def check_rows(prefs: dict, rows: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
+def check_rows(prefs: dict, rows: list[tuple[str, str, str, str]]) -> list[tuple[str, str, str]]:
     lowered = lowered_bindings(prefs.get(BINDINGS) or {})
     uuid_to_n, _n_to_uuid = desktop_maps(main_desktops(prefs))
     out = []
-    for name, bundle, want in rows:
+    for name, spec, want, step in rows:
+        bundle, problem = resolve_bundle(spec)
+        if problem == "missing":
+            out.append(("skip", "", not_setup_message(name, step)))
+            continue
+        if problem:
+            out.append(("warn", "", f"{name}: {problem}"))
+            continue
         have = have_desktop(lowered, uuid_to_n, bundle)
         if have == want:
             out.append(("ok", bundle, f"{name} assigned to {label(want)}"))
@@ -131,10 +199,20 @@ def plan(prefs: dict, rows, tokens: list[str], dry_run: bool):
     selected = {t.lower() for t in tokens}
     plans = []
     seen = set()
-    for name, bundle, want in rows:
-        if selected and bundle.lower() not in selected:
+    for name, spec, want, step in rows:
+        bundle, problem = resolve_bundle(spec)
+        keys = {spec.lower()}
+        if bundle:
+            keys.add(bundle.lower())
+        if selected and keys.isdisjoint(selected):
             continue
-        seen.add(bundle.lower())
+        seen.update(keys)
+        if problem == "missing":
+            plans.append(("skip", "", not_setup_message(name, step), None))
+            continue
+        if problem:
+            plans.append(("refuse", spec, f"{name}: {problem}", None))
+            continue
         have = have_desktop(lowered, uuid_to_n, bundle)
         if have == want:
             plans.append(("ok", bundle, f"{name} already assigned to {label(want)}", None))

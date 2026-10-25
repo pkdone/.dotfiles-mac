@@ -15,9 +15,19 @@ else
   url_to_path() { local p="${1#file://}"; p="${p%/}"; printf '%s' "${p//%20/ }"; }
 
   expected_paths=(); expected_names=()
-  while IFS='|' read -r name path; do
+  while IFS='|' read -r name path manual; do
     case "$name" in ''|'#'*) continue ;; esac
-    expected_names+=("$name"); expected_paths+=("${path/@HOME@/$HOME}")
+    path="${path/@HOME@/$HOME}"
+    # A manual-step app that is not on disk yet is not drift. The Dock check
+    # says so, and the order comparison uses the apps that are installed.
+    if [ -n "${manual:-}" ] && [ ! -e "$path" ]; then
+      CHECKED=$((CHECKED + 1))
+      fixid manual-step
+      warn "$name is missing because the manual step hasn't been done (${manual#manual:})"
+      fixid dock-apps
+      continue
+    fi
+    expected_names+=("$name"); expected_paths+=("$path")
   done < "$DOTDIR/lib/dock-apps.list"
 
   actual_paths=()

@@ -39,6 +39,9 @@ manualsteps list   # just print the full numbered checklist (even for those alre
 
 The full checklist, and how to add a step, is in [Manual steps](docs/manual-steps.md).
 
+WhatsApp is not installed because the company's app policy blocks it on company Macs. WhatsApp Web is used instead, as a Safari web app, set up by a manual step.
+Gemini is not installed because the company's app policy blocks it on company Macs.
+
 ## Everyday commands
 
 ### macconfig

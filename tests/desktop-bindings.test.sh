@@ -229,7 +229,7 @@ make_plist "$tmp/real.plist" 'p["app-bindings"] = {
   "com.google.chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod": "UUID-4",
 }'
 sig_real="$(space_sig "$tmp/real.plist")"
-only="$(awk -F'|' '$1 !~ /^#/ && NF && $3 != "4" && $3 != "none" { printf "%s%s", sep, $2; sep="," }' "$REAL_LIST")"
+only="$(awk -F'|' '$1 !~ /^#/ && NF && $2 !~ /^@APP@/ && $3 != "4" && $3 != "none" { printf "%s%s", sep, $2; sep="," }' "$REAL_LIST")"
 eq "six drifted bundles" 6 "$(printf '%s\n' "$only" | tr ',' '\n' | grep -c .)"
 out="$(run --apply --plist "$tmp/real.plist" --only "$only" --out "$tmp/real.out" "$REAL_LIST")"; rc=$?
 eq "six drifted pins apply cleanly" 0 "$rc"
@@ -244,10 +244,14 @@ eq "real-list bindings" "$(printf '%s\n' \
   'com.tinyspeck.slackmacgap=' \
   'com.todesktop.230313mzl4w4u92=UUID-3')" "$(binds "$tmp/real.out")"
 eq "real-list apply leaves Spaces alone" "$sig_real" "$(space_sig "$tmp/real.out")"
-out="$(run --plist "$tmp/real.out" "$REAL_LIST")"; rc=$?
+mkdir -p "$tmp/no-whatsapp"
+out="$(HOME="$tmp/no-whatsapp" run --plist "$tmp/real.out" "$REAL_LIST")"; rc=$?
 eq "checker is clean after apply" 0 "$rc"
 eq "every real pin ok" 10 "$(printf '%s\n' "$out" | grep -c '^ok|')"
 eq "no remaining drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
+eq "missing WhatsApp Web is not set up yet" \
+  "skip||WhatsApp Web is not set up yet (manual step whatsapp-web)" \
+  "$(printf '%s\n' "$out" | grep -F 'WhatsApp' || true)"
 
 make_plist "$tmp/short.plist" 'p["SpacesDisplayConfiguration"]["Management Data"]["Monitors"][0]["Spaces"] = [
   {"type": 0, "uuid": ""}, {"type": 0, "uuid": "UUID-2"}, {"type": 0, "uuid": "UUID-3"}]'
@@ -350,6 +354,84 @@ has "live dry-run would assign" "dry|com.tinyspeck.slackmacgap|would assign Slac
 eq "live dry-run does not write" "" "$(write_argv "$FAKE_LOG")"
 eq "live dry-run does not restart Dock" "" "$(kill_lines "$FAKE_LOG")"
 eq "live dry-run still reads the domain" 1 "$(grep -c '"export"' "$FAKE_LOG")"
+
+# ---- @APP@ path: bundle id comes from Info.plist, never a stored UUID ----
+eq "WhatsApp Web pin is an app path" \
+  "WhatsApp Web|@APP@@HOME@/Applications/WhatsApp Web.app|1|whatsapp-web" \
+  "$(awk -F'|' '$1=="WhatsApp Web" { print; exit }' "$REAL_LIST")"
+known_uuid='2C07FD29-EDF8-4FBA-8539-F9C71386A734'
+uuid_hit="$(grep -RInF "$known_uuid" "$DIR" --exclude-dir=.git --exclude='desktop-bindings.test.sh' || true)"
+eq "Paul's WhatsApp Web UUID is not hard-coded" "" "$uuid_hit"
+pattern_hit="$(grep -RInE 'com\.apple\.(Safari|safari)\.WebApp\.[0-9A-Fa-f]{8}-' "$DIR" \
+  --exclude-dir=.git --exclude-dir=tests || true)"
+eq "no Safari web app UUID is stored outside tests" "" "$pattern_hit"
+# shellcheck disable=SC2016  # needles are source text, compared literally
+has "desktop check reports skip instead of drift" 'skip) skip "$msg"' \
+  "$(sed -n '/case "\$status"/,/esac/p' "$DIR/checks/desktops.sh")"
+
+wa_bundle='com.apple.Safari.WebApp.11111111-2222-3333-4444-555555555555'
+wa_other='com.apple.Safari.WebApp.AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE'
+wa_low="$(printf '%s' "$wa_bundle" | tr '[:upper:]' '[:lower:]')"
+wa_other_low="$(printf '%s' "$wa_other" | tr '[:upper:]' '[:lower:]')"
+make_webapp() { # HOME bundle-id
+  local dest="$1/Applications/WhatsApp Web.app/Contents"
+  mkdir -p "$dest"
+  "$PY" - "$dest/Info.plist" "$2" <<'PY'
+import plistlib, sys
+plistlib.dump({"CFBundleIdentifier": sys.argv[2], "CFBundleName": "WhatsApp Web"}, open(sys.argv[1], "wb"))
+PY
+}
+printf 'WhatsApp Web|@APP@@HOME@/Applications/WhatsApp Web.app|1|whatsapp-web\n' > "$tmp/wa.list"
+
+make_plist "$tmp/wa-missing.plist" ''
+out="$(HOME="$tmp/no-whatsapp" run --plist "$tmp/wa-missing.plist" "$tmp/wa.list")"; rc=$?
+eq "missing web app check exits 0" 0 "$rc"
+eq "missing web app is skip, not drift" \
+  "skip||WhatsApp Web is not set up yet (manual step whatsapp-web)" "$out"
+out="$(HOME="$tmp/no-whatsapp" run --apply --plist "$tmp/wa-missing.plist" --out "$tmp/wa-missing.out" "$tmp/wa.list")"; rc=$?
+eq "missing web app apply exits 0" 0 "$rc"
+eq "missing web app apply writes nothing" "" "$(if_exists "$tmp/wa-missing.out")"
+has "missing web app apply says not set up yet" "skip||WhatsApp Web is not set up yet (manual step whatsapp-web)" "$out"
+eq "missing web app apply is not a change" "" "$(printf '%s\n' "$out" | grep '^chg|' || true)"
+
+wa_home="$tmp/wa-home"
+make_webapp "$wa_home" "$wa_bundle"
+make_plist "$tmp/wa-bare.plist" ''
+out="$(HOME="$wa_home" run --plist "$tmp/wa-bare.plist" "$tmp/wa.list")"; rc=$?
+eq "unpinned web app check exits 0" 0 "$rc"
+eq "unpinned web app names the plist bundle id" \
+  "bad|$wa_bundle|WhatsApp Web assigned to None (expected Desktop 1)" "$out"
+out="$(HOME="$wa_home" run --apply --plist "$tmp/wa-bare.plist" --out "$tmp/wa-set.plist" "$tmp/wa.list")"; rc=$?
+eq "apply resolves the bundle id from Info.plist" 0 "$rc"
+eq "apply stores the bundle id lowercased on Desktop 1" "$wa_low=" "$(binds "$tmp/wa-set.plist")"
+has "apply reports the resolved bundle" "chg|$wa_bundle|assign WhatsApp Web to Desktop 1" "$out"
+out="$(HOME="$wa_home" run --plist "$tmp/wa-set.plist" "$tmp/wa.list")"
+eq "checker agrees with the resolved bundle id" \
+  "ok|$wa_bundle|WhatsApp Web assigned to Desktop 1" "$out"
+
+# A second creation of the web app has a different UUID. The same list row follows it.
+# The previous key is unmanaged (its bundle id is not in the list), so it can
+# remain; the new id is what the check and --fix use.
+make_webapp "$wa_home" "$wa_other"
+out="$(HOME="$wa_home" run --apply --plist "$tmp/wa-set.plist" --out "$tmp/wa-other.plist" "$tmp/wa.list")"
+has "a new UUID is written from Info.plist" "$wa_other_low=" "$(binds "$tmp/wa-other.plist")"
+has "apply names the new bundle id" "chg|$wa_other|assign WhatsApp Web to Desktop 1" "$out"
+out="$(HOME="$wa_home" run --plist "$tmp/wa-other.plist" "$tmp/wa.list")"
+eq "checker follows the new UUID" \
+  "ok|$wa_other|WhatsApp Web assigned to Desktop 1" "$out"
+
+# --only accepts the resolved id, which is what macconfig passes after a bad line.
+make_plist "$tmp/wa-only.plist" ''
+out="$(HOME="$wa_home" run --apply --plist "$tmp/wa-only.plist" --only "$wa_other" --out "$tmp/wa-only.out" "$tmp/wa.list")"
+eq "--only the resolved bundle id writes it" "$wa_other_low=" "$(binds "$tmp/wa-only.out")"
+
+# A broken bundle (app directory, no readable id) is not treated as "not set up".
+mkdir -p "$tmp/broken-home/Applications/WhatsApp Web.app"
+out="$(HOME="$tmp/broken-home" run --plist "$tmp/wa-bare.plist" "$tmp/wa.list")"; rc=$?
+eq "unreadable Info.plist check exits 0" 0 "$rc"
+has "unreadable Info.plist is a warning" "warn||WhatsApp Web:" "$out"
+eq "unreadable Info.plist is not drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
+eq "unreadable Info.plist is not skip" "" "$(printf '%s\n' "$out" | grep '^skip|' || true)"
 
 printf 'desktop-bindings tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
