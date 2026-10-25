@@ -58,6 +58,11 @@ done
 # Help and unknown arguments exit above, so a log is only opened for a real run.
 dotfiles_log_exec bootstrap "$@"
 
+# macos.sh appends settings that still need a logout. Printed at the very end.
+if [ -n "${DOTFILES_LOG_FILE:-}" ]; then
+  export DOTFILES_LOGOUT_FILE="${DOTFILES_LOG_FILE}.logout"
+fi
+
 # ---- logging / prompts --------------------------------------------------
 # stdout is tee'd into the log, so it is not a tty. Colour follows the outer
 # terminal, which the log wrapper recorded before the redirect.
@@ -150,7 +155,16 @@ else
 fi
 
 # Manual steps (permissions, sign-ins, by-hand settings) from lib/manual-steps.list.
+# Auto-brightness cannot be written from here (admin password, root-owned
+# plist). Name it before the long checklist so it is not lost in the list.
+# Its open action is System Settings → Displays.
 MANUAL_STEPS="$DOTDIR/scripts/manual-steps.sh"
+echo ""
+printf '%sStill by hand: Automatically adjust brightness Off%s\n' "$C_HDR" "$C_OFF"
+echo "  System Settings → Displays. The manual-steps walk-through opens this page."
+echo "  Setup leaves it alone: changing it needs an admin password, and the saved"
+echo "  value is a root-owned file. Leave True Tone and Slightly dim the display"
+echo "  on battery as they are."
 echo ""
 "$MANUAL_STEPS" list || true
 # The walk-through is interactive by nature: offer it only on a real run, on a terminal,
@@ -163,4 +177,10 @@ if [ "$DRYRUN" = 0 ] && [ "$ASSUME_YES" = 0 ] && dotfiles_is_interactive; then
     y|Y|yes|YES) "$MANUAL_STEPS" open || true ;;
     *) echo "Later: $MANUAL_STEPS open" ;;
   esac
+fi
+
+# Very end. macos.sh notes anything it changed that still needs a logout
+# (trackpad rows are omitted when activateSettings -u succeeded).
+if [ "$DRYRUN" != 1 ]; then
+  dotfiles_print_logout_notice "$C_HDR" "$C_OFF"
 fi

@@ -38,9 +38,8 @@ eq "16-inch More Space prefix" "3456x2234|2056 x 1329" \
   "$(grep -E '^3456x2234\|' "$LIST")"
 eq "display-more-space is checked by macconfig-check.sh" "@macconfig-check.sh" \
   "$(awk -F'|' '$1 == "display-more-space" { print $6; exit }' "$STEPS")"
-eq "display-more-space is Needs Paul" "PAUL|" \
+eq "display-more-space is fixed by macos.sh" "SAFE|macos" \
   "$(awk -F'|' '$1 == "display-more-space" { print $2 "|" $3; exit }' "$DIR/lib/autofix.list")"
-miss "helper does not call displayplacer" 'displayplacer' "$(cat "$HELPER")"
 writers="$(grep -nE 'subprocess|os\.system|Popen' "$HELPER" || true)"
 eq "helper does not shell out" "" "$writers"
 
@@ -93,7 +92,7 @@ cat > "$tmp/default.json" <<'EOF'
 EOF
 out="$(run "$tmp/default.json")"
 eq "a different scaled mode warns" \
-  "warn||Built-in display is not More Space (Color LCD: _spdisplays_resolution is '1512 x 982 @ 120.00Hz'; want _spdisplays_resolution to start with 1800 x 1169) — System Settings → Displays. macconfig-check.sh --fix does not change this" \
+  "warn||Built-in display is not More Space (Color LCD: _spdisplays_resolution is '1512 x 982 @ 120.00Hz'; want _spdisplays_resolution to start with 1800 x 1169). macos.sh sets this with displayplacer when that mode is listed; otherwise System Settings → Displays" \
   "$out"
 
 cat > "$tmp/clamshell.json" <<'EOF'
@@ -240,6 +239,130 @@ has "a different list prefix is what gets checked" "starts with 1512 x 982" "$ou
 
 stdin_out="$("$PY" "$HELPER" --list "$LIST" < "$tmp/more-space.json")"
 eq "stdin matches --json" "$(run "$tmp/more-space.json")" "$stdin_out"
+
+# displayplacer plan: change only the built-in screen, keep the external mode.
+cat > "$tmp/placer-14.txt" <<'EOF'
+Persistent screen id: BUILTIN-ID
+Contextual screen id: 1
+Type: MacBook built in screen
+Resolution: 1512x982
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0) - main display
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
+  mode 1: res:1800x1169 hz:60 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 3: res:1800x1169 hz:120 color_depth:4 scaling:on
+  mode 4: res:1800x1169 hz:120 color_depth:8 scaling:off
+
+Persistent screen id: EXTERNAL-ID
+Contextual screen id: 2
+Type: 27 inch external screen
+Resolution: 2560x1440
+Hertz: 60
+Color Depth: 8
+Scaling: off
+Origin: (1800,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
+  mode 1: res:1920x1080 hz:60 color_depth:8 scaling:off
+
+Execute the command below to set your screens to the current arrangement:
+displayplacer "id:BUILTIN-ID res:1512x982 hz:120 color_depth:8 scaling:on origin:(0,0) degree:0" "id:EXTERNAL-ID res:2560x1440 hz:60 color_depth:8 scaling:off origin:(1800,0) degree:0"
+EOF
+plan() { "$PY" "$HELPER" --json "$1" --list "${3:-$LIST}" --plan --placer "$2"; }
+out="$(plan "$tmp/default.json" "$tmp/placer-14.txt")"
+eq "plan picks the 120Hz scaled More Space mode and leaves the external display" \
+  "$(printf '%s\n' \
+    'apply||built-in display More Space 1800x1169 at 120Hz, scaling on' \
+    'screen|id:BUILTIN-ID mode:2 origin:(0,0) degree:0' \
+    'screen|id:EXTERNAL-ID mode:0 origin:(1800,0) degree:0')" \
+  "$out"
+miss "plan does not put the More Space resolution on the external display" 'res:1800' "$out"
+
+# Already More Space: the plan is a no-op even if displayplacer list shows another mode.
+out="$(plan "$tmp/more-space.json" "$tmp/placer-14.txt")"
+eq "plan does not change a display that is already More Space" \
+  "ok||Built-in display is More Space (Color LCD '1800 x 1169 @ 120.00Hz'; _spdisplays_resolution starts with 1800 x 1169)" \
+  "$out"
+miss "already More Space plan has no screen line" 'screen|' "$out"
+
+out="$(plan "$tmp/clamshell.json" "$tmp/placer-14.txt")"
+has "plan leaves a clamshell alone" "info||no built-in display" "$out"
+miss "clamshell plan has no screen line" 'screen|' "$out"
+
+cat > "$tmp/placer-no-mode.txt" <<'EOF'
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1512x982
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
+  mode 4: res:1800x1169 hz:120 color_depth:8 scaling:off
+EOF
+out="$(plan "$tmp/default.json" "$tmp/placer-no-mode.txt")"
+has "a scaled-off mode is not More Space" "no More Space mode 1800x1169" "$out"
+miss "missing scaled mode has no screen line" 'screen|' "$out"
+has "missing mode says other displays were not changed" "Other displays were not changed" "$out"
+
+cat > "$tmp/placer-external-only.txt" <<'EOF'
+Persistent screen id: EXTERNAL-ID
+Type: 27 inch external screen
+Resolution: 2560x1440
+Hertz: 60
+Color Depth: 8
+Scaling: off
+Origin: (0,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
+EOF
+out="$(plan "$tmp/default.json" "$tmp/placer-external-only.txt")"
+has "no built-in screen in displayplacer list is a warning" "could not match the built-in display" "$out"
+miss "external-only list has no screen line" 'screen|' "$out"
+
+# Closest refresh rate when the current one is not listed. 144 is nearer 120 than 60.
+cat > "$tmp/placer-nearest.txt" <<'EOF'
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1512x982
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 1: res:1800x1169 hz:60 color_depth:8 scaling:on
+  mode 5: res:1800x1169 hz:144 color_depth:8 scaling:on
+EOF
+out="$(plan "$tmp/default.json" "$tmp/placer-nearest.txt")"
+has "nearest refresh rate is chosen" "screen|id:BUILTIN-ID mode:5 origin:(0,0) degree:0" "$out"
+has "nearest refresh rate is named" "at 144Hz" "$out"
+
+# 16-inch panel.
+cat > "$tmp/placer-16.txt" <<'EOF'
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1728x1117
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:1728x1117 hz:120 color_depth:8 scaling:on
+  mode 8: res:2056x1329 hz:120 color_depth:8 scaling:on
+EOF
+out="$(plan "$tmp/sixteen-14mode.json" "$tmp/placer-16.txt")"
+has "16-inch plan uses 2056x1329" "screen|id:BUILTIN-ID mode:8 origin:(0,0) degree:0" "$out"
 
 section="$(cat "$DIR/checks/display.sh")"
 has "section calls the helper" 'lib/display-resolution.py' "$section"

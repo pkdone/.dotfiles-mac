@@ -3,7 +3,8 @@
 # (for example spdisplays_3024x1964Retina), picks the matching row, and warns
 # when _spdisplays_resolution does not start with that row's prefix. A panel
 # size not listed here, or no built-in panel (clamshell), is an info line.
-# Read-only: no displayplacer, and --fix never changes the mode.
+# macos.sh uses displayplacer to apply the matching mode on the built-in
+# panel only. External displays are not changed. A missing mode stays by hand.
 # Format: panel | More Space prefix
 3024x1964|1800 x 1169
 3456x2234|2056 x 1329

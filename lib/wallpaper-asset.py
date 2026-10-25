@@ -5,8 +5,13 @@ The wallpaper store is
 ~/Library/Application Support/com.apple.wallpaper/Store/Index.plist.
 The asset id is searched for as text inside that file (plain text and
 UTF-16), so a binary plist still matches when the id is stored as text.
-Nothing here writes. A miss is a warning. macconfig --fix does not change
-the picture.
+Nothing here writes. A miss is a warning.
+
+Tahoe Night (Landscape) is a wallpaper-catalog asset, not a file under
+/System/Library/Desktop Pictures. System Events "set picture of every
+desktop" cannot select that asset, and writing this store is not a
+supported way to change it, so the picture stays a manual step.
+macconfig --fix does not change the picture.
 """
 from __future__ import annotations
 
@@ -41,6 +46,7 @@ def judge(data: bytes | None, missing: bool, asset_id: str) -> tuple[str, str]:
             "warn",
             "wallpaper store is missing, so the desktop picture could not be"
             f" checked (want {PLAIN_NAME}). System Settings → Wallpaper."
+            " There is no reliable command for this system picture."
             " macconfig --fix does not change this",
         )
     if has_asset(data, asset_id):
@@ -52,6 +58,7 @@ def judge(data: bytes | None, missing: bool, asset_id: str) -> tuple[str, str]:
         "warn",
         f"desktop picture is not {PLAIN_NAME} (asset {asset_id} is not in the"
         " wallpaper store). System Settings → Wallpaper."
+        " There is no reliable command for this system picture."
         " macconfig --fix does not change this",
     )
 
