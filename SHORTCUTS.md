@@ -62,7 +62,6 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 |------|------|
 | Spotlight Search | Command + Space |
 | Open settings in current app | Command + , |
-| Activate Finder (via Raycast) | Shift + Control + Command + F |
 | Clipboard History (via Raycast) | Control + Command + V |
 | Force Quit Applications window | Option + Command + Escape |
 | Lock Screen | Control + Command + Q OR TouchID press |
@@ -80,6 +79,14 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | ChatGPT | Option + Space (Raycast was moved off this — see [Settings](docs/settings.md#raycast)) |
 | Gemini mini chat | Control + Option + G |
 | Gemini full chat | Control + Option + Shift + G |
+
+#### Hammerspoon
+
+Hammerspoon binds this in `hammerspoon/finder_hotkey.lua`, which `init.lua` loads. Pressing the keys launches Finder, or brings it to the front when Finder is already running. If a Raycast backup still has a Finder hotkey on the same keys, unbind it in Raycast so the two don't clash.
+
+| Action | Shortcut |
+|------|------|
+| Bring Finder to the front | Shift + Control + Command + F |
 
 #### Window Tiling
 

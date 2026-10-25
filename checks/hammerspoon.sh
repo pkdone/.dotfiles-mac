@@ -115,7 +115,7 @@ if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
   return 0
 fi
 
-# ---- 10b. Hammerspoon (Sidecar -> Slack automation) ----------------------
+# ---- 10b. Hammerspoon (Sidecar -> Slack, Finder hotkey) ------------------
 # The ~/.hammerspoon dir symlink is checked in section 1 (links.list) and the cask in
 # section 2 (Brewfile). Here: soft-warn if the app isn't running. Its Accessibility
 # grant is a manual step, checked in the "Manual steps" section (id hammerspoon-ax).

@@ -21,6 +21,7 @@ local log = hs.logger.new('init', 'info')
 -- Automations to load, in order. Add new modules here (e.g. 'trackpad_mute').
 local MODULES = {
   'sidecar_slack',  -- Sidecar on: Slack -> iPad, full screen, zoom out; off: reverse
+  'finder_hotkey',  -- Shift+Ctrl+Cmd+F: launch or focus Finder
   'mode_switcher',  -- menu-bar modes: Normal / WebConf / DeepWork (settings: modes.lua)
 }
 
