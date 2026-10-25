@@ -18,9 +18,10 @@
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
 #               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @coteditor /
 #               @finder-recents / @finder-icon-view / @finder-favorites /
-#               @finder-show / @titlebar-double-click / @ac-sleep. Values that already
-#               match are left alone (no re-assert write). @finder-favorites only
-#               reads the sidebar file. Used by `macconfig-check.sh --fix`.
+#               @finder-show / @titlebar-double-click / @ac-sleep /
+#               @display-more-space. Values that already match are left alone
+#               (no re-assert write). @finder-favorites only reads the sidebar
+#               file. Used by `macconfig-check.sh --fix`.
 #   --yes       Run the deferred UI restarts without prompting (still only if
 #               something changed). Also skips the AC-sleep confirmation and goes
 #               straight to sudo when a terminal can ask for a password. Used by
@@ -36,6 +37,15 @@
 #     call sudo. Battery idle sleep is not changed. Closing the lid still
 #     sleeps the Mac. Other sudo-only items (hostname, display auto-brightness)
 #     stay manual. macconfig --fix never selects @ac-sleep.
+#   - Dark mode is also applied live with System Events when it is not already
+#     on. A missing Automation permission is a warning, not a failure, and does
+#     not ask for a logout.
+#   - After a trackpad value changes, activateSettings -u reloads it when that
+#     tool is present, so those rows do not ask for a logout. If it is missing
+#     or fails, they stay on the logout list.
+#   - @display-more-space sets the built-in panel with displayplacer. External
+#     displays are passed through unchanged. A missing tool or mode is a warning
+#     and stays the manual step.
 #   - Before the first value-changing write, every affected domain is exported
 #     to backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
 #   - UI restarts (killall) are deferred to the end, run only if something
@@ -74,7 +84,10 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --only ID    Apply only this item (repeatable): "domain|key" from
                lib/macos-defaults.list, or @dictation-164, @quicknote-190, @coteditor,
                @finder-recents, @finder-icon-view, @finder-favorites, @finder-show,
-               @titlebar-double-click, @ac-sleep. Matching values are left alone.
+               @titlebar-double-click, @ac-sleep, @display-more-space. Matching
+               values are left alone. Dark mode is also turned on live when it
+               is not already on. A changed trackpad setting is reloaded with
+               activateSettings when that tool is present.
                @finder-favorites reads the sidebar file and does not change it.
   --yes        Restart Dock/Finder/SystemUIServer/ControlCenter without prompting
                (only if something changed). Also accept the power sudo step
@@ -89,10 +102,21 @@ USAGE
 done
 
 # selected ID — true if ID should be applied (no --only given, or ID was named).
+# A hit is recorded so an unknown --only id can be reported at the end.
 selected() {
   if [ -z "$ONLY_IDS" ]; then return 0; fi
   case "$NL$ONLY_IDS$NL" in
     *"$NL$1$NL"*) ONLY_MATCHED="${ONLY_MATCHED}${ONLY_MATCHED:+$NL}$1"; return 0 ;;
+  esac
+  return 1
+}
+
+# wants ID — same question, without recording a match. Used when the settings
+# loop has already called selected for this id.
+wants() {
+  if [ -z "$ONLY_IDS" ]; then return 0; fi
+  case "$NL$ONLY_IDS$NL" in
+    *"$NL$1$NL"*) return 0 ;;
   esac
   return 1
 }
@@ -125,13 +149,23 @@ for f in defaults-lib.sh macos-defaults.list; do require_file "$DOTDIR/lib/$f"; 
 # lib so macconfig-check.sh can reuse the exact same match semantics.
 # shellcheck source=lib/defaults-lib.sh disable=SC1091
 . "$DOTDIR/lib/defaults-lib.sh"
+# shellcheck source=lib/dotfiles-log.sh disable=SC1091
+. "$DOTDIR/lib/dotfiles-log.sh"
 DOT_PYTHON="$(dot_python || true)"
 
-queue_restart() {  # restart-token  [descriptor]
+queue_restart() {  # restart-token  [descriptor]  [class]
+  # class "trackpad" marks a row activateSettings can reload. Anything else
+  # stays "other" and still needs a logout when it changes.
   [ -z "$1" ] && return 0
   if [ "$1" = logout ]; then
+    local desc="${2:-a setting}" class="${3:-other}" row
+    case "$class" in
+      trackpad) ;;
+      *) class=other ;;
+    esac
+    row="${class}|${desc}"
     NEEDS_LOGOUT=1
-    LOGOUT_ITEMS="${LOGOUT_ITEMS}${LOGOUT_ITEMS:+$NL}${2:-a setting}"
+    LOGOUT_ITEMS="${LOGOUT_ITEMS}${LOGOUT_ITEMS:+$NL}${row}"
     return 0
   fi
   case " $RESTARTS " in
@@ -216,8 +250,8 @@ ensure_screenshot_dir() {  # domain key path
   say_chg "screenshot folder $SCREENSHOT_DIR_SHOWN — created"
 }
 
-apply_setting() {  # domain key type desired restart tol
-  local domain="$1" key="$2" etype="$3" desired="$4" restart="$5" tol="${6:-}"
+apply_setting() {  # domain key type desired restart tol [class]
+  local domain="$1" key="$2" etype="$3" desired="$4" restart="$5" tol="${6:-}" class="${7:-}"
   CONSIDERED=$((CONSIDERED + 1))
   desired="${desired//@HOME@/$HOME}"
   ensure_screenshot_dir "$domain" "$key" "$desired"
@@ -311,7 +345,7 @@ apply_setting() {  # domain key type desired restart tol
     fi
   fi
   CHANGED=$((CHANGED + 1))
-  queue_restart "$restart" "$domain $key"
+  queue_restart "$restart" "$domain $key" "$class"
 }
 
 # ---- settings table -----------------------------------------------------
@@ -344,8 +378,104 @@ echo
 while IFS='|' read -r domain key etype desired restart area label disp tol; do
   case "$domain" in ''|'#'*) continue ;; esac
   selected "$domain|$key" || continue
-  apply_setting "$domain" "$key" "$etype" "$desired" "$restart" "$tol"
+  class=""
+  if [ "$area" = Trackpad ]; then class=trackpad; fi
+  apply_setting "$domain" "$key" "$etype" "$desired" "$restart" "$tol" "$class"
 done <<< "$SETTINGS"
+
+# ---- dark mode, live (System Events) ------------------------------------
+# AppleInterfaceStyle is written above. That default does not switch the menu
+# bar until logout, so when dark mode is not already on, ask System Events.
+# A missing Automation permission is a warning. macconfig --fix reaches this
+# through the same --only path as the default.
+apply_dark_mode_live() {
+  local current dark_get dark_set
+  dark_get='tell application "System Events" to tell appearance preferences to get dark mode'
+  dark_set='tell application "System Events" to tell appearance preferences to set dark mode to true'
+  if ! command -v osascript >/dev/null 2>&1; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "osascript is not available, so dark mode was not switched on live. AppleInterfaceStyle is still written."
+    return 0
+  fi
+  if ! current="$(osascript -e "$dark_get" 2>/dev/null)"; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "could not read dark mode (System Events failed, often a missing Automation permission). AppleInterfaceStyle is still written. The menu bar may stay light until that permission is allowed."
+    return 0
+  fi
+  current="$(printf '%s' "$current" | tr -d '[:space:]')"
+  case "$current" in
+    true|True|TRUE)
+      say_ok "dark mode already on"
+      return 0
+      ;;
+  esac
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "would turn dark mode on now (System Events)"
+    return 0
+  fi
+  if osascript -e "$dark_set" 2>/dev/null; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "dark mode turned on (System Events)"
+  else
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "could not turn dark mode on (System Events failed, often a missing Automation permission). AppleInterfaceStyle is still written. Allow Automation for this terminal, or log out and back in."
+  fi
+}
+if wants "NSGlobalDomain|AppleInterfaceStyle"; then apply_dark_mode_live; fi
+
+# ---- trackpad: reload user settings so a logout is not required ----------
+# One activateSettings -u covers every trackpad row that changed. Success
+# drops those rows from the logout list. A missing or failing tool leaves
+# them there. The values themselves are unchanged (bottom-right secondary
+# click, TrackpadRightClick=0).
+activate_trackpad_settings() {
+  local bin item any=0
+  while IFS= read -r item; do
+    [ -n "$item" ] || continue
+    case "$item" in
+      trackpad\|*) any=1 ;;
+    esac
+  done <<< "$LOGOUT_ITEMS"
+  [ "$any" = 1 ] || return 0
+  if [ -n "${DOTFILES_ACTIVATE_SETTINGS+x}" ]; then
+    bin="$DOTFILES_ACTIVATE_SETTINGS"
+  else
+    bin="/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings"
+  fi
+  if [ ! -x "$bin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "activateSettings is not available — trackpad changes need a logout to apply"
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    say_chg "would run activateSettings -u so trackpad changes apply without a logout"
+    drop_trackpad_logout
+    return 0
+  fi
+  if "$bin" -u; then
+    say_ok "activateSettings -u — trackpad changes apply without a logout"
+    drop_trackpad_logout
+  else
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "activateSettings -u failed — trackpad changes need a logout to apply"
+  fi
+}
+drop_trackpad_logout() {
+  local item kept=""
+  while IFS= read -r item; do
+    [ -n "$item" ] || continue
+    case "$item" in
+      trackpad\|*) ;;
+      *) kept="${kept}${kept:+$NL}${item}" ;;
+    esac
+  done <<< "$LOGOUT_ITEMS"
+  LOGOUT_ITEMS="$kept"
+  if [ -z "$LOGOUT_ITEMS" ]; then
+    NEEDS_LOGOUT=0
+  fi
+}
+activate_trackpad_settings
 
 # ---- dictation hotkey 164 (nested symbolichotkeys; not a macos-defaults row) ----
 # Pin "Start Dictation" to Right Command twice so hold-Fn never owns the mic.
@@ -767,6 +897,99 @@ EOF
 }
 if selected @ac-sleep; then apply_ac_sleep; fi
 
+# ---- Built-in display More Space (displayplacer) -------------------------
+# Only the built-in panel, and only when it is not already More Space.
+# External screens are repeated with their current mode so they stay put.
+# A missing displayplacer, or no matching scaled mode, stays the manual step.
+apply_display_more_space() {
+  local helper="$DOTDIR/lib/display-resolution.py"
+  local list="$DOTDIR/lib/display-resolution.list"
+  local json line status msg plan first rest cfg placer_file
+  local -a args
+  CONSIDERED=$((CONSIDERED + 1))
+  if ! command -v system_profiler >/dev/null 2>&1; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "built-in display: system_profiler is not available — set More Space by hand (System Settings → Displays)"
+    return 0
+  fi
+  if [ -z "$DOT_PYTHON" ] || [ ! -r "$helper" ] || [ ! -r "$list" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "built-in display: display resolution files missing — set More Space by hand (System Settings → Displays)"
+    return 0
+  fi
+  if ! json="$(system_profiler SPDisplaysDataType -json </dev/null 2>/dev/null)"; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "built-in display: system_profiler failed — set More Space by hand (System Settings → Displays)"
+    return 0
+  fi
+  if [ -z "$json" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "built-in display: system_profiler returned nothing — set More Space by hand (System Settings → Displays)"
+    return 0
+  fi
+  line="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" || true)"
+  status="${line%%|*}"
+  msg="${line#*|*|}"
+  case "$status" in
+    ok)
+      say_ok "built-in display already More Space"
+      return 0
+      ;;
+    info)
+      say_ok "$msg"
+      return 0
+      ;;
+    warn)
+      ;;
+    *)
+      WARNINGS=$((WARNINGS + 1))
+      say_warn "built-in display: ${msg:-could not read the display report}. Set More Space by hand (System Settings → Displays)"
+      return 0
+      ;;
+  esac
+  if ! command -v displayplacer >/dev/null 2>&1; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "built-in display: displayplacer is not installed — set More Space by hand (System Settings → Displays). Run brewsync to install it."
+    return 0
+  fi
+  placer_file="$(mktemp)"
+  displayplacer list >"$placer_file" 2>/dev/null || true
+  plan="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" --plan --placer "$placer_file" || true)"
+  rm -f "$placer_file"
+  first="${plan%%$'\n'*}"
+  status="${first%%|*}"
+  msg="${first#*|*|}"
+  args=()
+  if [ "$status" = apply ]; then
+    rest="${plan#*$'\n'}"
+    if [ "$rest" != "$plan" ]; then
+      while IFS= read -r cfg; do
+        case "$cfg" in
+          screen\|*) args+=("${cfg#screen|}") ;;
+        esac
+      done <<< "$rest"
+    fi
+  fi
+  if [ "$status" != apply ] || [ "${#args[@]}" -eq 0 ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "${msg:-built-in display: could not choose a More Space mode — set it by hand (System Settings → Displays)}"
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "built-in display would be set to More Space (${msg})"
+    return 0
+  fi
+  if displayplacer "${args[@]}"; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "built-in display set to More Space (${msg})"
+  else
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "built-in display: displayplacer failed — set More Space by hand (System Settings → Displays)"
+  fi
+}
+if selected @display-more-space; then apply_display_more_space; fi
+
 # --only ids that matched nothing (typo, or a row removed from the list).
 if [ -n "$ONLY_IDS" ]; then
   while IFS= read -r oid; do
@@ -805,7 +1028,12 @@ if [ "$NEEDS_LOGOUT" = 1 ] && [ "$CHANGED" -gt 0 ]; then
   echo
   echo 'Note: the following changed and may need a logout/login to fully apply:'
   while IFS= read -r item; do
-    [ -n "$item" ] && printf '  - %s\n' "$item"
+    [ -n "$item" ] || continue
+    label="${item#*|}"
+    printf '  - %s\n' "$label"
+    if [ "$DRY_RUN" != 1 ]; then
+      dotfiles_note_logout "$label"
+    fi
   done <<< "$LOGOUT_ITEMS"
 fi
 
@@ -816,7 +1044,10 @@ cat <<'MANUAL'
 Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
   - The account picture (the Dog) is checked and never changed
   - Keyboard British input source (checked; not written). Built-in display
-    More Space and the Tahoe Night wallpaper are checked and never changed
+    More Space is set with displayplacer when that mode is listed; otherwise
+    set it by hand. The Tahoe Night wallpaper stays by hand (there is no
+    reliable command for that system picture). Automatically adjust
+    brightness stays by hand (System Settings → Displays)
   - Finder sidebar Favorites are checked from the sidebar file and not changed.
     macconfig checks the Tags group collapsed, Recents hidden, and, when the
     sidebar files name the row, Shared at the top, AirDrop and iCloud Drive

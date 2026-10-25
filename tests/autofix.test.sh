@@ -35,13 +35,13 @@ eq "every autofix.list row is well formed" "" "$bad_rows"
 eq "ids are unique" "" "$(rows | cut -d'|' -f1 | sort | uniq -d)"
 
 # ---- the classes Paul asked for ----
-for id in defaults dictation-164 quicknote-190 finder-icon-view finder-recents coteditor launchagent symlink hammerspoon desktop-assign file-handler; do
+for id in defaults dictation-164 quicknote-190 finder-icon-view finder-recents coteditor launchagent symlink hammerspoon desktop-assign file-handler display-more-space; do
   eq "$id is SAFE" SAFE "$(autofix_class "$LIST" "$id")"
 done
 eq "desktop-assign fixer is desktop" desktop "$(autofix_lookup "$LIST" desktop-assign | cut -d'|' -f2)"
 eq "file-handler fixer is fileext" fileext "$(autofix_lookup "$LIST" file-handler | cut -d'|' -f2)"
 for id in brew app-install unwanted-app dock-apps login-shell hostname auto-brightness ac-sleep notifications url-handler \
-          login-items tcc manual-step mouse-settings pointer-size input-british gh-auth 1password-cli display-more-space mdm security software-update delete-files dotfiles-git \
+          login-items tcc manual-step mouse-settings pointer-size input-british gh-auth 1password-cli mdm security software-update delete-files dotfiles-git \
           karabiner-rules repo-file launchagent-exit health tooling broken-symlink hammerspoon-config launchagent-template; do
   eq "$id needs Paul" PAUL "$(autofix_class "$LIST" "$id")"
 done

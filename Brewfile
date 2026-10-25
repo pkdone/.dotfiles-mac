@@ -28,6 +28,7 @@ brew "htop"
 brew "mas"
 brew "dockutil"
 brew "duti"
+brew "displayplacer"  # built-in display More Space (macos.sh; external displays are not changed)
 brew "ykman"
 brew "ffmpeg"
 

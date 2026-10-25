@@ -48,7 +48,7 @@ This repo installs apps and tools from three places.
 
 Command-line tools and desktop apps listed in the Brewfile. The first setup installs them with `brew bundle`. A failed entry is retried once and does not stop the others. An app already in `/Applications` is adopted. After that, `brewsync` installs anything missing and upgrades what is already there. If one of these is missing, run `brewsync`.
 
-**Command-line tools:** git, gh, fish, mise, jq, yq, ripgrep, fd, fzf, bat, eza, tree, wget, curl, direnv, tmux, htop, mas, dockutil, duti, ykman, ffmpeg, pkgconf, shellcheck, openssl, python, uv, go, rustup, mongosh, pnpm, awscli, kubernetes-cli, helm, sops, age, coreutils, findutils, gnu-sed, gawk, and grep.
+**Command-line tools:** git, gh, fish, mise, jq, yq, ripgrep, fd, fzf, bat, eza, tree, wget, curl, direnv, tmux, htop, mas, dockutil, duti, displayplacer, ykman, ffmpeg, pkgconf, shellcheck, openssl, python, uv, go, rustup, mongosh, pnpm, awscli, kubernetes-cli, helm, sops, age, coreutils, findutils, gnu-sed, gawk, and grep.
 
 **Desktop apps:** ghostty, visual-studio-code, cursor, cursor-cli, coteditor, karabiner-elements, hammerspoon, microsoft-teams, raycast, 1password-cli, logi-options+, chatgpt, claude, google-gemini, grok-bot, grok-build, google-chrome, spotify, sonos, granola, slack, whatsapp, acorn, docker-desktop, multipass, cog-app, kid3, and yubico-authenticator.
 

@@ -6,7 +6,10 @@
 #   restart: process to killall after a change (Dock / Finder / SystemUIServer), or "logout", or empty
 #   display: uses literal Markdown backticks for `macos.sh --list`; @HOME@ -> $HOME at runtime
 # Blank lines and lines beginning with # are ignored.
-NSGlobalDomain|AppleInterfaceStyle|string|Dark|logout|Appearance|Theme|`Dark`
+# Dark mode. restart is empty: the default is written, and macos.sh also tells
+# System Events to turn dark mode on immediately when it is not already on.
+# A missing Automation permission is a warning. No logout.
+NSGlobalDomain|AppleInterfaceStyle|string|Dark||Appearance|Theme|`Dark`
 com.apple.dock|tilesize|float|28|Dock|Dock|Icon size|`28` (exact)
 com.apple.dock|show-recents|bool|false|Dock|Dock|Show recent apps|`false` (Off)
 com.apple.dock|mru-spaces|bool|false|Dock|Dock|Auto-rearrange Spaces|`false` (Off)
@@ -80,7 +83,11 @@ com.apple.assistant.support|Dictation Enabled|bool|false||Keyboard|Dictation|`fa
 org.hammerspoon.Hammerspoon|MJShowDockIconKey|bool|false||Hammerspoon|Dock icon|`false` (Off — menu-bar icon only)
 org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload crash data|`false` (Off)
 # Trackpad. Values match this Mac today, so applying them changes nothing until one drifts.
-# restart=logout: the trackpad may need a logout/login before it follows a new value.
+# restart=logout: if activateSettings is missing or fails, a logout/login may be
+# needed before the trackpad follows a new value. When activateSettings -u
+# succeeds, macos.sh does not ask for a logout for these rows.
+# Secondary click stays the bottom-right corner (TrackpadCornerSecondaryClick=2).
+# Clicking the right side of the trackpad stays off (TrackpadRightClick=0).
 # Force Click and haptic feedback are On (ActuateDetents=1, ForceSuppressed=0).
 # Look up & data detectors is checked on manual step trackpad-lookup
 # (NSGlobalDomain com.apple.trackpad.forceClick = 0). It is not written here.

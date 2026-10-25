@@ -121,3 +121,36 @@ dotfiles_log_exec() {
   printf 'Log: %s\n' "$log" | tee -a "$log"
   exit "$rc"
 }
+
+# dotfiles_note_logout ITEM — remember one setting that still needs a logout.
+# bootstrap.sh prints the list at the end of a guided run. A macos.sh run on
+# its own leaves DOTFILES_LOGOUT_FILE unset, so this does nothing and macos.sh
+# still prints its own note.
+dotfiles_note_logout() {
+  local item="$1" file
+  [ -n "$item" ] || return 0
+  file="${DOTFILES_LOGOUT_FILE:-}"
+  [ -n "$file" ] || return 0
+  printf '%s\n' "$item" >>"$file" || true
+}
+
+# Print the queued logout items, one per line, in the order they were noted,
+# dropping a later duplicate. Prints nothing when the queue is empty.
+dotfiles_logout_items() {
+  local file="${DOTFILES_LOGOUT_FILE:-}"
+  [ -n "$file" ] && [ -f "$file" ] || return 0
+  awk 'NF && !seen[$0]++' "$file"
+}
+
+# Prominent notice for the end of bootstrap.sh. $1 and $2 are optional colour
+# on and off sequences for the heading. Prints nothing when nothing is queued.
+dotfiles_print_logout_notice() {
+  local items item hdr="${1:-}" off="${2:-}"
+  items="$(dotfiles_logout_items)" || return 0
+  [ -n "$items" ] || return 0
+  printf '\n%sLog out and back in now to finish applying:%s\n' "$hdr" "$off"
+  while IFS= read -r item; do
+    [ -n "$item" ] || continue
+    printf '  - %s\n' "$item"
+  done <<< "$items"
+}

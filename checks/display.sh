@@ -36,11 +36,12 @@ else
   fi
 fi
 
-# ---- 6c. Built-in display More Space (check-only) -----------------------
+# ---- 6c. Built-in display More Space ------------------------------------
 # system_profiler SPDisplaysDataType -json. lib/display-resolution.list maps
 # the panel size to its More Space prefix (14" 1800 x 1169, 16" 2056 x 1329).
-# An unlisted panel size or no built-in panel (clamshell) is an info skip. --fix never changes the
-# display mode. Manual step display-more-space points here.
+# An unlisted panel size or no built-in panel (clamshell) is an info skip.
+# This section only reads the display report. macos.sh applies a mismatch
+# when it can. Manual step display-more-space is the fallback.
 hdr "Display (More Space)"
 fixid display-more-space
 CHECKED=$((CHECKED + 1))
@@ -85,7 +86,9 @@ fi
 
 # ---- 6c2. Wallpaper (check-only) ----------------------------------------
 # The desktop picture is Tahoe Night (Landscape). The asset id is read from
-# the wallpaper store. A miss is a warning. --fix does not change the picture.
+# the wallpaper store. A miss is a warning. There is no reliable command for
+# this system picture (it is a wallpaper-catalog asset, not a file), so
+# nothing here changes it and the wallpaper store is not written.
 # Manual step wallpaper points here.
 hdr "Wallpaper"
 fixid wallpaper

@@ -80,13 +80,21 @@ logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling 
 logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup|Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices|app:logioptionsplus|
 
 # ---- Display, keyboard & desktop ----
+# Automatically adjust brightness is not scripted. Turning it off needs an
+# admin password, and the saved value is the root-owned CoreBrightness plist.
+# bootstrap.sh calls this step out when it prints the manual steps. open jumps
+# to System Settings → Displays. True Tone and battery dim stay as they are.
+auto-brightness|Display, keyboard & desktop|Automatically adjust brightness Off. This stays by hand: it needs an admin password and the saved setting is root-owned. Leave True Tone and Slightly dim the display on battery as they are|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
 # More Space is _spdisplays_resolution starting with the value for this panel
 # size in lib/display-resolution.list (14" 1800 x 1169, 16" 2056 x 1329).
-# macconfig-check.sh reads system_profiler and never changes the mode. An
-# unlisted panel size or a clamshell Mac (no built-in panel) is an info skip.
-display-more-space|Display, keyboard & desktop|Built-in display: More Space (macconfig checks this from the display report; set it by hand)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
-auto-brightness|Display, keyboard & desktop|Displays: Automatically adjust brightness Off (macconfig checks this; leave True Tone and Slightly dim the display on battery as they are)|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
-wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). macconfig reads the wallpaper store and warns if it is a different picture. It does not change it|System Settings → Wallpaper|x-apple.systempreferences:com.apple.Wallpaper-Settings.extension|@macconfig-check.sh
+# macos.sh sets it with displayplacer on the built-in panel only. An unlisted
+# panel size or a clamshell Mac (no built-in panel) is an info skip. If
+# displayplacer is missing or the mode is not listed, set it by hand here.
+display-more-space|Display, keyboard & desktop|Built-in display: More Space. macos.sh sets this with displayplacer when that mode is listed for the built-in panel (14 inch 1800x1169, 16 inch 2056x1329). External displays are not changed. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig-check.sh
+# Tahoe Night (Landscape) is a wallpaper-catalog asset, not a file under
+# /System/Library/Desktop Pictures. System Events "set picture" cannot select
+# that asset, and the wallpaper store is not written.
+wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). Set it by hand. There is no reliable command for this system picture (it is a wallpaper-catalog asset, not a file), and the wallpaper store is not written. macconfig warns if it is a different picture|System Settings → Wallpaper|x-apple.systempreferences:com.apple.Wallpaper-Settings.extension|@macconfig-check.sh
 # Mains power: sleep 0, display sleep 10 minutes, wake for network access on.
 # Battery: display sleep 2 minutes. Battery idle sleep is not changed.
 # Closing the lid still sleeps the Mac. The screen still locks.
