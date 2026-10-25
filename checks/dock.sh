@@ -11,7 +11,7 @@ if ! command -v dockutil >/dev/null 2>&1; then
 else
   # dockutil --list is tab-separated: label \t file://URL \t section \t plist \t bundle-id
   # We compare by PATH (mirrors how dock.sh pins apps). Only %20 needs decoding for our
-  # paths; WhatsApp's invisible U+200E mark stays encoded and is absorbed by the * glob.
+  # paths. A * in an expected path is a glob and matches the installed app path.
   url_to_path() { local p="${1#file://}"; p="${p%/}"; printf '%s' "${p//%20/ }"; }
 
   expected_paths=(); expected_names=()
@@ -37,7 +37,7 @@ else
   i=0
   while [ "$i" -lt "$n" ]; do
     exp="${expected_paths[$i]}"; act="${actual_paths[$i]}"
-    # shellcheck disable=SC2254  # $exp is an intentional glob pattern (WhatsApp uses *)
+    # shellcheck disable=SC2254  # $exp is an intentional glob pattern when the list uses *
     case "$act" in
       $exp) : ;;
       *) bad "Dock #$((i + 1)): $act (expected ${expected_names[$i]} ~ $exp)"; mism=$((mism + 1)) ;;

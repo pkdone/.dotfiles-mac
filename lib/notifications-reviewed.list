@@ -22,7 +22,6 @@ org.hammerspoon.Hammerspoon # Hammerspoon (alert style is checked: manual step m
 com.google.Chrome.framework.AlertNotificationService # Chrome alerts
 us.zoom.xos # Zoom
 com.mitchellh.ghostty # Ghostty
-net.whatsapp.WhatsApp # WhatsApp
 com.anthropic.claudefordesktop # Claude
 com.todesktop.230313mzl4w4u92 # Cursor
 com.electron.dockerdesktop # Docker Desktop

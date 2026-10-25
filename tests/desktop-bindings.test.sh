@@ -230,10 +230,10 @@ make_plist "$tmp/real.plist" 'p["app-bindings"] = {
 }'
 sig_real="$(space_sig "$tmp/real.plist")"
 only="$(awk -F'|' '$1 !~ /^#/ && NF && $3 != "4" && $3 != "none" { printf "%s%s", sep, $2; sep="," }' "$REAL_LIST")"
-eq "seven drifted bundles" 7 "$(printf '%s\n' "$only" | tr ',' '\n' | grep -c .)"
+eq "six drifted bundles" 6 "$(printf '%s\n' "$only" | tr ',' '\n' | grep -c .)"
 out="$(run --apply --plist "$tmp/real.plist" --only "$only" --out "$tmp/real.out" "$REAL_LIST")"; rc=$?
-eq "seven drifted pins apply cleanly" 0 "$rc"
-eq "seven chg lines" 7 "$(printf '%s\n' "$out" | grep -c '^chg|')"
+eq "six drifted pins apply cleanly" 0 "$rc"
+eq "six chg lines" 6 "$(printf '%s\n' "$out" | grep -c '^chg|')"
 eq "real-list bindings" "$(printf '%s\n' \
   'co.anysphere.cursor.nightly=UUID-3' \
   'com.anysphere.sand=UUID-3' \
@@ -242,12 +242,11 @@ eq "real-list bindings" "$(printf '%s\n' \
   'com.granola.app=' \
   'com.spotify.client=UUID-4' \
   'com.tinyspeck.slackmacgap=' \
-  'com.todesktop.230313mzl4w4u92=UUID-3' \
-  'net.whatsapp.whatsapp=')" "$(binds "$tmp/real.out")"
+  'com.todesktop.230313mzl4w4u92=UUID-3')" "$(binds "$tmp/real.out")"
 eq "real-list apply leaves Spaces alone" "$sig_real" "$(space_sig "$tmp/real.out")"
 out="$(run --plist "$tmp/real.out" "$REAL_LIST")"; rc=$?
 eq "checker is clean after apply" 0 "$rc"
-eq "every real pin ok" 11 "$(printf '%s\n' "$out" | grep -c '^ok|')"
+eq "every real pin ok" 10 "$(printf '%s\n' "$out" | grep -c '^ok|')"
 eq "no remaining drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
 
 make_plist "$tmp/short.plist" 'p["SpacesDisplayConfiguration"]["Management Data"]["Monitors"][0]["Spaces"] = [

@@ -8,7 +8,6 @@
 #   YouTube Music is a Chrome web app with its own bundle id.
 # Blank lines and lines beginning with # are ignored.
 Slack|com.tinyspeck.slackmacgap|1
-WhatsApp|net.whatsapp.WhatsApp|1
 Granola|com.granola.app|1
 Google Chrome|com.google.Chrome|2
 Cursor|com.todesktop.230313mzl4w4u92|3

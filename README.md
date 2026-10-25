@@ -50,7 +50,7 @@ Command-line tools and desktop apps listed in the Brewfile. The first setup inst
 
 **Command-line tools:** git, gh, fish, mise, jq, yq, ripgrep, fd, fzf, bat, eza, tree, wget, curl, direnv, tmux, htop, mas, dockutil, duti, displayplacer, ykman, ffmpeg, pkgconf, shellcheck, openssl, python, uv, go, rustup, mongosh, pnpm, awscli, kubernetes-cli, helm, sops, age, coreutils, findutils, gnu-sed, gawk, and grep.
 
-**Desktop apps:** ghostty, visual-studio-code, cursor, cursor-cli, coteditor, karabiner-elements, hammerspoon, microsoft-teams, raycast, 1password-cli, logi-options+, chatgpt, claude, google-gemini, grok-bot, grok-build, google-chrome, spotify, sonos, granola, slack, whatsapp, acorn, docker-desktop, multipass, cog-app, kid3, and yubico-authenticator.
+**Desktop apps:** ghostty, visual-studio-code, cursor, cursor-cli, coteditor, karabiner-elements, hammerspoon, microsoft-teams, raycast, 1password-cli, logi-options+, chatgpt, claude, google-gemini, grok-bot, grok-build, google-chrome, spotify, sonos, granola, slack, acorn, docker-desktop, multipass, cog-app, kid3, and yubico-authenticator.
 
 ### Mac App Store
 
@@ -66,6 +66,8 @@ Company-managed apps. Install each one yourself from Iru Self Service (Kandji). 
 
 Cursor Nightly and YouTube Music are installed by hand. They are not Homebrew apps and not company apps. See [Setup](docs/setup.md#apps-not-in-the-brewfile).
 <!-- END app-sources -->
+
+WhatsApp is not installed because the company's app policy blocks it on company Macs.
 
 ## Everyday commands
 

@@ -7,7 +7,7 @@
 # Blank lines and lines beginning with # are ignored.
 #
 # Leave these on (do not add them here): App Store, Calculator, Dictionary,
-# System Settings, WhatsApp.
+# and System Settings.
 Books|com.apple.iBooksX
 Calendar|com.apple.iCal
 Contacts|com.apple.AddressBook

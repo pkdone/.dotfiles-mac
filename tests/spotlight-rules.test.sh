@@ -30,7 +30,7 @@ miss() {
 }
 
 OFF="Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos"
-ON="App Store, Calculator, Dictionary, System Settings, and WhatsApp"
+ON="App Store, Calculator, Dictionary, and System Settings"
 
 names="$(awk -F'|' '$1 !~ /^#/ && NF { print $1 }' "$LIST" | tr '\n' ',' | sed 's/,$//')"
 eq "fifteen apps" "Books,Calendar,Contacts,Mail,Messages,Music,Notes,Photos,Podcasts,Reminders,Safari,Shortcuts,Stocks,Tips,Voice Memos" "$names"
@@ -44,7 +44,6 @@ miss "App Store is not required off" "App Store" "$names"
 miss "Calculator is not required off" "Calculator" "$names"
 miss "Dictionary is not required off" "Dictionary" "$names"
 miss "System Settings is not required off" "System Settings" "$names"
-miss "WhatsApp is not required off" "WhatsApp" "$names"
 
 run() { "$PY" "$HELPER" --list "$LIST" --json "$1"; }
 

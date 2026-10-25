@@ -62,7 +62,7 @@ echo "📌 Pinning apps in order..."
 while IFS='|' read -r name path; do
   case "$name" in ''|'#'*) continue ;; esac
   path="${path/@HOME@/$HOME}"
-  # Expand the one globbed path (WhatsApp); literal paths pass through unchanged.
+  # A path containing * is a glob; expand it to the first match. Literal paths pass through.
   # shellcheck disable=SC2086  # intentional: unquoted $path lets the glob expand to its single match
   case "$path" in
     *'*'*) set -- $path; path="$1" ;;

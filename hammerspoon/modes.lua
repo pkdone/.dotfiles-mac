@@ -10,7 +10,6 @@
 -- non-Normal mode to another runs Normal's restore first.
 
 local apps = {
-  whatsapp     = 'net.whatsapp.WhatsApp',
   spotify      = 'com.spotify.client',
   -- Chrome PWA (~/Applications/Chrome Apps.localized/YouTube Music.app)
   youtubeMusic = 'com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod',
@@ -45,7 +44,7 @@ return {
     WebConf = {
       label   = 'WebConf (on air)',
       icon    = { symbol = 'record.circle.fill', color = 'red', fallback = '🔴' },
-      quit    = { apps.whatsapp, apps.spotify, apps.youtubeMusic },
+      quit    = { apps.spotify, apps.youtubeMusic },
       hide    = { apps.slack, apps.finder, apps.grokBot },  -- Finder = its windows
       focus   = 'WebConf',
       front   = apps.granola,              -- brought to the front last
@@ -57,7 +56,7 @@ return {
     DeepWork = {
       label   = 'DeepWork',
       icon    = { symbol = 'brain.head.profile', fallback = '🧠' },
-      quit    = { apps.slack, apps.whatsapp },
+      quit    = { apps.slack },
       hide    = { apps.granola },
       focus   = 'DeepWork',                -- Spotify is left alone
       timerMinutes  = 50,                  -- menu-bar countdown; when it ends you choose,
