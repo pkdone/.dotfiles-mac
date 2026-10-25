@@ -61,14 +61,14 @@ has "autofix comment names ControlCenter" "SystemUIServer / ControlCenter" \
 has "manual step hides Raycast, Logi Options+ and Docker" \
   "menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker." \
   "$(grep -v '^#' "$DIR/lib/manual-steps.list")"
-has "manual step keeps the other icons" "Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are." \
+has "manual step keeps the other icons" "Leave Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop as they are." \
   "$(grep '^menubar-third-party-hide|' "$DIR/lib/manual-steps.list")"
 eq "manual step is by hand" "" "$(awk -F'|' '$1=="menubar-third-party-hide" { print $6 }' "$DIR/lib/manual-steps.list")"
 
 settings="$(cat "$DIR/docs/settings.md")"
 has "settings names the intended menu bar" \
   "clock, the mode icon, battery percentage, Wi-Fi, Bluetooth and Control Centre" "$settings"
-has "settings names kept third-party icons" "Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents" "$settings"
+has "settings names kept third-party icons" "Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop" "$settings"
 
 # ---- repo karabiner.json (the file the directory symlink installs) ----
 kb="$(python3 - "$KJ" <<'PY'

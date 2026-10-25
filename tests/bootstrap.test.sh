@@ -48,6 +48,8 @@ make_sandbox() {
   mkdir -p "$sandbox/lib" "$sandbox/scripts"
   cp "$DIR/bootstrap.sh" "$sandbox/bootstrap.sh"
   cp "$DIR/lib/dotfiles-log.sh" "$sandbox/lib/dotfiles-log.sh"
+  cp "$DIR/lib/fleet-apps.sh" "$sandbox/lib/fleet-apps.sh"
+  cp "$DIR/lib/session-checks.sh" "$sandbox/lib/session-checks.sh"
   cp "$DIR/scripts/manual-steps.sh" "$sandbox/scripts/manual-steps.sh"
   cp "$DIR/lib/manual-steps.list" "$sandbox/lib/manual-steps.list"
   for s in install.sh shell.sh hostname.sh macos.sh dock.sh handlers.sh prune-apps.sh; do

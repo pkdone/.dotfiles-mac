@@ -56,7 +56,7 @@ eq "desktop apps match the Brewfile" "**Desktop apps:** ${casks}." "$(line_of '*
 
 store="$(printf '%s\n' "$section" | awk '
   $0 == "### Mac App Store" { on = 1; next }
-  $0 == "### Company apps (Iru Self Service)" { on = 0 }
+  $0 == "### Company apps (Fleet Self service)" { on = 0 }
   on { print }
 ')"
 eq "Brewfile has no Mac App Store apps" "" "$mas_apps"
@@ -69,7 +69,8 @@ miss "App Store section does not name Okta Extension" "Okta Extension" "$store"
 has "company apps match lib/mdm-apps.list" "**Apps:** ${company}." "$section"
 tick='`'
 has "Homebrew missing says run brewsync" "run ${tick}brewsync${tick}" "$section"
-has "company missing says Iru Self Service" "install it from Iru Self Service" "$section"
+has "company missing says Fleet Self service" "install it from Fleet Self service" "$section"
+has "company apps name the Fleet menu path" "Fleet Desktop menu bar → My device → Self service" "$section"
 has "Safari extensions are called out as unlisted" "1Password for Safari and Okta Extension App are not in any of these lists" "$section"
 miss "README does not mention check.sh" "check.sh" "$(cat "$README")"
 
@@ -89,7 +90,11 @@ eq "no app-store manual step" "" \
 miss "manual steps do not ask for App Store sign-in" "App Store sign-in" \
   "$(grep -v '^[[:space:]]*#' "$DIR/lib/manual-steps.list" || true)"
 
-has "mdm check names Iru Self Service" "install from Iru Self Service" "$(cat "$DIR/checks/mdm.sh")"
+mdm_src="$(cat "$DIR/checks/mdm.sh" "$DIR/lib/fleet-apps.sh")"
+has "mdm check names Fleet Self service" "install from Fleet Self service" "$mdm_src"
+has "mdm check offers Fleet Self service" "Open Fleet Self service to install them now? [Y/n]" "$mdm_src"
+has "mdm check does not treat a missing app as drift" "warn" "$(cat "$DIR/lib/fleet-apps.sh")"
+miss "mdm check does not call bad for a missing app" "bad " "$(cat "$DIR/checks/mdm.sh")"
 has "brew check names brewsync" "run brewsync" "$(cat "$DIR/checks/brew.sh")"
 miss "brew check does not ask for App Store sign-in" "App Store sign-in" "$(cat "$DIR/checks/brew.sh")"
 install="$(cat "$DIR/install.sh")"

@@ -120,6 +120,8 @@ res() { R_STATUS="$1"; R_DETAIL="$2"; }
 # macconfig-check.sh prints this script's result and does not run these again.
 # shellcheck source=../lib/session-checks.sh disable=SC1091
 . "$DOTDIR/lib/session-checks.sh"
+# shellcheck source=../lib/fleet-apps.sh disable=SC1091
+. "$DOTDIR/lib/fleet-apps.sh"
 
 # Allowed in the system TCC database? Reading it needs Full Disk Access for whatever
 # runs this (Ghostty / Grok Bot); without it, fall back to check by hand.
@@ -172,7 +174,7 @@ check_hammerspoon_ax() {
     # pipe (launchd/agent runs) and would otherwise wait forever.
     case "$(with_timeout 6 hs -q -t 3 -c 'hs.accessibilityState()' </dev/null 2>/dev/null)" in
       true)  res ok "granted (live, via hs)"; return ;;
-      false) res warn "not granted — System Settings → Privacy & Security → Accessibility, then restart Hammerspoon"; return ;;
+      false) res warn "not granted — open Hammerspoon first, then System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications, then restart Hammerspoon"; return ;;
     esac
   fi
   # Not running, or hs.ipc unavailable: fall back to the TCC database.
@@ -270,6 +272,10 @@ open_target() {  # target
   local t="$1"
   case "$t" in
     '')    return 0 ;;
+    app:Fleet\ Desktop)
+      # The self-service page needs the device id, which is not stored here.
+      fleet_open_self_service || true
+      ;;
     app:*) open -a "${t#app:}" 2>/dev/null || echo "      (couldn't open ${t#app:} — open it by hand)" ;;
     *)     open "$t" 2>/dev/null || echo "      (couldn't open $t — open it by hand)" ;;
   esac

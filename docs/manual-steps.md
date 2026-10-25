@@ -8,7 +8,7 @@ Some setup stays manual: privacy permissions (TCC / DriverKit), sign-ins, compan
 
 This file is generated from `lib/manual-steps.list`. Edit the list, then run `scripts/render-manual-steps-doc.sh`.
 
-Hammerspoon, Karabiner-Elements, and Raycast are under System Settings → Privacy & Security → Accessibility (called Device Control and Data Access on newer macOS).
+Hammerspoon, Karabiner-Elements, and Raycast are under System Settings → Privacy & Security → Accessibility (called Device Control and Data Access on newer macOS). Open the app first. It appears in Accessibility or Driver Extensions only after it has asked. If an Accessibility app is still not listed, click + and add it from Applications.
 
 `manualsteps` is the fish function for `scripts/manual-steps.sh`, installed with the others in `fish/functions/`. With no arguments it runs `check`. Any arguments pass through (`manualsteps list`, `manualsteps open`, `manualsteps open --all`, `manualsteps check`, `manualsteps --help`), and the exit status is the script's.
 
@@ -28,18 +28,18 @@ British input (`com.apple.HIToolbox` `AppleSelectedInputSources`, the keyboard l
 | # | Step | Where | Checked |
 |---|------|------|------|
 | 1 | Sign in to the GitHub CLI (needed to clone this private repo) | Terminal: gh auth login | auto |
-| 2 | Install the company apps from Iru Self Service (Kandji), not Homebrew. The names are in lib/mdm-apps.list | Applications → Iru Self Service | macconfig-check.sh |
+| 2 | Install the company apps from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not Homebrew. The names are in lib/mdm-apps.list | Fleet Desktop menu bar → My device → Self service | macconfig-check.sh |
 | 3 | Sign in to 1Password and unlock it | 1Password app | by hand |
 | 4 | Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal | 1Password → Settings → Developer | auto |
 | 5 | Install Cursor Nightly (separate app, next to the stable Cursor) | cursor.com/nightlydownload | auto |
 | 6 | Install YouTube Music as a Chrome app | Chrome → music.youtube.com → ⋮ → Cast, save, and share → Install page as app | auto |
-| 7 | Allow Hammerspoon (Sidecar → Slack), then restart it and choose Reload Config | System Settings → Privacy & Security → Accessibility → Hammerspoon | auto |
-| 8 | Enable the Karabiner DriverKit VirtualHIDDevice driver | System Settings → General → Login Items & Extensions → Driver Extensions | auto |
-| 9 | Allow Karabiner-Elements and Karabiner-Core-Service | System Settings → Privacy & Security → Accessibility | auto |
-| 10 | Allow Karabiner-Elements to run in the background (macconfig checks this: Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon are enabled and allowed). Karabiner-Elements Privileged Daemons v2 may stay disabled. macconfig does not change this | System Settings → General → Login Items & Extensions → Allow in the Background | macconfig-check.sh |
-| 11 | Allow Raycast (needed for Clipboard History) | System Settings → Privacy & Security → Accessibility → Raycast | auto |
-| 12 | Give Ghostty Full Disk Access (lets macconfig-check.sh read Login Items and Finder Recents) | System Settings → Privacy & Security → Full Disk Access → Ghostty | auto |
-| 13 | Give Grok Bot Full Disk Access (for its unattended macconfig-check.sh runs) | System Settings → Privacy & Security → Full Disk Access → Grok Bot | auto |
+| 7 | Allow Hammerspoon, then restart it and choose Reload Config | Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications | auto |
+| 8 | Turn on the Karabiner driver | Open Karabiner-Elements first so it asks for its driver. Then System Settings → General → Login Items & Extensions: scroll to Extensions, choose By Category, click ⓘ next to Driver Extensions, and turn on .Karabiner-VirtualHIDDevice-Manager (org.pqrs.Karabiner-DriverKit-VirtualHIDDevice). Enter your password if asked, then click Done | auto |
+| 9 | Allow Karabiner-Elements and Karabiner-Core-Service | Open Karabiner-Elements first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications | auto |
+| 10 | Allow Karabiner-Elements to run in the background. macconfig checks this and does not change it | Open Karabiner-Elements first. System Settings → General → Login Items & Extensions → Allow in the Background. Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon should be enabled and allowed. Karabiner-Elements Privileged Daemons v2 may stay disabled | macconfig-check.sh |
+| 11 | Allow Raycast for Clipboard History | Open Raycast first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications | auto |
+| 12 | Give Ghostty Full Disk Access | Open Ghostty first. System Settings → Privacy & Security → Full Disk Access → Ghostty. This lets macconfig read Login Items and Finder Recents | auto |
+| 13 | Give Grok Bot Full Disk Access | Open Grok Bot first. System Settings → Privacy & Security → Full Disk Access → Grok Bot. Needed for its unattended macconfig runs | auto |
 | 14 | Trackpad: Look up & data detectors Off | System Settings → Trackpad → Point & Click | auto |
 | 15 | Use trackpad for dragging On (Without Drag Lock) | System Settings → Accessibility → Pointer Control → Trackpad Options | auto |
 | 16 | Pointer size one notch above Normal (macconfig checks this; set the slider by hand) | System Settings → Accessibility → Display → Pointer → Pointer size | auto |
@@ -54,7 +54,7 @@ British input (`com.apple.HIToolbox` `AppleSelectedInputSources`, the keyboard l
 | 25 | Keyboard input source: British (macconfig checks the selected layout is British only) | System Settings → Keyboard → Text Input → Input Sources | auto |
 | 26 | Set your user picture to the Dog (macconfig checks this). A different picture is a warning. macconfig does not change it | System Settings → Users & Groups → your account picture | macconfig-check.sh |
 | 27 | Notifications Off when mirroring or sharing the display | System Settings → Notifications | by hand |
-| 28 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Kandji, Tailscale, Logi Options+, Cog, Gemini, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos | System Settings → Notifications → Application Notifications | macconfig-check.sh |
+| 28 | Turn notifications Off for Calendar, Cursor Nightly, FaceTime, Game Center, Home, Mail, Microsoft Teams, Slack, Spotify, Tips, Wallet, Tailscale, Logi Options+, Cog, Gemini, Grok Bot, ChatGPT, Multipass, Yubico Authenticator, YouTube Music, Sonos | System Settings → Notifications → Application Notifications | macconfig-check.sh |
 | 29 | Spotlight: turn off results from Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, and System Settings on. Check this page by hand (macconfig cannot read the toggles) | System Settings → Spotlight → Results from Apps | auto |
 | 30 | Keep ChatGPT, Gemini and GeminiAppLauncher Off at login | System Settings → General → Login Items & Extensions | macconfig-check.sh |
 | 31 | Finder sidebar (macconfig checks this): the Tags group stays collapsed, Recents stays hidden, and, when the sidebar files name the row, Shared is the first visible row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. A row the files do not name stays by hand. macconfig does not change the sidebar | Finder → Settings → Sidebar | macconfig-check.sh |
@@ -67,7 +67,7 @@ British input (`com.apple.HIToolbox` `AppleSelectedInputSources`, the keyboard l
 | 38 | Create four Shortcuts, each with one Set Focus action: "Mode WebConf On" (Turn WebConf On until Turned Off), "Mode WebConf Off" (Turn WebConf Off), "Mode DeepWork On", "Mode DeepWork Off". Also create "Mode Upcoming Meetings". macconfig checks all five with shortcuts list | Shortcuts → + → search "Set Focus" | macconfig-check.sh |
 | 39 | Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show | System Settings → Notifications → Hammerspoon → Alerts | macconfig-check.sh |
 | 40 | Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind << | Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain) | by hand |
-| 41 | Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Kandji/company agents as they are. Raycast's own menu-bar toggle isn't scriptable | System Settings → Menu Bar → Allow in the Menu Bar | by hand |
+| 41 | Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker. Leave Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop as they are. Raycast's own menu-bar toggle isn't scriptable | System Settings → Menu Bar → Allow in the Menu Bar | by hand |
 
 Trackpad tap to click, click pressure Light, secondary click in the bottom right corner, three-finger drag Off, tracking speed `0.6875`, Force Click and haptic feedback On, natural scrolling, and the 3/4/5-finger gestures are in `lib/macos-defaults.list` (`macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them). The same values are written for the built-in trackpad and the Bluetooth trackpad. After a trackpad value changes, `macos.sh` runs `activateSettings -u` when that tool is present, so the trackpad follows the new value without a logout. If it is missing or fails, `bootstrap.sh` says to log out and back in. Look up & data detectors is the check in the table above (`com.apple.trackpad.forceClick` = 0). `ActuateDetents` and `ForceSuppressed` only cover Force Click and haptic feedback, both On. Use trackpad for dragging stays a check (`Dragging=1`, `DragLock=0`: On, without drag lock) because that Accessibility setting does not reliably follow `defaults write`.
 

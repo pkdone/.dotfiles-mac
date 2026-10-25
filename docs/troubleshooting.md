@@ -21,7 +21,7 @@ Power settings that need sudo (manual step `ac-sleep`):
 - on battery, the display sleeps after 2 minutes (`sudo pmset -b displaysleep 2`)
 - on mains power, wake for network access is on (`sudo pmset -c womp 1`)
 
-Closing the lid still sleeps the Mac. Battery idle sleep is not changed. The screen still locks. `macconfig-check.sh` reads `pmset -g custom` and warns when one of those values is different. A company MDM (Kandji) reset often puts the sleep timer back. `--fix` does not run the commands, because they need sudo. `macos.sh` may run them and skips them when sudo is not available or you answer no. Run the manual step again in a terminal.
+Closing the lid still sleeps the Mac. Battery idle sleep is not changed. The screen still locks. `macconfig-check.sh` reads `pmset -g custom` and warns when one of those values is different. A company MDM reset often puts the sleep timer back. `--fix` does not run the commands, because they need sudo. `macos.sh` may run them and skips them when sudo is not available or you answer no. Run the manual step again in a terminal.
 
 The `macos.sh` step that runs the same command is in [Settings](settings.md#macos-defaults).
 

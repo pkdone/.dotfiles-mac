@@ -241,18 +241,19 @@ case "$H_SEC_SCREENLOCK" in
 esac
 
 fixid mdm
-# MDM: enrolment (non-sudo `profiles status`) and the Kandji / Iru agent daemons.
+# MDM: enrolment (non-sudo `profiles status`) and the Fleet agent.
+# Orbit is the launch daemon. It runs osquery and starts Fleet Desktop
+# from /opt/orbit. Those are not separate launchd jobs.
 prof="$(with_timeout 10 profiles status -type enrollment </dev/null 2>&1 || true)"
 case "$prof" in
   *"MDM enrollment: Yes"*) H_MDM_ENROLLED=yes ;;
   *"MDM enrollment: No"*)  H_MDM_ENROLLED=no ;;
 esac
 mdm_down=""
-for mdm_label in io.kandji.kandji-daemon io.kandji.kandji-agent; do
-  if ! with_timeout 5 launchctl print "system/$mdm_label" </dev/null 2>/dev/null | grep -q 'state = running'; then
-    mdm_down="$mdm_down $mdm_label"
-  fi
-done
+mdm_label="com.fleetdm.orbit"
+if ! with_timeout 5 launchctl print "system/$mdm_label" </dev/null 2>/dev/null | grep -q 'state = running'; then
+  mdm_down=" $mdm_label"
+fi
 if [ -z "$mdm_down" ]; then H_MDM_AGENT=yes; else H_MDM_AGENT=no; fi
 if [ "$H_MDM_ENROLLED" = unknown ]; then
   info "MDM enrolment: couldn't read (profiles status) — check by hand"
@@ -261,10 +262,10 @@ fi
 CHECKED=$((CHECKED + 1))
 if [ "$H_MDM_ENROLLED" = no ] || [ "$H_MDM_AGENT" = no ]; then
   H_MDM_STATUS=warn
-  warn "MDM: enrolled=$H_MDM_ENROLLED, Iru (Kandji) agent not running:${mdm_down:- none} — open Iru Self Service or contact IT"
+  warn "MDM: enrolled=$H_MDM_ENROLLED, Fleet agent not running:${mdm_down:- none} — open Fleet Desktop or contact IT"
 else
   [ "$H_MDM_ENROLLED" = yes ] && H_MDM_STATUS=ok
-  pass "MDM: enrolled=${H_MDM_ENROLLED}, Iru (Kandji) daemon + agent running"
+  pass "MDM: enrolled=${H_MDM_ENROLLED}, Fleet agent (orbit) running"
 fi
 
 fixid health

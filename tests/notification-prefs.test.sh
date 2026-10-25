@@ -97,7 +97,6 @@ SAMPLE='{
     {"bundle-id": "com.apple.iCal", "flags": 814219286},
     {"bundle-id": "org.hammerspoon.Hammerspoon", "flags": 8396822},
     {"bundle-id": "com.example.newapp", "flags": 1},
-    {"bundle-id": "io.kandji.Kandji", "flags": 1},
     {"bundle-id": "io.tailscale.ipn.macsys", "flags": 1},
     {"bundle-id": "com.logi.cp-dev-mgr", "flags": 1},
     {"bundle-id": "org.cogx.cog", "flags": 1},
@@ -125,7 +124,6 @@ ok|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notificati
 ok|com.spotify.client|Spotify (com.spotify.client): Allow Notifications is off (flags=276832270)
 ok|com.apple.tips|Tips (com.apple.tips): Allow Notifications is off (flags=294125584)
 ok|com.apple.Passbook|Wallet (com.apple.Passbook): Allow Notifications is off (flags=814219270)
-ok|io.kandji.Kandji|Kandji (io.kandji.Kandji): Allow Notifications is off (flags=1)
 ok|io.tailscale.ipn.macsys|Tailscale (io.tailscale.ipn.macsys): Allow Notifications is off (flags=1)
 ok|com.logi.cp-dev-mgr|Logi Options+ (com.logi.cp-dev-mgr): Allow Notifications is off (flags=1)
 ok|org.cogx.cog|Cog (org.cogx.cog): Allow Notifications is off (flags=1)
@@ -157,10 +155,10 @@ do
   miss "reviewed $quiet stays quiet while Allow Notifications is on" "$quiet" "$out"
 done
 # An Off-list app that is also in the reviewed snapshot still has to be off.
-write_plist "$tmp/kandji-on.plist" '{"apps": [{"bundle-id": "io.kandji.Kandji", "flags": 33554432}]}'
-kandji_on="$(run "$tmp/kandji-on.plist")"
-has "off-list Kandji with bit 25 set warns" "warn|io.kandji.Kandji|" "$kandji_on"
-has "off-list warning says turn it off" "turn it off" "$kandji_on"
+write_plist "$tmp/tailscale-on.plist" '{"apps": [{"bundle-id": "io.tailscale.ipn.macsys", "flags": 33554432}]}'
+tailscale_on="$(run "$tmp/tailscale-on.plist")"
+has "off-list Tailscale with bit 25 set warns" "warn|io.tailscale.ipn.macsys|" "$tailscale_on"
+has "off-list warning says turn it off" "turn it off" "$tailscale_on"
 miss "Apple apps outside the Off list are ignored" "com.apple.Safari" "$out"
 miss "system-center apps are ignored" "_SYSTEM_CENTER_" "$out"
 

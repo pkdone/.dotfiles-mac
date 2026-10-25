@@ -55,10 +55,13 @@ doc="$(cat "$DIR/../docs/manual-steps.md")"
 ax_where="$(awk -F'|' '$1 == "hammerspoon-ax" || $1 == "karabiner-ax" || $1 == "raycast-ax" { print $1 "|" $4 }' "$LIST")"
 eq "accessibility steps use Privacy & Security → Accessibility" \
   "$(printf '%s\n' \
-    'hammerspoon-ax|System Settings → Privacy & Security → Accessibility → Hammerspoon' \
-    'karabiner-ax|System Settings → Privacy & Security → Accessibility' \
-    'raycast-ax|System Settings → Privacy & Security → Accessibility → Raycast')" \
+    'hammerspoon-ax|Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications' \
+    'karabiner-ax|Open Karabiner-Elements first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications' \
+    'raycast-ax|Open Raycast first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications')" \
   "$ax_where"
+eq "driver step says to open Karabiner-Elements first" \
+  "Open Karabiner-Elements first so it asks for its driver." \
+  "$(awk -F'|' '$1=="karabiner-driver" { print $4 }' "$LIST" | cut -d. -f1)."
 eq "step paths do not use the newer page name" "" \
   "$(awk -F'|' '$4 ~ /Device Control/ { print }' "$LIST")"
 eq "newer page name is mentioned once, in the manual-steps doc" 1 \
