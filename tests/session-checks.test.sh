@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# British input source, pointer size, gh auth status, and op whoami.
+# British input source, pointer size, gh auth status, and the 1Password CLI.
 # The checks live once, in lib/session-checks.sh, and scripts/manual-steps.sh
 # runs them. macconfig-check.sh prints that result in Manual steps.
 # Run: ./tests/session-checks.test.sh
@@ -27,6 +27,16 @@ miss() {
   case "$3" in *"$2"*) fail=$((fail + 1)); printf 'FAIL: %s\n  unexpected: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;;
     *) pass=$((pass + 1)) ;; esac
 }
+# Account ids, emails, UUIDs, and URLs from op must not show up in a result or a log.
+no_account_fields() {
+  local label="$1" blob="$2" field
+  for field in \
+    'acct-email-SECRET@example.com' 'acct-url-SECRET' 'user-uuid-SECRET' 'account-uuid-SECRET' \
+    '"email"' '"user_uuid"' '"account_uuid"' '"url"'
+  do
+    miss "$label has no $field" "$field" "$blob"
+  done
+}
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
@@ -52,9 +62,52 @@ exit "${GH_RC:-0}"
 EOF
 cat > "$tmp/bin/op" <<'EOF'
 #!/usr/bin/env bash
-exit "${OP_RC:-0}"
+# Stubbed op. whoami uses OP_WHOAMI_RC (else OP_RC). account list prints a
+# JSON array of OP_ACCOUNTS objects, or OP_ACCOUNT_BODY. Values are secrets
+# the check must not echo. signin must never run.
+log="${OP_LOG:-}"
+if [ -n "$log" ]; then
+  printf '%s\n' "$*" >> "$log"
+  if [ -t 0 ]; then printf '%s\n' "stdin-tty" >> "$log"; else printf '%s\n' "stdin-not-tty" >> "$log"; fi
+fi
+cmd="${1:-}"
+if [ "$cmd" = signin ]; then
+  printf '%s\n' "ran-signin" >> "${log:-/dev/stderr}"
+  exit 99
+fi
+if [ "$cmd" = whoami ]; then
+  exit "${OP_WHOAMI_RC:-${OP_RC:-0}}"
+fi
+if [ "$cmd" = account ] && [ "${2:-}" = list ]; then
+  case " $* " in
+    *" --format=json "*) ;;
+    *) exit 2 ;;
+  esac
+  if [ -n "${OP_ACCOUNT_BODY:-}" ]; then
+    printf '%s' "$OP_ACCOUNT_BODY"
+    exit "${OP_ACCOUNT_RC:-0}"
+  fi
+  n="${OP_ACCOUNTS:-0}"
+  case "$n" in ''|*[!0-9]*) n=0 ;; esac
+  printf '['
+  i=0
+  while [ "$i" -lt "$n" ]; do
+    [ "$i" -gt 0 ] && printf ','
+    printf '%s' "{\"url\":\"https://acct-url-SECRET.1password.com\",\"email\":\"acct-email-SECRET@example.com\",\"user_uuid\":\"user-uuid-SECRET\",\"account_uuid\":\"account-uuid-SECRET-$i\"}"
+    i=$((i + 1))
+  done
+  printf ']'
+  exit 0
+fi
+exit 1
 EOF
-chmod +x "$tmp/bin/defaults" "$tmp/bin/gh" "$tmp/bin/op"
+cat > "$tmp/bin/open" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod +x "$tmp/bin/defaults" "$tmp/bin/gh" "$tmp/bin/op" "$tmp/bin/open"
+: > "$tmp/op.log"
+stub_path="$tmp/bin:$PATH"
 
 with_timeout() { shift; "$@"; }
 # shellcheck source=../lib/session-checks.sh disable=SC1091
@@ -63,9 +116,17 @@ with_timeout() { shift; "$@"; }
 run_check() { # function name — CHECK_PATH replaces PATH (missing-binary cases)
   R_STATUS=""
   R_DETAIL=""
+  # Resolved before the command prefix: a prefix assignment is not visible to
+  # the next one on the same command.
+  whoami_rc="${OP_WHOAMI_RC:-${OP_RC:-0}}"
   PATH="${CHECK_PATH:-$tmp/bin:$PATH}" DEFAULTS_DIR="$tmp/defaults" \
     SESSION_CHECKS_OP_APP="$tmp/1Password.app" \
     GH_RC="${GH_RC:-0}" OP_RC="${OP_RC:-0}" \
+    OP_WHOAMI_RC="$whoami_rc" \
+    OP_ACCOUNTS="${OP_ACCOUNTS:-0}" \
+    OP_ACCOUNT_BODY="${OP_ACCOUNT_BODY:-}" \
+    OP_ACCOUNT_RC="${OP_ACCOUNT_RC:-0}" \
+    OP_LOG="${OP_LOG:-$tmp/op.log}" \
     "$@"
 }
 
@@ -192,15 +253,69 @@ CHECK_PATH="$tmp/empty-bin" run_check check_gh_auth
 eq "missing gh is a warning" warn "$R_STATUS"
 unset CHECK_PATH
 
+unset OP_WHOAMI_RC OP_ACCOUNTS OP_ACCOUNT_BODY OP_ACCOUNT_RC
+: > "$tmp/op.log"
 OP_RC=0
 run_check check_op_cli
 eq "op whoami success is ok" ok "$R_STATUS"
+eq "op whoami success is signed in" "signed in" "$R_DETAIL"
+has "whoami success ran whoami" "whoami" "$(cat "$tmp/op.log")"
+miss "whoami success does not list accounts" "account list" "$(cat "$tmp/op.log")"
+miss "whoami success does not sign in" "signin" "$(cat "$tmp/op.log")"
+has "whoami is not a tty" "stdin-not-tty" "$(cat "$tmp/op.log")"
+miss "whoami is not given a terminal" "stdin-tty" "$(cat "$tmp/op.log")"
 
+: > "$tmp/op.log"
 OP_RC=1
+OP_WHOAMI_RC=1
+OP_ACCOUNTS=1
 run_check check_op_cli
-eq "op installed but not signed in is by hand, not a warning" hand "$R_STATUS"
-has "op not signed in mentions an unlock" "unlock" "$R_DETAIL"
-miss "op not signed in is not a warning detail" "not installed" "$R_DETAIL"
+eq "an added account is ok" ok "$R_STATUS"
+eq "an added account detail" \
+  "set up (account added via the 1Password app); a new terminal asks to unlock on first use" \
+  "$R_DETAIL"
+no_account_fields "an added account result" "$R_DETAIL"
+no_account_fields "an added account log" "$(cat "$tmp/op.log")"
+has "an added account lists accounts as json" "account list --format=json" "$(cat "$tmp/op.log")"
+miss "an added account does not sign in" "signin" "$(cat "$tmp/op.log")"
+has "account list is not a tty" "stdin-not-tty" "$(cat "$tmp/op.log")"
+# set -x is the debug path. It may show the count, never an account field.
+: > "$tmp/trace.log"
+(
+  set -x
+  run_check check_op_cli
+  printf 'STATUS=%s\nDETAIL=%s\n' "$R_STATUS" "$R_DETAIL"
+) >"$tmp/trace.out" 2>"$tmp/trace.log"
+eq "traced account count is ok" "ok" "$(sed -n 's/^STATUS=//p' "$tmp/trace.out")"
+no_account_fields "traced stdout" "$(cat "$tmp/trace.out")"
+no_account_fields "debug trace" "$(cat "$tmp/trace.log")"
+no_account_fields "debug trace log" "$(cat "$tmp/op.log")"
+has "debug trace shows the count" "n=1" "$(cat "$tmp/trace.log")"
+
+: > "$tmp/op.log"
+OP_ACCOUNTS=2
+run_check check_op_cli
+eq "two accounts is ok" ok "$R_STATUS"
+miss "two accounts does not print an account uuid" "account-uuid-SECRET" "$R_DETAIL"
+
+: > "$tmp/op.log"
+OP_ACCOUNTS=0
+OP_ACCOUNT_BODY='[]'
+run_check check_op_cli
+eq "empty account list is not set yet" warn "$R_STATUS"
+eq "empty account list detail" \
+  "turn on Integrate with 1Password CLI in 1Password → Settings → Developer, then run op signin" \
+  "$R_DETAIL"
+miss "empty account list does not say op whoami" "op whoami" "$R_DETAIL"
+
+: > "$tmp/op.log"
+OP_ACCOUNT_BODY='https://acct-url-SECRET.1password.com acct-email-SECRET@example.com user-uuid-SECRET account-uuid-SECRET'
+OP_ACCOUNT_RC=1
+run_check check_op_cli
+eq "account list failure is not set yet" warn "$R_STATUS"
+no_account_fields "account list failure result" "$R_DETAIL"
+no_account_fields "account list failure log" "$(cat "$tmp/op.log")"
+unset OP_WHOAMI_RC OP_ACCOUNTS OP_ACCOUNT_BODY OP_ACCOUNT_RC
 
 OP_RC=0
 rmdir "$tmp/1Password.app"
@@ -243,10 +358,15 @@ eq "gh-auth check name" "gh-auth" \
   "$(awk -F'|' '$1 == "gh-auth" { print $6; exit }' "$LIST")"
 eq "1password-cli check name" "op-cli" \
   "$(awk -F'|' '$1 == "1password-cli" { print $6; exit }' "$LIST")"
-eq "1password-cli step names op signin then op whoami" \
-  "Turn on Integrate with 1Password CLI, then run op signin and then op whoami in a terminal" \
+eq "1password-cli step names op signin once" \
+  "Turn on Integrate with 1Password CLI, then run op signin once in a terminal" \
   "$(awk -F'|' '$1 == "1password-cli" { print $3; exit }' "$LIST")"
-has "op check still runs op whoami" "with_timeout 8 op whoami" "$(cat "$LIB")"
+has "op check still runs op whoami" "with_timeout 8 op whoami </dev/null" "$(cat "$LIB")"
+has "op check counts inside the timeout" "with_timeout 8 python3 -c" "$(cat "$LIB")"
+has "op check discards account-list stderr" "2>/dev/null || true)" "$(cat "$LIB")"
+miss "op check does not capture account list in a variable" "json=" "$(cat "$LIB")"
+miss "op check does not run op signin" "with_timeout 8 op signin" "$(cat "$LIB")"
+miss "session checks do not mktemp" 'mktemp' "$(grep -v '^[[:space:]]*#' "$LIB")"
 eq "pointer-size check name" "pointer-size" \
   "$(awk -F'|' '$1 == "pointer-size" { print $6; exit }' "$LIST")"
 eq "no app-store manual step" "" \
@@ -261,6 +381,9 @@ run_manual() {
     # shellcheck disable=SC2030  # this PATH is only for the sourced section
     export PATH="$tmp/bin:$PATH" DEFAULTS_DIR="$tmp/defaults" SESSION_CHECKS_OP_APP="$tmp/1Password.app"
     export GH_RC="${1:-0}" OP_RC="${2:-0}" NO_COLOR=1
+    # $3 is an optional steps list. Account-count cases set OP_WHOAMI_RC and
+    # OP_ACCOUNTS in the environment before the call.
+    export OP_WHOAMI_RC="${OP_WHOAMI_RC:-${2:-0}}" OP_ACCOUNTS="${OP_ACCOUNTS:-0}"
     export MANUAL_STEPS_LIST="${3:-$tmp/steps.list}"
     DOTDIR="$DIR"
     CHECKED=0
@@ -316,11 +439,20 @@ has "gh signed out names the step" 'Sign in to the GitHub CLI' "$out"
 miss "gh signed out is not drift" 'DRIFT ' "$out"
 
 out="$(run_manual 0 1)"
-has "op locked is info, not a warning" 'INFO ' "$out"
-has "op locked names the step" 'Integrate with 1Password CLI' "$out"
-has "op locked says check by hand" 'check by hand' "$out"
-miss "op locked does not warn" 'WARN 1password-cli' "$out"
-miss "op locked is not drift" 'DRIFT ' "$out"
+has "no 1Password account is a warning tagged 1password-cli" 'WARN 1password-cli' "$out"
+has "no 1Password account names the step" 'Integrate with 1Password CLI' "$out"
+has "no 1Password account says to run op signin" 'op signin' "$out"
+miss "no 1Password account is not info" 'INFO 1password-cli' "$out"
+miss "no 1Password account is not drift" 'DRIFT ' "$out"
+miss "no 1Password account does not print an account email" 'acct-email-SECRET@example.com' "$out"
+
+out="$(OP_WHOAMI_RC=1 OP_ACCOUNTS=1 run_manual 0 1)"
+unset OP_WHOAMI_RC OP_ACCOUNTS
+has "an added account passes in Manual steps" 'PASS ' "$out"
+has "an added account names the app integration" 'account added via the 1Password app' "$out"
+miss "an added account does not warn" 'WARN 1password-cli' "$out"
+miss "an added account does not print the email" 'acct-email-SECRET@example.com' "$out"
+miss "an added account does not print the url" 'acct-url-SECRET' "$out"
 
 rmdir "$tmp/1Password.app"
 out="$(run_manual 0 0)"
@@ -343,6 +475,9 @@ porcelain() {
   PATH="$tmp/bin:$PATH" DEFAULTS_DIR="$tmp/defaults" \
     SESSION_CHECKS_OP_APP="$tmp/1Password.app" \
     GH_RC="${1:-0}" OP_RC="${2:-0}" \
+    OP_WHOAMI_RC="${3:-${2:-0}}" OP_ACCOUNTS="${4:-0}" \
+    OP_ACCOUNT_BODY="${OP_ACCOUNT_BODY:-}" OP_ACCOUNT_RC="${OP_ACCOUNT_RC:-0}" \
+    OP_LOG="${OP_LOG:-$tmp/op.log}" \
     MANUAL_STEPS_LIST="$tmp/steps.list" \
     "$MS" check --porcelain 2>&1
 }
@@ -351,9 +486,40 @@ eq "standalone gh-auth passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="gh
 eq "standalone British passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="input-british"{print $1; exit}')"
 eq "standalone pointer passes" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="pointer-size"{print $1; exit}')"
 out="$(porcelain 0 1)"
-eq "standalone op not signed in is by hand" "hand" "$(printf '%s\n' "$out" | awk -F'|' '$3=="1password-cli"{print $1; exit}')"
+eq "standalone op with no account is a warning" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$3=="1password-cli"{print $1; exit}')"
+has "standalone op with no account says to run op signin" "op signin" "$(printf '%s\n' "$out" | awk -F'|' '$3=="1password-cli"{print $5; exit}')"
+out="$(porcelain 0 1 1 1)"
+eq "standalone op with an account is ok" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="1password-cli"{print $1; exit}')"
+miss "standalone op with an account does not print the email" "acct-email-SECRET@example.com" "$out"
+out="$(porcelain 0 0)"
+eq "standalone op whoami success is ok" "ok" "$(printf '%s\n' "$out" | awk -F'|' '$3=="1password-cli"{print $1; exit}')"
 out="$(porcelain 1 0)"
 eq "standalone gh signed out is a warning" "warn" "$(printf '%s\n' "$out" | awk -F'|' '$3=="gh-auth"{print $1; exit}')"
+
+# manualsteps open/pending skip a step whose check is ok. No account is
+# "Not set yet". A one-row list, so other steps do not get in the way.
+printf '%s\n' \
+  '1password-cli|Company apps (MDM)|Turn on Integrate with 1Password CLI, then run op signin once in a terminal|1Password → Settings → Developer|app:1Password|op-cli' \
+  > "$tmp/op-only.list"
+pending_ok="$(OP_WHOAMI_RC=1 OP_ACCOUNTS=1 PATH="$stub_path" \
+  SESSION_CHECKS_OP_APP="$tmp/1Password.app" MANUAL_STEPS_LIST="$tmp/op-only.list" \
+  OP_LOG="$tmp/op.log" NO_COLOR=1 "$MS" pending)"
+has "an added account is already done" "Skipped 1 already done." "$pending_ok"
+has "an added account leaves nothing to set" "Nothing left to set by hand." "$pending_ok"
+miss "an added account is not shown by pending" "Integrate with 1Password CLI" "$pending_ok"
+miss "pending with an account does not print the email" "acct-email-SECRET@example.com" "$pending_ok"
+open_ok="$(printf 's\n' | OP_WHOAMI_RC=1 OP_ACCOUNTS=1 PATH="$stub_path" \
+  SESSION_CHECKS_OP_APP="$tmp/1Password.app" MANUAL_STEPS_LIST="$tmp/op-only.list" \
+  MANUAL_STEPS_OPEN_TTY=1 OP_LOG="$tmp/op.log" NO_COLOR=1 "$MS" open)"
+has "open skips an added account" "Nothing to do" "$open_ok"
+miss "open does not show an added account" "Integrate with 1Password CLI" "$open_ok"
+pending_miss="$(OP_WHOAMI_RC=1 OP_ACCOUNTS=0 PATH="$stub_path" \
+  SESSION_CHECKS_OP_APP="$tmp/1Password.app" MANUAL_STEPS_LIST="$tmp/op-only.list" \
+  OP_LOG="$tmp/op.log" NO_COLOR=1 "$MS" pending)"
+has "no account says not set yet" "Not set yet:" "$pending_miss"
+has "no account names the developer setting" "1Password → Settings → Developer" "$pending_miss"
+has "no account says to run op signin" "then run op signin" "$pending_miss"
+miss "no account does not mention op whoami" "op whoami" "$pending_miss"
 
 printf 'session-checks tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

@@ -373,5 +373,107 @@ has "control centre open says it can't be checked" "Can't check this automatical
 has "control centre open has nothing to open" "(nothing to open)" "$cc_open"
 rm -rf "$ccdir"
 
+# WhatsApp Web: done when the Safari web app exists and its bundle id has the
+# prefix. Missing is "Not set yet", not "Can't check this automatically".
+# Linking the phone is named in the step because it cannot be read.
+wa_where="$(awk -F'|' '$1=="whatsapp-web" { print $4; exit }' "$LIST")"
+has "whatsapp step opens Safari to the site" "https://web.whatsapp.com" "$wa_where"
+has "whatsapp step names Add to Dock" "File → Add to Dock" "$wa_where"
+has "whatsapp step says a blank tab will not do" "not a blank tab or a Private window" "$wa_where"
+has "whatsapp step keeps the name" 'keep the name "WhatsApp Web"' "$wa_where"
+has "whatsapp step names Linked devices" "Linked devices" "$wa_where"
+has "whatsapp step says the phone link can't be checked" "Linking the phone can't be checked." "$wa_where"
+has "whatsapp step names dock.sh" "dock.sh" "$wa_where"
+has "whatsapp step names macconfig --fix" "macconfig --fix" "$wa_where"
+has "whatsapp step puts it between Slack and Granola" "between Slack and Granola on Desktop 1" "$wa_where"
+eq "whatsapp step check is the named check" "whatsapp-web" \
+  "$(awk -F'|' '$1=="whatsapp-web" { print $6; exit }' "$LIST")"
+eq "whatsapp step opens in Safari, not the default browser" \
+  "safari:https://web.whatsapp.com" \
+  "$(awk -F'|' '$1=="whatsapp-web" { print $5; exit }' "$LIST")"
+eq "whatsapp step does not hard-code a web app UUID" "" \
+  "$(awk -F'|' '$1=="whatsapp-web" { print }' "$LIST" | grep -E 'WebApp\.[0-9A-Fa-f]{8}-' || true)"
+miss "notifications-off does not list WhatsApp Web" "WhatsApp" \
+  "$(cat "$DIR/../lib/notifications-off.list")"
+miss "notifications-reviewed does not hard-code a Safari web app id" "Safari.WebApp." \
+  "$(grep -v '^[[:space:]]*#' "$DIR/../lib/notifications-reviewed.list" || true)"
+
+wa_dir="$(mktemp -d)"
+wa_bin="$wa_dir/bin"
+mkdir -p "$wa_bin"
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$wa_bin/open"
+chmod +x "$wa_bin/open"
+printf '%s\n' \
+  'whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web|Open Safari → File → Add to Dock|https://web.whatsapp.com|whatsapp-web' \
+  > "$wa_dir/steps.list"
+write_webapp() { # bundle id, or empty to leave the app missing
+  rm -rf "${wa_dir:?}/home"
+  mkdir -p "$wa_dir/home"
+  [ -n "$1" ] || return 0
+  mkdir -p "$wa_dir/home/Applications/WhatsApp Web.app/Contents"
+  cat > "$wa_dir/home/Applications/WhatsApp Web.app/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleIdentifier</key><string>$1</string>
+  <key>CFBundleName</key><string>WhatsApp Web</string>
+</dict></plist>
+EOF
+}
+wa_check() {
+  HOME="$wa_dir/home" PATH="$wa_bin:$PATH" MANUAL_STEPS_LIST="$wa_dir/steps.list" \
+    "$MS" check --porcelain
+}
+CANT="Can't check this automatically"
+write_webapp ""
+wa_out="$(wa_check)"; wa_rc=$?
+eq "a missing WhatsApp Web warns" warn "$(printf '%s\n' "$wa_out" | cut -d'|' -f1)"
+eq "a missing WhatsApp Web exits 1" 1 "$wa_rc"
+has "a missing WhatsApp Web names the path" "not found at ~/Applications/WhatsApp Web.app" "$wa_out"
+wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
+  MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
+has "open says WhatsApp Web is not set yet" "Not set yet:" "$wa_open"
+has "open names the missing app" "not found at ~/Applications/WhatsApp Web.app" "$wa_open"
+miss "a missing WhatsApp Web is not labelled can't-check" "$CANT" "$wa_open"
+
+write_webapp "com.apple.Safari.WebApp.11111111-2222-3333-4444-555555555555"
+wa_out="$(wa_check)"; wa_rc=$?
+eq "a Safari web app is done" ok "$(printf '%s\n' "$wa_out" | cut -d'|' -f1)"
+eq "a Safari web app exits 0" 0 "$wa_rc"
+has "a done WhatsApp Web says the phone link can't be checked" \
+  "Linking the phone can't be checked." "$wa_out"
+wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
+  MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
+miss "open skips a WhatsApp Web that is already a Safari web app" "Add WhatsApp Web" "$wa_open"
+
+write_webapp "com.example.not-whatsapp"
+wa_out="$(wa_check)"
+eq "a non-Safari bundle id warns" warn "$(printf '%s\n' "$wa_out" | cut -d'|' -f1)"
+has "a non-Safari bundle id names the prefix" "does not start with com.apple.Safari.WebApp." "$wa_out"
+wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
+  MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
+has "open says a wrong bundle id is not set yet" "Not set yet:" "$wa_open"
+miss "a wrong bundle id is not labelled can't-check" "$CANT" "$wa_open"
+
+# Chrome is the default https handler. Add to Dock exists only in Safari,
+# so the walk-through must pass -a Safari and not a bare URL.
+cat > "$wa_bin/open" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "${OPEN_LOG:?}"
+exit 0
+EOF
+chmod +x "$wa_bin/open"
+printf '%s\n' \
+  'whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web|Open Safari|safari:https://web.whatsapp.com|whatsapp-web' \
+  > "$wa_dir/safari.list"
+write_webapp ""
+: > "$wa_dir/open.log"
+printf '\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
+  OPEN_LOG="$wa_dir/open.log" MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$wa_dir/safari.list" "$MS" open >/dev/null
+eq "walk-through opens the page in Safari" "-a Safari https://web.whatsapp.com" \
+  "$(cat "$wa_dir/open.log")"
+rm -rf "$wa_dir"
+
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

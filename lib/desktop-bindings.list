@@ -1,13 +1,20 @@
 # Dock "Options → Assign To" desktop pins. macconfig-check.sh compares them; macconfig-check.sh --fix applies them
 # (lib/desktop-bindings.py --apply) by writing com.apple.spaces app-bindings.
-# Format (pipe-delimited): Display name | bundle id | desktop
+# Format (pipe-delimited): Display name | bundle id | desktop | optional manual step
 #   desktop: 1..N = "This Desktop" on Desktop N of the main display; none = not assigned
 #   Bundle ids are matched case-insensitively (macOS stores them lowercased).
 #   Desktop N is resolved to that Space's current UUID when applying (Desktop 1 is "").
 #   UUIDs for Desktops 2+ change if Spaces are recreated; they are not stored here.
 #   YouTube Music is a Chrome web app with its own bundle id.
+#   A bundle field that starts with @APP@ is an app path, not a bundle id.
+#   @HOME@ in that path is $HOME. The bundle id is CFBundleIdentifier in the app's
+#   Contents/Info.plist, read when checking or applying. A Safari web app's id
+#   contains a UUID that is different on each Mac, so the UUID is not stored here.
+#   If that app is not installed, the row is not set up yet (the optional fourth
+#   field is the manual-step id). It is not drift, and --fix does not write a pin.
 # Blank lines and lines beginning with # are ignored.
 Slack|com.tinyspeck.slackmacgap|1
+WhatsApp Web|@APP@@HOME@/Applications/WhatsApp Web.app|1|whatsapp-web
 Granola|com.granola.app|1
 Google Chrome|com.google.Chrome|2
 Cursor|com.todesktop.230313mzl4w4u92|3

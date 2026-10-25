@@ -8,8 +8,9 @@
 # writes a setting, runs sudo, or opens the notification store. Callers wrap
 # slow commands in with_timeout (defined by the caller).
 #
-# hand is "check by hand": not a warning. 1Password installed but not signed
-# in (it needs an unlock, or this session was never authorised) is hand.
+# hand is "check by hand": not a warning (a preference that cannot be read,
+# or Spotlight). A 1Password account added through the app is ok even when
+# this terminal has not authorised `op whoami`.
 
 # res is provided by scripts/manual-steps.sh. Define it when this file is
 # sourced alone (the session-checks tests) so a check can record a status quietly.
@@ -98,20 +99,82 @@ ${text}"
   res ok "British keyboard layout only"
 }
 
-# The manual step is to turn on the integration, run op signin, then op whoami.
-# This check only runs `op whoami`. That never prompts: with the app integration
-# it only reports an account this terminal session has already authorised.
-# Success proves the integration works. Installed but not signed in (an unlock,
-# or this session was never authorised) is check by hand, not a warning.
-# SESSION_CHECKS_OP_APP overrides the app path in tests.
+# The manual step is to turn on Integrate with 1Password CLI, then run
+# `op signin` once in a terminal. This check never prompts and never runs
+# `op signin`. `op whoami` only succeeds in a terminal that has already
+# authorised, and that session expires, so a failure does not mean setup is
+# missing. An account from `op account list` means the app integration is on:
+# the step is done, and a new terminal asks to unlock on first use.
+# The list body (account ids, emails, UUIDs, URLs) is piped into python,
+# which prints only the number of accounts. It is not stored in a shell
+# variable, a log, or a temp file, and stderr is discarded. The shell only
+# keeps that count. No account is not set yet. SESSION_CHECKS_OP_APP
+# overrides the app path in tests.
 check_op_cli() {
   local app="${SESSION_CHECKS_OP_APP:-/Applications/1Password.app}"
+  local n
   if [ ! -d "$app" ]; then res warn "1Password.app not installed (Fleet Self service)"; return; fi
   if ! command -v op >/dev/null 2>&1; then res warn "op CLI not installed (brew bundle)"; return; fi
   if with_timeout 8 op whoami </dev/null >/dev/null 2>&1; then
-    res ok "op whoami works through the app"
+    res ok "signed in"
+    return
+  fi
+  # python is the timed command. It moves to its own process group, pipes
+  # `op account list` into a counter, and prints one integer. On the alarm
+  # it kills that group, not the shell that started it.
+  n="$(with_timeout 8 python3 -c '
+import json, os, signal, subprocess
+moved = False
+try:
+    os.setpgrp()
+    moved = True
+except Exception:
+    moved = False
+proc = None
+def stop(_sig, _frm):
+    if moved:
+        try:
+            os.killpg(0, signal.SIGKILL)
+        except Exception:
+            pass
+    elif proc is not None:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+    raise SystemExit(142)
+signal.signal(signal.SIGALRM, stop)
+try:
+    proc = subprocess.Popen(
+        ["op", "account", "list", "--format=json"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+except Exception:
+    print(0)
+    raise SystemExit(0)
+try:
+    data = json.load(proc.stdout)
+except Exception:
+    data = None
+try:
+    proc.stdout.close()
+except Exception:
+    pass
+try:
+    proc.wait()
+except Exception:
+    pass
+print(len(data) if isinstance(data, list) else 0)
+' </dev/null 2>/dev/null || true)"
+  case "$n" in
+    ''|*[!0-9]*) n=0 ;;
+  esac
+  if [ "$n" -ge 1 ]; then
+    res ok "set up (account added via the 1Password app); a new terminal asks to unlock on first use"
   else
-    res hand "installed but not signed in (an unlock may be required); run op signin and then op whoami in a terminal to confirm"
+    res warn "turn on Integrate with 1Password CLI in 1Password → Settings → Developer, then run op signin"
   fi
 }
 
