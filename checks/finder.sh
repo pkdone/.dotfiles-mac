@@ -65,7 +65,7 @@ fi
 
 case "${CHECK_PART:-}" in
 icon)
-# ---- 9b. Finder icon-view defaults (72 / 13) ------------------------------
+# ---- 9b. Finder icon-view defaults (72 / 13 / Sort By Name) --------------
 hdr "Finder icon view defaults"
 fixid finder-icon-view
 CHECKED=$((CHECKED + 1))
@@ -73,7 +73,7 @@ pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
 if [ ! -x "$pin" ]; then
   fixid repo-file; bad "scripts/pin-finder-icon-view.sh missing"
 elif "$pin" --check >/dev/null 2>&1; then
-  pass "Finder icon view defaults iconSize=72 textSize=13"
+  pass "Finder icon view defaults iconSize=72 textSize=13 arrangeBy=name"
 else
   bad "Finder icon view defaults drifted ($("$pin" --check 2>&1 || true)) — run macos.sh"
 fi

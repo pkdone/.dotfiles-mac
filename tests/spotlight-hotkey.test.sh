@@ -36,30 +36,18 @@ state="$tmp/hotkeys.txt"
 dlog="$tmp/defaults.log"
 alog="$tmp/activate.log"
 mkdir -p "$bin" "$home"
-# macos.sh writes a restore snapshot under backups/. Remember what was already
-# there and delete only directories this run creates.
-snapshot_backups() {
-  if [ -d "$DIR/backups" ]; then
-    find "$DIR/backups" -mindepth 1 -maxdepth 1 -type d -name 'defaults-*' | sort
-  fi
-}
-mkdir -p "$DIR/backups/defaults-keep-spotlight-test"
-printf 'keep\n' > "$DIR/backups/defaults-keep-spotlight-test/marker"
-BACKUP_BEFORE="$(snapshot_backups)"
-sweep_new_backups() {
-  local now d
-  now="$(snapshot_backups)"
-  while IFS= read -r d; do
-    [ -n "$d" ] || continue
-    case "$BACKUP_BEFORE" in
-      *"$d"*) ;;
-      *) rm -rf "$d" ;;
-    esac
-  done <<< "$now"
+# macos.sh writes one restore snapshot when a value changes. Delete only the
+# directory this run names. Do not remove backups/ or any other snapshot.
+: > "$tmp/made-backups"
+note_backups() {
+  printf '%s\n' "$1" | awk '/backups -> / { print $NF }' >> "$tmp/made-backups"
 }
 cleanup() {
-  sweep_new_backups
-  rm -rf "$DIR/backups/defaults-keep-spotlight-test" "$tmp"
+  local d
+  while IFS= read -r d; do
+    [ -n "$d" ] && rm -rf "$d"
+  done < "$tmp/made-backups"
+  rm -rf "$tmp"
 }
 trap cleanup EXIT
 
@@ -253,19 +241,21 @@ run_macos() {
 write_state enabled
 out="$(run_macos)"
 rc=$?
+note_backups "$out"
 ok "macos leaves a correct hotkey" "$rc"
 has "macos says left alone" "Spotlight hotkey 64 already Command+Space (left alone)" "$out"
+miss "a matching hotkey does not write a restore snapshot" "backups -> " "$out"
 eq "macos does not write when it matches" 0 "$(write_count)"
 write_state disabled
 out="$(run_macos)"
 rc=$?
+note_backups "$out"
 ok "macos repairs a disabled hotkey" "$rc"
 has "macos reports the change" "Spotlight hotkey 64 -> Command+Space" "$out"
 eq "macos writes once when it differs" 1 "$(write_count)"
-sweep_new_backups
-eq "a pre-existing defaults backup is left in place" "keep" \
-  "$(cat "$DIR/backups/defaults-keep-spotlight-test/marker")"
-eq "this run's defaults backup is removed" "$BACKUP_BEFORE" "$(snapshot_backups)"
+has "a change names its own restore snapshot" "backups -> " "$out"
+eq "a change names one restore snapshot" 1 \
+  "$(printf '%s\n' "$out" | grep -c 'backups -> ' || true)"
 
 printf 'spotlight-hotkey tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

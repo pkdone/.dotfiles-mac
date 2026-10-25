@@ -703,7 +703,10 @@ apply_finder_recents() {
 }
 if selected @finder-recents; then apply_finder_recents; fi
 
-# ---- Finder icon-view defaults (iconSize=72, textSize=13) ----
+# ---- Finder icon-view defaults (iconSize=72, textSize=13, arrangeBy=name) ----
+# Sort By Name on StandardViewSettings and FK_StandardViewSettings.
+# DesktopViewSettings is not written. A folder .DS_Store is not written.
+# The pin script restarts Finder; a real change also queues that same restart.
 apply_finder_icon_view() {
   local pin="$DOTDIR/scripts/pin-finder-icon-view.sh"
   CONSIDERED=$((CONSIDERED + 1))
@@ -714,26 +717,26 @@ apply_finder_icon_view() {
   fi
   if "$pin" --check >/dev/null 2>&1; then
     if [ "$DRY_RUN" = 1 ]; then
-      say_ok "Finder icon view defaults iconSize=72 textSize=13 (dry-run)"
+      say_ok "Finder icon view defaults iconSize=72 textSize=13 arrangeBy=name (dry-run)"
     elif [ -n "$ONLY_IDS" ]; then
-      say_ok "Finder icon view defaults already iconSize=72 textSize=13 (left alone)"
+      say_ok "Finder icon view defaults already iconSize=72 textSize=13 arrangeBy=name (left alone)"
     else
       "$pin" >/dev/null
       REASSERTED=$((REASSERTED + 1))
-      say_ok "Finder icon view defaults already iconSize=72 textSize=13 (re-asserted)"
+      say_ok "Finder icon view defaults already iconSize=72 textSize=13 arrangeBy=name (re-asserted)"
     fi
     return 0
   fi
   if [ "$DRY_RUN" = 1 ]; then
     CHANGED=$((CHANGED + 1))
-    say_chg "Finder icon view defaults -> iconSize=72 textSize=13 (dry-run)"
+    say_chg "Finder icon view defaults -> iconSize=72 textSize=13 arrangeBy=name (dry-run)"
     return 0
   fi
   BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.finder"
   ensure_backup
   "$pin" >/dev/null
   CHANGED=$((CHANGED + 1))
-  say_chg "Finder icon view defaults -> iconSize=72 textSize=13"
+  say_chg "Finder icon view defaults -> iconSize=72 textSize=13 arrangeBy=name"
   queue_restart Finder
 }
 if selected @finder-icon-view; then apply_finder_icon_view; fi

@@ -13,7 +13,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 - **Menu bar:** clock, mode icon, battery percentage, Wi-Fi, Bluetooth, Control Centre, and the third-party icons that stay (Tailscale, 1Password, Granola, Hammerspoon, Fleet Desktop). Spotlight, Focus, Now Playing and Voice Control are hidden (`@host/com.apple.controlcenter` = `8`, Don't Show). Bluetooth stays in the menu bar (`2`, Show in Menu Bar). Battery percentage is On (`BatteryShowPercentage`, boolean; `defaults read` prints `1`). `macos.sh` / `macconfig-check.sh` check those rows; `macconfig --fix` repairs them and restarts ControlCenter. Karabiner's own menu bar icon stays hidden. Raycast, Logi Options+ and Docker are Off under System Settings → Menu Bar → Allow in the Menu Bar (manual step `menubar-third-party-hide`; Raycast's own toggle isn't scriptable)
 - **Dock minimize and bounce:** windows minimize into the application icon (`com.apple.dock minimize-to-application` = true) and opening an app does not bounce the icon (`no-bouncing` = true). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Dock
-- **Finder sidebar Recents** Off, **icon view 72/13**, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `macconfig-check.sh`
+- **Finder sidebar Recents** Off, **icon view 72/13 and Sort By Name**, **show all filename extensions** On, **status bar** On, **sidebar icon size** Large, and **CotEditor** theme **Anura (Dark)** + monospaced font via `macos.sh` / `macconfig-check.sh`
 - **Finder and Trash tidy:** remove Trash items after 30 days (`FXRemoveOldTrashItems`), search the current folder (`FXDefaultSearchScope` = `SCcf`), keep folders on top (`_FXSortFoldersFirst`), and no `.DS_Store` on network volumes (`com.apple.desktopservices DSDontWriteNetworkStores`; the domain is created by the first write). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them and restarts Finder
 - **Window tiling (macOS 15+):** drag a window to the left or right edge to tile (`com.apple.WindowManager EnableTilingByEdgeDrag` = true; unset on this Mac, which is the system default On) and no gap between tiled windows (`EnableTiledWindowMargins` = false; `defaults read` prints `0`). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs them. `restart` is empty, so a repair restarts no process. Shortcuts are in [SHORTCUTS.md](../SHORTCUTS.md)
 - **Desktop widgets and Stage Manager:** widgets hidden on the desktop and in Stage Manager (`StandardHideWidgets` and `StageManagerHideWidgets` = true; Show Widgets → On Desktop and In Stage Manager off) and Stage Manager off (`GloballyEnabled` = false). `macos.sh` / `macconfig-check.sh`; `macconfig --fix` repairs those three keys through the `defaults` row in `lib/autofix.list`. `restart` is empty, so a repair restarts no process. Hiding a widget does not delete it. Placed widgets are checked separately (manual step `remove-widgets`) and `macconfig --fix` does not remove them. Click wallpaper to reveal desktop (`EnableStandardClickToShowDesktop`) is not pinned
@@ -122,12 +122,12 @@ Notifications Off when mirroring stays by hand.
 
 ## Finder
 
-Per-window View Options and chrome (kept manual so folder views stay intentional; the default icon view 72/13 is pinned by `macos.sh` and checked by `macconfig-check.sh`):
+Per-window View Options and chrome. The default icon view is pinned by `macos.sh` and checked by `macconfig-check.sh`: icon size 72, text size 13, and Sort By Name (`arrangeBy` = `name`) on `StandardViewSettings` and `FK_StandardViewSettings`. The Desktop (`DesktopViewSettings`) is not changed. A value is written only when it differs, and a full run re-asserts it when it already matches. Finder is restarted with `killall Finder`, the same restart the icon size change already uses. A folder that saved its own view in `.DS_Store` does not pick this up. Open that folder and set it once: **View → Show View Options** (`Command + J`) → **Sort By Name**.
 
 1. Open any Finder window → **View → Show View Options** (`Command + J`)
-2. Set **Icon size** to **72×72**
-3. Set **Text size** to **13**
-4. Optionally tick **Use as Defaults** if you want new icon-view windows to inherit these sizes
+2. **Icon size** 72×72, **Text size** 13, and **Sort By Name** are the pinned defaults for new icon-view windows
+3. A folder with its own `.DS_Store` still needs **Sort By Name** set once on that folder
+4. **Use as Defaults** is optional; `macos.sh` already writes the window defaults
 5. **Show Status Bar** — managed by `macos.sh` / `macconfig-check.sh` (`com.apple.finder ShowStatusBar`); UI path: **View → Show Status Bar**
 6. **Show all filename extensions** — managed by `macos.sh` / `macconfig-check.sh` (`NSGlobalDomain AppleShowAllExtensions`); UI path: **Finder → Settings… → Advanced**
 
