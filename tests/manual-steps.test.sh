@@ -146,17 +146,33 @@ miss "dragging is not written by macos.sh" '|Dragging|' "$(grep -v '^#' "$DEF")"
 miss "drag lock is not written by macos.sh" '|DragLock|' "$(grep -v '^#' "$DEF")"
 
 # Mouse tracking and scrolling are a check only (same idea as dragging).
+# The step names slider notches: 1.5 is the 7th from Slow, 0.5 the 5th.
 mouse_row="$(grep '^mouse-settings|' "$LIST")"
 has "mouse step checks tracking speed" "com.apple.mouse.scaling=1.5" "$mouse_row"
 has "mouse step checks scrolling speed" "com.apple.scrollwheel.scaling=0.5" "$mouse_row"
-has "mouse step still names double-click" "Double-click" "$mouse_row"
-has "mouse step still names secondary click" "secondary click" "$mouse_row"
+has "mouse step names the tracking notch" "7th notch from Slow" "$mouse_row"
+has "mouse step names the scrolling notch" "5th notch from Slow" "$mouse_row"
+has "mouse step still names double-click" "Double-Click Speed" "$mouse_row"
+has "mouse step still names Click Right Side" "Click Right Side" "$mouse_row"
+has "mouse warning names the tracking notch" "7th notch from Slow" \
+  "$(awk -F'|' '$1 == "mouse-settings" { print $4; exit }' "$DIR/../lib/autofix.list")"
+has "mouse warning names the scrolling notch" "5th notch from Slow" \
+  "$(awk -F'|' '$1 == "mouse-settings" { print $4; exit }' "$DIR/../lib/autofix.list")"
 miss "mouse scaling is not written by macos.sh" 'com.apple.mouse.scaling' "$(grep -v '^#' "$DEF")"
 miss "scrollwheel scaling is not written by macos.sh" 'com.apple.scrollwheel.scaling' "$(grep -v '^#' "$DEF")"
 eq "mouse-settings is check-only Needs Paul" "PAUL|" \
   "$(awk -F'|' '$1 == "mouse-settings" { print $2 "|" $3; exit }' "$DIR/../lib/autofix.list")"
 has "a mouse warn is tagged mouse-settings" 'mouse-settings) fixid mouse-settings' \
   "$(cat "$DIR/../checks/manual.sh")"
+
+# Logi Options+ 2.9: backup stays under Settings → Other. Sign in first, and
+# restore from the same page on a new Mac.
+logi_row="$(grep '^logi-cloud-backup|' "$LIST")"
+has "logi backup path stays Settings Other" \
+  "Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices" \
+  "$logi_row"
+has "logi backup says sign in first" "sign in to your Logi account first" "$logi_row"
+has "logi backup names restore" "Restore settings from backup (same page) on a new Mac if needed" "$logi_row"
 
 # Docs that used to say Force Click Off now say On.
 force_off="$(grep -n -i -E 'force click[^\n]*off|haptic feedback off' \

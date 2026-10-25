@@ -1050,8 +1050,9 @@ Still manual (not scriptable / out of scope) — see docs/manual-steps.md:
     sidebar files name the row, Shared at the top, AirDrop and iCloud Drive
     hidden, and your home folder, Macintosh HD, Network, and Trash visible.
     A row the files do not name stays manual. macconfig does not change the sidebar
-  - Mouse double-click speed and secondary click (tracking 1.5 and scrolling 0.5
-    are checked only — defaults write is unreliable, so they are never written);
+  - Mouse double-click speed and secondary click (tracking 1.5 is the 7th notch
+    from Slow and scrolling 0.5 is the 5th notch from Slow; checked only —
+    defaults write is unreliable, so they are never written);
     Trackpad Look up (checked, forceClick 0) and trackpad dragging (checked
     only, Dragging=1 DragLock=0); MX Master 3S wheel (Natural), buttons in Logi
     Options+ (checked by macconfig-check.sh, never written); Logi cloud backup

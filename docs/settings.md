@@ -156,7 +156,7 @@ MX Master 3S settings, all checked read-only by the **Logi Options+** section of
 | Buttons → Gesture button | Action | Window navigation |
 | Point & Scroll → Pointer speed | Speed | 0.12 (±0.02) |
 
-Cloud backup: sign in to a Logi account in the app, then **MX Master 3S → Settings → Other** and turn on **Automatically backup all devices**; it shows **Last backup on …** underneath. Not readable locally, so manual step `logi-cloud-backup` is by hand.
+Cloud backup: sign in to your Logi account first, then **MX Master 3S → Settings → Other** and turn on **Automatically backup all devices**; it shows **Last backup on …** underneath. Use **Restore settings from backup** (same page) on a new Mac if needed. Not readable locally, so manual step `logi-cloud-backup` is by hand.
 
 ## Raycast
 

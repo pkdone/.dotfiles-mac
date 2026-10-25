@@ -72,12 +72,15 @@ trackpad-dragging|Trackpad, mouse & pointer|Use trackpad for dragging On (Withou
 pointer-size|Trackpad, mouse & pointer|Pointer size one notch above Normal (macconfig checks this; set the slider by hand)|System Settings → Accessibility → Display → Pointer → Pointer size|x-apple.systempreferences:com.apple.Accessibility-Settings.extension|pointer-size
 # Tracking speed and scrolling speed are readable, but defaults write does not
 # reliably drive System Settings → Mouse on recent macOS, so they stay a check
-# only (warn on drift; macconfig-check.sh --fix does not write them). The
-# double-click threshold key is unset on this Mac, and secondary click has no
-# separate reliable key, so those two stay in the step text.
-mouse-settings|Trackpad, mouse & pointer|Mouse: tracking speed 1.5 and scrolling speed 0.5 (checked only; writing them is unreliable). Double-click speed faster and secondary click on the right side stay by hand (the double-click threshold key is unset). The wheel's direction, Natural, is set in Logi Options+ and checked by macconfig-check.sh|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|defaults:NSGlobalDomain:com.apple.mouse.scaling=1.5,com.apple.scrollwheel.scaling=0.5
+# only (warn on drift; macconfig-check.sh --fix does not write them).
+# Verified on pdone-mac2: com.apple.mouse.scaling 1.5 is the 7th notch from Slow
+# (1.0 was the 5th); com.apple.scrollwheel.scaling 0.5 is the 5th notch from Slow
+# (0.3125 was the 4th). The double-click threshold key is unset on this Mac, and
+# secondary click has no separate reliable key, so the step says to leave those,
+# and Natural scrolling, as they are (Logi Options+ sets the wheel direction).
+mouse-settings|Trackpad, mouse & pointer|Set Tracking speed to the 7th notch from Slow and Scrolling Speed to the 5th notch from Slow. Leave Double-Click Speed, Click Right Side and Natural scrolling as they are (Logi Options+ sets the wheel direction).|System Settings → Mouse|x-apple.systempreferences:com.apple.Mouse-Settings.extension|defaults:NSGlobalDomain:com.apple.mouse.scaling=1.5,com.apple.scrollwheel.scaling=0.5
 logi-smooth-scrolling|Trackpad, mouse & pointer|Logi Options+: Smooth scrolling On (main wheel and thumb wheel)|Logi Options+ → MX Master 3S → Point & Scroll|app:logioptionsplus|logi:wheel-smooth,thumb-smooth
-logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup|Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices|app:logioptionsplus|
+logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in to your Logi account first and turn on cloud backup (Automatically backup all devices); confirm it shows a recent Last backup. Use Restore settings from backup (same page) on a new Mac if needed|Logi Options+ → MX Master 3S → Settings → Other → Automatically backup all devices|app:logioptionsplus|
 
 # ---- Display, keyboard & desktop ----
 # Automatically adjust brightness is not scripted. Turning it off needs an
