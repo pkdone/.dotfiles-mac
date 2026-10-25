@@ -56,9 +56,9 @@ A broken link is restored by `macconfig-check.sh --fix`. An override file is rep
 
 **Raycast: partly readable.** Raycast keeps almost everything in an encrypted database (`~/Library/Application Support/com.raycast.macos/raycast-enc.sqlite`). The only setting readable from `defaults` is the launcher hotkey: `com.raycast.macos raycastGlobalHotkey` = `Shift-Control-Command-15`, where key code 15 is R. The manual-steps check for that step reads it automatically.
 
-Clipboard History (Control+Command+V, 1-day history, 1Password and 1Password for Safari excluded) lives only in the encrypted database, so it stays **by hand**. Shift+Control+Command+F brings Finder to the front from Hammerspoon (`hammerspoon/finder_hotkey.lua`). If the Raycast backup being imported still has a Finder hotkey on Shift+Control+Command+F, unbind it in Raycast so it doesn't clash with Hammerspoon (manual step `raycast-finder-unbind`).
+Clipboard History (Control+Command+V, 1-day history, 1Password and 1Password for Safari excluded) lives only in the encrypted database, so it stays **by hand**. Shift+Control+Command+F brings Finder to the front from Hammerspoon (`hammerspoon/finder_hotkey.lua`). Only if you imported a backup: if it still has a Finder hotkey on Shift+Control+Command+F, unbind it in Raycast so it doesn't clash with Hammerspoon (manual step `raycast-finder-unbind`).
 
-Raycast's supported backup is **Export Settings & Data**, a passphrase-encrypted `.rayconfig` file (Raycast → Settings → Advanced → Export, or Scheduled Backup). Restoring it is a GUI step: Import Settings & Data, then tick **Settings, Aliases & Hotkeys**. The export also holds clipboard history, AI chats, notes, MCP servers and extension settings (which can include tokens), so it is **never stored in this repo**. `*.rayconfig` is gitignored. Keep it in a synced folder via Scheduled Backup instead. Writing the hotkey back with `defaults write` isn't a supported restore (Raycast holds it in memory and in its database), so the step stays manual (`raycast-import` / `raycast-hotkey` in [Manual steps](manual-steps.md)).
+A `.rayconfig` backup is optional. Only if you already have one from another Mac: Raycast → Import Settings & Data, then tick **Settings, Aliases & Hotkeys** (manual step `raycast-import`). No backup? Skip that and do the hotkey and Clipboard History steps. The file is passphrase-encrypted and also holds clipboard history, AI chats, notes, MCP servers and extension settings (which can include tokens), so it is **never stored in this repo**. `*.rayconfig` is gitignored. Turn on Raycast → Settings → Advanced → **Scheduled Backup** to a synced folder (manual step `raycast-scheduled-backup`) so the next Mac can import it. Writing the hotkey back with `defaults write` isn't a supported restore (Raycast holds it in memory and in its database), so the hotkey step stays manual (`raycast-hotkey` in [Manual steps](manual-steps.md)).
 
 **Logi Options+: checked, never written.** Logi Options+ keeps its settings as JSON inside a private SQLite database (`~/Library/Application Support/LogiOptionsPlus/settings.db`; the agent caches it and syncs it to the mouse). `lib/logi-settings.py` copies the database (plus its `-wal` / `-shm`) to a temp dir, reads the copy read-only, deletes it, and compares the MX Master 3S values (found by model `2b034`, not serial number) with `lib/logi-expected.list`: main wheel Natural + smooth + SmartShift, thumb wheel horizontal scroll + smooth, gesture button window navigation, pointer speed 0.12. The **Logi Options+** section of `macconfig-check.sh` reports drift as **Needs Paul** (`logi-settings` in `lib/autofix.list`; `--fix` never touches it), and a missing app, missing database or unreadable format as a warning (`logi-unreadable`), never a failure of the run. Restore is by hand in the app or from Logi's cloud backup (manual step `logi-cloud-backup`). Cloud backup itself stays **by hand**: the **Automatically backup all devices** toggle and the last-backup time aren't in any readable local file (the per-device `settings_backup_state_v2` flags in `settings.db` stay false with backup on), so there's nothing reliable to check. Manual step `logi-smooth-scrolling` uses the same helper (`logi:<id>` check).
 
@@ -160,17 +160,20 @@ Cloud backup: sign in to your Logi account first, then **MX Master 3S → Settin
 
 ## Raycast
 
-Move Raycast off `Option + Space` (clashes with ChatGPT): Settings → General → Raycast Hotkey → `Shift + Control + Command + R`.
+Only if you have a `.rayconfig` backup from another Mac: Raycast → Import Settings & Data → tick **Settings, Aliases & Hotkeys**. No backup? Skip that and do the hotkey and Clipboard History steps below.
 
-Finder comes to the front with `Shift + Control + Command + F` in Hammerspoon ([Shortcuts](../SHORTCUTS.md#hammerspoon)). If the Raycast backup being imported still has a Finder hotkey on Shift+Control+Command+F, unbind it in Raycast so it doesn't clash with Hammerspoon.
+Move Raycast off `Option + Space` (clashes with ChatGPT): Raycast → Settings (Command+,) → General → click **Raycast Hotkey** → press `Shift + Control + Command + R`.
 
-To enable Clipboard History:
-1. Open Raycast and run the **Clipboard History** command once
-2. Open Raycast first, then grant Accessibility if prompted (System Settings → Privacy & Security → Accessibility. If Raycast is not listed, click + and add it from Applications)
-3. Bind a hotkey via Raycast Settings → Extensions → search "clipboard", then in the **Clipboard History** row of type **Command** (not the parent "Extension" row), click **Record Hotkey** and press `Control + Command + V`.
-   - Avoid `Command + Shift + V` (paste without formatting) and `Command + Option + V` (Finder paste-as-move).
-4. Set **Keep History For** to 1 Day
-5. Add password apps to **Disabled Applications** so their copies are never recorded: 1Password, 1Password for Safari
+Clipboard History, on the **Command** row, not the Extension row:
+1. Open Raycast and run **Clipboard History** once (allow Accessibility if asked)
+2. Settings → Extensions → search "clipboard"
+3. On the **Clipboard History** row of type **Command**, click **Record Hotkey** → press `Control + Command + V`. Avoid `Command + Shift + V` (paste without formatting) and `Command + Option + V` (Finder paste-as-move)
+4. With that row selected, set **Keep History** to 1 Day
+5. Add 1Password and 1Password for Safari to the disabled/excluded apps
+
+Only if you imported a backup, and it still has a Finder hotkey on `Shift + Control + Command + F`: Raycast → type Finder → Command+K → Configure Application… → clear the hotkey. Hammerspoon owns those keys ([Shortcuts](../SHORTCUTS.md#hammerspoon)).
+
+Turn on Raycast → Settings → Advanced → **Scheduled Backup** (to a synced folder, never this repo) so the next Mac can import it.
 
 ## Running one part of the check
 
