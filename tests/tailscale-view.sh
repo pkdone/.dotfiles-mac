@@ -11,6 +11,10 @@
 # runs as the current user. macOS uses the real bundle when it is installed,
 # and sandbox-exec denies reads of it for absent.
 #
+# The interposer reads TAILSCALE_APP_VIEW, not TAILSCALE_VIEW. run-all.sh
+# assigns TAILSCALE_VIEW="" at startup, and that empty value stays exported
+# into the workers. Sharing the name made --tailscale installed a no-op.
+#
 # The interposer does not change access(2). A check that only stats the
 # bundle sees an install; it does not execute a binary that is not there.
 # Login items, defaults, and mdfind are still the host's unless the command
@@ -54,7 +58,24 @@ enter_preload() { # view
   so="$so.so"
   trap cleanup EXIT
   gcc -shared -fPIC -Wall -Wextra -o "$so" "$src" -ldl || die "could not build $src"
-  TAILSCALE_VIEW="$view" LD_PRELOAD="$so${LD_PRELOAD:+:$LD_PRELOAD}" "$@"
+  # run-all.sh assigns TAILSCALE_VIEW="" and the workers inherit that. The
+  # interposer must still see the bundle after that assignment.
+  if ! env TAILSCALE_VIEW=installed TAILSCALE_APP_VIEW="$view" \
+    LD_PRELOAD="$so${LD_PRELOAD:+:$LD_PRELOAD}" \
+    /bin/bash -s -- "$view" <<'EOS'
+TAILSCALE_VIEW=""
+/bin/bash -s -- "$1" <<'INNER'
+if [ "$1" = installed ]; then
+  test -d /Applications/Tailscale.app
+else
+  test ! -d /Applications/Tailscale.app
+fi
+INNER
+EOS
+  then
+    die "Tailscale view did not apply after TAILSCALE_VIEW was cleared"
+  fi
+  TAILSCALE_APP_VIEW="$view" LD_PRELOAD="$so${LD_PRELOAD:+:$LD_PRELOAD}" "$@"
   rc=$?
   cleanup
   trap - EXIT

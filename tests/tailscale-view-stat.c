@@ -1,8 +1,11 @@
 /* Interpose stat/lstat so /Applications/Tailscale.app can be present or
  * absent without touching the host filesystem.
  *
- * TAILSCALE_VIEW=installed  the bundle stats as a directory
- * TAILSCALE_VIEW=absent     the bundle stats as missing (ENOENT)
+ * TAILSCALE_APP_VIEW=installed  the bundle stats as a directory
+ * TAILSCALE_APP_VIEW=absent     the bundle stats as missing (ENOENT)
+ *
+ * Not TAILSCALE_VIEW: tests/run-all.sh assigns that name to "" at startup,
+ * and the empty value stays exported into the test workers.
  *
  * Only those paths are changed. [ -d ] uses stat. [ -x ] uses access, which
  * is left alone, so a missing binary is not executed.
@@ -33,7 +36,7 @@ static int under_app(const char *path) {
 
 /* 1: filled st, -1: error already in errno, 0: caller should use the real call. */
 static int fake_stat(const char *path, struct stat *st) {
-  const char *view = getenv("TAILSCALE_VIEW");
+  const char *view = getenv("TAILSCALE_APP_VIEW");
   if (!under_app(path) || view == NULL) {
     return 0;
   }
