@@ -455,7 +455,7 @@ miss "More Space apply does not set an external resolution" "res:1800" "$(cat "$
 
 PROFILER_JSON="$tmp/more-space.json"
 out="$(run_macos --only @display-more-space)"
-has "already More Space is skipped" "built-in display already More Space" "$out"
+has "already More Space is skipped" "Built-in display is More Space" "$out"
 eq "already More Space does not run displayplacer" "" "$(cat "$placerlog")"
 
 PROFILER_JSON="$tmp/clamshell.json"
@@ -580,10 +580,11 @@ EOF
 PROFILER_JSON="$tmp/arzopa.json"
 DISPLAYPLACER_LIST="$tmp/placer-arzopa-ok.txt"
 out="$(run_macos --only @arzopa-display)"
-has "an already pinned ARZOPA is reported as itself" "ARZOPA is 1920x1080 at 180Hz, scaling off" "$out"
-has "an already pinned laptop is still More Space" "built-in display already More Space" "$out"
-eq "More Space is not repeated for the ARZOPA line" "1" \
-  "$(printf '%s\n' "$out" | grep -c 'already More Space')"
+has "an already pinned ARZOPA keeps its own ok line" \
+  "ok    ARZOPA is 1920x1080 at 180Hz, scaling off" "$out"
+has "an already pinned laptop keeps its own ok line" \
+  "ok    Built-in display is More Space" "$out"
+miss "an already pinned ARZOPA is not relabelled as More Space" "already More Space" "$out"
 has "an already pinned ARZOPA still reads displayplacer list" "CALL list" "$(cat "$placerlog")"
 miss "an already pinned ARZOPA does not set a mode" "CALL id:" "$(cat "$placerlog")"
 

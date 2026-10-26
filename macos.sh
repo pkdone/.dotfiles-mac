@@ -953,7 +953,7 @@ if selected @ac-sleep; then apply_ac_sleep; fi
 apply_display_arrangement() {
   local helper="$DOTDIR/lib/display-resolution.py"
   local list="$DOTDIR/lib/display-resolution.list"
-  local json report row status rest topic msg plan placer_file saw_builtin w
+  local json report row status rest msg plan placer_file saw_builtin w
   local -a args apply_msgs warn_msgs ok_msgs plan_warns
   args=()
   apply_msgs=()
@@ -996,18 +996,11 @@ apply_display_arrangement() {
     [ -n "$row" ] || continue
     status="${row%%|*}"
     rest="${row#*|}"
-    topic="${rest%%|*}"
     msg="${rest#*|}"
     case "$status" in
-      ok)
-        # An ok row for the portable monitor is not the laptop's More Space line.
-        if [ "$topic" = arzopa ]; then
-          ok_msgs+=("$msg")
-        else
-          ok_msgs+=("built-in display already More Space")
-        fi
-        ;;
-      info)
+      ok|info)
+        # Keep the helper's own text. Rewriting every ok row as More Space
+        # hid an already-correct ARZOPA pin from macos_line.
         ok_msgs+=("$msg")
         ;;
       warn|pending)
