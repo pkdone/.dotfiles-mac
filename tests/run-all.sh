@@ -376,6 +376,12 @@ if [ -n "$SHELLCHECK_MODE" ]; then
 fi
 
 if [ "$DO_TESTS" = 1 ]; then
+  # One finished safe PATH before any suite starts. Workers inherit the
+  # directory and do not link into a tree another suite is already using.
+  # shellcheck source=hermetic.sh disable=SC1091
+  . "$ROOT/tests/hermetic.sh"
+  HERMETIC_SAFE_DIR="$(hermetic_safe_root)"
+  export HERMETIC_SAFE_DIR
   printf '%s\0' "${tests[@]}" | xargs -0 -P "$JOBS" -n 1 "$ROOT/tests/run-all.sh" --worker
 fi
 

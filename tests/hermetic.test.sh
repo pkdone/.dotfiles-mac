@@ -32,9 +32,10 @@ eq "safe path provides awk" "awk" "$(PATH="$safe" command -v awk >/dev/null && e
 eq "safe path provides python3" "python3" "$(PATH="$safe" command -v python3 >/dev/null && echo python3 || echo missing)"
 eq "safe path provides perl" "perl" "$(PATH="$safe" command -v perl >/dev/null && echo perl || echo missing)"
 
-# A cold cache with several callers at once. Readiness is .ready, not the
-# first symlink (awk). Each caller must see python3 and perl. This uses a
-# private directory so it does not delete the cache other suites are using.
+# A cold cache with several callers at once. The directory must not be
+# visible until python3, perl, cut, and rm are all linked. Callers share
+# one published path. This override is private so the test does not remove
+# the cache other suites are using.
 cache="$tmp/cache"
 mkdir -p "$tmp/parallel"
 i=0
@@ -55,8 +56,12 @@ wait
 i=0
 while [ "$i" -lt 8 ]; do
   got="$(cat "$tmp/parallel/$i")"
-  eq "parallel caller $i finished the safe path" "ready" \
-    "$([ -f "$got/.ready" ] && [ -x "$got/python3" ] && [ -x "$got/perl" ] && echo ready || echo partial)"
+  eq "parallel caller $i uses the published directory" "$cache" "$got"
+  eq "parallel caller $i is finished" "ready" "$([ -f "$got/.ready" ] && echo ready || echo partial)"
+  for cmd in awk python3 perl cut rm; do
+    eq "parallel caller $i has $cmd" "yes" "$([ -x "$got/$cmd" ] && echo yes || echo no)"
+  done
+  eq "parallel caller $i hides lpstat" "no" "$([ -e "$got/lpstat" ] && echo yes || echo no)"
   i=$((i + 1))
 done
 

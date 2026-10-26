@@ -29,8 +29,8 @@ hermetic_denied() {
   return 1
 }
 
-# Fill $1 with the safe symlinks, then publish it. .ready is last so a
-# parallel reader never treats a half-built directory as the PATH.
+# Link the safe tools into $1. .ready is written last, inside this private
+# directory, before anything publishes it.
 hermetic_safe_fill() {
   local dest="$1" d f base
   for d in /bin /usr/bin /usr/sbin /sbin; do
@@ -48,20 +48,21 @@ hermetic_safe_fill() {
   : > "$dest/.ready"
 }
 
-# Print the shared safe directory, building it on first use.
-# One process holds $dest.lock while it links. Everyone else waits until
-# .ready exists. awk appearing midway is not readiness: python3 and perl
-# are linked later, and a cold parallel run-all.sh would otherwise start
-# with those missing.
+# Print the shared safe directory.
+# The tree is built in a private directory and published with rename, which
+# is atomic on the same filesystem. Callers only use a directory that already
+# contains .ready, so a cold parallel run never sees awk without python3,
+# perl, or cut. run-all.sh builds it once before starting workers; a suite
+# run on its own uses the same publish.
 hermetic_safe_root() {
-  local dest lock priv i
+  local dest priv i
   # The suffix is part of the cache key. Bump it when hermetic_denied
   # changes, or a previous directory would still expose a command that
   # should now be hidden (gh was linked before it was denied).
   if [ -n "${HERMETIC_SAFE_OVERRIDE:-}" ]; then
     dest="$HERMETIC_SAFE_OVERRIDE"
   else
-    dest="${TMPDIR:-/tmp}/dotfiles-hermetic-safe-${UID:-0}-5"
+    dest="${TMPDIR:-/tmp}/dotfiles-hermetic-safe-${UID:-0}-6"
   fi
   if [ -n "${HERMETIC_SAFE_DIR:-}" ] && [ -f "${HERMETIC_SAFE_DIR}/.ready" ]; then
     printf '%s\n' "$HERMETIC_SAFE_DIR"
@@ -72,14 +73,18 @@ hermetic_safe_root() {
     printf '%s\n' "$dest"
     return 0
   fi
-  lock="$dest.lock"
+  priv="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-hermetic-build.XXXXXX")"
+  hermetic_safe_fill "$priv"
+  # rename(2) replaces nothing that is already visible. If dest exists, this
+  # fails and the other publisher's directory is the one to use.
+  if mv "$priv" "$dest" 2>/dev/null; then
+    HERMETIC_SAFE_DIR="$dest"
+    printf '%s\n' "$dest"
+    return 0
+  fi
+  rm -rf "$priv"
   i=0
-  while ! mkdir "$lock" 2>/dev/null; do
-    if [ -f "$dest/.ready" ]; then
-      HERMETIC_SAFE_DIR="$dest"
-      printf '%s\n' "$dest"
-      return 0
-    fi
+  while [ ! -f "$dest/.ready" ]; do
     i=$((i + 1))
     if [ "$i" -ge 20 ]; then
       priv="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-hermetic-build.XXXXXX")"
@@ -90,15 +95,6 @@ hermetic_safe_root() {
     fi
     sleep 1
   done
-  if [ -f "$dest/.ready" ]; then
-    rmdir "$lock" 2>/dev/null || true
-    HERMETIC_SAFE_DIR="$dest"
-    printf '%s\n' "$dest"
-    return 0
-  fi
-  mkdir -p "$dest"
-  hermetic_safe_fill "$dest"
-  rmdir "$lock" 2>/dev/null || true
   HERMETIC_SAFE_DIR="$dest"
   printf '%s\n' "$dest"
 }
