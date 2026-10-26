@@ -27,7 +27,38 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 safe="$(hermetic_safe_root)"
 eq "safe path is a directory" "dir" "$([ -d "$safe" ] && echo dir || echo missing)"
+eq "safe path is published only when finished" "ready" "$([ -f "$safe/.ready" ] && echo ready || echo partial)"
 eq "safe path provides awk" "awk" "$(PATH="$safe" command -v awk >/dev/null && echo awk || echo missing)"
+eq "safe path provides python3" "python3" "$(PATH="$safe" command -v python3 >/dev/null && echo python3 || echo missing)"
+eq "safe path provides perl" "perl" "$(PATH="$safe" command -v perl >/dev/null && echo perl || echo missing)"
+
+# A cold cache with several callers at once. Readiness is .ready, not the
+# first symlink (awk). Each caller must see python3 and perl. This uses a
+# private directory so it does not delete the cache other suites are using.
+cache="$tmp/cache"
+mkdir -p "$tmp/parallel"
+i=0
+while [ "$i" -lt 8 ]; do
+  (
+    unset HERMETIC_SAFE_DIR
+    # Read by hermetic_safe_root after this file is sourced below.
+    # shellcheck disable=SC2034
+    HERMETIC_SAFE_OVERRIDE="$cache"
+    export HERMETIC_SAFE_OVERRIDE
+    # shellcheck source=hermetic.sh disable=SC1091
+    . "$DIR/tests/hermetic.sh"
+    hermetic_safe_root
+  ) > "$tmp/parallel/$i" &
+  i=$((i + 1))
+done
+wait
+i=0
+while [ "$i" -lt 8 ]; do
+  got="$(cat "$tmp/parallel/$i")"
+  eq "parallel caller $i finished the safe path" "ready" \
+    "$([ -f "$got/.ready" ] && [ -x "$got/python3" ] && [ -x "$got/perl" ] && echo ready || echo partial)"
+  i=$((i + 1))
+done
 
 decoy="$tmp/decoy"
 mkdir -p "$decoy"

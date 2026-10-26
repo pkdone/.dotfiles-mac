@@ -29,32 +29,76 @@ hermetic_denied() {
   return 1
 }
 
+# Fill $1 with the safe symlinks, then publish it. .ready is last so a
+# parallel reader never treats a half-built directory as the PATH.
+hermetic_safe_fill() {
+  local dest="$1" d f base
+  for d in /bin /usr/bin /usr/sbin /sbin; do
+    [ -d "$d" ] || continue
+    for f in "$d"/*; do
+      [ -e "$f" ] || continue
+      [ -x "$f" ] || continue
+      [ -d "$f" ] && continue
+      base="$(basename "$f")"
+      hermetic_denied "$base" && continue
+      [ -e "$dest/$base" ] && continue
+      ln -s "$f" "$dest/$base" 2>/dev/null || true
+    done
+  done
+  : > "$dest/.ready"
+}
+
 # Print the shared safe directory, building it on first use.
+# One process holds $dest.lock while it links. Everyone else waits until
+# .ready exists. awk appearing midway is not readiness: python3 and perl
+# are linked later, and a cold parallel run-all.sh would otherwise start
+# with those missing.
 hermetic_safe_root() {
-  if [ -n "${HERMETIC_SAFE_DIR:-}" ] && [ -x "${HERMETIC_SAFE_DIR}/awk" ]; then
-    printf '%s\n' "$HERMETIC_SAFE_DIR"
-    return 0
-  fi
-  local dest d f base
+  local dest lock priv i
   # The suffix is part of the cache key. Bump it when hermetic_denied
   # changes, or a previous directory would still expose a command that
   # should now be hidden (gh was linked before it was denied).
-  dest="${TMPDIR:-/tmp}/dotfiles-hermetic-safe-${UID:-0}-4"
-  mkdir -p "$dest"
-  if [ ! -x "$dest/awk" ]; then
-    for d in /bin /usr/bin /usr/sbin /sbin; do
-      [ -d "$d" ] || continue
-      for f in "$d"/*; do
-        [ -e "$f" ] || continue
-        [ -x "$f" ] || continue
-        [ -d "$f" ] && continue
-        base="$(basename "$f")"
-        hermetic_denied "$base" && continue
-        [ -e "$dest/$base" ] && continue
-        ln -s "$f" "$dest/$base" 2>/dev/null || true
-      done
-    done
+  if [ -n "${HERMETIC_SAFE_OVERRIDE:-}" ]; then
+    dest="$HERMETIC_SAFE_OVERRIDE"
+  else
+    dest="${TMPDIR:-/tmp}/dotfiles-hermetic-safe-${UID:-0}-5"
   fi
+  if [ -n "${HERMETIC_SAFE_DIR:-}" ] && [ -f "${HERMETIC_SAFE_DIR}/.ready" ]; then
+    printf '%s\n' "$HERMETIC_SAFE_DIR"
+    return 0
+  fi
+  if [ -f "$dest/.ready" ]; then
+    HERMETIC_SAFE_DIR="$dest"
+    printf '%s\n' "$dest"
+    return 0
+  fi
+  lock="$dest.lock"
+  i=0
+  while ! mkdir "$lock" 2>/dev/null; do
+    if [ -f "$dest/.ready" ]; then
+      HERMETIC_SAFE_DIR="$dest"
+      printf '%s\n' "$dest"
+      return 0
+    fi
+    i=$((i + 1))
+    if [ "$i" -ge 20 ]; then
+      priv="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-hermetic-build.XXXXXX")"
+      hermetic_safe_fill "$priv"
+      HERMETIC_SAFE_DIR="$priv"
+      printf '%s\n' "$priv"
+      return 0
+    fi
+    sleep 1
+  done
+  if [ -f "$dest/.ready" ]; then
+    rmdir "$lock" 2>/dev/null || true
+    HERMETIC_SAFE_DIR="$dest"
+    printf '%s\n' "$dest"
+    return 0
+  fi
+  mkdir -p "$dest"
+  hermetic_safe_fill "$dest"
+  rmdir "$lock" 2>/dev/null || true
   HERMETIC_SAFE_DIR="$dest"
   printf '%s\n' "$dest"
 }
