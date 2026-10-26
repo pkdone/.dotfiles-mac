@@ -88,7 +88,26 @@ fi
 printf '%s\n' "io.tailscale.ipn.macsys=${BTM_STATUS:-missing}"
 exit "${BTM_RC:-0}"
 EOF
-chmod +x "$tmp/bin/osascript" "$tmp/bin/python3"
+cat > "$tmp/bin/open" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+cat > "$tmp/bin/mdfind" <<'EOF'
+#!/bin/sh
+# Spotlight must not report a host Tailscale (bundle id or /Applications path).
+exit 0
+EOF
+cat > "$tmp/bin/defaults" <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+cat > "$tmp/bin/sfltool" <<'EOF'
+#!/bin/sh
+echo "sfltool should not be run" >&2
+exit 1
+EOF
+chmod +x "$tmp/bin/osascript" "$tmp/bin/python3" "$tmp/bin/open" "$tmp/bin/mdfind" \
+  "$tmp/bin/defaults" "$tmp/bin/sfltool"
 printf 'bplist00' > "$tmp/app/Contents/Info.plist"
 
 # shellcheck source=../checks/login-items.sh disable=SC1091
@@ -155,15 +174,18 @@ miss "the login-items section does not invoke sfltool" "sfltool" \
 printf '%s\n' \
   'tailscale-login|Sign-ins|Add Tailscale to Open at Login|'"$HOW"'|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:login-items' \
   > "$tmp/step.list"
-# Drive the real manual-steps check with the same stubs by pointing HOME away
-# from a real Tailscale and overriding the app path through the environment
-# the check reads. manual-steps does not export TAILSCALE_APP_PATH, so this
-# uses a copy of the step function result via covered_step only when the app
-# path default is absent. Here the default app is absent on Linux, which is
-# the "left alone" path: the step is not shown.
-open_out="$(printf 's\n' | PATH="$tmp/bin:$PATH" HOME="$tmp/home" NO_COLOR=1 \
+# Uninstalled: every lookup the check can make stays inside $tmp. The app
+# path (TAILSCALE_APP_PATH, else /Applications/Tailscale.app), Spotlight,
+# the bundle id, login items, defaults, and HOME must not be the machine
+# this runs on. A closed PATH keeps a host `tailscale` binary invisible.
+# /usr/bin and /bin stay so awk and perl (with_timeout) are still there.
+hermetic_path="$tmp/bin:/usr/bin:/bin"
+open_out="$(printf 's\n' | env -u LOGIN_ITEMS -u BTM_STATUS -u BTM_RC -u OSASCRIPT_RC \
+  PATH="$hermetic_path" HOME="$tmp/home" NO_COLOR=1 \
   MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/step.list" \
   DOT_PYTHON="$tmp/bin/python3" \
+  TAILSCALE_APP_PATH="$tmp/no-such-app" \
+  MANUAL_STEPS_TAILSCALE_BIN="$tmp/no-such-tailscale" \
   "$MS" open 2>"$tmp/open.err")"
 eq "open stderr stays empty when Tailscale is not installed" "" "$(cat "$tmp/open.err")"
 has "an uninstalled Tailscale is not walked" "Nothing to do" "$open_out"

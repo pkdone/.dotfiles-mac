@@ -77,8 +77,11 @@ jobs:
           # That includes manual-steps.test.sh, which checks that
           # docs/manual-steps.md matches scripts/render-manual-steps-doc.sh.
           # modes.test.sh needs Lua; without it that suite skips.
-          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc >/dev/null
           ./tests/run-all.sh
+          # Same suite with /Applications/Tailscale.app appearing present, so a
+          # test that reads the host install fails here.
+          ./tests/run-all.sh --tailscale installed
 
   mac-style-home:
     name: tests under a Mac-like home
