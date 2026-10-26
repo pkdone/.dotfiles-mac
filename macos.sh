@@ -23,7 +23,7 @@
 #               @coteditor /
 #               @finder-recents / @finder-icon-view / @finder-favorites /
 #               @finder-show / @titlebar-double-click / @ac-sleep /
-#               @display-more-space. Values that already match are left alone
+#               @display-more-space / @arzopa-display. Values that already match are left alone
 #               (no re-assert write). @finder-favorites only reads the sidebar
 #               file. Used by `macconfig-check.sh --fix`.
 #   --yes       Run the deferred UI restarts without prompting (still only if
@@ -47,9 +47,13 @@
 #   - After a trackpad value changes, activateSettings -u reloads it when that
 #     tool is present, so those rows do not ask for a logout. If it is missing
 #     or fails, they stay on the logout list.
-#   - @display-more-space sets the built-in panel with displayplacer. External
-#     displays are passed through unchanged. A missing tool or mode is a warning
-#     and stays the manual step.
+#   - @display-more-space sets the built-in panel with displayplacer.
+#     @arzopa-display sets the ARZOPA portable monitor when it is connected
+#     (1920x1080, 180Hz, scaling off, to the left). Either id runs both,
+#     because displayplacer sets every screen in one command. Other displays
+#     are passed through unchanged. A missing tool or mode is a warning and
+#     stays the manual step. When the ARZOPA is not connected, nothing is
+#     changed for it.
 #   - Before the first value-changing write, every affected domain is exported
 #     to backups/defaults-<timestamp>/ (gitignored). Reverse with `defaults import`.
 #   - UI restarts (killall) are deferred to the end, run only if something
@@ -89,7 +93,8 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
                lib/macos-defaults.list, or @dictation-164, @quicknote-190, @spotlight-64,
                @coteditor,
                @finder-recents, @finder-icon-view, @finder-favorites, @finder-show,
-               @titlebar-double-click, @ac-sleep, @display-more-space. Matching
+               @titlebar-double-click, @ac-sleep, @display-more-space,
+               @arzopa-display. Matching
                values are left alone. Dark mode is also turned on live when it
                is not already on. A changed trackpad setting is reloaded with
                activateSettings when that tool is present.
@@ -938,16 +943,25 @@ EOF
 }
 if selected @ac-sleep; then apply_ac_sleep; fi
 
-# ---- Built-in display More Space (displayplacer) -------------------------
-# Only the built-in panel, and only when it is not already More Space.
-# External screens are repeated with their current mode so they stay put.
-# A missing displayplacer, or no matching scaled mode, stays the manual step.
-apply_display_more_space() {
+# ---- Built-in display More Space and the ARZOPA pin (displayplacer) ------
+# The built-in panel moves to More Space when it is not already there.
+# When the ARZOPA monitor is connected and not already 1920x1080 at 180Hz,
+# scaling off, to the left, it is pinned and the laptop origin stays (0,0)
+# so the Dock and menu bar stay on the laptop. Other screens keep their
+# current mode. A missing displayplacer, or no matching mode, stays by hand.
+# Either --only id runs this once: displayplacer sets every screen together.
+apply_display_arrangement() {
   local helper="$DOTDIR/lib/display-resolution.py"
   local list="$DOTDIR/lib/display-resolution.list"
-  local json line status msg plan first rest cfg placer_file
-  local -a args
+  local json report row status rest msg plan placer_file saw_builtin w
+  local -a args apply_msgs warn_msgs ok_msgs plan_warns
+  args=()
+  apply_msgs=()
+  warn_msgs=()
+  ok_msgs=()
+  plan_warns=()
   CONSIDERED=$((CONSIDERED + 1))
+  placer_file=""
   if ! command -v system_profiler >/dev/null 2>&1; then
     WARNINGS=$((WARNINGS + 1))
     say_warn "built-in display: system_profiler is not available — set More Space by hand (System Settings → Displays)"
@@ -968,68 +982,137 @@ apply_display_more_space() {
     say_warn "built-in display: system_profiler returned nothing — set More Space by hand (System Settings → Displays)"
     return 0
   fi
-  line="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" || true)"
-  status="${line%%|*}"
-  msg="${line#*|*|}"
-  case "$status" in
-    ok)
-      say_ok "built-in display already More Space"
-      return 0
-      ;;
-    info)
+  report="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" || true)"
+  if printf '%s\n' "$report" | grep -q '^pending|'; then
+    if command -v displayplacer >/dev/null 2>&1; then
+      placer_file="$(mktemp)"
+      displayplacer list >"$placer_file" 2>/dev/null || true
+      report="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" --placer "$placer_file" || true)"
+    fi
+    report="$(printf '%s\n' "$report" | sed 's/^pending|/warn|/')"
+  fi
+  local need=0
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    status="${row%%|*}"
+    rest="${row#*|}"
+    msg="${rest#*|}"
+    case "$status" in
+      ok)
+        ok_msgs+=("built-in display already More Space")
+        ;;
+      info)
+        ok_msgs+=("$msg")
+        ;;
+      warn|pending)
+        need=1
+        warn_msgs+=("$msg")
+        ;;
+      *)
+        WARNINGS=$((WARNINGS + 1))
+        say_warn "built-in display: ${msg:-could not read the display report}. Set More Space by hand (System Settings → Displays)"
+        [ -n "$placer_file" ] && rm -f "$placer_file"
+        return 0
+        ;;
+    esac
+  done <<< "$report"
+  if [ "$need" = 0 ]; then
+    for msg in "${ok_msgs[@]+"${ok_msgs[@]}"}"; do
       say_ok "$msg"
-      return 0
-      ;;
-    warn)
-      ;;
-    *)
-      WARNINGS=$((WARNINGS + 1))
-      say_warn "built-in display: ${msg:-could not read the display report}. Set More Space by hand (System Settings → Displays)"
-      return 0
-      ;;
-  esac
-  if ! command -v displayplacer >/dev/null 2>&1; then
-    WARNINGS=$((WARNINGS + 1))
-    say_warn "built-in display: displayplacer is not installed — set More Space by hand (System Settings → Displays). Run brewsync to install it."
+    done
+    [ -n "$placer_file" ] && rm -f "$placer_file"
     return 0
   fi
-  placer_file="$(mktemp)"
-  displayplacer list >"$placer_file" 2>/dev/null || true
+  if ! command -v displayplacer >/dev/null 2>&1; then
+    saw_builtin=0
+    for w in "${warn_msgs[@]+"${warn_msgs[@]}"}"; do
+      case "$w" in
+        *"More Space"*) saw_builtin=1 ;;
+      esac
+    done
+    if [ "$saw_builtin" = 1 ] || [ "${#warn_msgs[@]}" -eq 0 ]; then
+      WARNINGS=$((WARNINGS + 1))
+      say_warn "built-in display: displayplacer is not installed — set More Space by hand (System Settings → Displays). Run brewsync to install it."
+    fi
+    for w in "${warn_msgs[@]+"${warn_msgs[@]}"}"; do
+      case "$w" in
+        *"More Space"*) ;;
+        *)
+          WARNINGS=$((WARNINGS + 1))
+          say_warn "$w"
+          ;;
+      esac
+    done
+    [ -n "$placer_file" ] && rm -f "$placer_file"
+    return 0
+  fi
+  if [ -z "$placer_file" ]; then
+    placer_file="$(mktemp)"
+    displayplacer list >"$placer_file" 2>/dev/null || true
+  fi
   plan="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" --plan --placer "$placer_file" || true)"
   rm -f "$placer_file"
-  first="${plan%%$'\n'*}"
-  status="${first%%|*}"
-  msg="${first#*|*|}"
-  args=()
-  if [ "$status" = apply ]; then
-    rest="${plan#*$'\n'}"
-    if [ "$rest" != "$plan" ]; then
-      while IFS= read -r cfg; do
-        case "$cfg" in
-          screen\|*) args+=("${cfg#screen|}") ;;
-        esac
-      done <<< "$rest"
+  placer_file=""
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    case "$row" in
+      apply\|*)
+        rest="${row#apply|}"
+        apply_msgs+=("${rest#|}")
+        ;;
+      screen\|*) args+=("${row#screen|}") ;;
+      warn\|*)
+        rest="${row#warn|}"
+        plan_warns+=("${rest#|}")
+        ;;
+    esac
+  done <<< "$plan"
+  if [ "${#apply_msgs[@]}" -eq 0 ] || [ "${#args[@]}" -eq 0 ]; then
+    if [ "${#plan_warns[@]}" -eq 0 ]; then
+      for w in "${warn_msgs[@]+"${warn_msgs[@]}"}"; do
+        plan_warns+=("$w")
+      done
     fi
-  fi
-  if [ "$status" != apply ] || [ "${#args[@]}" -eq 0 ]; then
-    WARNINGS=$((WARNINGS + 1))
-    say_warn "${msg:-built-in display: could not choose a More Space mode — set it by hand (System Settings → Displays)}"
+    if [ "${#plan_warns[@]}" -eq 0 ]; then
+      plan_warns+=("built-in display: could not choose a More Space mode — set it by hand (System Settings → Displays)")
+    fi
+    for w in "${plan_warns[@]+"${plan_warns[@]}"}"; do
+      WARNINGS=$((WARNINGS + 1))
+      say_warn "$w"
+    done
     return 0
   fi
   if [ "$DRY_RUN" = 1 ]; then
     CHANGED=$((CHANGED + 1))
-    say_chg "built-in display would be set to More Space (${msg})"
+    for msg in "${apply_msgs[@]+"${apply_msgs[@]}"}"; do
+      case "$msg" in
+        *"More Space"*) say_chg "built-in display would be set to More Space (${msg})" ;;
+        *) say_chg "would set ${msg}" ;;
+      esac
+    done
     return 0
   fi
   if displayplacer "${args[@]}"; then
     CHANGED=$((CHANGED + 1))
-    say_chg "built-in display set to More Space (${msg})"
+    for msg in "${apply_msgs[@]+"${apply_msgs[@]}"}"; do
+      case "$msg" in
+        *"More Space"*) say_chg "built-in display set to More Space (${msg})" ;;
+        *) say_chg "set ${msg}" ;;
+      esac
+    done
+    for w in "${plan_warns[@]+"${plan_warns[@]}"}"; do
+      WARNINGS=$((WARNINGS + 1))
+      say_warn "$w"
+    done
   else
     WARNINGS=$((WARNINGS + 1))
     say_warn "built-in display: displayplacer failed — set More Space by hand (System Settings → Displays)"
   fi
 }
-if selected @display-more-space; then apply_display_more_space; fi
+run_displays=0
+if selected @display-more-space; then run_displays=1; fi
+if selected @arzopa-display; then run_displays=1; fi
+if [ "$run_displays" = 1 ]; then apply_display_arrangement; fi
 
 # --only ids that matched nothing (typo, or a row removed from the list).
 if [ -n "$ONLY_IDS" ]; then

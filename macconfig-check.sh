@@ -517,7 +517,8 @@ if [ "$FIX" = 1 ]; then
       finder-icon-view) pat="Finder icon view defaults" ;;
       finder-show)      pat="Show Finder shortcut" ;;
       titlebar-double-click) pat="AppleMiniaturizeOnDoubleClick" ;;
-      display-more-space) pat="built-in display" ;;
+      display-more-space) pat="More Space" ;;
+      arzopa-display) pat="ARZOPA" ;;
     esac
     printf '%s\n' "$MACOS_OUT" | grep -F -- "$pat" | grep -E '^  (chg|warn|ok) ' | head -1 | sed -E 's/^ +(chg|warn|ok) +//'
   }

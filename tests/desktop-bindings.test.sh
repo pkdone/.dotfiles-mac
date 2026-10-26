@@ -121,7 +121,7 @@ Slack|com.tinyspeck.slackmacgap|1
 Chrome|com.google.Chrome|2
 Spotify|com.spotify.client|4
 Ghostty|com.mitchellh.ghostty|none
-Sidecar|com.example.sidecar|none
+Preview|com.example.preview|none
 Missing|com.example.missing|1
 EOF
 
@@ -131,7 +131,7 @@ make_plist "$tmp/check.plist" 'p["app-bindings"] = {
   "com.google.chrome": "UUID-2",
   "com.spotify.client": "FS-1",
   "com.mitchellh.ghostty": "UUID-2",
-  "com.example.sidecar": "OTHER-1",
+  "com.example.preview": "OTHER-1",
 }'
 sum_before="$(cksum < "$tmp/check.plist")"
 log_before="$(cksum < "$FAKE_LOG")"
@@ -142,7 +142,7 @@ eq "check lines" "$(printf '%s\n' \
   'ok|com.google.Chrome|Chrome assigned to Desktop 2' \
   'bad|com.spotify.client|Spotify assigned to unknown desktop FS-1 (expected Desktop 4)' \
   'bad|com.mitchellh.ghostty|Ghostty assigned to Desktop 2 (expected None)' \
-  'bad|com.example.sidecar|Sidecar assigned to unknown desktop OTHER-1 (expected None)' \
+  'bad|com.example.preview|Preview assigned to unknown desktop OTHER-1 (expected None)' \
   'bad|com.example.missing|Missing assigned to None (expected Desktop 1)')" "$out"
 eq "check does not modify the plist" "$sum_before" "$(cksum < "$tmp/check.plist")"
 eq "check --plist does not call defaults" "$log_before" "$(cksum < "$FAKE_LOG")"

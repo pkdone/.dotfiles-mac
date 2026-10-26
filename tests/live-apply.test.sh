@@ -498,5 +498,58 @@ has "dry-run would set More Space" "would be set to More Space" "$out"
 has "dry-run still reads the mode list" "CALL list" "$(cat "$placerlog")"
 miss "dry-run does not set the mode" "CALL id:" "$(cat "$placerlog")"
 
+# ARZOPA connected, built-in already More Space, monitor on the wrong mode.
+# --only @arzopa-display pins it and keeps the laptop at (0,0).
+cat > "$tmp/arzopa.json" <<'EOF'
+{"SPDisplaysDataType":[{"spdisplays_ndrvs":[
+  {"_name":"Color LCD","spdisplays_connection_type":"spdisplays_internal","_spdisplays_resolution":"1800 x 1169 @ 120.00Hz","spdisplays_pixelresolution":"spdisplays_3024x1964Retina"},
+  {"_name":"ARZOPA","spdisplays_connection_type":"spdisplays_connection_type_usb_type_c","_spdisplays_resolution":"2560 x 1440 @ 60.00Hz","_spdisplays_display-serial-number":"74646035"}
+]}]}
+EOF
+cat > "$tmp/placer-arzopa.txt" <<'EOF'
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1800x1169
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0) - main display
+Rotation: 0
+Resolutions for rotation 0:
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+
+Persistent screen id: FRESH-UUID
+Serial screen id: s74646035
+Type: 16 inch external screen
+Resolution: 2560x1440
+Hertz: 60
+Color Depth: 8
+Scaling: off
+Origin: (1800,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
+  mode 9: res:1920x1080 hz:180 color_depth:8 scaling:off
+EOF
+PROFILER_JSON="$tmp/arzopa.json"
+DISPLAYPLACER_LIST="$tmp/placer-arzopa.txt"
+DISPLAYPLACER_RC=0
+out="$(run_macos --only @arzopa-display)"
+rc=$?
+eq "ARZOPA apply exits 0" 0 "$rc"
+has "ARZOPA apply says it set the monitor" "set ARZOPA 1920x1080 at 180Hz, scaling off, left of the laptop" "$out"
+has "ARZOPA apply uses the pinned mode and origin" \
+  "id:FRESH-UUID res:1920x1080 hz:180 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" \
+  "$(cat "$placerlog")"
+has "ARZOPA apply keeps the laptop at the origin" \
+  "id:BUILTIN-ID mode:2 origin:(0,0) degree:0" "$(cat "$placerlog")"
+miss "ARZOPA apply does not call itself More Space" "More Space" "$out"
+
+# Unplugged: the check is info and displayplacer is not asked to move anything.
+PROFILER_JSON="$tmp/more-space.json"
+out="$(run_macos --only @arzopa-display)"
+has "an unplugged ARZOPA is not a failure" "ARZOPA not connected" "$out"
+eq "an unplugged ARZOPA does not run displayplacer" "" "$(cat "$placerlog")"
+
 printf 'live-apply tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

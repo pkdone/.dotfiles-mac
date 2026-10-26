@@ -74,6 +74,7 @@ Login shell
 Hostname
 Display auto-brightness
 Display (More Space)
+ARZOPA display
 Wallpaper
 Desktop widgets
 User picture

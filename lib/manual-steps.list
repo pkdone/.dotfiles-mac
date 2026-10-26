@@ -132,10 +132,15 @@ logi-cloud-backup|Trackpad, mouse & pointer|Logi Options+: sign in to your Logi 
 auto-brightness|Display, keyboard & desktop|Automatically adjust brightness Off. This stays by hand: it needs an admin password and the saved setting is root-owned. Leave True Tone and Slightly dim the display on battery as they are|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
 # More Space is _spdisplays_resolution starting with the value for this panel
 # size in lib/display-resolution.list (14" 1800 x 1169, 16" 2056 x 1329).
-# macos.sh sets it with displayplacer on the built-in panel only. An unlisted
+# macos.sh sets it with displayplacer on the built-in panel. An unlisted
 # panel size or a clamshell Mac (no built-in panel) is an info skip. If
 # displayplacer is missing or the mode is not listed, set it by hand here.
-display-more-space|Display, keyboard & desktop|Built-in display: More Space. macos.sh sets this with displayplacer when that mode is listed for the built-in panel (14 inch 1800x1169, 16 inch 2056x1329). External displays are not changed. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
+display-more-space|Display, keyboard & desktop|Built-in display: More Space. macos.sh sets this with displayplacer when that mode is listed for the built-in panel (14 inch 1800x1169, 16 inch 2056x1329). Other displays are left as they are. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
+# The ARZOPA 16.1" portable monitor. Not connected is an info skip, not drift.
+# macos.sh pins 1920x1080, 180Hz, scaling off, origin (-1920,0), and keeps the
+# laptop at (0,0) so the Dock and menu bar stay on it. Matched by name or
+# serial, not by the persistent screen id. A missing mode stays by hand.
+arzopa-display|Display, keyboard & desktop|ARZOPA portable monitor, when it is plugged in: 1920x1080, 180Hz, scaling off, to the left of the laptop with the tops aligned. The laptop stays the main display so the Dock and menu bar stay on it. macos.sh sets this with displayplacer when that mode is listed. When the monitor is not connected, nothing is wrong. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
 # Tahoe Night (Landscape) is a wallpaper-catalog asset, not a file under
 # /System/Library/Desktop Pictures. System Events "set picture" cannot select
 # that asset, and the wallpaper store is not written.

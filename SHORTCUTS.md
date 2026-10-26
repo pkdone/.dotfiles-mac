@@ -80,11 +80,12 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 
 #### Hammerspoon
 
-Hammerspoon binds this in `hammerspoon/finder_hotkey.lua`, which `init.lua` loads. Pressing the keys launches Finder, or brings it to the front when Finder is already running.
+Hammerspoon binds these in `hammerspoon/finder_hotkey.lua` and `hammerspoon/external_slack.lua`, which `init.lua` loads. Shift + Control + Command + F launches Finder, or brings it to the front when Finder is already running. Shift + Control + Option + Command + S moves Slack onto the ARZOPA display, or brings it back to the built-in display.
 
 | Action | Shortcut |
 |------|------|
 | Bring Finder to the front | Shift + Control + Command + F |
+| Move Slack onto the ARZOPA display, or bring it back | Shift + Control + Option + Command + S |
 
 #### Window Tiling
 
