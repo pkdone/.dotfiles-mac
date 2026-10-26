@@ -3,6 +3,8 @@
 # checks/modes.sh requires the Focus Shortcuts named in hammerspoon/modes.lua.
 # It does not require "Mode Upcoming Meetings": that Shortcut was only for the
 # DeepWork meeting alerts removed in PR #2, and nothing runs it any more.
+# A WhatsApp Web quit recorded in state.json is listed by its display name
+# and is not drift. The bundle id is per Mac, so modes.lua stores the app path.
 # Run: ./tests/modes-check.test.sh
 #
 set -uo pipefail
@@ -84,6 +86,64 @@ miss "the warning does not require Mode Upcoming Meetings" \
 
 miss "modes check source does not require Mode Upcoming Meetings" \
   "Mode Upcoming Meetings" "$(cat "$DIR/checks/modes.sh")"
+
+modes_src="$(cat "$DIR/hammerspoon/modes.lua")"
+eq "WhatsApp Web is named by its app path" \
+  "1" "$(printf '%s\n' "$modes_src" | grep -c "path = '~/Applications/WhatsApp Web.app'" || true)"
+eq "WebConf and DeepWork both quit WhatsApp Web" \
+  "2" "$(printf '%s\n' "$modes_src" | grep -c 'apps\.whatsappWeb' || true)"
+eq "modes do not store a Safari web app UUID" "" \
+  "$(grep -RInE 'com\.apple\.(Safari|safari)\.WebApp\.[0-9A-Fa-f]{8}-' \
+    "$DIR/hammerspoon" "$DIR/docs/modes.md" || true)"
+has "the switcher reads the bundle id from the app" "infoForBundlePath" \
+  "$(cat "$DIR/hammerspoon/mode_switcher.lua")"
+
+# state.json records the display name. The check lists that name and does not
+# treat a quit WhatsApp Web as drift.
+state_home="$tmp/wa-home"
+mkdir -p "$state_home/Library/Application Support/pdone-modes"
+python3 - "$state_home/Library/Application Support/pdone-modes/state.json" <<'PY'
+import json, sys, time
+json.dump({
+    "version": 1,
+    "mode": "WebConf",
+    "since": time.time(),
+    "phase": "applied",
+    "changes": {
+        "quit": [{
+            "bundle": "com.apple.Safari.WebApp.11111111-2222-3333-4444-555555555555",
+            "name": "WhatsApp Web",
+            "path": "/tmp/Applications/WhatsApp Web.app",
+            "app": "~/Applications/WhatsApp Web.app",
+        }]
+    },
+}, open(sys.argv[1], "w"))
+PY
+wa_modes="$(
+  SHORTCUTS_NAMES="$tmp/four" \
+  PATH="$tmp/bin:$PATH" \
+  HOME="$state_home" \
+  DOTDIR="$DIR" \
+  DOT_PYTHON="$(command -v python3)" \
+  CHECKED=0 \
+  bash -c '
+    pass() { printf "ok|%s\n" "$1"; }
+    warn() { printf "warn|%s\n" "$1"; }
+    bad() { printf "bad|%s\n" "$1"; }
+    info() { printf "info|%s\n" "$1"; }
+    note() { printf "note|%s\n" "$1"; }
+    fixid() { :; }
+    hdr() { :; }
+    with_timeout() { shift; "$@"; }
+    # shellcheck disable=SC1091
+    . "$DOTDIR/checks/modes.sh"
+  '
+)"
+has "a quit WhatsApp Web is listed by name" \
+  "note|quit by WebConf on purpose (not drift; Normal reopens them): WhatsApp Web" \
+  "$wa_modes"
+miss "a quit WhatsApp Web is not drift" "bad|" "$wa_modes"
+has "modes.lua still validates" "ok|hammerspoon/modes.lua is valid" "$wa_modes"
 
 printf 'modes-check tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
