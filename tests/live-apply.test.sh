@@ -8,6 +8,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 MACOS="$DIR/macos.sh"
 # shellcheck source=../lib/dotfiles-log.sh disable=SC1091
 . "$DIR/lib/dotfiles-log.sh"
@@ -231,10 +233,10 @@ Resolutions for rotation 0:
   mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
 EOF
 
-# Stub directory first, then only /usr/bin and /bin. The host PATH is not
+# Stub directory first, then ordinary Unix tools only. The host PATH is not
 # used: a Homebrew displayplacer there would run when the stub is hidden,
-# and the not-More-Space fixture would change this machine's displays.
-BASE_PATH="/usr/bin:/bin"
+# and /usr/bin/defaults would run when the defaults stub is hidden.
+BASE_PATH="$(hermetic_safe_root)"
 DARK='NSGlobalDomain|AppleInterfaceStyle'
 TRACK='com.apple.AppleMultitouchTrackpad|TrackpadCornerSecondaryClick'
 SPACES='com.apple.spaces|spans-displays'

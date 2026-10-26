@@ -7,6 +7,8 @@
 set -uo pipefail   # deliberately not -e: run every assertion, then tally failures
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 HELPER="$DIR/lib/file-handlers.py"
 REAL_LIST="$DIR/lib/file-handlers.list"
 PY="$(command -v python3 || true)"
@@ -459,8 +461,10 @@ eq "guard calls duti -s only for txt" '["-s", "com.coteditor.CotEditor", ".txt",
 count 1' "$(s_calls "$DUTI_LOG")"
 eq "guard never sets a browser UTI or scheme" "" "$(s_calls "$DUTI_LOG" | grep -e html -e htm -e xhtml -e http -e https -e mailto -e public.html || true)"
 
-# Missing duti: check warns, apply fails closed.
-export PATH="/usr/bin:/bin"
+# Missing duti: check warns, apply fails closed. A closed safe PATH, not
+# /usr/bin:/bin — duti can be installed there, and this must still miss it.
+PATH="$(hermetic_safe_root)"
+export PATH
 out="$(run "$tmp/small.list")"; rc=$?
 eq "missing duti check exits 0" 0 "$rc"
 has "missing duti is a warning" "warn||duti not installed" "$out"

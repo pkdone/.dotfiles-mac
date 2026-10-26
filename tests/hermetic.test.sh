@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+#
+# The safe PATH hides host commands even when they sit earlier on the
+# inherited PATH. The configured-Mac stubs answer as a machine that is
+# already set up, so a test that falls through to $PATH cannot pass by
+# accident on Linux.
+# Run: ./tests/hermetic.test.sh
+#
+set -uo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
+
+pass=0
+fail=0
+eq() {
+  if [ "$2" = "$3" ]; then pass=$((pass + 1)); else
+    fail=$((fail + 1)); printf 'FAIL: %s\n  expected: [%s]\n  actual:   [%s]\n' "$1" "$2" "$3"; fi
+}
+has() {
+  case "$3" in *"$2"*) pass=$((pass + 1)) ;; *)
+    fail=$((fail + 1)); printf 'FAIL: %s\n  missing: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;; esac
+}
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+safe="$(hermetic_safe_root)"
+eq "safe path is a directory" "dir" "$([ -d "$safe" ] && echo dir || echo missing)"
+eq "safe path is published only when finished" "ready" "$([ -f "$safe/.ready" ] && echo ready || echo partial)"
+eq "safe path provides awk" "awk" "$(PATH="$safe" command -v awk >/dev/null && echo awk || echo missing)"
+eq "safe path provides python3" "python3" "$(PATH="$safe" command -v python3 >/dev/null && echo python3 || echo missing)"
+eq "safe path provides perl" "perl" "$(PATH="$safe" command -v perl >/dev/null && echo perl || echo missing)"
+
+# A cold cache with several callers at once. The directory must not be
+# visible until python3, perl, cut, and rm are all linked. Callers share
+# one published path. This override is private so the test does not remove
+# the cache other suites are using.
+cache="$tmp/cache"
+mkdir -p "$tmp/parallel"
+i=0
+while [ "$i" -lt 8 ]; do
+  (
+    unset HERMETIC_SAFE_DIR
+    # Read by hermetic_safe_root after this file is sourced below.
+    # shellcheck disable=SC2034
+    HERMETIC_SAFE_OVERRIDE="$cache"
+    export HERMETIC_SAFE_OVERRIDE
+    # shellcheck source=hermetic.sh disable=SC1091
+    . "$DIR/tests/hermetic.sh"
+    hermetic_safe_root
+  ) > "$tmp/parallel/$i" &
+  i=$((i + 1))
+done
+wait
+i=0
+while [ "$i" -lt 8 ]; do
+  got="$(cat "$tmp/parallel/$i")"
+  eq "parallel caller $i uses the published directory" "$cache" "$got"
+  eq "parallel caller $i is finished" "ready" "$([ -f "$got/.ready" ] && echo ready || echo partial)"
+  for cmd in awk python3 perl cut rm; do
+    eq "parallel caller $i has $cmd" "yes" "$([ -x "$got/$cmd" ] && echo yes || echo no)"
+  done
+  eq "parallel caller $i hides lpstat" "no" "$([ -e "$got/lpstat" ] && echo yes || echo no)"
+  i=$((i + 1))
+done
+
+decoy="$tmp/decoy"
+mkdir -p "$decoy"
+cat > "$decoy/lpstat" <<'EOF'
+#!/bin/sh
+printf '%s\n' "printer HP_ENVY_6000_series is idle"
+exit 0
+EOF
+chmod +x "$decoy/lpstat"
+found="$(PATH="$decoy:$PATH" command -v lpstat || true)"
+eq "a planted lpstat is what an inherited PATH would run" "$decoy/lpstat" "$found"
+closed="$(PATH="$safe" command -v lpstat || true)"
+eq "the safe path does not see a planted lpstat" "" "$closed"
+for cmd in pmset system_profiler displayplacer sfltool shortcuts dscl defaults ioreg osascript open; do
+  hit="$(PATH="$safe" command -v "$cmd" || true)"
+  eq "the safe path hides $cmd" "" "$hit"
+done
+
+conf="$(hermetic_configured_root "$tmp/configured")"
+printer="$(PATH="$conf:$safe" lpstat -p)"
+has "configured lpstat names the home printer" "HP_ENVY_6000" "$printer"
+power="$(PATH="$conf:$safe" pmset -g custom)"
+has "configured pmset has AC sleep 0" "sleep                0" "$power"
+short="$(PATH="$conf:$safe" shortcuts list)"
+has "configured shortcuts list Mode WebConf On" "Mode WebConf On" "$short"
+eq "configured brightness stub is executable" "yes" \
+  "$([ -x "$conf/corebrightnessdiag" ] && echo yes || echo no)"
+
+# BTM_DIR is the only way to keep --karabiner off the real database.
+# A store file that is not a plist is parsed, so the message says
+# "Invalid file". The default directory is not consulted: on Linux that
+# directory is missing and the message would not mention a bad file, and
+# on a Mac it would be the real login-item database.
+mkdir -p "$tmp/btm"
+printf 'not a plist\n' > "$tmp/btm/BackgroundItems-v9.btm"
+btm="$(BTM_DIR="$tmp/btm" PATH="$safe" python3 "$DIR/lib/btm-login-items.py" --karabiner 2>&1 || true)"
+has "BTM_DIR is the store that was read" "Invalid file" "$btm"
+
+has "display check uses the same diag override as bootstrap" \
+  'AUTO_BRIGHTNESS_DIAG:-/usr/libexec/corebrightnessdiag' "$(cat "$DIR/checks/display.sh")"
+
+printf 'hermetic tests: %d passed, %d failed\n' "$pass" "$fail"
+[ "$fail" -eq 0 ]

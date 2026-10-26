@@ -8,6 +8,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 SHIM="$DIR/check.sh"
 REAL="$DIR/macconfig-check.sh"
 FISH_FN="$DIR/fish/functions/macconfig.fish"
@@ -73,8 +75,8 @@ if grep -F -q 'macconfig-check.sh' "$FISH_FN"; then pass=$((pass + 1)); else
 if grep -F -q "\$argv" "$FISH_FN"; then pass=$((pass + 1)); else
   fail=$((fail + 1)); printf 'FAIL: macconfig passes arguments through\n'; fi
 
-if command -v fish >/dev/null 2>&1; then
-  fish_err="$(fish -n "$FISH_FN" 2>&1)"
+if FISH_BIN="$(hermetic_fish)"; then
+  fish_err="$("$FISH_BIN" -n "$FISH_FN" 2>&1)"
   fish_rc=$?
   eq "fish -n macconfig.fish" "0" "$fish_rc"
   eq "fish -n prints nothing" "" "$fish_err"
@@ -93,20 +95,20 @@ EOF
   pwd_out="$(mktemp)"
   fish_out="$(
     HOME="$fake" MACCONFIG_PWD_OUT="$pwd_out" MACCONFIG_EXIT=7 \
-      fish --no-config -c "cd /tmp; source \"$FISH_FN\"; macconfig --fix --no-color; echo STATUS:\$status"
+      "$FISH_BIN" --no-config -c "cd /tmp; source \"$FISH_FN\"; macconfig --fix --no-color; echo STATUS:\$status"
   )"
   eq "macconfig passes args and returns the script status" "--fix --no-color
 STATUS:7" "$fish_out"
   eq "macconfig leaves the working directory alone" "/tmp" "$(cat "$pwd_out")"
   only_out="$(
     HOME="$fake" MACCONFIG_PWD_OUT="$pwd_out" MACCONFIG_EXIT=3 \
-      fish --no-config -c "source \"$FISH_FN\"; macconfig --only dock,brew; echo STATUS:\$status"
+      "$FISH_BIN" --no-config -c "source \"$FISH_FN\"; macconfig --only dock,brew; echo STATUS:\$status"
   )"
   eq "macconfig passes --only through" "--only dock,brew
 STATUS:3" "$only_out"
   rm -rf "$fake" "$pwd_out"
 else
-  echo "fish not installed — skipped fish -n (CI fish-syntax job still parses *.fish)"
+  echo "SKIP: fish not available — fish-wrapper cases not run (looked on PATH and in /opt/homebrew/bin, /usr/local/bin, /usr/bin). The CI fish-syntax job still parses *.fish."
 fi
 
 printf 'macconfig tests: %d passed, %d failed\n' "$pass" "$fail"

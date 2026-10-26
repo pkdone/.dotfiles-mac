@@ -3,6 +3,7 @@
 
 `sfltool dumpbtm` often pops an admin password dialog on Tahoe. The BTM stores under
 /var/db/com.apple.backgroundtaskmanagement/ are the same records dumpbtm prints.
+BTM_DIR overrides that directory. Unset, the system directory is read.
 They are world-readable with Full Disk Access and enough for our checks. Read-only.
 The login-items commands below never run sfltool. `--karabiner` reads those records
 first, and only runs `sfltool dumpbtm` with a short timeout when the records cannot
@@ -43,7 +44,14 @@ from pathlib import Path
 from plistlib import UID, load
 from urllib.parse import unquote
 
-BTM_DIR = Path("/var/db/com.apple.backgroundtaskmanagement")
+def _btm_dir() -> Path:
+    override = os.environ.get("BTM_DIR", "").strip()
+    if override:
+        return Path(override)
+    return Path("/var/db/com.apple.backgroundtaskmanagement")
+
+
+BTM_DIR = _btm_dir()
 # Item type bits, from dumpbtm ("Type: app (0x2)", "legacy agent (0x10008)", ...)
 TYPE_APP = 0x2
 TYPE_LOGIN_ITEM = 0x4

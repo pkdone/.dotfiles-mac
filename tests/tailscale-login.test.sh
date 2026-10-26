@@ -7,6 +7,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 LIST="$DIR/lib/manual-steps.list"
 MS="$DIR/scripts/manual-steps.sh"
 PY="$(command -v python3 || true)"
@@ -177,9 +179,9 @@ printf '%s\n' \
 # Uninstalled: every lookup the check can make stays inside $tmp. The app
 # path (TAILSCALE_APP_PATH, else /Applications/Tailscale.app), Spotlight,
 # the bundle id, login items, defaults, and HOME must not be the machine
-# this runs on. A closed PATH keeps a host `tailscale` binary invisible.
-# /usr/bin and /bin stay so awk and perl (with_timeout) are still there.
-hermetic_path="$tmp/bin:/usr/bin:/bin"
+# this runs on. The safe PATH keeps host commands (defaults, dscl, osascript,
+# tailscale) invisible and still has awk and perl for with_timeout.
+hermetic_path="$tmp/bin:$(hermetic_safe_root)"
 open_out="$(printf 's\n' | env -u LOGIN_ITEMS -u BTM_STATUS -u BTM_RC -u OSASCRIPT_RC \
   PATH="$hermetic_path" HOME="$tmp/home" NO_COLOR=1 \
   MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/step.list" \

@@ -6,6 +6,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 MS="$DIR/scripts/manual-steps.sh"
 LIST="$DIR/lib/manual-steps.list"
 
@@ -56,6 +58,9 @@ esac
 exit "${LPSTAT_RC:-0}"
 EOF
 chmod +x "$bin/open" "$bin/lpstat"
+# $bin first, then ordinary Unix tools only. $PATH is not copied: on a Mac
+# that would still find /usr/bin/lpstat after the stub is removed.
+SAFE="$(hermetic_safe_root)"
 printf '%s\n' \
   'home-printer|Printer|Add the home printer HP ENVY 6000 series|System Settings → Printers & Scanners|x-apple.systempreferences:com.apple.Print-Scan-Settings.extension|home-printer' \
   > "$tmp/steps.list"
@@ -64,7 +69,7 @@ export NO_COLOR=1 LPSTAT_LOG="$tmp/lpstat.log"
 
 check() {
   LPSTAT_P="${1-}" LPSTAT_V="${2-}" LPSTAT_RC="${3:-0}" \
-    PATH="$bin:$PATH" MANUAL_STEPS_LIST="$tmp/steps.list" \
+    PATH="$bin:$SAFE" MANUAL_STEPS_LIST="$tmp/steps.list" \
     "$MS" check --porcelain
 }
 
@@ -94,7 +99,21 @@ eq "no queues is not set yet" warn "$(printf '%s\n' "$out" | cut -d'|' -f1)"
 has "no queues says it can only be added at home" "only be added on the home network" "$out"
 
 rm -f "$bin/lpstat"
-out="$(PATH="$bin:$PATH" MANUAL_STEPS_LIST="$tmp/steps.list" "$MS" check --porcelain)"
+# A decoy earlier on an inherited PATH would count as the printer. The
+# closed path must not see it, and must not see /usr/bin/lpstat either.
+decoy="$tmp/decoy"
+mkdir -p "$decoy"
+cat > "$decoy/lpstat" <<'EOF'
+#!/bin/sh
+printf '%s\n' "printer HP_ENVY_6000_series is idle. enabled since today"
+exit 0
+EOF
+chmod +x "$decoy/lpstat"
+leak="$(PATH="$decoy:$SAFE" MANUAL_STEPS_LIST="$tmp/steps.list" "$MS" check --porcelain)"
+eq "a planted lpstat counts as the printer" ok "$(printf '%s\n' "$leak" | cut -d'|' -f1)"
+found="$(PATH="$bin:$SAFE" command -v lpstat || true)"
+eq "the closed path has no lpstat" "" "$found"
+out="$(PATH="$bin:$SAFE" MANUAL_STEPS_LIST="$tmp/steps.list" "$MS" check --porcelain)"
 eq "a missing lpstat is not set yet" warn "$(printf '%s\n' "$out" | cut -d'|' -f1)"
 
 cat > "$bin/lpstat" <<'EOF'
@@ -107,7 +126,7 @@ exit 0
 EOF
 chmod +x "$bin/lpstat"
 open_out="$(printf 's\n' | LPSTAT_P='printer Other is idle' LPSTAT_V='' \
-  PATH="$bin:$PATH" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/steps.list" \
+  PATH="$bin:$SAFE" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/steps.list" \
   "$MS" open)"
 has "open shows the step when the printer is missing" "Add the home printer HP ENVY 6000 series" "$open_out"
 has "open says not set yet" "NOTSET:" "$open_out"
@@ -115,7 +134,7 @@ has "open says it can only be added at home" "home network" "$open_out"
 has "open names Printers and Scanners" "Printers & Scanners" "$open_out"
 
 open_ok="$(printf 's\n' | LPSTAT_P='printer HP_ENVY_6000_series is idle' \
-  PATH="$bin:$PATH" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/steps.list" \
+  PATH="$bin:$SAFE" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/steps.list" \
   "$MS" open)"
 has "open skips a printer that is already there" "Nothing to do" "$open_ok"
 miss "open hides the title when the printer is already there" "Add the home printer" "$open_ok"

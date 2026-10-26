@@ -83,6 +83,23 @@ jobs:
           # test that reads the host install fails here.
           ./tests/run-all.sh --tailscale installed
 
+  configured-mac:
+    name: tests against a configured Mac
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run the suite with configured-Mac stubs
+        run: |
+          # Stubs at the front of PATH answer the way a fully configured Mac
+          # does (printer present, sleep already correct, Focus Shortcuts
+          # exist). A test that falls through to the inherited PATH gets ok
+          # instead of "tool missing", which is the failure seen on a real
+          # Mac, so it fails here too. lua5.4 is for modes.test.sh. gcc builds
+          # the Tailscale view used by the second run.
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc >/dev/null
+          ./tests/run-all.sh --configured-mac
+          ./tests/run-all.sh --configured-mac --tailscale installed
+
   mac-style-home:
     name: tests under a Mac-like home
     runs-on: ubuntu-latest

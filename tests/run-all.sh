@@ -15,6 +15,7 @@
 #   tests/run-all.sh --jobs N
 #   tests/run-all.sh --mac-home [name]
 #   tests/run-all.sh --tailscale absent|installed
+#   tests/run-all.sh --configured-mac
 #
 # --shellcheck changed reads the pre-push ref lines on stdin
 # (`<local ref> <local sha> <remote ref> <remote sha>`). When that remote
@@ -30,6 +31,11 @@
 # --tailscale absent hides /Applications/Tailscale.app. --tailscale installed
 # makes that bundle exist. tests/tailscale-view.sh builds the view. The suite
 # should pass in both; a test that reads the host's Tailscale install will not.
+#
+# --configured-mac puts stubs that answer like a fully configured Mac at the
+# front of PATH (lpstat names the home printer, pmset is already correct,
+# shortcuts exist, and so on). A test that falls through to $PATH then gets
+# ok, which is the failure mode of Paul's Mac, so the leak shows up on Linux.
 #
 # Bash 3.2-safe (stock macOS bash): no mapfile, no associative arrays.
 #
@@ -48,6 +54,7 @@ Usage: tests/run-all.sh [options]
                            set HOME, and run there. Default name: pdone.
   --tailscale absent       Run with Tailscale.app not installed.
   --tailscale installed    Run with /Applications/Tailscale.app present.
+  --configured-mac         Prepend stubs that answer like a configured Mac.
   --check-view             Print present or absent for Tailscale.app as a
                            worker would see it, then exit.
   -h, --help               Show this help.
@@ -64,6 +71,7 @@ MAC_HOME=0
 MAC_NAME="pdone"
 TAILSCALE_VIEW=""
 CHECK_VIEW=0
+CONFIGURED_MAC=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -90,6 +98,7 @@ while [ $# -gt 0 ]; do
       esac
       shift 2
       ;;
+    --configured-mac) CONFIGURED_MAC=1; shift ;;
     --mac-home)
       MAC_HOME=1
       shift
@@ -193,6 +202,7 @@ if [ "$MAC_HOME" = 1 ] && [ -z "${RUN_ALL_INSIDE_MAC_HOME:-}" ]; then
   [ -n "$SHELLCHECK_MODE" ] && child+=(--shellcheck "$SHELLCHECK_MODE")
   [ "$DO_TESTS" = 0 ] && child+=(--no-tests)
   [ -n "$TAILSCALE_VIEW" ] && child+=(--tailscale "$TAILSCALE_VIEW")
+  [ "$CONFIGURED_MAC" = 1 ] && child+=(--configured-mac)
   [ "$CHECK_VIEW" = 1 ] && child+=(--check-view)
   echo "tests/run-all.sh: mac-style home ${dest} (HOME=${parent})"
   HOME="$parent" USER="$MAC_NAME" LOGNAME="$MAC_NAME" RUN_ALL_INSIDE_MAC_HOME=1 \
@@ -214,6 +224,7 @@ if [ -n "$TAILSCALE_VIEW" ] && [ -z "${RUN_ALL_INSIDE_TAILSCALE:-}" ]; then
   [ -n "$JOBS" ] && view_args+=(--jobs "$JOBS")
   [ -n "$SHELLCHECK_MODE" ] && view_args+=(--shellcheck "$SHELLCHECK_MODE")
   [ "$DO_TESTS" = 0 ] && view_args+=(--no-tests)
+  [ "$CONFIGURED_MAC" = 1 ] && view_args+=(--configured-mac)
   [ "$CHECK_VIEW" = 1 ] && view_args+=(--check-view)
   exec "$ROOT/tests/tailscale-view.sh" "$TAILSCALE_VIEW" -- \
     "$ROOT/tests/run-all.sh" "${view_args[@]+"${view_args[@]}"}"
@@ -228,6 +239,18 @@ if [ "$CHECK_VIEW" = 1 ]; then
 fi
 
 cd "$ROOT" || exit 1
+
+# Stubs first, then whatever PATH the caller had. Tests that build a closed
+# PATH (tests/hermetic.sh) do not see these. Tests that use $PATH do.
+if [ "$CONFIGURED_MAC" = 1 ]; then
+  # shellcheck source=hermetic.sh disable=SC1091
+  . "$ROOT/tests/hermetic.sh"
+  conf="$(hermetic_configured_root "${TMPDIR:-/tmp}/dotfiles-configured-mac-${UID:-0}")"
+  export PATH="$conf:${PATH:-/usr/bin:/bin}"
+  export AUTO_BRIGHTNESS_DIAG="$conf/corebrightnessdiag"
+  export BTM_DIR="$conf/btm-empty"
+  echo "tests/run-all.sh: configured-Mac stubs ahead of PATH ($conf)"
+fi
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/run-all.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
@@ -353,6 +376,12 @@ if [ -n "$SHELLCHECK_MODE" ]; then
 fi
 
 if [ "$DO_TESTS" = 1 ]; then
+  # One finished safe PATH before any suite starts. Workers inherit the
+  # directory and do not link into a tree another suite is already using.
+  # shellcheck source=hermetic.sh disable=SC1091
+  . "$ROOT/tests/hermetic.sh"
+  HERMETIC_SAFE_DIR="$(hermetic_safe_root)"
+  export HERMETIC_SAFE_DIR
   printf '%s\0' "${tests[@]}" | xargs -0 -P "$JOBS" -n 1 "$ROOT/tests/run-all.sh" --worker
 fi
 
