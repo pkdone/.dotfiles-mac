@@ -551,5 +551,41 @@ out="$(run_macos --only @arzopa-display)"
 has "an unplugged ARZOPA is not a failure" "ARZOPA not connected" "$out"
 eq "an unplugged ARZOPA does not run displayplacer" "" "$(cat "$placerlog")"
 
+# Already pinned: the ok line names the ARZOPA, not More Space. displayplacer
+# list is read so the pin can be checked, and no mode is set.
+cat > "$tmp/placer-arzopa-ok.txt" <<'EOF'
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1800x1169
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0) - main display
+Rotation: 0
+Resolutions for rotation 0:
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+
+Persistent screen id: FRESH-UUID
+Serial screen id: s74646035
+Type: 16 inch external screen
+Resolution: 1920x1080
+Hertz: 180
+Color Depth: 8
+Scaling: off
+Origin: (-1920,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 9: res:1920x1080 hz:180 color_depth:8 scaling:off
+EOF
+PROFILER_JSON="$tmp/arzopa.json"
+DISPLAYPLACER_LIST="$tmp/placer-arzopa-ok.txt"
+out="$(run_macos --only @arzopa-display)"
+has "an already pinned ARZOPA is reported as itself" "ARZOPA is 1920x1080 at 180Hz, scaling off" "$out"
+has "an already pinned laptop is still More Space" "built-in display already More Space" "$out"
+eq "More Space is not repeated for the ARZOPA line" "1" \
+  "$(printf '%s\n' "$out" | grep -c 'already More Space')"
+has "an already pinned ARZOPA still reads displayplacer list" "CALL list" "$(cat "$placerlog")"
+miss "an already pinned ARZOPA does not set a mode" "CALL id:" "$(cat "$placerlog")"
+
 printf 'live-apply tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
