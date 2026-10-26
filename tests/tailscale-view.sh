@@ -75,7 +75,10 @@ EOS
   then
     die "Tailscale view did not apply after TAILSCALE_VIEW was cleared"
   fi
-  TAILSCALE_APP_VIEW="$view" LD_PRELOAD="$so${LD_PRELOAD:+:$LD_PRELOAD}" "$@"
+  # RUN_ALL_INSIDE_TAILSCALE tells a test it is already in this view. Unsetting
+  # it does not leave a macOS sandbox, so the test must not start another one.
+  RUN_ALL_INSIDE_TAILSCALE="$view" TAILSCALE_APP_VIEW="$view" \
+    LD_PRELOAD="$so${LD_PRELOAD:+:$LD_PRELOAD}" "$@"
   rc=$?
   cleanup
   trap - EXIT
