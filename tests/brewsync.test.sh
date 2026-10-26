@@ -8,6 +8,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 FISH_FN="$DIR/fish/functions/brewsync.fish"
 
 pass=0
@@ -30,13 +32,15 @@ if [ ! -f "$FISH_FN" ]; then
   exit 1
 fi
 
-if ! command -v fish >/dev/null 2>&1; then
-  echo "fish not installed — skipped brewsync run (CI fish-syntax job still parses *.fish)"
-  echo "brewsync tests: 0 passed, 0 failed"
+# fish is often /opt/homebrew/bin/fish and absent from a non-interactive PATH.
+# Resolve it before the wrapper replaces PATH with the brew stub directory.
+if ! FISH_BIN="$(hermetic_fish)"; then
+  echo "SKIP: fish not available — fish-wrapper cases not run (looked on PATH and in /opt/homebrew/bin, /usr/local/bin, /usr/bin). The CI fish-syntax job still parses *.fish."
+  echo "brewsync tests: $pass passed, $fail failed"
   exit 0
 fi
 
-fish_err="$(fish -n "$FISH_FN" 2>&1)"
+fish_err="$("$FISH_BIN" -n "$FISH_FN" 2>&1)"
 fish_rc=$?
 eq "fish -n brewsync.fish" "0" "$fish_rc"
 eq "fish -n prints nothing" "" "$fish_err"
@@ -69,7 +73,7 @@ chmod +x "$home/.dotfiles-mac/scripts/brew-bundle-install.sh" "$bin/brew"
 
 run_brewsync() {
   HOME="$home" PATH="$bin:/usr/bin:/bin" BUNDLE_RC="$1" \
-    fish --no-config -c "source \"$FISH_FN\"; brewsync; echo STATUS:\$status"
+    "$FISH_BIN" --no-config -c "source \"$FISH_FN\"; brewsync; echo STATUS:\$status"
 }
 
 out="$(run_brewsync 3)"

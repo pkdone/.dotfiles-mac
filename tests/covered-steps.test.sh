@@ -8,6 +8,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 MS="$DIR/scripts/manual-steps.sh"
 LIST="$DIR/lib/manual-steps.list"
 
@@ -34,8 +36,22 @@ cat > "$tmp/bin/open" <<'EOF'
 exit 0
 EOF
 chmod +x "$tmp/bin/open"
+# Closed PATH: stubs in front, then ordinary Unix tools. Host commands
+# (lpstat, pmset, system_profiler, dscl, shortcuts, defaults, sfltool, …)
+# are not on it, and neither is a configured-Mac stub directory the runner
+# may have prepended to the inherited PATH. with_timeout has to exist in
+# this shell too: manual-steps.sh defines it, and a direct covered_step_run
+# would otherwise fail the command while the porcelain path ran the real tool.
+SAFE="$(hermetic_safe_root)"
+PY="$(PATH="$SAFE" command -v python3 || true)"
+mkdir -p "$tmp/btm-empty"
+with_timeout() { shift; "$@"; }
 export NO_COLOR=1
 export DOTDIR="$DIR"
+export PATH="$tmp/bin:$SAFE"
+export DOT_PYTHON="$PY"
+export BTM_DIR="$tmp/btm-empty"
+export AUTO_BRIGHTNESS_DIAG="$tmp/bin/no-such-corebrightnessdiag"
 # shellcheck disable=SC1091
 . "$DIR/lib/covered-steps.sh"
 
@@ -140,32 +156,47 @@ eq "a More Space info skip exits 0" 0 "$disp_rc"
 disp_open="$(printf 's\n' | PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
   MANUAL_STEPS_LIST="$tmp/disp.list" "$MS" open 2>"$tmp/dispopen.err")"
 miss "open skips More Space when there is no built-in display" "More Space" "$disp_open"
+# The agreement loop must not keep this empty-display stub. Without it,
+# system_profiler is missing and both display steps warn. A real Mac's
+# system_profiler would report the panel as ok.
+rm -f "$tmp/bin/system_profiler"
 
-if ! command -v dscl >/dev/null 2>&1; then
-  printf '%s\n' \
-    'user-picture|Display, keyboard & desktop|Account picture|System Settings → Users & Groups|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig:display' \
-    > "$tmp/pic.list"
-  pic_porc="$(HOME="$tmp/home" MANUAL_STEPS_LIST="$tmp/pic.list" "$MS" check --porcelain 2>"$tmp/pic.err")"
-  eq "a missing dscl stays check by hand" hand "$(printf '%s\n' "$pic_porc" | cut -d'|' -f1)"
-  pic_open="$(printf 's\n' | HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
-    MANUAL_STEPS_LIST="$tmp/pic.list" PATH="$tmp/bin:$PATH" "$MS" open 2>"$tmp/picopen.err")"
-  has "open still shows the account picture when it cannot be read" "Account picture" "$pic_open"
-  has "open names why the account picture stays by hand" \
-    "MANUAL: Dscl not found — the account picture stays by hand. If it's already set, press s." "$pic_open"
-  miss "a checked account picture is not labelled can't-check" \
-    "MANUAL: Can't check this automatically" "$pic_open"
-fi
+printf '%s\n' \
+  'user-picture|Display, keyboard & desktop|Account picture|System Settings → Users & Groups|x-apple.systempreferences:com.apple.Users-Groups-Settings.extension|@macconfig:display' \
+  > "$tmp/pic.list"
+pic_porc="$(HOME="$tmp/home" MANUAL_STEPS_LIST="$tmp/pic.list" "$MS" check --porcelain 2>"$tmp/pic.err")"
+eq "a missing dscl stays check by hand" hand "$(printf '%s\n' "$pic_porc" | cut -d'|' -f1)"
+pic_open="$(printf 's\n' | HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$tmp/pic.list" PATH="$tmp/bin:$PATH" "$MS" open 2>"$tmp/picopen.err")"
+has "open still shows the account picture when it cannot be read" "Account picture" "$pic_open"
+has "open names why the account picture stays by hand" \
+  "MANUAL: Dscl not found — the account picture stays by hand. If it's already set, press s." "$pic_open"
+miss "a checked account picture is not labelled can't-check" \
+  "MANUAL: Can't check this automatically" "$pic_open"
 
-# Every @macconfig step: manualsteps check and the shared function agree.
+# Every @macconfig step: manualsteps check and the shared function agree,
+# and the result is the one these stubs produce, not this machine's.
 awk -F'|' '$1 !~ /^#/ && $6 ~ /^@macconfig:/ { print $1, substr($6, 12) }' "$LIST" > "$tmp/ids.txt"
+unset DISPLAY_RESOLUTION_REPORT
 while read -r id area; do
   [ -n "$id" ] || continue
   printf '%s|G|Title|Where||@macconfig:%s\n' "$id" "$area" > "$tmp/row.list"
   porc="$(HOME="$tmp/home" MANUAL_STEPS_LIST="$tmp/row.list" "$MS" check --porcelain 2>/dev/null || true)"
   direct="$(HOME="$tmp/home" covered_step_run "$id" "$area" 2>/dev/null || true)"
-  eq "$id status matches" \
-    "$(printf '%s\n' "$direct" | cut -d'|' -f1)" \
-    "$(printf '%s\n' "$porc" | cut -d'|' -f1)"
+  porc_status="$(printf '%s\n' "$porc" | cut -d'|' -f1)"
+  direct_status="$(printf '%s\n' "$direct" | cut -d'|' -f1)"
+  eq "$id status matches" "$direct_status" "$porc_status"
+  # Pinned to the stubbed result. A configured Mac (or --configured-mac)
+  # would say ok for these if the check could see the host.
+  want=""
+  case "$id" in
+    karabiner-login-items|user-picture|finder-sidebar) want=hand ;;
+    auto-brightness|display-more-space|arzopa-display|ac-sleep|mode-focus-shortcuts|wallpaper|notifications-apps|login-items-off) want=warn ;;
+    mode-focus-modes) want=ok ;;
+  esac
+  if [ -n "$want" ]; then
+    eq "$id does not read this machine" "$want" "$porc_status"
+  fi
 done < "$tmp/ids.txt"
 
 # shellcheck disable=SC2016  # the needle is source text, compared literally

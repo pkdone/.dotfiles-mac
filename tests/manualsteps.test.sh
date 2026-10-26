@@ -10,6 +10,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 FISH_FN="$DIR/fish/functions/manualsteps.fish"
 
 pass=0
@@ -41,8 +43,8 @@ if grep -F -q 'fish/functions/*.fish' "$DIR/install.sh"; then pass=$((pass + 1))
 if grep -F -q 'fish/functions/*.fish' "$DIR/checks/symlinks.sh"; then pass=$((pass + 1)); else
   fail=$((fail + 1)); printf 'FAIL: macconfig-check.sh checks fish/functions/*.fish links\n'; fi
 
-if command -v fish >/dev/null 2>&1; then
-  fish_err="$(fish -n "$FISH_FN" 2>&1)"
+if FISH_BIN="$(hermetic_fish)"; then
+  fish_err="$("$FISH_BIN" -n "$FISH_FN" 2>&1)"
   fish_rc=$?
   eq "fish -n manualsteps.fish" "0" "$fish_rc"
   eq "fish -n prints nothing" "" "$fish_err"
@@ -66,7 +68,7 @@ EOF
     : >"$pwd_out"
     out="$(
       HOME="$fake" MANUALSTEPS_PWD_OUT="$pwd_out" MANUALSTEPS_EXIT="$exit_code" \
-        fish --no-config -c "cd /tmp; source \"$FISH_FN\"; manualsteps $fish_args; echo STATUS:\$status"
+        "$FISH_BIN" --no-config -c "cd /tmp; source \"$FISH_FN\"; manualsteps $fish_args; echo STATUS:\$status"
     )"
     eq "$desc" "${expected}
 STATUS:${exit_code}" "$out"
@@ -82,7 +84,7 @@ STATUS:${exit_code}" "$out"
 
   rm -rf "$fake" "$pwd_out"
 else
-  echo "fish not installed — skipped fish -n (CI fish-syntax job still parses *.fish)"
+  echo "SKIP: fish not available — fish-wrapper cases not run (looked on PATH and in /opt/homebrew/bin, /usr/local/bin, /usr/bin). The CI fish-syntax job still parses *.fish."
 fi
 
 printf 'manualsteps tests: %d passed, %d failed\n' "$pass" "$fail"

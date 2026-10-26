@@ -10,7 +10,9 @@
 check_step_auto_brightness() {
   fixid auto-brightness
   CHECKED=$((CHECKED + 1))
-  if [ ! -x /usr/libexec/corebrightnessdiag ]; then
+  # Same override bootstrap.sh uses. Unset, this is still the system tool.
+  ab_diag="${AUTO_BRIGHTNESS_DIAG:-/usr/libexec/corebrightnessdiag}"
+  if [ ! -x "$ab_diag" ]; then
     fixid tooling
     warn "corebrightnessdiag missing — can't check Automatically adjust brightness"
   elif [ ! -r "$DOTDIR/lib/auto-brightness.py" ]; then
@@ -20,7 +22,7 @@ check_step_auto_brightness() {
     fixid tooling
     warn "no python3 — can't check Automatically adjust brightness"
   else
-    diag_out="$(with_timeout 15 /usr/libexec/corebrightnessdiag status-info 2>/dev/null || true)"
+    diag_out="$(with_timeout 15 "$ab_diag" status-info 2>/dev/null || true)"
     if [ -z "$diag_out" ]; then
       fixid tooling
       warn "corebrightnessdiag status-info returned nothing — can't check Automatically adjust brightness"

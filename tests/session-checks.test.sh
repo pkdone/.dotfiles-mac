@@ -8,6 +8,8 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=hermetic.sh disable=SC1091
+. "$DIR/tests/hermetic.sh"
 LIB="$DIR/lib/session-checks.sh"
 MS="$DIR/scripts/manual-steps.sh"
 LIST="$DIR/lib/manual-steps.list"
@@ -323,7 +325,8 @@ run_check check_op_cli
 eq "missing 1Password app is a warning" warn "$R_STATUS"
 mkdir -p "$tmp/1Password.app"
 
-CHECK_PATH="/usr/bin:/bin" run_check check_op_cli
+# Not /usr/bin:/bin: a host `op` in /usr/bin would look installed.
+CHECK_PATH="$(hermetic_safe_root)" run_check check_op_cli
 eq "missing op CLI is a warning" warn "$R_STATUS"
 unset CHECK_PATH
 
