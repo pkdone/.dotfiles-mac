@@ -17,6 +17,9 @@ local apps = {
   granola      = 'com.granola.app',
   finder       = 'com.apple.finder',
   grokBot      = 'com.anysphere.sand',
+  -- Safari web app (File > Add to Dock, manual step whatsapp-web). Not a fixed
+  -- bundle id: each Mac gets its own, read from this app when a mode runs.
+  whatsappWeb  = { path = '~/Applications/WhatsApp Web.app', name = 'WhatsApp Web' },
 }
 
 return {
@@ -44,7 +47,7 @@ return {
     WebConf = {
       label   = 'WebConf (on air)',
       icon    = { symbol = 'record.circle.fill', color = 'red', fallback = '🔴' },
-      quit    = { apps.spotify, apps.youtubeMusic },
+      quit    = { apps.spotify, apps.youtubeMusic, apps.whatsappWeb },
       hide    = { apps.slack, apps.finder, apps.grokBot },  -- Finder = its windows
       focus   = 'WebConf',
       front   = apps.granola,              -- brought to the front last
@@ -56,7 +59,7 @@ return {
     DeepWork = {
       label   = 'DeepWork',
       icon    = { symbol = 'brain.head.profile', fallback = '🧠' },
-      quit    = { apps.slack },
+      quit    = { apps.slack, apps.whatsappWeb },
       hide    = { apps.granola },
       focus   = 'DeepWork',                -- Spotify is left alone
       timerMinutes  = 50,                  -- menu-bar countdown; when it ends you choose,

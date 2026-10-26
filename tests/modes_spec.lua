@@ -42,6 +42,10 @@ bad('missing Normal', function(c) c.modes.Normal = nil end, 'a Normal mode is re
 bad('Normal with actions', function(c) c.modes.Normal.quit = { 'com.x.y' } end, "Normal can't have actions")
 bad('typo key', function(c) c.modes.WebConf.qiut = {} end, "unknown key 'qiut'")
 bad('bad bundle id', function(c) c.modes.WebConf.quit = { 'not a bundle' } end, 'bad bundle id')
+bad('bad app path', function(c) c.modes.WebConf.quit = { { path = 'not-an-app' } } end, 'bad app path')
+bad('app path with an extra key', function(c)
+  c.modes.WebConf.quit = { { path = '~/Applications/WhatsApp Web.app', bundle = 'com.apple.Safari' } }
+end, 'bad app path')
 bad('unknown focus', function(c) c.modes.DeepWork.focus = 'Nope' end, "focus 'Nope'")
 bad('mode not in order', function(c) c.modes.Extra = { label = 'x', icon = { symbol = 'a', fallback = 'b' } } end, 'missing from order')
 bad('timer out of range', function(c) c.modes.DeepWork.timerMinutes = 0 end, 'timerMinutes must be 1-600')
@@ -66,6 +70,7 @@ ok('WebConf: dry-run header', wc[1]:find('dry run, nothing changed', 1, true))
 ok('WebConf: state written first', has(wc, 'write state.json'))
 ok('WebConf: quits YouTube Music', has(wc, 'quit YouTube Music politely'))
 ok('WebConf: Spotify not running', has(wc, 'quit Spotify: not running, skip'))
+ok('WebConf: WhatsApp Web not running', has(wc, 'quit WhatsApp Web: not running, skip'))
 ok('WebConf: hides Slack', has(wc, 'hide Slack'))
 ok('WebConf: missing Focus Shortcut noted', has(wc, "Shortcut 'Mode WebConf On' (MISSING"))
 ok('WebConf: display awake', has(wc, 'keep the display awake'))
@@ -77,6 +82,7 @@ ok('WebConf: badges explained', has(wc, 'no macOS API'))
 ok('WebConf: Granola to the front', has(wc, 'bring Granola to the front'))
 local dw = ms.plan(cfg, 'DeepWork', snap)
 ok('DeepWork: quits Slack', has(dw, 'quit Slack politely'))
+ok('DeepWork: WhatsApp Web not running', has(dw, 'quit WhatsApp Web: not running, skip'))
 ok('DeepWork: hides Granola', has(dw, 'hide Granola'))
 ok('DeepWork: timer', has(dw, '50-minute countdown'))
 ok('DeepWork: never auto-switches', has(dw, 'never switches by itself'))
@@ -99,6 +105,124 @@ local nt = ms.plan(cfg, 'Normal', timed)
 ok('Normal: stops the DeepWork timer', has(nt, 'stop the DeepWork timer'))
 ok('Normal: no meeting checks', not has(nt, 'meeting'))
 ok('Normal from Normal: nothing', has(ms.plan(cfg, 'Normal', snap), 'nothing recorded to restore'))
+
+-- WhatsApp Web is a path app. The bundle id is per Mac, so it is not stored here.
+local waPath = '~/Applications/WhatsApp Web.app'
+local waSpec
+for _, spec in ipairs(cfg.modes.WebConf.quit) do
+  if type(spec) == 'table' and spec.path == waPath then waSpec = spec end
+end
+ok('WebConf quits WhatsApp Web by app path', waSpec ~= nil)
+eq('WhatsApp Web display name', 'WhatsApp Web', waSpec and waSpec.name)
+local deepWa = false
+for _, spec in ipairs(cfg.modes.DeepWork.quit) do
+  if type(spec) == 'table' and spec.path == waPath then deepWa = true end
+end
+ok('DeepWork quits the same WhatsApp Web path', deepWa)
+local storedId = false
+local function walkIds(t)
+  if type(t) == 'string' and t:find('WebApp%.', 1, false) then storedId = true end
+  if type(t) ~= 'table' then return end
+  for _, v in pairs(t) do walkIds(v) end
+end
+walkIds(cfg)
+ok('modes.lua does not store a Safari web app id', not storedId)
+
+local waMissing = deepcopy(snap)
+waMissing.missing = { [waPath] = true }
+local wcm = ms.plan(cfg, 'WebConf', waMissing)
+ok('WebConf: WhatsApp Web not installed', has(wcm, 'quit WhatsApp Web: not installed, skip'))
+ok('not installed is a skip, not an error', not has(wcm, 'error'))
+local dwm = ms.plan(cfg, 'DeepWork', waMissing)
+ok('DeepWork: WhatsApp Web not installed', has(dwm, 'quit WhatsApp Web: not installed, skip'))
+
+local waBlocked = deepcopy(snap)
+waBlocked.blocked = { [waPath] = true }
+waBlocked.running[waPath] = true
+ok('WebConf: refuses to quit Safari', has(ms.plan(cfg, 'WebConf', waBlocked), 'quit WhatsApp Web: would quit Safari, skip'))
+
+local waUnread = deepcopy(snap)
+waUnread.unreadable = { [waPath] = true }
+ok('WebConf: unreadable bundle id is a skip', has(ms.plan(cfg, 'WebConf', waUnread), "quit WhatsApp Web: can't read its bundle id, skip"))
+
+local waRun = deepcopy(snap)
+waRun.running[waPath] = true
+waRun.names[waPath] = 'WhatsApp Web'
+ok('WebConf: quits a running WhatsApp Web politely', has(ms.plan(cfg, 'WebConf', waRun), 'quit WhatsApp Web politely'))
+ok('DeepWork: quits a running WhatsApp Web politely', has(ms.plan(cfg, 'DeepWork', waRun), 'quit WhatsApp Web politely'))
+
+-- A fake id, not the one on any real Mac. state.json stores the id read at quit time.
+local waBundle = 'com.apple.Safari.WebApp.11111111-2222-3333-4444-555555555555'
+local waExpanded = '/tmp/home/Applications/WhatsApp Web.app'
+local waSnap = {
+  running = { [waPath] = true },
+  names = { [waPath] = 'WhatsApp Web' },
+  bundles = { [waPath] = waBundle },
+  paths = { [waPath] = waExpanded },
+}
+local waRec = ms.quitRecord(waSpec, waSnap)
+eq('quit records the resolved bundle id', waBundle, waRec and waRec.bundle)
+eq('quit records the app path', waExpanded, waRec and waRec.path)
+eq('quit records the configured path', waPath, waRec and waRec.app)
+eq('quit records the display name', 'WhatsApp Web', waRec and waRec.name)
+ok('DeepWork quits that recorded app', ms.modeQuits(cfg.modes.DeepWork, waRec))
+ok('WebConf quits that recorded app', ms.modeQuits(cfg.modes.WebConf, waRec))
+ok('DeepWork does not quit Spotify', not ms.modeQuits(cfg.modes.DeepWork, { bundle = 'com.spotify.client', name = 'Spotify' }))
+eq('a missing WhatsApp Web is not recorded', nil, ms.quitRecord(waSpec, { missing = { [waPath] = true }, running = {} }))
+eq('a stopped WhatsApp Web is not recorded', nil, ms.quitRecord(waSpec, { running = {} }))
+eq('Safari itself is not recorded', nil, ms.quitRecord(waSpec, {
+  running = { [waPath] = true }, blocked = { [waPath] = true },
+  bundles = { [waPath] = 'com.apple.Safari' }, paths = { [waPath] = '/Applications/Safari.app' },
+}))
+eq('a Safari bundle id is refused even when marked running', nil, ms.quitRecord(waSpec, {
+  running = { [waPath] = true }, bundles = { [waPath] = 'com.apple.Safari' },
+  paths = { [waPath] = '/Applications/Safari.app' },
+}))
+local spot = ms.quitRecord('com.spotify.client', {
+  running = { ['com.spotify.client'] = true }, names = { ['com.spotify.client'] = 'Spotify' },
+})
+eq('a normal app is still recorded by bundle id', 'com.spotify.client', spot and spot.bundle)
+eq('a normal app has no path', nil, spot and spot.path)
+
+local reopen = ms.reopenArgs(waRec)
+eq('reopen launches in the background', '-g', reopen and reopen[1])
+eq('reopen uses the web app path', waExpanded, reopen and reopen[2])
+ok('reopen by path does not name Safari', reopen and not reopen[2]:find('Safari', 1, true))
+local reopenId = ms.reopenArgs({ bundle = waBundle, name = 'WhatsApp Web' })
+eq('reopen by bundle id is still background', '-g', reopenId and reopenId[1])
+eq('reopen by bundle id uses -b', '-b', reopenId and reopenId[2])
+eq('reopen by bundle id is the web app', waBundle, reopenId and reopenId[3])
+ok('reopen by bundle id is not Safari itself', reopenId and reopenId[3] ~= 'com.apple.Safari')
+eq('Safari is not launched', nil, ms.reopenArgs({ bundle = 'com.apple.Safari', name = 'Safari' }))
+local reopenSpot = ms.reopenArgs({ bundle = 'com.spotify.client', name = 'Spotify' })
+eq('other apps still reopen with open -g -b', '-b', reopenSpot and reopenSpot[2])
+eq('other apps reopen their own bundle id', 'com.spotify.client', reopenSpot and reopenSpot[3])
+
+local waBack = deepcopy(snap)
+waBack.current = 'WebConf'
+waBack.changes = { quit = { waRec } }
+ok('Normal: reopens WhatsApp Web in the background', has(ms.plan(cfg, 'Normal', waBack), 'reopen WhatsApp Web in the background (open -g)'))
+
+-- WebConf and DeepWork both quit WhatsApp Web. Switching between them must
+-- leave it quit and keep the record, or Normal would lose it and open -g would
+-- race the next quit.
+local fromWa = deepcopy(snap)
+fromWa.current = 'WebConf'
+fromWa.changes = { quit = {
+  { bundle = waBundle, name = 'WhatsApp Web', path = waExpanded, app = waPath },
+  { bundle = 'com.spotify.client', name = 'Spotify' },
+}, focus = 'WebConf' }
+local toDeep = ms.plan(cfg, 'DeepWork', fromWa)
+ok('DeepWork leaves WhatsApp Web quit', has(toDeep, 'leave WhatsApp Web quit (this mode quits it too)'))
+ok('DeepWork still reopens Spotify', has(toDeep, 'reopen Spotify in the background'))
+ok('DeepWork does not reopen WhatsApp Web', not has(toDeep, 'reopen WhatsApp Web'))
+ok('DeepWork keeps the quit for Normal', has(toDeep, 'quit WhatsApp Web: already quit, kept so Normal reopens it'))
+local gone = deepcopy(fromWa)
+gone.missing = { [waPath] = true }
+local gonePlan = ms.plan(cfg, 'DeepWork', gone)
+ok('a missing WhatsApp Web is not kept quit', has(gonePlan, 'quit WhatsApp Web: not installed, skip'))
+ok('a missing WhatsApp Web is not reopened', has(gonePlan, 'reopen WhatsApp Web: not installed, skip'))
+ok('a missing WhatsApp Web is not described as already quit', not has(gonePlan, 'already quit'))
 
 -- ---- Focus skip toast + menu status line ---------------------------------------
 eq('missing Shortcut is missing', true, ms.shortcutMissing({}, 'Mode WebConf On'))

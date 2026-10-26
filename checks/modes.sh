@@ -8,7 +8,9 @@
 # checks syntax). The Focus Shortcuts and Focus modes it names should exist (report
 # only: a mode still runs without them). A non-Normal mode left on for more than
 # HEALTH_MODE_MAX_HOURS is a warning. Apps a mode quit or hid on purpose are listed as
-# info, never drift. Read-only: never switches a mode or touches state.json.
+# info, never drift. The note uses the display name recorded in state.json, so a
+# path app such as WhatsApp Web is listed by that name, not by a stored bundle id.
+# Read-only: never switches a mode or touches state.json.
 # scripts/manual-steps.sh calls check_step_mode_focus_shortcuts and
 # check_step_mode_focus_modes (@macconfig:modes).
 check_step_mode_focus_shortcuts() {
@@ -101,7 +103,14 @@ if [ ! -r "$MODES_CFG" ] || [ ! -r "$MODES_ENGINE" ]; then
   fixid repo-file; bad "hammerspoon/modes.lua or mode_switcher.lua missing — restore it from git"
 else
   if [ -n "$modes_lua" ]; then
-    modes_val="$(with_timeout 10 "$modes_lua" -e "local ms = dofile(arg[1]); io.write(ms.validateFile(arg[2]))" "$MODES_ENGINE" "$MODES_CFG" </dev/null 2>&1 || true)"
+    # lua -e puts the first file in arg[0] and the next in arg[1]. Older
+    # interpreters that leave arg[0] as the -e chunk still use arg[1], arg[2].
+    modes_val="$(with_timeout 10 "$modes_lua" -e '
+local eng, cfg = arg[0], arg[1]
+if type(eng) ~= "string" or eng:sub(-4) ~= ".lua" then eng, cfg = arg[1], arg[2] end
+local ms = dofile(eng)
+io.write(ms.validateFile(cfg))
+' "$MODES_ENGINE" "$MODES_CFG" </dev/null 2>&1 || true)"
     modes_how="$modes_lua"
   elif command -v hs >/dev/null 2>&1 && pgrep -xq Hammerspoon; then
     # hs reads stdin unless it's /dev/null; dofile (not require) = the repo file as it is now

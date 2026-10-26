@@ -23,6 +23,10 @@
 --
 -- The first half of this file is pure Lua (no hs.*) so tests/modes.test.sh and macconfig-check.sh
 -- can validate modes.lua and the planning logic without Hammerspoon.
+--
+-- A quit or hide entry is a bundle id, or { path = '~/Applications/Name.app', name = 'Name' }.
+-- Path apps (the Safari web app WhatsApp Web) get their bundle id from the app when a
+-- mode runs. A missing app is skipped. Safari itself is never quit or launched.
 
 local M = {}
 
@@ -46,6 +50,24 @@ local function isList(t)
 end
 
 local function bundleOk(s) return type(s) == 'string' and s:match('^[%w][%w%.%-]*$') ~= nil end
+
+--- True for Safari itself. A Safari web app has its own id and is not this.
+function M.isSafariBundle(bundle)
+  return bundle == 'com.apple.Safari' or bundle == 'com.apple.SafariTechnologyPreview'
+end
+
+-- { path = '~/Applications/Name.app' or '/Applications/Name.app', name = 'Name'? }
+local function pathAppOk(t)
+  if type(t) ~= 'table' then return false end
+  for k in pairs(t) do
+    if k ~= 'path' and k ~= 'name' then return false end
+  end
+  local path = t.path
+  if type(path) ~= 'string' or path:find('[\r\n%z]') then return false end
+  if not (path:match('^~/.*%.app$') or path:match('^/.*%.app$')) then return false end
+  if t.name ~= nil and (type(t.name) ~= 'string' or t.name == '') then return false end
+  return true
+end
 
 --- validate(cfg) -> true | false, {errors}
 function M.validate(cfg)
@@ -86,7 +108,15 @@ function M.validate(cfg)
           if not isList(v) then err("mode '%s': %s must be a list", name, k)
           else
             for _, b in ipairs(v) do
-              if not bundleOk(b) then err("mode '%s': %s has a bad bundle id '%s'", name, k, tostring(b)) end
+              if type(b) == 'string' then
+                if not bundleOk(b) then err("mode '%s': %s has a bad bundle id '%s'", name, k, b) end
+              elseif type(b) == 'table' then
+                if not pathAppOk(b) then
+                  err("mode '%s': %s has a bad app path '%s'", name, k, tostring(b.path))
+                end
+              else
+                err("mode '%s': %s has a bad bundle id '%s'", name, k, tostring(b))
+              end
             end
           end
         elseif type(v) ~= want then err("mode '%s': %s must be a %s", name, k, want) end
@@ -245,20 +275,127 @@ function M.modeStatus(info)
   })
 end
 
-local function appName(snap, bundle)
-  return (snap.names and snap.names[bundle]) or bundle
+local function specKey(spec)
+  if type(spec) == 'table' then return spec.path end
+  return spec
+end
+
+--- Display name for a bundle id or a { path, name } app.
+local function specName(snap, spec)
+  local key = specKey(spec)
+  if snap.names and type(key) == 'string' and snap.names[key] then return snap.names[key] end
+  if type(spec) == 'table' and type(spec.name) == 'string' and spec.name ~= '' then return spec.name end
+  if type(key) == 'string' then return key end
+  return '?'
+end
+
+--- modeQuits(mode, q) -> bool
+--- q is a recorded quit: { bundle, name, path?, app? }. app is the configured
+--- path (~/Applications/Name.app) so a later mode can recognise the same app
+--- without knowing the per-Mac bundle id.
+function M.modeQuits(mode, q)
+  if type(mode) ~= 'table' or type(q) ~= 'table' then return false end
+  for _, spec in ipairs(mode.quit or {}) do
+    if type(spec) == 'string' then
+      if spec == q.bundle then return true end
+    elseif type(spec) == 'table' then
+      if type(q.app) == 'string' and q.app == spec.path then return true end
+      if type(q.path) == 'string' and q.path == spec.path then return true end
+    end
+  end
+  return false
+end
+
+--- quitLine(spec, snap, carried) -> one dry-run line, without the leading indent.
+--- A path app that is not installed, cannot be read, or would be Safari is a skip.
+--- carried is quit records the previous mode left behind that this mode also quits.
+function M.quitLine(spec, snap, carried)
+  snap = snap or {}
+  local key = specKey(spec)
+  local label = specName(snap, spec)
+  if type(spec) == 'table' then
+    if snap.blocked and snap.blocked[key] then
+      return 'quit ' .. label .. ': would quit Safari, skip'
+    end
+    if snap.unreadable and snap.unreadable[key] then
+      return 'quit ' .. label .. ": can't read its bundle id, skip"
+    end
+    if snap.missing and snap.missing[key] then
+      return 'quit ' .. label .. ': not installed, skip'
+    end
+  end
+  if snap.running and snap.running[key] then
+    return 'quit ' .. label .. ' politely (skipped if it has unsaved work or refuses)'
+  end
+  if type(carried) == 'table' then
+    for _, q in ipairs(carried) do
+      if M.modeQuits({ quit = { spec } }, q) then
+        return 'quit ' .. label .. ': already quit, kept so Normal reopens it'
+      end
+    end
+  end
+  return 'quit ' .. label .. ': not running, skip'
+end
+
+--- quitRecord(spec, snap) -> { bundle, name, path? } | nil
+--- nil means do not quit and do not record it. path is set only for a path app,
+--- and only once it is expanded: open does not expand ~.
+function M.quitRecord(spec, snap)
+  snap = snap or {}
+  local key = specKey(spec)
+  if type(spec) == 'table' then
+    if (snap.blocked and snap.blocked[key]) or (snap.missing and snap.missing[key])
+       or (snap.unreadable and snap.unreadable[key]) then
+      return nil
+    end
+  end
+  if not (snap.running and snap.running[key]) then return nil end
+  local bundle = type(spec) == 'string' and spec or (snap.bundles and snap.bundles[key])
+  if type(bundle) ~= 'string' or bundle == '' or M.isSafariBundle(bundle) then return nil end
+  local rec = { bundle = bundle, name = specName(snap, spec) }
+  if type(spec) == 'table' then
+    if type(spec.path) == 'string' then rec.app = spec.path end
+    local path = snap.paths and snap.paths[key]
+    if type(path) == 'string' and path ~= '' and path:sub(1, 1) ~= '~' then rec.path = path end
+  end
+  return rec
+end
+
+--- reopenArgs(q) -> { '-g', path } | { '-g', '-b', bundle } | nil
+--- A recorded path is that app bundle (the web app), launched in the background.
+--- A bare Safari bundle id is not launched.
+function M.reopenArgs(q)
+  if type(q) ~= 'table' then return nil end
+  if type(q.path) == 'string' and q.path ~= '' and q.path:sub(1, 1) ~= '~' then
+    return { '-g', q.path }
+  end
+  if type(q.bundle) == 'string' and q.bundle ~= '' and not M.isSafariBundle(q.bundle) then
+    return { '-g', '-b', q.bundle }
+  end
+  return nil
 end
 
 -- What Normal's restore would do for a recorded set of changes.
-local function restoreLines(cfg, changes, snap, out, indent)
+local function restoreLines(cfg, changes, snap, out, indent, nextMode)
   changes = changes or {}
   local any = false
   for _, q in ipairs(changes.quit or {}) do
     any = true
-    if snap.running and snap.running[q.bundle] then
-      out[#out + 1] = indent .. 'reopen ' .. (q.name or q.bundle) .. ': already running, nothing to do'
+    local label = q.name or q.bundle
+    local appKey = type(q.app) == 'string' and q.app or nil
+    if appKey and snap.missing and snap.missing[appKey] then
+      out[#out + 1] = indent .. 'reopen ' .. label .. ': not installed, skip'
+    elseif appKey and snap.unreadable and snap.unreadable[appKey] then
+      out[#out + 1] = indent .. 'reopen ' .. label .. ": can't read its bundle id, skip"
+    elseif appKey and snap.blocked and snap.blocked[appKey] then
+      out[#out + 1] = indent .. 'reopen ' .. label .. ': would launch Safari, skip'
+    elseif nextMode and M.modeQuits(nextMode, q) then
+      -- Leave it quit. Reopening it, then quitting it again, races open -g.
+      out[#out + 1] = indent .. 'leave ' .. label .. ' quit (this mode quits it too)'
+    elseif snap.running and snap.running[q.bundle] then
+      out[#out + 1] = indent .. 'reopen ' .. label .. ': already running, nothing to do'
     else
-      out[#out + 1] = indent .. 'reopen ' .. (q.name or q.bundle) .. ' in the background (open -g)'
+      out[#out + 1] = indent .. 'reopen ' .. label .. ' in the background (open -g)'
     end
   end
   for _, h in ipairs(changes.hidden or {}) do
@@ -277,8 +414,12 @@ local function restoreLines(cfg, changes, snap, out, indent)
 end
 
 --- plan(cfg, name, snap) -> { lines }. snap = { current = 'Mode', changes = {...},
---- running = { [bundle] = true }, hidden = { [bundle] = true }, names = { [bundle] = 'Name' },
+--- running = { [key] = true }, hidden = { [key] = true }, names = { [key] = 'Name' },
+--- missing / unreadable / blocked = { [path] = true } for a path app that is not
+--- installed, has no readable id, or resolved to Safari,
+--- bundles = { [path] = bundle id }, paths = { [path] = expanded path },
 --- shortcuts = { [name] = true } | nil (unknown) }
+--- A key is a bundle id, or the path of a { path, name } app.
 function M.plan(cfg, name, snap)
   snap = snap or {}
   local out = {}
@@ -293,25 +434,30 @@ function M.plan(cfg, name, snap)
   if current == name then
     out[#out + 1] = '  already in ' .. name .. ': switching again restores first, then re-applies'
   end
+  local carried
   if current ~= 'Normal' then
+    carried = {}
+    for _, q in ipairs((snap.changes or {}).quit or {}) do
+      if M.modeQuits(m, q) then carried[#carried + 1] = q end
+    end
     out[#out + 1] = '  first, restore (as Normal would):'
-    restoreLines(cfg, snap.changes, snap, out, '    ')
+    restoreLines(cfg, snap.changes, snap, out, '    ', m)
   end
   out[#out + 1] = '  write state.json (mode ' .. name .. ', what will change) before changing anything'
   for _, b in ipairs(m.quit or {}) do
-    if snap.running and snap.running[b] then
-      out[#out + 1] = '  quit ' .. appName(snap, b) .. ' politely (skipped if it has unsaved work or refuses)'
-    else
-      out[#out + 1] = '  quit ' .. appName(snap, b) .. ': not running, skip'
-    end
+    out[#out + 1] = '  ' .. M.quitLine(b, snap, carried)
   end
   for _, b in ipairs(m.hide or {}) do
-    if not (snap.running and snap.running[b]) then
-      out[#out + 1] = '  hide ' .. appName(snap, b) .. ': not running, skip'
-    elseif snap.hidden and snap.hidden[b] then
-      out[#out + 1] = '  hide ' .. appName(snap, b) .. ': already hidden, skip (not recorded)'
+    local key = specKey(b)
+    local label = specName(snap, b)
+    if type(b) == 'table' and snap.missing and snap.missing[key] then
+      out[#out + 1] = '  hide ' .. label .. ': not installed, skip'
+    elseif not (snap.running and snap.running[key]) then
+      out[#out + 1] = '  hide ' .. label .. ': not running, skip'
+    elseif snap.hidden and snap.hidden[key] then
+      out[#out + 1] = '  hide ' .. label .. ': already hidden, skip (not recorded)'
     else
-      out[#out + 1] = '  hide ' .. appName(snap, b)
+      out[#out + 1] = '  hide ' .. label
     end
   end
   if m.focus then
@@ -326,7 +472,7 @@ function M.plan(cfg, name, snap)
   end
   if m.keepDisplayAwake then out[#out + 1] = '  keep the display awake (displayIdle) until you leave the mode' end
   if m.front then
-    out[#out + 1] = '  bring ' .. appName(snap, m.front) .. ' to the front'
+    out[#out + 1] = '  bring ' .. specName(snap, m.front) .. ' to the front'
       .. ((snap.running and not snap.running[m.front]) and ' (launches it)' or '')
   end
   if name ~= 'Normal' and m.focus then
@@ -413,8 +559,13 @@ local function stopTimer(name)
 end
 
 local function appByBundle(bundle)
+  -- Never hand back Safari. A web app has its own bundle id and its own process.
+  if type(bundle) ~= 'string' or bundle == '' or M.isSafariBundle(bundle) then return nil end
   for _, a in ipairs(hs.application.applicationsForBundleID(bundle) or {}) do
-    if a:isRunning() then return a end
+    if a:isRunning() then
+      local ok, bid = pcall(function() return a:bundleID() end)
+      if not (ok and M.isSafariBundle(bid)) then return a end
+    end
   end
   return nil
 end
@@ -657,30 +808,109 @@ local function unsavedWork(app)
   return false
 end
 
+local function expandPath(path)
+  if type(path) ~= 'string' then return nil end
+  if path:sub(1, 2) == '~/' then
+    if type(HOME) ~= 'string' or HOME == '' then return nil end
+    return HOME .. path:sub(2)
+  end
+  return path
+end
+
+-- Bundle id from a path app's Info.plist. problem is 'missing', 'unreadable',
+-- 'safari', or nil when bid is usable. Never raises: a missing app is a skip.
+local function bundleIdAtPath(path)
+  local info
+  if type(hs.application.infoForBundlePath) == 'function' then
+    local ok, result = pcall(hs.application.infoForBundlePath, path)
+    if ok and type(result) == 'table' then info = result end
+  end
+  if type(info) ~= 'table' and hs.plist and type(hs.plist.read) == 'function' then
+    local ok, result = pcall(hs.plist.read, path .. '/Contents/Info.plist')
+    if ok and type(result) == 'table' then info = result end
+  end
+  local exists = false
+  if hs.fs and type(hs.fs.attributes) == 'function' then
+    local okAttr, attrs = pcall(hs.fs.attributes, path)
+    exists = okAttr and attrs ~= nil
+  end
+  local bid = type(info) == 'table' and info.CFBundleIdentifier or nil
+  if type(bid) == 'string' then bid = bid:match('^%s*(.-)%s*$') end
+  if type(bid) ~= 'string' or bid == '' then
+    if exists then return nil, 'unreadable' end
+    return nil, 'missing'
+  end
+  if M.isSafariBundle(bid) then return nil, 'safari' end
+  return bid, nil
+end
+
 local function snapshot()
-  local snap = { running = {}, hidden = {}, names = {}, shortcuts = shortcutsKnown,
+  local snap = { running = {}, hidden = {}, names = {}, bundles = {}, paths = {},
+                 missing = {}, unreadable = {}, blocked = {},
+                 shortcuts = shortcutsKnown,
                  current = state.mode, changes = state.changes }
-  local function look(b)
+  local function lookBundle(b)
+    if type(b) ~= 'string' then return end
     local a = appByBundle(b)
     snap.names[b] = cleanName(bundleName(b))
     if a then snap.running[b] = true; if a:isHidden() then snap.hidden[b] = true end end
   end
-  for _, m in pairs(cfg.modes) do
-    for _, b in ipairs(m.quit or {}) do look(b) end
-    for _, b in ipairs(m.hide or {}) do look(b) end
-    if m.front then look(m.front) end
+  local function noteProblem(key, problem)
+    if problem == 'safari' then snap.blocked[key] = true
+    elseif problem == 'unreadable' then snap.unreadable[key] = true
+    else snap.missing[key] = true end
   end
-  for _, q in ipairs(state.changes.quit or {}) do look(q.bundle) end
+  local function lookSpec(spec)
+    if type(spec) ~= 'table' then lookBundle(spec); return end
+    local key = specKey(spec)
+    if type(key) ~= 'string' or key == '' then return end
+    if type(spec.name) == 'string' and spec.name ~= '' then snap.names[key] = spec.name
+    else snap.names[key] = key end
+    local path = expandPath(spec.path)
+    if type(path) ~= 'string' then noteProblem(key, 'missing'); return end
+    snap.paths[key] = path
+    local bid, problem = bundleIdAtPath(path)
+    if not bid then noteProblem(key, problem); return end
+    snap.bundles[key] = bid
+    local a = appByBundle(bid)
+    if not a then return end
+    snap.running[key] = true
+    local live = a:name()
+    if type(live) == 'string' and live ~= '' then snap.names[key] = cleanName(live) end
+    if a:isHidden() then snap.hidden[key] = true end
+  end
+  for _, m in pairs(cfg.modes) do
+    for _, b in ipairs(m.quit or {}) do lookSpec(b) end
+    for _, b in ipairs(m.hide or {}) do lookSpec(b) end
+    if m.front then lookBundle(m.front) end
+  end
+  for _, q in ipairs(state.changes.quit or {}) do lookBundle(q.bundle) end
   return snap
 end
 
 -- ---- restore (Normal) + apply -------------------------------------------------
 
-local function restoreChanges(changes)
+-- 'missing', 'unreadable', or 'safari' when a recorded path app must not be launched.
+-- nil when it is fine to launch, or when the record is a normal bundle id.
+local function pathProblem(q)
+  if type(q.app) ~= 'string' then return nil end
+  local path = expandPath(q.app)
+  if type(path) ~= 'string' then return 'missing' end
+  local bid, problem = bundleIdAtPath(path)
+  if bid then return nil end
+  return problem or 'missing'
+end
+
+local function restoreChanges(changes, keep)
   local msgs = {}
+  local skip = {}
+  for _, q in ipairs(keep or {}) do skip[q] = true end
   for _, q in ipairs(changes.quit or {}) do
-    if not appByBundle(q.bundle) then
-      runTask('/usr/bin/open', { '-g', '-b', q.bundle })   -- background, not hidden
+    -- keep: the next mode quits this app too, so leave the process quit.
+    -- pathProblem: the web app is gone, or the path is Safari itself.
+    if not skip[q] and not pathProblem(q) and not appByBundle(q.bundle) then
+      local args = M.reopenArgs(q)   -- background, not hidden; path apps are not Safari
+      if args then runTask('/usr/bin/open', args) end
     end
   end
   for _, h in ipairs(changes.hidden or {}) do
@@ -697,29 +927,72 @@ local function restoreChanges(changes)
   return msgs
 end
 
-local function restoreToNormal(reason)
+local function changesBeingRestored()
+  if state.phase == 'restoring' and state.restoreOf then return state.restoreOf end
+  return state.changes or {}
+end
+
+local function restoreToNormal(keep)
   local prev, prevSince = state.mode, state.since
-  local changes = state.changes or {}
-  if state.phase == 'restoring' and state.restoreOf then changes = state.restoreOf end
+  local changes = changesBeingRestored()
   -- state first: if anything below fails, the next Normal still knows what to undo
   state = { mode = 'Normal', since = now(), phase = 'restoring', restoreOf = changes, changes = {} }
   writeState(state)
-  restoreChanges(changes)
+  restoreChanges(changes, keep)
   state.phase = 'applied'; state.restoreOf = nil
   writeState(state)
   return prev, prevSince
 end
 
-local function applyMode(name)
+local function copyQuit(q)
+  local rec = { bundle = q.bundle, name = q.name }
+  if type(q.path) == 'string' and q.path ~= '' then rec.path = q.path end
+  if type(q.app) == 'string' and q.app ~= '' then rec.app = q.app end
+  return rec
+end
+
+local function carriedDropped(spec, snap, q)
+  if type(spec) ~= 'table' or not M.modeQuits({ quit = { spec } }, q) then return false end
+  local key = specKey(spec)
+  return (snap.missing and snap.missing[key]) or (snap.blocked and snap.blocked[key])
+    or (snap.unreadable and snap.unreadable[key])
+end
+
+local function applyMode(name, carried)
   local m = cfg.modes[name]
   local snap = snapshot()
   -- Plan what will change and record it BEFORE changing anything.
   local changes = { quit = {}, hidden = {} }
-  for _, b in ipairs(m.quit or {}) do
-    if snap.running[b] then changes.quit[#changes.quit + 1] = { bundle = b, name = snap.names[b] } end
+  local seen = {}
+  for _, spec in ipairs(m.quit or {}) do
+    local rec = M.quitRecord(spec, snap)
+    if rec then
+      changes.quit[#changes.quit + 1] = rec
+      seen[rec.bundle] = true
+    end
   end
-  for _, b in ipairs(m.hide or {}) do
-    if snap.running[b] and not snap.hidden[b] then changes.hidden[#changes.hidden + 1] = { bundle = b, name = snap.names[b] } end
+  -- Apps the previous mode already quit, which this mode quits too, stay
+  -- recorded so Normal still reopens them. They were not launched again.
+  for _, q in ipairs(carried or {}) do
+    if type(q.bundle) == 'string' and not seen[q.bundle] and not M.isSafariBundle(q.bundle) then
+      local drop = false
+      for _, spec in ipairs(m.quit or {}) do
+        if carriedDropped(spec, snap, q) then drop = true end
+      end
+      if not drop then
+        changes.quit[#changes.quit + 1] = copyQuit(q)
+        seen[q.bundle] = true
+      end
+    end
+  end
+  for _, spec in ipairs(m.hide or {}) do
+    local key = specKey(spec)
+    if snap.running[key] and not snap.hidden[key] then
+      local bundle = type(spec) == 'string' and spec or snap.bundles[key]
+      if type(bundle) == 'string' and bundle ~= '' and not M.isSafariBundle(bundle) then
+        changes.hidden[#changes.hidden + 1] = { bundle = bundle, name = specName(snap, spec) }
+      end
+    end
   end
   if m.focus then changes.focus = m.focus end
   if m.keepDisplayAwake then changes.displayAwake = true end
@@ -730,15 +1003,20 @@ local function applyMode(name)
   writeState(state)
 
   local skipped = {}
-  -- quit politely (kill() = Cmd-Q); never force
+  -- quit politely (kill() = Cmd-Q); never force, and never Safari
   for _, q in ipairs(changes.quit) do
-    local a = appByBundle(q.bundle)
-    if a then
-      if unsavedWork(a) then
-        q.result = 'skipped: unsaved work'; skipped[#skipped + 1] = q.name .. ' (unsaved work)'
-      elseif a:kill() == false then   -- polite quit, like Cmd-Q
-        q.result = 'skipped: refused'; skipped[#skipped + 1] = q.name .. " (didn't accept quit)"
-      else q.result = 'asked' end
+    if M.isSafariBundle(q.bundle) then
+      q.result = 'skipped: safari'
+      log.w('refusing to quit Safari for ' .. tostring(q.name))
+    else
+      local a = appByBundle(q.bundle)
+      if a then
+        if unsavedWork(a) then
+          q.result = 'skipped: unsaved work'; skipped[#skipped + 1] = q.name .. ' (unsaved work)'
+        elseif a:kill() == false then   -- polite quit, like Cmd-Q
+          q.result = 'skipped: refused'; skipped[#skipped + 1] = q.name .. " (didn't accept quit)"
+        else q.result = 'asked' end
+      end
     end
   end
   for _, h in ipairs(changes.hidden) do
@@ -778,8 +1056,18 @@ function M.switch(name)
   local prev, prevSince = state.mode, state.since
   notes.skipped = nil; notes.focus = nil
   focusTrack = {}
-  if state.mode ~= 'Normal' or state.phase == 'restoring' then restoreToNormal() end
-  if name ~= 'Normal' then applyMode(name) end
+  local carried
+  if state.mode ~= 'Normal' or state.phase == 'restoring' then
+    local nextMode = name ~= 'Normal' and cfg.modes[name] or nil
+    carried = {}
+    if nextMode then
+      for _, q in ipairs(changesBeingRestored().quit or {}) do
+        if M.modeQuits(nextMode, q) and not pathProblem(q) then carried[#carried + 1] = q end
+      end
+    end
+    restoreToNormal(carried)
+  end
+  if name ~= 'Normal' then applyMode(name, carried) end
   logSwitch(name, prev, prevSince)
   alert('Mode: ' .. cfg.modes[name].label, 1.5)
   updateMenu()
