@@ -48,6 +48,8 @@ Usage: tests/run-all.sh [options]
                            set HOME, and run there. Default name: pdone.
   --tailscale absent       Run with Tailscale.app not installed.
   --tailscale installed    Run with /Applications/Tailscale.app present.
+  --check-view             Print present or absent for Tailscale.app as a
+                           worker would see it, then exit.
   -h, --help               Show this help.
 A missing shellcheck binary is skipped for --shellcheck changed (local hook)
 and is a failure for --shellcheck all (CI).
@@ -61,6 +63,7 @@ MAC_HOME=0
 # Default account: the checkout that passed in CI and failed locally.
 MAC_NAME="pdone"
 TAILSCALE_VIEW=""
+CHECK_VIEW=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -78,6 +81,7 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --no-tests) DO_TESTS=0; shift ;;
+    --check-view) CHECK_VIEW=1; shift ;;
     --tailscale)
       [ $# -ge 2 ] || { echo "tests/run-all.sh: --tailscale needs absent or installed" >&2; exit 2; }
       case "$2" in
@@ -189,6 +193,7 @@ if [ "$MAC_HOME" = 1 ] && [ -z "${RUN_ALL_INSIDE_MAC_HOME:-}" ]; then
   [ -n "$SHELLCHECK_MODE" ] && child+=(--shellcheck "$SHELLCHECK_MODE")
   [ "$DO_TESTS" = 0 ] && child+=(--no-tests)
   [ -n "$TAILSCALE_VIEW" ] && child+=(--tailscale "$TAILSCALE_VIEW")
+  [ "$CHECK_VIEW" = 1 ] && child+=(--check-view)
   echo "tests/run-all.sh: mac-style home ${dest} (HOME=${parent})"
   HOME="$parent" USER="$MAC_NAME" LOGNAME="$MAC_NAME" RUN_ALL_INSIDE_MAC_HOME=1 \
     "$dest/tests/run-all.sh" "${child[@]+"${child[@]}"}"
@@ -209,8 +214,17 @@ if [ -n "$TAILSCALE_VIEW" ] && [ -z "${RUN_ALL_INSIDE_TAILSCALE:-}" ]; then
   [ -n "$JOBS" ] && view_args+=(--jobs "$JOBS")
   [ -n "$SHELLCHECK_MODE" ] && view_args+=(--shellcheck "$SHELLCHECK_MODE")
   [ "$DO_TESTS" = 0 ] && view_args+=(--no-tests)
+  [ "$CHECK_VIEW" = 1 ] && view_args+=(--check-view)
   exec "$ROOT/tests/tailscale-view.sh" "$TAILSCALE_VIEW" -- \
     "$ROOT/tests/run-all.sh" "${view_args[@]+"${view_args[@]}"}"
+fi
+
+# What a worker sees. This process has already assigned TAILSCALE_VIEW="",
+# and a child inherits that the way xargs workers do. The word is the only
+# stdout, so tests can compare it.
+if [ "$CHECK_VIEW" = 1 ]; then
+  /bin/bash -c 'if [ -d /Applications/Tailscale.app ]; then echo present; else echo absent; fi'
+  exit $?
 fi
 
 cd "$ROOT" || exit 1
