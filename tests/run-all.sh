@@ -14,6 +14,7 @@
 #   tests/run-all.sh --shellcheck all --no-tests
 #   tests/run-all.sh --jobs N
 #   tests/run-all.sh --mac-home [name]
+#   tests/run-all.sh --tailscale absent|installed
 #
 # --shellcheck changed reads the pre-push ref lines on stdin
 # (`<local ref> <local sha> <remote ref> <remote sha>`). When that remote
@@ -25,6 +26,10 @@
 # HOME at /Users/<name>, and runs the suite there. The default name is the
 # account whose checkout used to pass in CI and fail locally. On Linux, where
 # that directory doesn't exist, it is created (sudo -n) so the path is real.
+#
+# --tailscale absent hides /Applications/Tailscale.app. --tailscale installed
+# makes that bundle exist. tests/tailscale-view.sh builds the view. The suite
+# should pass in both; a test that reads the host's Tailscale install will not.
 #
 # Bash 3.2-safe (stock macOS bash): no mapfile, no associative arrays.
 #
@@ -41,6 +46,10 @@ Usage: tests/run-all.sh [options]
   --no-tests               Do not run tests/*.test.sh.
   --mac-home [name]        Copy the repo under /Users/<name>/.dotfiles-mac-style,
                            set HOME, and run there. Default name: pdone.
+  --tailscale absent       Run with Tailscale.app not installed.
+  --tailscale installed    Run with /Applications/Tailscale.app present.
+  --check-view             Print present or absent for Tailscale.app as a
+                           worker would see it, then exit.
   -h, --help               Show this help.
 A missing shellcheck binary is skipped for --shellcheck changed (local hook)
 and is a failure for --shellcheck all (CI).
@@ -53,6 +62,8 @@ DO_TESTS=1
 MAC_HOME=0
 # Default account: the checkout that passed in CI and failed locally.
 MAC_NAME="pdone"
+TAILSCALE_VIEW=""
+CHECK_VIEW=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -70,6 +81,15 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     --no-tests) DO_TESTS=0; shift ;;
+    --check-view) CHECK_VIEW=1; shift ;;
+    --tailscale)
+      [ $# -ge 2 ] || { echo "tests/run-all.sh: --tailscale needs absent or installed" >&2; exit 2; }
+      case "$2" in
+        absent|installed) TAILSCALE_VIEW="$2" ;;
+        *) echo "tests/run-all.sh: --tailscale must be absent or installed" >&2; exit 2 ;;
+      esac
+      shift 2
+      ;;
     --mac-home)
       MAC_HOME=1
       shift
@@ -172,6 +192,8 @@ if [ "$MAC_HOME" = 1 ] && [ -z "${RUN_ALL_INSIDE_MAC_HOME:-}" ]; then
   [ -n "$JOBS" ] && child+=(--jobs "$JOBS")
   [ -n "$SHELLCHECK_MODE" ] && child+=(--shellcheck "$SHELLCHECK_MODE")
   [ "$DO_TESTS" = 0 ] && child+=(--no-tests)
+  [ -n "$TAILSCALE_VIEW" ] && child+=(--tailscale "$TAILSCALE_VIEW")
+  [ "$CHECK_VIEW" = 1 ] && child+=(--check-view)
   echo "tests/run-all.sh: mac-style home ${dest} (HOME=${parent})"
   HOME="$parent" USER="$MAC_NAME" LOGNAME="$MAC_NAME" RUN_ALL_INSIDE_MAC_HOME=1 \
     "$dest/tests/run-all.sh" "${child[@]+"${child[@]}"}"
@@ -183,6 +205,26 @@ if [ "$MAC_HOME" = 1 ] && [ -z "${RUN_ALL_INSIDE_MAC_HOME:-}" ]; then
     sudo -n rmdir /Users 2>/dev/null || true
   fi
   exit "$rc"
+fi
+
+# Show the suite a machine where Tailscale.app is either missing or present.
+# mac-home (above) copies first; this re-execs that copy inside the view.
+if [ -n "$TAILSCALE_VIEW" ] && [ -z "${RUN_ALL_INSIDE_TAILSCALE:-}" ]; then
+  view_args=()
+  [ -n "$JOBS" ] && view_args+=(--jobs "$JOBS")
+  [ -n "$SHELLCHECK_MODE" ] && view_args+=(--shellcheck "$SHELLCHECK_MODE")
+  [ "$DO_TESTS" = 0 ] && view_args+=(--no-tests)
+  [ "$CHECK_VIEW" = 1 ] && view_args+=(--check-view)
+  exec "$ROOT/tests/tailscale-view.sh" "$TAILSCALE_VIEW" -- \
+    "$ROOT/tests/run-all.sh" "${view_args[@]+"${view_args[@]}"}"
+fi
+
+# What a worker sees. This process has already assigned TAILSCALE_VIEW="",
+# and a child inherits that the way xargs workers do. The word is the only
+# stdout, so tests can compare it.
+if [ "$CHECK_VIEW" = 1 ]; then
+  /bin/bash -c 'if [ -d /Applications/Tailscale.app ]; then echo present; else echo absent; fi'
+  exit $?
 fi
 
 cd "$ROOT" || exit 1
