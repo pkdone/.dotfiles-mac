@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that the built-in display is on More Space, and plan a displayplacer command.
+"""Check display modes, and plan a displayplacer command.
 
 `system_profiler SPDisplaysDataType -json` lists each GPU's `spdisplays_ndrvs`.
 A built-in panel is a drive whose `spdisplays_connection_type` is
@@ -13,20 +13,39 @@ size to the start of its More Space `_spdisplays_resolution`: 3024x1964 (14")
 is `1800 x 1169` and 3456x2234 (16") is `2056 x 1329`. The live string looks
 like `1800 x 1169 @ 120.00Hz`. A panel size not in the list is an info line.
 
+The same list pins the ARZOPA portable monitor (`external|...` rows). It is
+connected when some non-built-in display's `_name` is the row's name, or
+when a serial field on that display matches the row's serial. The persistent
+screen id is not used: macOS replaces it when the cable moves to another
+port. The check then reads `displayplacer list` (passed with `--placer`) and
+compares resolution, refresh, scaling, and origin. A matching displayplacer
+screen is chosen by serial, then by name, then by type — and type counts
+only when that block does not name a different product or serial. When the
+monitor is absent the line is info, not a warning. Without `--placer` a
+connected monitor is `pending`, so the caller can read `displayplacer list`
+and run again.
+
 One line, fields separated by `|`:
 
     ok||message
     warn||message
     info||message
     error||message
+    pending|arzopa|message
+    ok|arzopa|message
+    warn|arzopa|message
+    info|arzopa|message
 
 `--plan --placer FILE` reads `displayplacer list` output. When the built-in
 panel is not already More Space, it prints that status line and then one
 `screen|<displayplacer arg>` line per screen. The built-in screen switches to
 the More Space mode (scaling on, current refresh rate when that mode exists).
-Every other screen is repeated with its current mode so it is not changed.
-This file does not run displayplacer. A missing mode is a warning and no
-screen lines. Exit status is 0 whenever a line was printed.
+Every other screen is repeated with its current mode so it is not changed,
+except a connected ARZOPA that is not already on its pin: that screen is set
+to the pinned mode and origin `(-width,0)`, and the laptop display's origin
+is set to `(0,0)` so it stays the main display. This file does not run
+displayplacer. A missing mode is a warning and no screen lines. Exit status
+is 0 whenever a line was printed.
 """
 from __future__ import annotations
 
@@ -49,12 +68,24 @@ def emit(status: str, message: str) -> None:
 PANEL_RE = re.compile(r"(\d{3,5})\s*x\s*(\d{3,5})")
 
 
-def load_prefixes(path: str) -> dict[str, str]:
+def load_config(path: str) -> tuple[dict[str, str], list[dict]]:
+    """Panel prefixes, then external pins, from lib/display-resolution.list."""
     rows: dict[str, str] = {}
+    pins: list[dict] = []
+    seen_names: set[str] = set()
     with open(path, encoding="utf-8") as fh:
         for lineno, raw in enumerate(fh, 1):
             body = raw.split("#", 1)[0].strip()
             if not body:
+                continue
+            if body.startswith("external|"):
+                pins.append(_parse_pin(path, lineno, body))
+                key = pins[-1]["name"].lower()
+                if key in seen_names:
+                    raise ValueError(
+                        f"{os.path.basename(path)}:{lineno}: {pins[-1]['name']} listed twice"
+                    )
+                seen_names.add(key)
                 continue
             panel, sep, prefix = body.partition("|")
             panel = panel.strip()
@@ -67,7 +98,39 @@ def load_prefixes(path: str) -> dict[str, str]:
             rows[panel] = prefix.strip()
     if not rows:
         raise ValueError(f"{os.path.basename(path)}: no panel rows")
-    return rows
+    return rows, pins
+
+
+def _parse_pin(path: str, lineno: int, body: str) -> dict:
+    parts = [part.strip() for part in body.split("|")]
+    name = os.path.basename(path)
+    if len(parts) != 8:
+        raise ValueError(
+            f"{name}:{lineno}: want external|<name>|<serial>|<type>|"
+            "<width>x<height>|<hz>|off|left"
+        )
+    _, label, serial, kind, res, hz, scaling, place = parts
+    if not label or not serial or not kind:
+        raise ValueError(f"{name}:{lineno}: name, serial, and type are required")
+    if not re.fullmatch(r"s?\d+", serial, re.I):
+        raise ValueError(f"{name}:{lineno}: serial should look like s74646035")
+    if not re.fullmatch(r"\d+x\d+", res):
+        raise ValueError(f"{name}:{lineno}: resolution should look like 1920x1080")
+    if not re.fullmatch(r"\d+", hz):
+        raise ValueError(f"{name}:{lineno}: refresh rate should be a number")
+    if scaling.lower() not in ("on", "off"):
+        raise ValueError(f"{name}:{lineno}: scaling should be on or off")
+    if place != "left":
+        raise ValueError(f"{name}:{lineno}: place should be left")
+    return {
+        "name": label,
+        "serial": serial,
+        "type": kind,
+        "res": res,
+        "hz": hz,
+        "scaling": scaling.lower(),
+        "place": place,
+    }
 
 
 def panel_size(drv: dict) -> str:
@@ -242,6 +305,12 @@ def parse_placer(text: str) -> list[dict]:
             {
                 "id": sid,
                 "type": _field(block, "Type"),
+                "name": (
+                    _field(block, "Screen name")
+                    or _field(block, "Display name")
+                    or _field(block, "Name")
+                ),
+                "serial": _field(block, "Serial screen id"),
                 "res": _compact_res(_field(block, "Resolution")),
                 "hz": _first_int(_field(block, "Hertz")),
                 "depth": _first_int(_field(block, "Color Depth")),
@@ -321,11 +390,12 @@ def _current_mode(screen: dict) -> dict | None:
     return matches[0] if matches else None
 
 
-def _mode_arg(screen: dict, mode: dict) -> str:
-    if not screen.get("origin"):
+def _mode_arg(screen: dict, mode: dict, origin: str | None = None) -> str:
+    origin = origin or screen.get("origin") or ""
+    if not origin:
         return ""
     degree = screen.get("degree") or "0"
-    return f"id:{screen['id']} mode:{mode['n']} origin:{screen['origin']} degree:{degree}"
+    return f"id:{screen['id']} mode:{mode['n']} origin:{origin} degree:{degree}"
 
 
 def _property_arg(screen: dict) -> str:
@@ -350,11 +420,248 @@ def _manual(message: str) -> None:
     emit("warn", f"built-in display: {text}. Other displays were not changed")
 
 
-def plan_apply(builtins: list[dict], prefixes: dict[str, str], placer_text: str) -> None:
-    """Print a displayplacer plan, or the same check line when nothing should change."""
-    if not _needs_apply(builtins, prefixes):
-        describe(builtins, prefixes)
-        return
+def emit_pin(status: str, message: str) -> None:
+    text = str(message).replace("\n", " ").replace("|", "/")
+    print(f"{status}|arzopa|{text}")
+
+
+def _norm_serial(value: str) -> str:
+    text = re.sub(r"\s+", "", value.strip().lower())
+    if text.startswith("s") and text[1:].isdigit():
+        return text[1:]
+    return text
+
+
+def _norm_type(value: str) -> str:
+    return " ".join(value.lower().replace("-", " ").split())
+
+
+def _drv_serial(drv: dict) -> str:
+    for key, val in drv.items():
+        if "serial" in str(key).lower() and isinstance(val, str) and val.strip():
+            return _norm_serial(val)
+    return ""
+
+
+def _want_origin(pin: dict) -> str:
+    width = pin["res"].split("x", 1)[0]
+    return f"(-{int(width)},0)"
+
+
+def _profiler_connected(displays: list[dict], pin: dict) -> bool:
+    """True when system_profiler shows this monitor.
+
+    Name and serial come from the panel itself. The displayplacer persistent
+    id is not in this report and is not consulted.
+    """
+    want_name = pin["name"].lower()
+    want_serial = _norm_serial(pin["serial"])
+    for drv in displays:
+        if is_builtin(drv):
+            continue
+        if panel_name(drv).lower() == want_name:
+            return True
+        serial = _drv_serial(drv)
+        if want_serial and serial and serial == want_serial:
+            return True
+    return False
+
+
+def _placer_candidates(screens: list[dict], pin: dict) -> list[dict]:
+    """displayplacer screens for this pin.
+
+    Serial wins, then an exact name, then the type. Type is displayplacer's
+    size class ("16 inch external screen"), so it is used only when the block
+    does not already name a different product or carry a different serial.
+    A persistent screen id is never enough on its own.
+    """
+    want_name = pin["name"].lower()
+    want_serial = _norm_serial(pin["serial"])
+    want_type = _norm_type(pin["type"])
+    serial_hits: list[dict] = []
+    name_hits: list[dict] = []
+    type_hits: list[dict] = []
+    for screen in screens:
+        if not screen.get("id") or _builtin_screen(screen):
+            continue
+        name = str(screen.get("name") or "").strip().lower()
+        serial = _norm_serial(str(screen.get("serial") or ""))
+        kind = _norm_type(str(screen.get("type") or ""))
+        if want_serial and serial and serial == want_serial:
+            serial_hits.append(screen)
+            continue
+        if name and name == want_name:
+            name_hits.append(screen)
+            continue
+        if want_type and kind == want_type:
+            if name and name != want_name:
+                continue
+            if serial and want_serial and serial != want_serial:
+                continue
+            type_hits.append(screen)
+    if serial_hits:
+        return serial_hits
+    if name_hits:
+        return name_hits
+    return type_hits
+
+
+def _pick_exact(modes: list[dict], res: str, hz: str, scaling: str) -> dict | None:
+    width, height = (int(part) for part in res.split("x", 1))
+    pool = [
+        mode
+        for mode in modes
+        if mode["w"] == width
+        and mode["h"] == height
+        and mode["hz"] == hz
+        and mode["scaling"] == scaling
+    ]
+    if not pool:
+        return None
+    preferred = [mode for mode in pool if mode["depth"] == "8"]
+    pool = preferred or pool
+    return sorted(pool, key=lambda mode: int(mode["n"]))[0]
+
+
+def _pin_arg(screen: dict, mode: dict, origin: str) -> str:
+    return (
+        f"id:{screen['id']} res:{mode['res']} hz:{mode['hz']} "
+        f"color_depth:{mode['depth']} enabled:true scaling:{mode['scaling']} "
+        f"origin:{origin} degree:0"
+    )
+
+
+def _read_screens(placer_text: str) -> tuple[list[dict] | None, str | None]:
+    if not placer_text.strip():
+        return None, "empty"
+    declared = len(re.findall(r"^Persistent screen id:", placer_text, re.M))
+    screens = parse_placer(placer_text)
+    if declared == 0 or declared != len(screens) or any(not screen.get("id") for screen in screens):
+        return None, "unreadable"
+    return screens, None
+
+
+def _arrangement(screen: dict, screens: list[dict], pin: dict) -> tuple[bool, str]:
+    want = _want_origin(pin)
+    problems: list[str] = []
+    if screen.get("res") != pin["res"]:
+        problems.append(f"resolution {screen.get('res') or 'unknown'}")
+    if screen.get("hz") != pin["hz"]:
+        problems.append(f"{screen.get('hz') or 'unknown'}Hz")
+    if screen.get("scaling") != pin["scaling"]:
+        problems.append(f"scaling {screen.get('scaling') or 'unknown'}")
+    if screen.get("depth") and screen.get("depth") != "8":
+        problems.append(f"color depth {screen.get('depth')}")
+    if (screen.get("degree") or "0") != "0":
+        problems.append(f"rotation {screen.get('degree')}")
+    if screen.get("origin") != want:
+        problems.append(f"origin {screen.get('origin') or 'unknown'}")
+    laptops = [other for other in screens if _builtin_screen(other)]
+    if len(laptops) != 1:
+        problems.append("laptop display was not found")
+    elif laptops[0].get("origin") != "(0,0)":
+        problems.append(f"laptop display origin {laptops[0].get('origin') or 'unknown'}")
+    if not problems:
+        return True, (
+            f"{pin['name']} is {pin['res']} at {pin['hz']}Hz, scaling {pin['scaling']}, "
+            f"at {want}, to the left of the laptop. The laptop stays at (0,0), "
+            "so the Dock and menu bar stay on it"
+        )
+    return False, (
+        f"{pin['name']} is not in its place ({'; '.join(problems)}; "
+        f"want {pin['res']} at {pin['hz']}Hz, scaling {pin['scaling']}, "
+        f"origin {want}, laptop at (0,0)). "
+        "macos.sh sets this with displayplacer when that mode is listed; "
+        "otherwise System Settings → Displays"
+    )
+
+
+def evaluate_pin(displays: list[dict], pin: dict, placer_text: str | None) -> dict:
+    """One external pin: info if absent, pending if its list was not read."""
+    origin = _want_origin(pin)
+    base = {
+        "name": pin["name"],
+        "res": pin["res"],
+        "hz": pin["hz"],
+        "scaling": pin["scaling"],
+        "origin": origin,
+        "fix": False,
+        "mode": None,
+        "screen": None,
+    }
+    if not _profiler_connected(displays, pin):
+        return {
+            **base,
+            "status": "info",
+            "message": f"{pin['name']} not connected — resolution and position not checked",
+        }
+    if placer_text is None:
+        return {
+            **base,
+            "status": "pending",
+            "message": (
+                f"{pin['name']} is connected but displayplacer list was not read, so "
+                f"{pin['res']} at {pin['hz']}Hz, scaling {pin['scaling']}, "
+                f"to the left of the laptop (origin {origin}) was not checked. "
+                "Run brewsync to install displayplacer, or set it by hand "
+                "(System Settings → Displays)"
+            ),
+        }
+    screens, kind = _read_screens(placer_text)
+    if kind is not None or screens is None:
+        return {
+            **base,
+            "status": "warn",
+            "message": (
+                f"{pin['name']}: displayplacer list could not be read, so the monitor "
+                "was not checked. Set it by hand (System Settings → Displays)"
+            ),
+        }
+    hits = _placer_candidates(screens, pin)
+    if len(hits) != 1:
+        if not hits:
+            message = (
+                f"{pin['name']} is connected but displayplacer list has no screen "
+                f"named {pin['name']}, with serial {pin['serial']}, or of type "
+                f"{pin['type']} without a different name or serial. "
+                "The persistent screen id is not used. "
+                "Set it by hand (System Settings → Displays)"
+            )
+        else:
+            message = (
+                f"{pin['name']}: displayplacer list has {len(hits)} matching screens "
+                "(name, serial, or type). The persistent screen id is not used, "
+                "so nothing was changed"
+            )
+        return {**base, "status": "warn", "message": message}
+    screen = hits[0]
+    mode = _pick_exact(screen["modes"], pin["res"], pin["hz"], pin["scaling"])
+    ok, message = _arrangement(screen, screens, pin)
+    if ok:
+        return {**base, "status": "ok", "message": message, "screen": screen, "mode": mode}
+    if mode is None:
+        return {
+            **base,
+            "status": "warn",
+            "message": (
+                f"{pin['name']}: displayplacer has no mode {pin['res']} at {pin['hz']}Hz "
+                f"with scaling {pin['scaling']} — set it by hand "
+                "(System Settings → Displays). Other displays were not changed"
+            ),
+        }
+    laptops = [other for other in screens if _builtin_screen(other)]
+    return {
+        **base,
+        "status": "warn",
+        "message": message,
+        "screen": screen,
+        "mode": mode,
+        "fix": len(laptops) == 1,
+    }
+
+
+def _plan_builtin_only(builtins: list[dict], prefixes: dict[str, str], placer_text: str) -> None:
+    """More Space for the built-in panel. Other screens keep their current mode."""
     if not placer_text.strip():
         _manual(
             "displayplacer list returned nothing — set More Space by hand"
@@ -411,6 +718,154 @@ def plan_apply(builtins: list[dict], prefixes: dict[str, str], placer_text: str)
         print(f"screen|{arg}")
 
 
+def _plan_with_pins(
+    builtins: list[dict],
+    prefixes: dict[str, str],
+    actionable: list[dict],
+    placer_text: str,
+) -> None:
+    """Set each pinned monitor, and More Space too when the laptop needs it."""
+    builtin_needed = _needs_apply(builtins, prefixes)
+    names = ", ".join(ev["name"] for ev in actionable)
+    screens, kind = _read_screens(placer_text)
+    if kind == "empty":
+        if builtin_needed:
+            _manual(
+                "displayplacer list returned nothing — set More Space by hand"
+                " (System Settings → Displays)."
+            )
+        emit_pin(
+            "warn",
+            f"{names}: displayplacer list returned nothing — set the monitor by hand"
+            " (System Settings → Displays)",
+        )
+        return
+    if kind == "unreadable" or screens is None:
+        if builtin_needed:
+            _manual(
+                "could not read every screen from displayplacer list — set More Space"
+                " by hand (System Settings → Displays)."
+            )
+        emit_pin(
+            "warn",
+            f"{names}: could not read every screen from displayplacer list — set the"
+            " monitor by hand (System Settings → Displays)",
+        )
+        return
+    builtin_screens = [screen for screen in screens if _builtin_screen(screen)]
+    if len(builtin_screens) != 1:
+        if builtin_needed:
+            _manual(
+                "could not match the built-in display in displayplacer list — set More"
+                " Space by hand (System Settings → Displays)."
+            )
+        emit_pin(
+            "warn",
+            f"{names}: the laptop display is not in displayplacer list, so the monitor"
+            " was not moved",
+        )
+        return
+    builtin = builtin_screens[0]
+    builtin_mode: dict | None
+    builtin_size: tuple[int, int] | None = None
+    if builtin_needed:
+        jobs = _mismatch_prefixes(builtins, prefixes)
+        if len(jobs) != 1:
+            _manual(
+                "could not match the built-in display in displayplacer list — set More"
+                " Space by hand (System Settings → Displays)."
+            )
+            emit_pin("warn", f"{names} was not changed")
+            return
+        builtin_size = _parse_wh(jobs[0])
+        if builtin_size is None:
+            _manual("the More Space size in lib/display-resolution.list is not width x height.")
+            return
+        builtin_mode = _pick_mode(
+            builtin["modes"], builtin_size[0], builtin_size[1], builtin["hz"], builtin["depth"]
+        )
+        if builtin_mode is None:
+            _manual(
+                f"displayplacer has no More Space mode {builtin_size[0]}x{builtin_size[1]}"
+                " (scaling on) for the built-in display — set it by hand"
+                " (System Settings → Displays)."
+            )
+            for ev in actionable:
+                emit_pin("warn", ev["message"])
+            return
+    else:
+        builtin_mode = _current_mode(builtin)
+        if builtin_mode is None:
+            emit_pin(
+                "warn",
+                f"{names}: could not read the laptop display's current mode, so the"
+                " monitor was not changed",
+            )
+            return
+    by_id = {ev["screen"]["id"]: ev for ev in actionable}
+    args: list[str] = []
+    for screen in screens:
+        if screen["id"] in by_id:
+            ev = by_id[screen["id"]]
+            arg = _pin_arg(screen, ev["mode"], ev["origin"])
+        elif screen["id"] == builtin["id"]:
+            arg = _mode_arg(screen, builtin_mode, origin="(0,0)")
+        else:
+            current = _current_mode(screen)
+            arg = _mode_arg(screen, current) if current is not None else _property_arg(screen)
+        if not arg:
+            if builtin_needed:
+                _manual(
+                    "could not read a display's current mode — set More Space by hand"
+                    " (System Settings → Displays)."
+                )
+            emit_pin(
+                "warn",
+                f"{names}: could not read a display's current mode, so the monitor"
+                " was not changed",
+            )
+            return
+        args.append(arg)
+    if builtin_needed and builtin_size is not None and builtin_mode is not None:
+        emit(
+            "apply",
+            f"built-in display More Space {builtin_size[0]}x{builtin_size[1]}"
+            f" at {builtin_mode['hz']}Hz, scaling on",
+        )
+    for ev in actionable:
+        emit(
+            "apply",
+            f"{ev['name']} {ev['res']} at {ev['hz']}Hz, scaling {ev['scaling']},"
+            " left of the laptop",
+        )
+    for arg in args:
+        print(f"screen|{arg}")
+
+
+def plan_apply(
+    displays: list[dict],
+    builtins: list[dict],
+    prefixes: dict[str, str],
+    pins: list[dict],
+    placer_text: str,
+) -> None:
+    """Print a displayplacer plan, or the check lines when nothing should change."""
+    evals = [evaluate_pin(displays, pin, placer_text) for pin in pins]
+    actionable = [ev for ev in evals if ev.get("fix")]
+    if actionable:
+        _plan_with_pins(builtins, prefixes, actionable, placer_text)
+        return
+    if not _needs_apply(builtins, prefixes):
+        describe(builtins, prefixes)
+        for ev in evals:
+            emit_pin(ev["status"], ev["message"])
+        return
+    _plan_builtin_only(builtins, prefixes, placer_text)
+    for ev in evals:
+        if ev["status"] == "warn":
+            emit_pin(ev["status"], ev["message"])
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="display-resolution.py", description=__doc__)
     parser.add_argument(
@@ -421,16 +876,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--plan",
         action="store_true",
-        help="plan a displayplacer command when the built-in display is not More Space",
+        help="plan a displayplacer command when a managed display is not in place",
     )
     parser.add_argument(
         "--placer",
         default="",
-        help="file of displayplacer list output (used with --plan)",
+        help="file of displayplacer list output (checks the ARZOPA pin, and --plan)",
     )
     args = parser.parse_args(argv)
     try:
-        prefixes = load_prefixes(args.list)
+        prefixes, pins = load_config(args.list)
     except FileNotFoundError as exc:
         emit("error", f"display resolution list missing ({exc.filename})")
         return 0
@@ -449,18 +904,21 @@ def main(argv: list[str] | None = None) -> int:
         emit("error", f"could not read system_profiler JSON ({exc})")
         return 0
     builtins = [drv for drv in displays if is_builtin(drv)]
+    placer: str | None = None
+    if args.placer:
+        try:
+            with open(args.placer, encoding="utf-8") as fh:
+                placer = fh.read()
+        except Exception as exc:  # noqa: BLE001 - a missing list is a report
+            emit("warn", f"could not read displayplacer list ({exc})")
+            return 0
     if args.plan:
-        placer = ""
-        if args.placer:
-            try:
-                with open(args.placer, encoding="utf-8") as fh:
-                    placer = fh.read()
-            except Exception as exc:  # noqa: BLE001 - a missing list is a report
-                emit("warn", f"could not read displayplacer list ({exc})")
-                return 0
-        plan_apply(builtins, prefixes, placer)
+        plan_apply(displays, builtins, prefixes, pins, "" if placer is None else placer)
     else:
         describe(builtins, prefixes)
+        for pin in pins:
+            ev = evaluate_pin(displays, pin, placer)
+            emit_pin(ev["status"], ev["message"])
     return 0
 
 

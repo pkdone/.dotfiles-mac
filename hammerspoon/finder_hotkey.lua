@@ -9,7 +9,7 @@
 local M = {}
 
 M.app = 'Finder'
--- Same modifier names as sidecar_slack.lua (shift, ctrl, cmd). No Option.
+-- Modifier names match external_slack.lua (shift, ctrl, cmd). No Option.
 M.mods = { 'shift', 'ctrl', 'cmd' }
 M.key = 'f'
 

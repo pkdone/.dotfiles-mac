@@ -1,49 +1,48 @@
--- sidecar_slack.lua: automate the Sidecar + Slack routine.
+-- external_slack.lua: keep Slack on the ARZOPA portable monitor.
 --
--- Sidecar starts (an iPad display appears):
---   Slack's main window -> Sidecar screen -> full screen -> Cmd - (zoom out one step).
--- Sidecar stops (the display goes away):
---   exit full screen -> back on the built-in/main screen -> restore the window's
---   pre-Sidecar size/position (or fill the screen) -> Cmd = (zoom back in).
+-- The screen name is M.screenName (one place). A screen matches when its name
+-- is exactly that, ignoring case. Override the list, then reload:
+--   hs -c "hs.settings.set('external_slack.screenNames', {'ARZOPA'}); hs.reload()"
 --
--- Acts only on transitions (absent -> present, present -> absent), debounced because
--- hs.screen.watcher can fire several times per change. Cmd = is only sent if this
--- module sent Cmd - earlier (persisted in hs.settings), so Slack's zoom stays balanced
--- across reloads and restarts.
+-- ARZOPA connects (including when it is already connected at startup):
+--   Slack's main window moves onto that screen and goes full screen.
+-- ARZOPA disconnects:
+--   Slack leaves full screen, comes back to the built-in display, and gets
+--   its previous frame back when that frame still fits.
+-- Slack's zoom is never changed.
+-- The Dock and menu bar stay on the built-in display: this module does not
+-- change which display is main.
 --
--- Manual test / override: Shift+Control+Option+Command+S toggles the routine.
--- Debug from a terminal:  hs -c 'loaded.sidecar_slack.status()'
--- If your Sidecar screen name doesn't match, set extra name fragments, then reload:
---   hs -c "hs.settings.set('sidecar_slack.screenNames', {'Sidecar', 'iPad'}); hs.reload()"
+-- Nothing happens when Slack is not running. Screen changes are debounced,
+-- and only a real connect or disconnect acts.
+-- Manual toggle: Shift+Control+Option+Command+S.
+-- Status: hs -c 'loaded.external_slack.status()'
 --
 -- Needs Accessibility: System Settings -> Privacy & Security -> Accessibility -> Hammerspoon.
 
 local M = {}
 
-local log = hs.logger.new('sidecar', 'info')
+local log = hs.logger.new('external', 'info')
 
-local SLACK_BUNDLE = 'com.tinyspeck.slackmacgap'
--- Case-insensitive substrings that identify the Sidecar screen by name.
-local DEFAULT_SCREEN_NAMES = { 'sidecar', 'ipad' }
+M.screenName = 'ARZOPA'
+M.slackBundle = 'com.tinyspeck.slackmacgap'
+M.mods = { 'shift', 'ctrl', 'alt', 'cmd' }
+M.key = 's'
 
-local DEBOUNCE_SECS   = 1.0  -- wait for screen changes to settle
-local ACTIVATE_SECS   = 0.6  -- after activating Slack (may switch Space)
-local MOVE_SECS       = 1.0  -- after moving the window to another screen
-local FULLSCREEN_SECS = 1.5  -- full-screen enter/exit animation
+local DEBOUNCE_SECS   = 1.0
+local ACTIVATE_SECS   = 0.6
+local MOVE_SECS       = 1.0
+local FULLSCREEN_SECS = 1.5
 local ALERT_SECS      = 1.5
 
-local KEY_ZOOMED  = 'sidecar_slack.zoomedOut'   -- true once we've sent Cmd -
-local KEY_APPLIED = 'sidecar_slack.applied'     -- true while Slack is "on Sidecar"
-local KEY_NAMES   = 'sidecar_slack.screenNames' -- optional override list
-local KEY_FRAME   = 'sidecar_slack.savedFrame'  -- Slack's window frame before the move
-
-local HOTKEY_MODS = { 'shift', 'ctrl', 'alt', 'cmd' }
-local HOTKEY_KEY  = 's'
+local KEY_APPLIED = 'external_slack.applied'
+local KEY_NAMES   = 'external_slack.screenNames'
+local KEY_FRAME   = 'external_slack.savedFrame'
 
 local watcher, debounce, hotkey
-local sidecarPresent = false
-local generation = 0   -- bumped per run; a newer run cancels an older in-flight one
-local pending = {}     -- strong refs to scheduled timers so they can't be collected
+local externalPresent = false
+local generation = 0
+local pending = {}
 
 -- ---- helpers -------------------------------------------------------------
 
@@ -62,23 +61,28 @@ local function alert(msg)
   hs.alert.show(msg, ALERT_SECS)
 end
 
-local function screenNames()
+function M.configuredNames()
   local names = hs.settings.get(KEY_NAMES)
   if type(names) == 'table' and #names > 0 then return names end
-  return DEFAULT_SCREEN_NAMES
+  return { M.screenName }
 end
 
-local function isSidecarScreen(screen)
-  local name = (screen:name() or ''):lower()
-  for _, frag in ipairs(screenNames()) do
-    if name:find(tostring(frag):lower(), 1, true) then return true end
+function M.nameMatches(name)
+  local got = tostring(name or ''):lower()
+  if got == '' then return false end
+  for _, want in ipairs(M.configuredNames()) do
+    if got == tostring(want):lower() then return true end
   end
   return false
 end
 
-local function findSidecarScreen()
+local function isExternalScreen(screen)
+  return M.nameMatches(screen:name())
+end
+
+local function findExternalScreen()
   for _, s in ipairs(hs.screen.allScreens()) do
-    if isSidecarScreen(s) then return s end
+    if isExternalScreen(s) then return s end
   end
   return nil
 end
@@ -86,7 +90,7 @@ end
 -- Built-in display if present, otherwise the primary (menu-bar) screen.
 local function homeScreen()
   for _, s in ipairs(hs.screen.allScreens()) do
-    if not isSidecarScreen(s) and (s:name() or ''):lower():find('built-in', 1, true) then
+    if not isExternalScreen(s) and (s:name() or ''):lower():find('built-in', 1, true) then
       return s
     end
   end
@@ -97,7 +101,7 @@ local function describeScreens()
   local parts = {}
   for _, s in ipairs(hs.screen.allScreens()) do
     parts[#parts + 1] = string.format('%q (id %s)%s', s:name() or '?', tostring(s:id()),
-      isSidecarScreen(s) and ' [sidecar]' or '')
+      isExternalScreen(s) and ' [ARZOPA]' or '')
   end
   return table.concat(parts, ', ')
 end
@@ -107,7 +111,7 @@ local function logScreens(why)
 end
 
 local function slackApp()
-  return hs.application.get(SLACK_BUNDLE)
+  return hs.application.get(M.slackBundle)
 end
 
 local function slackWindow(app)
@@ -119,18 +123,12 @@ local function slackWindow(app)
   return win
 end
 
--- Send Cmd+<key> to Slack only (not whatever app happens to be frontmost).
-local function zoom(app, key)
-  app:activate()
-  hs.eventtap.keyStroke({ 'cmd' }, key, 0, app)
-end
-
 -- ---- the two routines ------------------------------------------------------
 
 local function apply(reason)
-  local screen = findSidecarScreen()
+  local screen = findExternalScreen()
   if not screen then
-    alert('Sidecar: no Sidecar screen found')
+    alert('No ARZOPA display found')
     logScreens('apply (' .. reason .. ')')
     return
   end
@@ -141,19 +139,18 @@ local function apply(reason)
   end
   generation = generation + 1
   local gen = generation
-  alert('Sidecar on: moving Slack to the iPad')
-  app:activate()  -- switches to Slack's Space so its window is reachable
+  alert('Moving Slack to the ARZOPA display')
+  app:activate()
   after(ACTIVATE_SECS, function()
     if gen ~= generation then return end
     local win = slackWindow(app)
-    if not win then alert('Sidecar: no Slack window found'); return end
-    hs.settings.set(KEY_APPLIED, true)
+    if not win then alert('Slack has no window'); return end
 
     local function moveAndFullScreen()
       if gen ~= generation then return end
-      -- Remember the normal (non-full-screen) frame so revert can put it back.
       local f = win:frame()
       hs.settings.set(KEY_FRAME, { x = f.x, y = f.y, w = f.w, h = f.h })
+      hs.settings.set(KEY_APPLIED, true)
       log.i(string.format('saved Slack frame %d,%d %dx%d', f.x, f.y, f.w, f.h))
       win:moveToScreen(screen, false, true, 0)
       after(MOVE_SECS, function()
@@ -162,13 +159,7 @@ local function apply(reason)
         after(FULLSCREEN_SECS, function()
           if gen ~= generation then return end
           win:focus()
-          if not hs.settings.get(KEY_ZOOMED) then
-            zoom(app, '-')
-            hs.settings.set(KEY_ZOOMED, true)
-          else
-            log.i('already zoomed out by us; not sending Cmd - again')
-          end
-          alert('Slack is on Sidecar')
+          alert('Slack is full screen on the ARZOPA display')
         end)
       end)
     end
@@ -186,13 +177,12 @@ local function revert(reason)
   local app = slackApp()
   hs.settings.set(KEY_APPLIED, false)
   if not app then
-    -- Keep KEY_ZOOMED: Slack remembers its zoom, so restore it next time.
     log.i('revert (' .. reason .. '): Slack not running, nothing to do')
     return
   end
   generation = generation + 1
   local gen = generation
-  alert('Sidecar off: restoring Slack')
+  alert('Putting Slack back on the built-in display')
   app:activate()
   after(ACTIVATE_SECS, function()
     if gen ~= generation then return end
@@ -206,9 +196,6 @@ local function revert(reason)
         if home and (not cur or cur:id() ~= home:id()) then
           win:moveToScreen(home, false, true, 0)
         end
-        -- Restore the size/position Slack had before it went to Sidecar, if it
-        -- still fits on the home screen; otherwise fill the screen (like
-        -- double-clicking the title bar).
         local saved = hs.settings.get(KEY_FRAME)
         local hf = home and home:frame()
         local fits = type(saved) == 'table' and hf and saved.w and saved.h
@@ -219,19 +206,12 @@ local function revert(reason)
           log.i('restored saved Slack frame')
         else
           win:maximize(0)
-          log.i('no usable saved frame; maximized Slack on home screen')
+          log.i('no usable saved frame; maximized Slack on the built-in display')
         end
         hs.settings.clear(KEY_FRAME)
         win:focus()
       end
-      after(0.3, function()
-        if gen ~= generation then return end
-        if hs.settings.get(KEY_ZOOMED) then
-          zoom(app, '=')
-          hs.settings.set(KEY_ZOOMED, false)
-        end
-        alert('Slack is back on the Mac')
-      end)
+      alert('Slack is back on the built-in display')
     end
 
     if win and win:isFullScreen() then
@@ -245,15 +225,15 @@ end
 
 local function onScreensChanged()
   logScreens('screen change')
-  local present = findSidecarScreen() ~= nil
-  if present == sidecarPresent then return end  -- not a Sidecar transition
-  sidecarPresent = present
+  local present = findExternalScreen() ~= nil
+  if present == externalPresent then return end
+  externalPresent = present
   if present then
-    apply('Sidecar appeared')
-  elseif hs.settings.get(KEY_APPLIED) or hs.settings.get(KEY_ZOOMED) then
-    revert('Sidecar disappeared')
+    apply('ARZOPA connected')
+  elseif hs.settings.get(KEY_APPLIED) then
+    revert('ARZOPA disconnected')
   else
-    log.i('Sidecar disappeared; Slack was not moved by us, leaving it alone')
+    log.i('ARZOPA disconnected; Slack was not moved by us, leaving it alone')
   end
 end
 
@@ -264,18 +244,30 @@ function M.toggle()
 end
 
 function M.status()
-  return string.format('sidecarPresent=%s applied=%s zoomedOut=%s screens: %s',
-    tostring(sidecarPresent), tostring(hs.settings.get(KEY_APPLIED) or false),
-    tostring(hs.settings.get(KEY_ZOOMED) or false), describeScreens())
+  return string.format('externalPresent=%s applied=%s screens: %s',
+    tostring(externalPresent), tostring(hs.settings.get(KEY_APPLIED) or false),
+    describeScreens())
 end
 
 function M.start()
-  sidecarPresent = findSidecarScreen() ~= nil  -- baseline: no action on (re)load
-  logScreens('start (Sidecar ' .. (sidecarPresent and 'present' or 'absent') .. ')')
+  externalPresent = findExternalScreen() ~= nil
+  logScreens('start (ARZOPA ' .. (externalPresent and 'connected' or 'not connected') .. ')')
   debounce = hs.timer.delayed.new(DEBOUNCE_SECS, onScreensChanged)
   watcher = hs.screen.watcher.new(function() debounce:start() end)
   watcher:start()
-  hotkey = hs.hotkey.bind(HOTKEY_MODS, HOTKEY_KEY, M.toggle)
+  hotkey = hs.hotkey.bind(M.mods, M.key, M.toggle)
+  -- Already plugged in when Hammerspoon starts: move Slack now. If we moved
+  -- it on a previous run, keep the saved frame instead of overwriting it
+  -- with the full-screen frame.
+  if externalPresent then
+    if not hs.settings.get(KEY_APPLIED) then
+      apply('connected at start')
+    else
+      log.i('ARZOPA already connected and Slack was already moved; leaving it')
+    end
+  elseif hs.settings.get(KEY_APPLIED) then
+    revert('missing at start')
+  end
   return M
 end
 

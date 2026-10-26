@@ -38,53 +38,129 @@ check_step_auto_brightness() {
   fi
 }
 
-# ---- 6c. Built-in display More Space ------------------------------------
+# ---- 6c. Built-in display More Space and the ARZOPA pin -----------------
 # system_profiler SPDisplaysDataType -json. lib/display-resolution.list maps
-# the panel size to its More Space prefix (14" 1800 x 1169, 16" 2056 x 1329).
-# An unlisted panel size or no built-in panel (clamshell) is an info skip.
-# This section only reads the display report. macos.sh applies a mismatch
-# when it can. Manual step display-more-space is the fallback.
-check_step_display_more_space() {
-  fixid display-more-space
-  CHECKED=$((CHECKED + 1))
+# the panel size to its More Space prefix (14" 1800 x 1169, 16" 2056 x 1329)
+# and pins the ARZOPA portable monitor when it is connected.
+# An unlisted panel size, no built-in panel (clamshell), or no ARZOPA is an
+# info skip, not drift. displayplacer list is read-only, and only when that
+# tool is installed and the ARZOPA is connected, so the position can be
+# checked. This section does not change a display. macos.sh applies a
+# mismatch when it can. Manual steps display-more-space and arzopa-display
+# are the fallback.
+#
+# DISPLAY_RESOLUTION_REPORT caches one read for both checks. The section
+# unsets it first. A later macconfig process reads the displays again.
+gather_display_resolution() {
+  if [ -n "${DISPLAY_RESOLUTION_REPORT+x}" ]; then
+    printf '%s\n' "$DISPLAY_RESOLUTION_REPORT"
+    return 0
+  fi
+  local json placer_file report
   DISP_HELPER="$DOTDIR/lib/display-resolution.py"
   DISP_LIST="$DOTDIR/lib/display-resolution.list"
   if ! command -v system_profiler >/dev/null 2>&1; then
-    fixid tooling
-    warn "system_profiler not available — can't check More Space"
+    DISPLAY_RESOLUTION_REPORT="error||system_profiler not available — can't check the displays"
   elif [ ! -r "$DISP_HELPER" ] || [ ! -r "$DISP_LIST" ]; then
-    fixid repo-file
-    warn "display resolution check files missing — can't check More Space"
+    DISPLAY_RESOLUTION_REPORT="error||display resolution check files missing — can't check the displays"
   elif [ -z "$DOT_PYTHON" ]; then
-    fixid tooling
-    warn "no python3 — can't check More Space"
+    DISPLAY_RESOLUTION_REPORT="error||no python3 — can't check the displays"
   else
-    if disp_json="$(with_timeout 30 system_profiler SPDisplaysDataType -json </dev/null 2>/dev/null)"; then
-      disp_rc=0
+    if json="$(with_timeout 30 system_profiler SPDisplaysDataType -json </dev/null 2>/dev/null)"; then
+      :
     else
-      disp_rc=$?
+      json=""
     fi
-    if [ "$disp_rc" -ne 0 ] || [ -z "$disp_json" ]; then
-      fixid tooling
-      warn "system_profiler SPDisplaysDataType failed — can't check More Space"
+    if [ -z "$json" ]; then
+      DISPLAY_RESOLUTION_REPORT="error||system_profiler SPDisplaysDataType failed — can't check the displays"
     else
-      disp_line="$(printf '%s\n' "$disp_json" | "$DOT_PYTHON" "$DISP_HELPER" --list "$DISP_LIST" || true)"
-      disp_status="${disp_line%%|*}"
-      disp_msg="${disp_line#*|}"; disp_msg="${disp_msg#*|}"
-      case "$disp_status" in
-        ok)   pass "$disp_msg" ;;
-        info) skip "$disp_msg" ;;
-        warn)
-          fixid display-more-space
-          warn "$disp_msg"
-          ;;
-        *)
-          fixid tooling
-          warn "${disp_msg:-display resolution check failed}"
-          ;;
-      esac
+      report="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$DISP_HELPER" --list "$DISP_LIST" || true)"
+      if printf '%s\n' "$report" | grep -q '^pending|'; then
+        if command -v displayplacer >/dev/null 2>&1; then
+          placer_file="$(mktemp)"
+          with_timeout 15 displayplacer list >"$placer_file" </dev/null 2>/dev/null || true
+          report="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$DISP_HELPER" --list "$DISP_LIST" --placer "$placer_file" || true)"
+          rm -f "$placer_file"
+        fi
+        report="$(printf '%s\n' "$report" | sed 's/^pending|/warn|/')"
+      fi
+      DISPLAY_RESOLUTION_REPORT="$report"
     fi
   fi
+  printf '%s\n' "$DISPLAY_RESOLUTION_REPORT"
+}
+
+# display_resolution_pick TOPIC — sets DISP_LINE. TOPIC "" is the built-in
+# panel. TOPIC arzopa is the portable monitor. The gather runs in this shell
+# so the cache is still there for the second check.
+display_resolution_pick() {
+  local topic="$1" row rest got
+  gather_display_resolution >/dev/null
+  DISP_LINE=""
+  while IFS= read -r row; do
+    [ -n "$row" ] || continue
+    rest="${row#*|}"
+    got="${rest%%|*}"
+    if [ "$got" = "$topic" ]; then
+      DISP_LINE="$row"
+      return 0
+    fi
+  done <<< "$DISPLAY_RESOLUTION_REPORT"
+  return 1
+}
+
+check_step_display_more_space() {
+  fixid display-more-space
+  CHECKED=$((CHECKED + 1))
+  local disp_line disp_status disp_msg
+  display_resolution_pick "" || true
+  disp_line="$DISP_LINE"
+  if [ -z "$disp_line" ]; then
+    fixid tooling
+    warn "display resolution check failed"
+    return 0
+  fi
+  disp_status="${disp_line%%|*}"
+  disp_msg="${disp_line#*|}"; disp_msg="${disp_msg#*|}"
+  case "$disp_status" in
+    ok)   pass "$disp_msg" ;;
+    info) skip "$disp_msg" ;;
+    warn)
+      fixid display-more-space
+      warn "$disp_msg"
+      ;;
+    *)
+      fixid tooling
+      warn "${disp_msg:-display resolution check failed}"
+      ;;
+  esac
+}
+
+check_step_arzopa_display() {
+  fixid arzopa-display
+  CHECKED=$((CHECKED + 1))
+  local az_line az_status az_msg
+  display_resolution_pick arzopa || true
+  az_line="$DISP_LINE"
+  if [ -z "$az_line" ]; then
+    fixid tooling
+    warn "ARZOPA display was not checked because the display report could not be read"
+    return 0
+  fi
+  az_status="${az_line%%|*}"
+  az_msg="${az_line#*|}"; az_msg="${az_msg#*|}"
+  case "$az_status" in
+    ok) pass "$az_msg" ;;
+    info) skip "$az_msg" ;;
+    warn)
+      fixid arzopa-display
+      warn "$az_msg"
+      ;;
+    *)
+      fixid tooling
+      warn "${az_msg:-ARZOPA display check failed}"
+      ;;
+  esac
 }
 
 # ---- 6c2. Wallpaper (check-only) ----------------------------------------
@@ -153,7 +229,10 @@ fi
 hdr "Display auto-brightness"
 check_step_auto_brightness
 hdr "Display (More Space)"
+unset DISPLAY_RESOLUTION_REPORT
 check_step_display_more_space
+hdr "ARZOPA display"
+check_step_arzopa_display
 hdr "Wallpaper"
 check_step_wallpaper
 

@@ -4,7 +4,21 @@
 # when _spdisplays_resolution does not start with that row's prefix. A panel
 # size not listed here, or no built-in panel (clamshell), is an info line.
 # macos.sh uses displayplacer to apply the matching mode on the built-in
-# panel only. External displays are not changed. A missing mode stays by hand.
+# panel only. A missing mode stays by hand.
 # Format: panel | More Space prefix
 3024x1964|1800 x 1169
 3456x2234|2056 x 1329
+
+# ARZOPA 16.1" portable USB-C monitor. When it is not connected the check is
+# an info line, not drift. macos.sh sets the mode with displayplacer.
+# Match the name, the serial, or the type. The persistent screen id is not a match
+# key: on pdone-mac2 it was 82BDB23E-5EA1-4C6F-925B-EB392903EC5E, and
+# macOS mints a new one when the same panel is plugged into another USB-C
+# port. The name ARZOPA is what system_profiler and Hammerspoon both report.
+# The serial s74646035 is displayplacer's serial screen id and stays with the
+# panel. Type is "16 inch external screen", and it counts only when that
+# displayplacer block has no different name and no different serial.
+# place "left" means origin (-width, 0). The laptop display stays at (0,0),
+# so it stays the main display (Dock and menu bar) and the tops line up.
+# Format: external | name | serial | type | res | hz | scaling | place
+external|ARZOPA|s74646035|16 inch external screen|1920x1080|180|off|left

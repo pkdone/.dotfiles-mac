@@ -66,7 +66,7 @@ Spotlight's Command+Space is macOS symbolic hotkey 64, not a Raycast setting. Th
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
 
-A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotkey 164, CotEditor theme/font, Finder sidebar Recents, Finder Favorites, the Show Finder shortcut, power settings, and the built-in display's More Space mode):
+A curated set of macOS `defaults` is applied by `macos.sh` (plus Dictation hotkey 164, CotEditor theme/font, Finder sidebar Recents, Finder Favorites, the Show Finder shortcut, power settings, the built-in display's More Space mode, and the ARZOPA portable monitor when it is plugged in):
 
 ```bash
 ~/.dotfiles-mac/macos.sh --dry-run   # preview every decision, write nothing
@@ -89,7 +89,7 @@ Finder sidebar Favorites are `lib/sidebar-favorites.list` (Applications, Desktop
 
 Show Finder is the menu shortcut Cmd-Ctrl-Shift-F (`com.apple.finder` `NSUserKeyEquivalents`, added with `-dict-add` so other menu shortcuts stay). Hammerspoon uses the same keys to bring Finder to the front from any app (`hammerspoon/finder_hotkey.lua`). Double-clicking a window's title bar fills the window (`AppleActionOnDoubleClick` = `Fill`). If the older minimize-on-double-click key is set, `macos.sh` deletes it.
 
-The built-in display's More Space mode is set by `macos.sh` with `displayplacer` (Homebrew formula `displayplacer`) when that mode is listed for the panel in `lib/display-resolution.list` (14": `1800 x 1169`, 16": `2056 x 1329`). The current refresh rate is kept when a scaled mode at that rate exists. External displays are left on their current mode. A missing `displayplacer` or a missing mode is a warning and stays the manual step (System Settings → Displays). `macconfig --fix` uses the same path. An unlisted panel size, or no built-in panel, is left alone.
+The built-in display's More Space mode is set by `macos.sh` with `displayplacer` (Homebrew formula `displayplacer`) when that mode is listed for the panel in `lib/display-resolution.list` (14": `1800 x 1169`, 16": `2056 x 1329`). The current refresh rate is kept when a scaled mode at that rate exists. Other displays are left on their current mode, except the ARZOPA portable monitor: when it is plugged in, the same command sets it to 1920x1080 at 180Hz with scaling off, to the left of the laptop, and keeps the laptop at the origin so the Dock and menu bar stay there. A missing `displayplacer` or a missing mode is a warning and stays the manual step (System Settings → Displays). `macconfig --fix` uses the same path. An unlisted panel size, no built-in panel, or an unplugged ARZOPA is left alone.
 
 The desktop picture is Tahoe Night (Landscape). `macconfig-check.sh` looks for asset `CF6347E2-4F81-4410-8892-4830991B6C5A` in the wallpaper store and warns if it is absent. That picture is a wallpaper-catalog asset, not a file under `/System/Library/Desktop Pictures`, so System Events cannot select it. The wallpaper store is not written. `--fix` does not change the picture. Set it by hand in System Settings → Wallpaper.
 
