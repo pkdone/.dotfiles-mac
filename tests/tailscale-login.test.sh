@@ -131,6 +131,7 @@ skip() { lines="${lines}skip|$1"$'\n'; }
 
 run_check() {
   lines=""
+  CHECKED=0
   PATH="$tmp/bin:$PATH" \
     TAILSCALE_APP_PATH="$tmp/app" \
     DOT_PYTHON="$tmp/bin/python3" \
@@ -146,6 +147,13 @@ run_check() {
 out="$(run_check "Google Chrome, Granola, Grok Bot, Hammerspoon, Okta Verify, Raycast, Slack, Tailscale")"
 eq "a listed Tailscale passes" "ok" "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
 has "a listed Tailscale says it is in Open at Login" "Tailscale is in Open at Login" "$out"
+# run_check prints from a subshell, so the count is read from a direct call.
+CHECKED=0
+lines=""
+PATH="$tmp/bin:$PATH" TAILSCALE_APP_PATH="$tmp/app" DOT_PYTHON="$tmp/bin/python3" DOTDIR="$DIR" \
+  LOGIN_ITEMS="Google Chrome, Slack, Tailscale" OSASCRIPT_RC=0 BTM_STATUS=missing BTM_RC=0 \
+  check_step_tailscale_login
+eq "a listed Tailscale is counted" "1" "$CHECKED"
 
 out="$(run_check "Google Chrome, Slack")"
 eq "a missing Tailscale warns" "warn" "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
@@ -160,12 +168,20 @@ out="$(run_check "" 1 missing)"
 eq "an unreadable list is not a false missing warning" "info" \
   "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
 has "an unreadable list stays by hand" "stays by hand" "$out"
+CHECKED=0
+lines=""
+PATH="$tmp/bin:$PATH" TAILSCALE_APP_PATH="$tmp/app" DOT_PYTHON="$tmp/bin/python3" DOTDIR="$DIR" \
+  LOGIN_ITEMS="" OSASCRIPT_RC=1 BTM_STATUS=missing BTM_RC=0 \
+  check_step_tailscale_login
+eq "an unreadable list is not part of the ok total" "0" "$CHECKED"
 
 lines=""
+CHECKED=0
 TAILSCALE_APP_PATH="$tmp/no-such-app" PATH="$tmp/bin:$PATH" DOT_PYTHON="$tmp/bin/python3" DOTDIR="$DIR" \
   check_step_tailscale_login
 out="$lines"
 eq "a missing app is left alone" "skip" "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
+eq "a missing app is not counted" "0" "$CHECKED"
 miss "a missing app is not a warning" "warn|" "$out"
 has "a missing app says it is not installed yet" "not installed yet" "$out"
 

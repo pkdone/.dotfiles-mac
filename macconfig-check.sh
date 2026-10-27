@@ -196,9 +196,12 @@ bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); record drift "$1"; attn_push 
 warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  record warn "$1";  attn_push warn "$1";  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
 info() { HAND=$((HAND + 1));   printf '  info  %s\n' "$1"; }   # check-by-hand item: not drift, not a warning
 note() { printf '  info  %s\n' "$1"; }                         # FYI line: not counted anywhere
-# Same printed line as info. manualsteps treats skip as "does not apply"
-# (a clamshell display, an unlisted panel) and does not walk that step.
-skip() { info "$1"; }
+# Same printed line as info. A skip does not apply, so it is left out of the
+# ok total and out of the by-hand count: the ARZOPA is unplugged, the lid is
+# closed, the panel size is not in the list, or the app is not installed.
+# manualsteps treats skip as "does not apply" and does not walk that step.
+# A check you still do by hand uses info, which counts.
+skip() { note "$1"; }
 
 # with_timeout SECS CMD... — macOS has no timeout(1) by default; perl's alarm survives
 # exec, so CMD is killed (status 142) if it runs longer than SECS.

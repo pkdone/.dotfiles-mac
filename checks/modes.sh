@@ -45,8 +45,8 @@ check_step_mode_focus_shortcuts() {
 check_step_mode_focus_modes() {
   local modes_focus modes_fdb modes_fnames modes_fmiss f
   MODES_CFG="$DOTDIR/hammerspoon/modes.lua"
-  CHECKED=$((CHECKED + 1))
   if [ ! -r "$MODES_CFG" ]; then
+    CHECKED=$((CHECKED + 1))
     fixid repo-file
     warn "hammerspoon/modes.lua missing — can't check the Focus modes"
     return 0
@@ -54,6 +54,7 @@ check_step_mode_focus_modes() {
   modes_focus="$(grep -oE "^[[:space:]]+focus[[:space:]]*=[[:space:]]*'[^']+'" "$MODES_CFG" | sed -E "s/.*'([^']+)'/\1/" | sort -u)"
   modes_fdb="$HOME/Library/DoNotDisturb/DB/ModeConfigurations.json"
   if [ -z "$DOT_PYTHON" ]; then
+    CHECKED=$((CHECKED + 1))
     fixid tooling; warn "python3 missing — can't check the Focus modes"
   elif ! modes_fnames="$("$DOT_PYTHON" - "$modes_fdb" <<'PY' 2>/dev/null
 import json, sys
@@ -69,6 +70,9 @@ def walk(o):
 walk(json.load(open(sys.argv[1])))
 PY
 )"; then
+    # The Focus database could not be read, so this check was not made.
+    # note prints the line and counts it nowhere. manualsteps still shows
+    # the step, because note is a part the check does not cover.
     note "Focus modes not readable (needs Full Disk Access) — check System Settings → Focus for:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
   else
     modes_fmiss=""
@@ -76,8 +80,10 @@ PY
       if ! printf '%s\n' "$modes_fnames" | grep -Fxq "$f"; then modes_fmiss="$modes_fmiss $f"; fi
     done
     if [ -n "$modes_fmiss" ]; then
+      CHECKED=$((CHECKED + 1))
       warn "Focus modes missing:$modes_fmiss — System Settings → Focus → click Add Focus… (opens a sheet) → Custom (manual step mode-focus-modes)"
     else
+      CHECKED=$((CHECKED + 1))
       pass "Focus modes exist:$(printf '%s\n' "$modes_focus" | tr '\n' ' ' | sed 's/ $//; s/^/ /')"
     fi
   fi

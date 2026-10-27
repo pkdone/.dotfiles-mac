@@ -10,14 +10,13 @@ fixid desktop-assign
 if PY="$(dot_python)"; then
   while IFS='|' read -r status bundle msg; do
     [ -z "$status" ] && continue
-    CHECKED=$((CHECKED + 1))
     case "$status" in
-      ok)  pass "$msg" ;;
-      bad) fixid desktop-assign "$bundle"; bad "$msg" ;;
-      # The app path is not installed yet (a manual step). Not drift, and
-      # --fix does not write a pin for it. skip prints an info line.
+      ok)  CHECKED=$((CHECKED + 1)); pass "$msg" ;;
+      bad) CHECKED=$((CHECKED + 1)); fixid desktop-assign "$bundle"; bad "$msg" ;;
+      # The app is not installed yet, so this pin does not apply. The manual
+      # step is separate. skip prints the info line and does not count it.
       skip) skip "$msg" ;;
-      *)   fixid tooling; warn "${msg:-$bundle}" ;;
+      *)   CHECKED=$((CHECKED + 1)); fixid tooling; warn "${msg:-$bundle}" ;;
     esac
   done < <("$PY" "$DOTDIR/lib/desktop-bindings.py" "$DOTDIR/lib/desktop-bindings.list")
 else

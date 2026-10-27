@@ -615,7 +615,8 @@ has "section warns on mismatch" 'warn "$disp_msg"' "$section"
 # shellcheck disable=SC2016
 has "section skips a clamshell instead of walking it" 'skip "$disp_msg"' "$section"
 # shellcheck disable=SC2016  # the check source contains this literal
-has "a skip still prints as an info line" 'skip() { info "$1"; }' "$(cat "$DIR/macconfig-check.sh")"
+has "a skip still prints as an info line" 'skip() { note "$1"; }' "$(cat "$DIR/macconfig-check.sh")"
+has "a note prints the info prefix" "printf '  info  %s\\n'" "$(cat "$DIR/macconfig-check.sh")"
 miss "section does not run a displayplacer set" 'displayplacer "' "$section"
 
 printf 'display-resolution tests: %d passed, %d failed\n' "$pass" "$fail"
