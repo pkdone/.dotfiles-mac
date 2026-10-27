@@ -44,8 +44,9 @@ check_step_auto_brightness() {
 # system_profiler SPDisplaysDataType -json. lib/display-resolution.list maps
 # the panel size to its More Space prefix (14" 1800 x 1169, 16" 2056 x 1329)
 # and pins the ARZOPA portable monitor when it is connected.
-# An unlisted panel size, no built-in panel (clamshell), or no ARZOPA is an
-# info skip, not drift. displayplacer list is read-only, and only when that
+# An unlisted panel size, no built-in panel (clamshell), or no ARZOPA does
+# not apply. The check prints an info line and does not count it in the ok
+# total or the by-hand count. displayplacer list is read-only, and only when that
 # tool is installed and the ARZOPA is connected, so the position can be
 # checked. This section does not change a display. macos.sh applies a
 # mismatch when it can. Manual steps display-more-space and arzopa-display
@@ -113,11 +114,11 @@ display_resolution_pick() {
 
 check_step_display_more_space() {
   fixid display-more-space
-  CHECKED=$((CHECKED + 1))
   local disp_line disp_status disp_msg
   display_resolution_pick "" || true
   disp_line="$DISP_LINE"
   if [ -z "$disp_line" ]; then
+    CHECKED=$((CHECKED + 1))
     fixid tooling
     warn "display resolution check failed"
     return 0
@@ -125,13 +126,17 @@ check_step_display_more_space() {
   disp_status="${disp_line%%|*}"
   disp_msg="${disp_line#*|}"; disp_msg="${disp_msg#*|}"
   case "$disp_status" in
-    ok)   pass "$disp_msg" ;;
+    ok) CHECKED=$((CHECKED + 1)); pass "$disp_msg" ;;
+    # Clamshell or an unlisted panel: does not apply. skip prints the info
+    # line and manualsteps does not walk the step.
     info) skip "$disp_msg" ;;
     warn)
+      CHECKED=$((CHECKED + 1))
       fixid display-more-space
       warn "$disp_msg"
       ;;
     *)
+      CHECKED=$((CHECKED + 1))
       fixid tooling
       warn "${disp_msg:-display resolution check failed}"
       ;;
@@ -140,11 +145,11 @@ check_step_display_more_space() {
 
 check_step_arzopa_display() {
   fixid arzopa-display
-  CHECKED=$((CHECKED + 1))
   local az_line az_status az_msg
   display_resolution_pick arzopa || true
   az_line="$DISP_LINE"
   if [ -z "$az_line" ]; then
+    CHECKED=$((CHECKED + 1))
     fixid tooling
     warn "ARZOPA display was not checked because the display report could not be read"
     return 0
@@ -152,13 +157,17 @@ check_step_arzopa_display() {
   az_status="${az_line%%|*}"
   az_msg="${az_line#*|}"; az_msg="${az_msg#*|}"
   case "$az_status" in
-    ok) pass "$az_msg" ;;
+    ok) CHECKED=$((CHECKED + 1)); pass "$az_msg" ;;
+    # Not connected: does not apply. skip prints the info line and
+    # manualsteps does not walk the step.
     info) skip "$az_msg" ;;
     warn)
+      CHECKED=$((CHECKED + 1))
       fixid arzopa-display
       warn "$az_msg"
       ;;
     *)
+      CHECKED=$((CHECKED + 1))
       fixid tooling
       warn "${az_msg:-ARZOPA display check failed}"
       ;;

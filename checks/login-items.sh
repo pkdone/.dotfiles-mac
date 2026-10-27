@@ -75,7 +75,8 @@ check_step_tailscale_login() {
   fixid login-items
   app="${TAILSCALE_APP_PATH:-/Applications/Tailscale.app}"
   if [ ! -d "$app" ]; then
-    CHECKED=$((CHECKED + 1))
+    # Not installed: Open at Login does not apply. The Fleet check reports
+    # the missing app. skip prints the info line and does not count it.
     skip "Tailscale is not installed yet, so Open at Login is left alone"
     return 0
   fi
@@ -122,7 +123,8 @@ print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleIdentifier") or "")' \
     warn "Tailscale is not in Open at Login — $TAILSCALE_LOGIN_HOW"
     return 0
   fi
-  CHECKED=$((CHECKED + 1))
+  # Could not be read: still by hand, so info counts it there. It is not
+  # part of the ok total.
   info "Open at Login could not be read, so Tailscale stays by hand — $TAILSCALE_LOGIN_HOW"
 }
 

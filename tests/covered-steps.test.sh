@@ -156,6 +156,17 @@ eq "a More Space info skip exits 0" 0 "$disp_rc"
 disp_open="$(printf 's\n' | PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
   MANUAL_STEPS_LIST="$tmp/disp.list" "$MS" open 2>"$tmp/dispopen.err")"
 miss "open skips More Space when there is no built-in display" "More Space" "$disp_open"
+printf '%s\n' \
+  'arzopa-display|Display, keyboard & desktop|ARZOPA display|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display' \
+  > "$tmp/az.list"
+az_porc="$(PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_LIST="$tmp/az.list" \
+  "$MS" check --porcelain 2>"$tmp/az.err")"
+az_rc=$?
+eq "an unplugged ARZOPA is does not apply" "ok" "$(printf '%s\n' "$az_porc" | cut -d'|' -f1)"
+eq "an unplugged ARZOPA exits 0" 0 "$az_rc"
+az_open="$(printf 's\n' | PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$tmp/az.list" "$MS" open 2>"$tmp/azopen.err")"
+miss "open skips ARZOPA when it is not connected" "ARZOPA display" "$az_open"
 # The agreement loop must not keep this empty-display stub. Without it,
 # system_profiler is missing and both display steps warn. A real Mac's
 # system_profiler would report the panel as ok.

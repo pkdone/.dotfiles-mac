@@ -110,13 +110,14 @@ fi
 # it. Rows that are not files (AirDrop and similar) are not part of this list.
 hdr "Finder Favorites"
 fixid finder-favorites
-CHECKED=$((CHECKED + 1))
 side_helper="$DOTDIR/lib/sidebar-favorites.py"
 side_list="$DOTDIR/lib/sidebar-favorites.list"
 if [ ! -r "$side_helper" ] || [ ! -r "$side_list" ]; then
+  CHECKED=$((CHECKED + 1))
   fixid repo-file
   warn "sidebar favorites files missing — skip"
 elif [ -z "$DOT_PYTHON" ]; then
+  CHECKED=$((CHECKED + 1))
   fixid tooling
   warn "python3 not found — skip Finder Favorites"
 else
@@ -124,10 +125,12 @@ else
   side_status="${side_line%%|*}"
   side_msg="${side_line#*|}"
   case "$side_status" in
-    ok) pass "$side_msg" ;;
+    ok) CHECKED=$((CHECKED + 1)); pass "$side_msg" ;;
+    # The sidebar file is not there yet, so this stays by hand. It is not
+    # part of the ok total.
     info) info "$side_msg" ;;
-    bad) warn "$side_msg — set them in Finder. macconfig --fix does not change Favorites" ;;
-    *) warn "${side_msg:-Finder Favorites could not be read}" ;;
+    bad) CHECKED=$((CHECKED + 1)); warn "$side_msg — set them in Finder. macconfig --fix does not change Favorites" ;;
+    *) CHECKED=$((CHECKED + 1)); warn "${side_msg:-Finder Favorites could not be read}" ;;
   esac
 fi
 
