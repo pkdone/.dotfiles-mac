@@ -13,16 +13,19 @@ LOG="${HOME}/Library/Logs/com.pdone.pin-spotlight-hotkey-64.log"
 read_state() {
   local hk blk
   hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
-  blk="$(printf '%s\n' "$hk" | awk '
+  # awk exits as soon as the block ends. A pipe would then raise SIGPIPE in
+  # the writer, and pipefail would abort a hotkey that was already correct.
+  # A here-string is a file, so the early exit is harmless.
+  blk="$(awk '
     $0 ~ /^[[:space:]]*64 =/ {grab=1}
     grab {print}
     grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
-  ')"
-  ENABLED="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';')"
-  PTYPE="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";')"
-  P1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',')"
-  P2="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; getline; print $1; exit}' | tr -d ',')"
-  P3="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; getline; getline; print $1; exit}' | tr -d ',')"
+  ' <<<"$hk")"
+  ENABLED="$(awk '/enabled/ {print $3; exit}' <<<"$blk" | tr -d ';')"
+  PTYPE="$(awk '/type/ {print $3; exit}' <<<"$blk" | tr -d '";')"
+  P1="$(awk '/parameters/ {getline; print $1; exit}' <<<"$blk" | tr -d ',')"
+  P2="$(awk '/parameters/ {getline; getline; print $1; exit}' <<<"$blk" | tr -d ',')"
+  P3="$(awk '/parameters/ {getline; getline; getline; print $1; exit}' <<<"$blk" | tr -d ',')"
 }
 
 log() {
