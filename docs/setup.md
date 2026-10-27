@@ -2,7 +2,7 @@
 
 See [README.md](../README.md).
 
-The one-paste block for a fresh Mac is at the top of the README. This is the rest of the walkthrough: what each step runs, how to check the machine afterwards, and where the repo files live. What a managed setting does is in [Settings](settings.md). The by-hand checklist is [Manual steps](manual-steps.md). After a software update, hotkey pins, and AC sleep are in [Troubleshooting](troubleshooting.md). Hammerspoon modes are in [Modes](modes.md).
+The three paste blocks for a fresh Mac are at the top of the README. This is the rest of the walkthrough: what each step runs, how to check the machine afterwards, and where the repo files live. What a managed setting does is in [Settings](settings.md). The by-hand checklist is [Manual steps](manual-steps.md). After a software update, hotkey pins, and AC sleep are in [Troubleshooting](troubleshooting.md). Hammerspoon modes are in [Modes](modes.md).
 
 ## What's in the repo
 
@@ -23,24 +23,36 @@ The one-paste block for a fresh Mac is at the top of the README. This is the res
 
 ## Bootstrap
 
-On a fresh Mac, paste this block. It installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon), installs the GitHub CLI, signs in when `gh auth status` is not already ok, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste it again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. After `install.sh` it names any missing company app and, in a terminal, offers to open Fleet Self service. A missing company app is a warning, not a failed step. If one of the setup steps fails, bootstrap records it and keeps going, including the manual-steps list and the offer to walk through them. At the end it prints the failed steps and the log path, and exits with an error. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
+On a fresh Mac, paste the first block, wait for it to finish (it may ask for the Mac password and to press Return), then paste the second block and finish signing in to GitHub. Then paste the third block. Signing in asks questions in the terminal and may open a browser, so it is the last line of the second paste. The first block installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon). The second block puts `brew` on PATH if this Terminal window does not have it yet, installs the GitHub CLI, and signs in when `gh auth status` is not already ok. The third block puts `brew` on PATH the same way, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste them again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. After `install.sh` it names any missing company app and, in a terminal, offers to open Fleet Self service. A missing company app is a warning, not a failed step. If one of the setup steps fails, bootstrap records it and keeps going, including the manual-steps list and the offer to walk through them. At the end it prints the failed steps and the log path, and exits with an error. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
 
 ```bash
 command -v brew >/dev/null 2>&1 || {
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   eval "$(/opt/homebrew/bin/brew shellenv)"
 }
-brew install gh
-gh auth status || gh auth login
+```
+
+```bash
+{
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+  brew install gh
+  gh auth status || gh auth login
+}
+```
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv)"
 [ -d ~/.dotfiles-mac ] || gh repo clone pkdone/.dotfiles-mac ~/.dotfiles-mac
 ~/.dotfiles-mac/bootstrap.sh
 ```
 
-The same block is at the top of [README.md](../README.md#setup).
+The same three blocks are at the top of [README.md](../README.md#setup).
 
-Each run of `bootstrap.sh`, `install.sh`, and `brewsync` is copied to `~/Library/Logs/dotfiles/` (`bootstrap-YYYYMMDD-HHMMSS.log`, and the same shape for `install` and `brewsync`). The path is printed at the end. Logs older than 30 days are removed. The log is the script's own output. Your password is not written there.
+## Logs and when something fails
 
-Before the Brewfile is installed, setup checks that this Mac can reach github.com and formulae.brew.sh, that the Xcode Command Line Tools are installed (`xcode-select -p`, and it offers `xcode-select --install` when they are missing), that at least 10 GB is free, and that `brew doctor` is not reporting a serious problem. A harmless doctor note does not stop setup. A failed check stops before any install and says what to fix.
+Each run of `bootstrap.sh`, `install.sh`, and `brewsync` is copied to `~/Library/Logs/dotfiles/` (`bootstrap-YYYYMMDD-HHMMSS.log`, and the same shape for `install` and `brewsync`, for example `install-20260101-120000.log`). The path is printed when the run finishes. Logs older than 30 days are removed. The log is the script's own output. Your password is not written there.
+
+Before the Brewfile is installed, setup checks that this Mac can reach github.com and formulae.brew.sh, that the Xcode Command Line Tools are installed (`xcode-select -p`, and it offers `xcode-select --install` when they are missing), that at least 10 GB is free, and that `brew doctor` is not reporting a serious problem. A harmless doctor note does not stop setup. A failed check stops early, before any install, and gives a plain explanation of what to fix.
 
 If one Brewfile entry fails, that entry is tried once more (`brew install` for a tool, `brew install --cask --adopt` for an app) and the others still install. Anything still missing is printed with the Homebrew error, when there is one, and the exact command to install it. If the install step itself stops before it can name a package, setup says the Brewfile install failed and points at the log under `~/Library/Logs/dotfiles/`. `brewsync` prints the same failure and the log path, still upgrades and cleans up, and exits with an error. `--adopt` takes over an app that is already in `/Applications` instead of stopping because the app is already there.
 

@@ -59,13 +59,56 @@ miss "note does not name Okta Extension" "Okta Extension" "$section"
 miss "README does not mention check.sh" "check.sh" "$(cat "$README")"
 
 # An exact integer count would go stale each time a step is added. The README
-# says "about 40" / "about 10" instead, and this test must not require a
+# says "up to about 40" / "about 10" instead, and this test must not require a
 # particular integer.
 readme="$(cat "$README")"
-has "README approximates the manual-step count" "About 40 manual steps" "$readme"
+has "README approximates the manual-step count" "up to about 40" "$readme"
+has "README says fewer steps are usually open" "Usually far fewer are still open" "$readme"
 has "README approximates the by-eye count" "about 10 you confirm by eye" "$readme"
-exact="$(printf '%s\n' "$readme" | grep -E '[0-9]+ (manual steps|settings) have to be set by hand|[0-9]+ you confirm by eye' | grep -vi 'about ' || true)"
+has "README says to wait for the Homebrew paste" "wait for it to finish" "$readme"
+has "README says bootstrap offers the walk-through" "offers to walk you through them" "$readme"
+has "README keeps later commands for a re-run" "go through them again later" "$readme"
+miss "README leaves the run-log example to the setup doc" "install-20260101-120000.log" "$readme"
+exact="$(printf '%s\n' "$readme" | grep -E '[0-9]+ (manual steps|settings) have to be set by hand|[0-9]+ you confirm by eye|[0-9]+ steps you set by hand' | grep -vi 'about ' || true)"
 eq "README does not pin an exact manual-step count" "" "$exact"
+
+# The Homebrew installer and gh auth login both read the terminal. The second
+# paste is one { } group, so the shell reads every line before running any
+# command. The clone is a later paste.
+bash_fence() {
+  awk -v want="$1" '
+    $0 == "```bash" { n++; capture = 1; next }
+    $0 == "```" && capture { capture = 0; next }
+    capture && n == want { print }
+  ' "$2"
+}
+last_line() { awk 'NF { line = $0 } END { print line }'; }
+first_paste="$(bash_fence 1 "$README")"
+second_paste="$(bash_fence 2 "$README")"
+third_paste="$(bash_fence 3 "$README")"
+has "first paste is the Homebrew installer" "Homebrew/install/HEAD/install.sh" "$first_paste"
+miss "first paste stops before gh" "brew install gh" "$first_paste"
+# shellcheck disable=SC2016  # the paste line is compared literally
+shellenv_line='eval "$(/opt/homebrew/bin/brew shellenv)"'
+eq "second paste opens one group" "{" \
+  "$(printf '%s\n' "$second_paste" | head -n 1)"
+eq "second paste closes the group" "}" \
+  "$(printf '%s\n' "$second_paste" | last_line)"
+has "second paste puts brew on PATH" "$shellenv_line" "$second_paste"
+has "second paste installs gh" "brew install gh" "$second_paste"
+has "second paste signs in to GitHub" "gh auth status || gh auth login" "$second_paste"
+if bash -n <<<"$second_paste"; then second_rc=0; else second_rc=$?; fi
+eq "second paste is valid bash" 0 "$second_rc"
+setup_second="$(bash_fence 2 "$DIR/docs/setup.md")"
+eq "setup doc second paste matches the README" "$second_paste" "$setup_second"
+miss "second paste does not clone" "gh repo clone" "$second_paste"
+miss "second paste does not run bootstrap" "bootstrap.sh" "$second_paste"
+eq "third paste puts brew on PATH first" "$shellenv_line" \
+  "$(printf '%s\n' "$third_paste" | head -n 1)"
+has "third paste clones the repo" "gh repo clone pkdone/.dotfiles-mac" "$third_paste"
+# shellcheck disable=SC2088  # the README line uses a literal tilde
+has "third paste runs bootstrap" "~/.dotfiles-mac/bootstrap.sh" "$third_paste"
+miss "third paste does not sign in" "gh auth login" "$third_paste"
 
 mas_brew="$(mktemp)"
 printf '%s\n' 'mas "Example Store App", id: 1' > "$mas_brew"
