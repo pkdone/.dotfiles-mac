@@ -37,8 +37,8 @@ What a macOS Software Update does to these hotkeys, and how to reload a LaunchAg
 
 **Karabiner** (Brewfile cask `karabiner-elements`; `karabiner/` → `~/.config/karabiner/` as a **directory** symlink — Karabiner won't watch a file symlink):
 - Fn/Globe only sets internal variable `pdone_fn` (never sent to macOS)
-- While held: Fn+F → ⌃⌘F (fullscreen); Fn+F11 → Show Desktop; Fn+Delete → forward-delete; Fn+arrows → Home/End/PgUp/PgDn
-- Dictation/microphone consumer keys swallowed; Finder Forward Delete → Move to Trash
+- While held: Fn+F → ⌃⌘F (fullscreen); Fn+F11 → Show Desktop; Fn+Delete → forward-delete outside Finder, and in Finder moves the selected item to the Bin; Fn+arrows → Home/End/PgUp/PgDn
+- Dictation/microphone consumer keys swallowed; Forward Delete on an external keyboard in Finder also moves the selected item to the Bin
 - Top-row brightness/volume still work without Fn
 - Menu bar icon hidden: `global.show_in_menu_bar` and `show_profile_name_in_menu_bar` are both `false` in `karabiner/karabiner.json` (the directory symlink's `~/.config/karabiner/karabiner.json`). `macconfig-check.sh` reads that file with python3 and drifts if either is not false. Restore is git (`karabiner-rules` in `lib/autofix.list`); `--fix` does not rewrite it
 - `macconfig-check.sh` drifts if the dir symlink, Fn-kill rule, Finder Trash rule, or menu bar icon setting is missing
