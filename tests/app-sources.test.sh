@@ -85,9 +85,11 @@ first_paste="$(bash_fence 1)"
 second_paste="$(bash_fence 2)"
 has "first paste is the Homebrew installer" "Homebrew/install/HEAD/install.sh" "$first_paste"
 miss "first paste stops before gh" "brew install gh" "$first_paste"
+# shellcheck disable=SC2016  # the paste line is compared literally
 eq "second paste puts brew on PATH first" 'eval "$(/opt/homebrew/bin/brew shellenv)"' \
   "$(printf '%s\n' "$second_paste" | head -n 1)"
 has "second paste installs gh" "brew install gh" "$second_paste"
+# shellcheck disable=SC2088  # the README line uses a literal tilde
 has "second paste runs bootstrap" "~/.dotfiles-mac/bootstrap.sh" "$second_paste"
 
 mas_brew="$(mktemp)"
