@@ -70,7 +70,7 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Mission Control / Desktop Overview | Control + Up Arrow OR 3-Finger Swipe Up OR F3 (Mission Control key) |
 | Show Desktop | Fn + F11 OR Click desktop space |
 | Move Item to Trash | Command + Backspace (in Finder/Desktop) |
-| Forward Delete → Trash | Forward Delete (in Finder; mapped to Move to Trash) |
+| Move selected item to the Bin | Fn + Delete (or Forward Delete on an external keyboard) in Finder |
 | Paste file as a move (cut & paste) | Option + Command + V (in Finder, after Command + C) |
 | Show/hide hidden files in Finder | Command + Shift + . |
 | Ghostty Quick Launcher | Command + ` |
