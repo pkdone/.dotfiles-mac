@@ -72,8 +72,8 @@ miss "README leaves the run-log example to the setup doc" "install-20260101-1200
 exact="$(printf '%s\n' "$readme" | grep -E '[0-9]+ (manual steps|settings) have to be set by hand|[0-9]+ you confirm by eye|[0-9]+ steps you set by hand' | grep -vi 'about ' || true)"
 eq "README does not pin an exact manual-step count" "" "$exact"
 
-# The Homebrew installer reads the rest of a paste, so it has its own fence.
-# The next fence starts by putting brew on PATH, then installs gh.
+# The Homebrew installer and gh auth login both read the terminal, so each
+# one is the last command in its paste. The clone is a later paste.
 bash_fence() {
   awk -v want="$1" '
     $0 == "```bash" { n++; capture = 1; next }
@@ -81,16 +81,27 @@ bash_fence() {
     capture && n == want { print }
   ' "$README"
 }
+last_line() { awk 'NF { line = $0 } END { print line }'; }
 first_paste="$(bash_fence 1)"
 second_paste="$(bash_fence 2)"
+third_paste="$(bash_fence 3)"
 has "first paste is the Homebrew installer" "Homebrew/install/HEAD/install.sh" "$first_paste"
 miss "first paste stops before gh" "brew install gh" "$first_paste"
 # shellcheck disable=SC2016  # the paste line is compared literally
-eq "second paste puts brew on PATH first" 'eval "$(/opt/homebrew/bin/brew shellenv)"' \
+shellenv_line='eval "$(/opt/homebrew/bin/brew shellenv)"'
+eq "second paste puts brew on PATH first" "$shellenv_line" \
   "$(printf '%s\n' "$second_paste" | head -n 1)"
 has "second paste installs gh" "brew install gh" "$second_paste"
+eq "second paste ends at GitHub sign-in" "gh auth status || gh auth login" \
+  "$(printf '%s\n' "$second_paste" | last_line)"
+miss "second paste does not clone" "gh repo clone" "$second_paste"
+miss "second paste does not run bootstrap" "bootstrap.sh" "$second_paste"
+eq "third paste puts brew on PATH first" "$shellenv_line" \
+  "$(printf '%s\n' "$third_paste" | head -n 1)"
+has "third paste clones the repo" "gh repo clone pkdone/.dotfiles-mac" "$third_paste"
 # shellcheck disable=SC2088  # the README line uses a literal tilde
-has "second paste runs bootstrap" "~/.dotfiles-mac/bootstrap.sh" "$second_paste"
+has "third paste runs bootstrap" "~/.dotfiles-mac/bootstrap.sh" "$third_paste"
+miss "third paste does not sign in" "gh auth login" "$third_paste"
 
 mas_brew="$(mktemp)"
 printf '%s\n' 'mas "Example Store App", id: 1' > "$mas_brew"

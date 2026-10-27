@@ -8,7 +8,7 @@ Do these two parts once on a new Mac, in order.
 
 ### 1. Bootstrap
 
-Paste the first block, wait for it to finish (it may ask for the Mac password and to press Return), then paste the second block. The two blocks install Homebrew and the GitHub CLI, sign you in to GitHub, clone this repo to `~/.dotfiles-mac`, and then run the guided setup (`bootstrap.sh`), which asks before each step. It's safe to paste again later, or to re-run `~/.dotfiles-mac/bootstrap.sh`, because it skips anything that's already done.
+Paste the first block, wait for it to finish (it may ask for the Mac password and to press Return), then paste the second block and finish signing in to GitHub. Then paste the third block. Signing in asks questions in the terminal and may open a browser, so the clone is a separate paste. The three blocks install Homebrew and the GitHub CLI, sign you in to GitHub, clone this repo to `~/.dotfiles-mac`, and then run the guided setup (`bootstrap.sh`), which asks before each step. It's safe to paste again later, or to re-run `~/.dotfiles-mac/bootstrap.sh`, because it skips anything that's already done.
 
 ```bash
 command -v brew >/dev/null 2>&1 || {
@@ -21,6 +21,10 @@ command -v brew >/dev/null 2>&1 || {
 eval "$(/opt/homebrew/bin/brew shellenv)"
 brew install gh
 gh auth status || gh auth login
+```
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv)"
 [ -d ~/.dotfiles-mac ] || gh repo clone pkdone/.dotfiles-mac ~/.dotfiles-mac
 ~/.dotfiles-mac/bootstrap.sh
 ```

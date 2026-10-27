@@ -2,7 +2,7 @@
 
 See [README.md](../README.md).
 
-The two paste blocks for a fresh Mac are at the top of the README. This is the rest of the walkthrough: what each step runs, how to check the machine afterwards, and where the repo files live. What a managed setting does is in [Settings](settings.md). The by-hand checklist is [Manual steps](manual-steps.md). After a software update, hotkey pins, and AC sleep are in [Troubleshooting](troubleshooting.md). Hammerspoon modes are in [Modes](modes.md).
+The three paste blocks for a fresh Mac are at the top of the README. This is the rest of the walkthrough: what each step runs, how to check the machine afterwards, and where the repo files live. What a managed setting does is in [Settings](settings.md). The by-hand checklist is [Manual steps](manual-steps.md). After a software update, hotkey pins, and AC sleep are in [Troubleshooting](troubleshooting.md). Hammerspoon modes are in [Modes](modes.md).
 
 ## What's in the repo
 
@@ -23,7 +23,7 @@ The two paste blocks for a fresh Mac are at the top of the README. This is the r
 
 ## Bootstrap
 
-On a fresh Mac, paste the first block, wait for it to finish (it may ask for the Mac password and to press Return), then paste the second block. The first block installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon). The second block puts `brew` on PATH if this Terminal window does not have it yet, installs the GitHub CLI, signs in when `gh auth status` is not already ok, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste them again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. After `install.sh` it names any missing company app and, in a terminal, offers to open Fleet Self service. A missing company app is a warning, not a failed step. If one of the setup steps fails, bootstrap records it and keeps going, including the manual-steps list and the offer to walk through them. At the end it prints the failed steps and the log path, and exits with an error. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
+On a fresh Mac, paste the first block, wait for it to finish (it may ask for the Mac password and to press Return), then paste the second block and finish signing in to GitHub. Then paste the third block. Signing in asks questions in the terminal and may open a browser, so it is the last line of the second paste. The first block installs Homebrew when `brew` is not already on PATH (the official installer, then `brew shellenv` for Apple Silicon). The second block puts `brew` on PATH if this Terminal window does not have it yet, installs the GitHub CLI, and signs in when `gh auth status` is not already ok. The third block puts `brew` on PATH the same way, clones this private repo when `~/.dotfiles-mac` does not exist, and runs the guided bootstrap. Paste them again later: each of those steps skips work that is already done. Bootstrap walks through `install.sh`, `shell.sh`, `hostname.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, and `prune-apps.sh`, prompting before each. After `install.sh` it names any missing company app and, in a terminal, offers to open Fleet Self service. A missing company app is a warning, not a failed step. If one of the setup steps fails, bootstrap records it and keeps going, including the manual-steps list and the offer to walk through them. At the end it prints the failed steps and the log path, and exits with an error. It is safe to re-run. `--yes` skips the prompts; `--dry-run` previews every step.
 
 ```bash
 command -v brew >/dev/null 2>&1 || {
@@ -36,11 +36,15 @@ command -v brew >/dev/null 2>&1 || {
 eval "$(/opt/homebrew/bin/brew shellenv)"
 brew install gh
 gh auth status || gh auth login
+```
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv)"
 [ -d ~/.dotfiles-mac ] || gh repo clone pkdone/.dotfiles-mac ~/.dotfiles-mac
 ~/.dotfiles-mac/bootstrap.sh
 ```
 
-The same two blocks are at the top of [README.md](../README.md#setup).
+The same three blocks are at the top of [README.md](../README.md#setup).
 
 ## Logs and when something fails
 
