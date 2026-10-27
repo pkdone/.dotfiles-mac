@@ -72,28 +72,35 @@ miss "README leaves the run-log example to the setup doc" "install-20260101-1200
 exact="$(printf '%s\n' "$readme" | grep -E '[0-9]+ (manual steps|settings) have to be set by hand|[0-9]+ you confirm by eye|[0-9]+ steps you set by hand' | grep -vi 'about ' || true)"
 eq "README does not pin an exact manual-step count" "" "$exact"
 
-# The Homebrew installer and gh auth login both read the terminal, so each
-# one is the last command in its paste. The clone is a later paste.
+# The Homebrew installer and gh auth login both read the terminal. The second
+# paste is one { } group, so the shell reads every line before running any
+# command. The clone is a later paste.
 bash_fence() {
   awk -v want="$1" '
     $0 == "```bash" { n++; capture = 1; next }
     $0 == "```" && capture { capture = 0; next }
     capture && n == want { print }
-  ' "$README"
+  ' "$2"
 }
 last_line() { awk 'NF { line = $0 } END { print line }'; }
-first_paste="$(bash_fence 1)"
-second_paste="$(bash_fence 2)"
-third_paste="$(bash_fence 3)"
+first_paste="$(bash_fence 1 "$README")"
+second_paste="$(bash_fence 2 "$README")"
+third_paste="$(bash_fence 3 "$README")"
 has "first paste is the Homebrew installer" "Homebrew/install/HEAD/install.sh" "$first_paste"
 miss "first paste stops before gh" "brew install gh" "$first_paste"
 # shellcheck disable=SC2016  # the paste line is compared literally
 shellenv_line='eval "$(/opt/homebrew/bin/brew shellenv)"'
-eq "second paste puts brew on PATH first" "$shellenv_line" \
+eq "second paste opens one group" "{" \
   "$(printf '%s\n' "$second_paste" | head -n 1)"
-has "second paste installs gh" "brew install gh" "$second_paste"
-eq "second paste ends at GitHub sign-in" "gh auth status || gh auth login" \
+eq "second paste closes the group" "}" \
   "$(printf '%s\n' "$second_paste" | last_line)"
+has "second paste puts brew on PATH" "$shellenv_line" "$second_paste"
+has "second paste installs gh" "brew install gh" "$second_paste"
+has "second paste signs in to GitHub" "gh auth status || gh auth login" "$second_paste"
+if bash -n <<<"$second_paste"; then second_rc=0; else second_rc=$?; fi
+eq "second paste is valid bash" 0 "$second_rc"
+setup_second="$(bash_fence 2 "$DIR/docs/setup.md")"
+eq "setup doc second paste matches the README" "$second_paste" "$setup_second"
 miss "second paste does not clone" "gh repo clone" "$second_paste"
 miss "second paste does not run bootstrap" "bootstrap.sh" "$second_paste"
 eq "third paste puts brew on PATH first" "$shellenv_line" \

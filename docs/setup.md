@@ -33,9 +33,11 @@ command -v brew >/dev/null 2>&1 || {
 ```
 
 ```bash
-eval "$(/opt/homebrew/bin/brew shellenv)"
-brew install gh
-gh auth status || gh auth login
+{
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+  brew install gh
+  gh auth status || gh auth login
+}
 ```
 
 ```bash
