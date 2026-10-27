@@ -8,13 +8,17 @@ Do these two parts once on a new Mac, in order.
 
 ### 1. Bootstrap
 
-Paste this block. It installs Homebrew and the GitHub CLI, signs you in to GitHub, clones this repo to `~/.dotfiles-mac`, and then runs the guided setup (`bootstrap.sh`), which asks before each step. It's safe to paste again later, or to re-run `~/.dotfiles-mac/bootstrap.sh`, because it skips anything that's already done.
+Paste the first block, wait for it to finish (it may ask for the Mac password and to press Return), then paste the second block. The two blocks install Homebrew and the GitHub CLI, sign you in to GitHub, clone this repo to `~/.dotfiles-mac`, and then run the guided setup (`bootstrap.sh`), which asks before each step. It's safe to paste again later, or to re-run `~/.dotfiles-mac/bootstrap.sh`, because it skips anything that's already done.
 
 ```bash
 command -v brew >/dev/null 2>&1 || {
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   eval "$(/opt/homebrew/bin/brew shellenv)"
 }
+```
+
+```bash
+eval "$(/opt/homebrew/bin/brew shellenv)"
 brew install gh
 gh auth status || gh auth login
 [ -d ~/.dotfiles-mac ] || gh repo clone pkdone/.dotfiles-mac ~/.dotfiles-mac
@@ -23,13 +27,13 @@ gh auth status || gh auth login
 
 What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md).
 
-Each run of `bootstrap.sh` and `install.sh` writes a log under `~/Library/Logs/dotfiles/` (for example `install-20260101-120000.log`) and prints that path when it finishes. Logs older than 30 days are removed. A failed Homebrew app is retried once and does not stop the others. Setup then names anything still missing and the command to install it. If that install step itself stops before it can name a package, setup says the Brewfile install failed and points at the log. An app that is already in `/Applications` is adopted instead of failing. In a terminal, setup asks once for an admin password when a package installer needs it. It stops early, with a plain explanation, if the network, the Xcode Command Line Tools, or free disk space is not ready.
-
 ### 2. Manual steps
 
-About 40 manual steps have to be set by hand: privacy permissions, sign-ins, company-managed apps and a few System Settings pages. `macconfig` checks most of them for you afterwards; about 10 you confirm by eye. Go through them once the bootstrap finishes (it prints the list and offers to walk you through it).
+A completely fresh Mac has up to about 40 steps you set by hand: privacy permissions, sign-ins, company-managed apps, and a few System Settings pages. Usually far fewer are still open. Company device management (Fleet) covers many of them, some apps sign back in through iCloud or 1Password, and an earlier run may already have done the rest. `macconfig` checks most of them afterwards; about 10 you confirm by eye.
 
-These are three ways to use the same checklist. You don't need to run all of them. Most of the time, `manualsteps open` is the only one you need.
+When `bootstrap.sh` finishes, it lists the steps still open on this Mac, including any it can't check, and offers to walk you through them. You don't need to run anything else.
+
+To see or go through them again later, run:
 
 ```bash
 manualsteps        # check each step and report whether it is done (ok), needs attention (warn), or must be checked by hand. Changes nothing.

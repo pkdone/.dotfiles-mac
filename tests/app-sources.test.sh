@@ -59,13 +59,36 @@ miss "note does not name Okta Extension" "Okta Extension" "$section"
 miss "README does not mention check.sh" "check.sh" "$(cat "$README")"
 
 # An exact integer count would go stale each time a step is added. The README
-# says "about 40" / "about 10" instead, and this test must not require a
+# says "up to about 40" / "about 10" instead, and this test must not require a
 # particular integer.
 readme="$(cat "$README")"
-has "README approximates the manual-step count" "About 40 manual steps" "$readme"
+has "README approximates the manual-step count" "up to about 40" "$readme"
+has "README says fewer steps are usually open" "Usually far fewer are still open" "$readme"
 has "README approximates the by-eye count" "about 10 you confirm by eye" "$readme"
-exact="$(printf '%s\n' "$readme" | grep -E '[0-9]+ (manual steps|settings) have to be set by hand|[0-9]+ you confirm by eye' | grep -vi 'about ' || true)"
+has "README says to wait for the Homebrew paste" "wait for it to finish" "$readme"
+has "README says bootstrap offers the walk-through" "offers to walk you through them" "$readme"
+has "README keeps later commands for a re-run" "go through them again later" "$readme"
+miss "README leaves the run-log example to the setup doc" "install-20260101-120000.log" "$readme"
+exact="$(printf '%s\n' "$readme" | grep -E '[0-9]+ (manual steps|settings) have to be set by hand|[0-9]+ you confirm by eye|[0-9]+ steps you set by hand' | grep -vi 'about ' || true)"
 eq "README does not pin an exact manual-step count" "" "$exact"
+
+# The Homebrew installer reads the rest of a paste, so it has its own fence.
+# The next fence starts by putting brew on PATH, then installs gh.
+bash_fence() {
+  awk -v want="$1" '
+    $0 == "```bash" { n++; capture = 1; next }
+    $0 == "```" && capture { capture = 0; next }
+    capture && n == want { print }
+  ' "$README"
+}
+first_paste="$(bash_fence 1)"
+second_paste="$(bash_fence 2)"
+has "first paste is the Homebrew installer" "Homebrew/install/HEAD/install.sh" "$first_paste"
+miss "first paste stops before gh" "brew install gh" "$first_paste"
+eq "second paste puts brew on PATH first" 'eval "$(/opt/homebrew/bin/brew shellenv)"' \
+  "$(printf '%s\n' "$second_paste" | head -n 1)"
+has "second paste installs gh" "brew install gh" "$second_paste"
+has "second paste runs bootstrap" "~/.dotfiles-mac/bootstrap.sh" "$second_paste"
 
 mas_brew="$(mktemp)"
 printf '%s\n' 'mas "Example Store App", id: 1' > "$mas_brew"
