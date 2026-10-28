@@ -162,6 +162,31 @@ print("allow" if any(mod.matches(r, it) for r in rules) else "no")
 PY
 )"
 
+docker_match() { # team — allow or no for the DockerHelper login item
+  "$PY" - "$DIR/lib/btm-login-items.py" "$DIR/lib/login-items-allow.list" "$1" <<'PY'
+import importlib.util, sys
+mod_path, allow, team = sys.argv[1:]
+spec = importlib.util.spec_from_file_location("btm_login_items", mod_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+it = {
+    "type": 0x4, "disposition": 0xB, "name": "DockerHelper",
+    "identifier": "4.com.docker.helper",
+    "bundle": "com.docker.helper", "id": "com.docker.helper",
+    "developer": "Docker Inc" if team else "", "team": team, "url": "file:///bin",
+    "executable": "", "parent": "", "enabled": True,
+}
+rules = mod.read_allow(allow)
+print("allow" if any(mod.matches(r, it) for r in rules) else "no")
+PY
+}
+eq "DockerHelper (Docker Inc, team 9BNSXJN65R) is allow-listed" allow "$(docker_match 9BNSXJN65R)"
+eq "DockerHelper without a team id is allow-listed by bundle id" allow "$(docker_match "")"
+docker_rows="$(awk '/^# ---- Tools this repo sets up/,/^# ---- Company/' "$DIR/lib/login-items-allow.list")"
+has "Docker's team row is under Tools this repo sets up" "team|9BNSXJN65R|" "$docker_rows"
+has "Docker's bundle row is under Tools this repo sets up" "bundle|com.docker.helper|" "$docker_rows"
+has "docker-desktop is in the Brewfile" 'cask "docker-desktop"' "$(cat "$DIR/Brewfile")"
+
 company="$("$PY" - "$DIR/lib/btm-login-items.py" "$DIR/lib/login-items-allow.list" "$tmp/company.btm" "$tmp/mdm.btm" <<'PY'
 import importlib.util, io, plistlib, sys
 from contextlib import redirect_stdout
