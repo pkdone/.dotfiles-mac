@@ -280,7 +280,7 @@ def item(name, bundle, path, kind=0x2):
         "url": url(path), "executablePath": "", "container": "",
     }
 items = [
-    item("WhatsApp Web", "com.apple.Safari.WebApp.2C07FD29-EDF8-4FBA-8539-F9C71386A734",
+    item("WhatsApp Web", "com.apple.Safari.WebApp.AAAABBBB-CCCC-DDDD-EEEE-FFFF00001111",
          f"{home}/Applications/WhatsApp Web.app"),
     item("Gmail", "com.apple.Safari.WebApp.11111111-2222-3333-4444-555555555555",
          f"{home}/Applications/Gmail.app"),
@@ -300,14 +300,14 @@ sys.stdout.write(buf.getvalue())
 PY
 }
 web="$(webapp_audit "$home" "$DIR/lib/login-items-allow.list")"
-eq "WhatsApp Web in ~/Applications is allow-listed" allow "$(field_in "$web" "2C07FD29-EDF8-4FBA-8539-F9C71386A734" 1)"
-eq "WhatsApp Web keeps its name" "WhatsApp Web" "$(field_in "$web" "2C07FD29-EDF8-4FBA-8539-F9C71386A734" 3)"
+eq "WhatsApp Web in ~/Applications is allow-listed" allow "$(field_in "$web" "AAAABBBB-CCCC-DDDD-EEEE-FFFF00001111" 1)"
+eq "WhatsApp Web keeps its name" "WhatsApp Web" "$(field_in "$web" "AAAABBBB-CCCC-DDDD-EEEE-FFFF00001111" 3)"
 eq "another Safari web app stays unknown" unknown "$(field_in "$web" "11111111-2222-3333-4444-555555555555" 1)"
 eq "a WhatsApp Web app somewhere else stays unknown" unknown "$(field_in "$web" "99999999-2222-3333-4444-555555555555" 1)"
 eq "a background agent at that path is not an app row match" unknown "$(field_in "$web" "com.example.whatsapp-agent" 1)"
 rm -rf "$home/Applications/WhatsApp Web.app"
 web="$(webapp_audit "$home" "$DIR/lib/login-items-allow.list")"
-eq "a removed WhatsApp Web is stale, not allowed" stale "$(field_in "$web" "2C07FD29-EDF8-4FBA-8539-F9C71386A734" 1)"
+eq "a removed WhatsApp Web is stale, not allowed" stale "$(field_in "$web" "AAAABBBB-CCCC-DDDD-EEEE-FFFF00001111" 1)"
 mkdir -p "$home/Applications/WhatsApp Web.app"
 
 printf 'app|Applications/WhatsApp Web.app|relative\napp|~/Applications/WhatsApp Web|no .app\n' > "$tmp/bad-app.list"
@@ -315,12 +315,12 @@ bad="$(webapp_audit "$home" "$tmp/bad-app.list" 2>&1)"
 has "an app row needs a full .app path" "allowlist: line 1: an app row needs the full path of a .app" "$bad"
 has "an app row without .app is refused" "allowlist: line 2: an app row needs the full path of a .app" "$bad"
 miss "the allowlist error has no pipe for health.sh to split on" "allowlist: line 1: an app row needs the full path of a .app, such as ~/Applications/WhatsApp Web.app|" "$bad"
-eq "a refused app row allows nothing" unknown "$(field_in "$bad" "2C07FD29-EDF8-4FBA-8539-F9C71386A734" 1)"
+eq "a refused app row allows nothing" unknown "$(field_in "$bad" "AAAABBBB-CCCC-DDDD-EEEE-FFFF00001111" 1)"
 
 allow_text="$(cat "$DIR/lib/login-items-allow.list")"
 has "allow list names WhatsApp Web by path" "app|~/Applications/WhatsApp Web.app|" "$allow_text"
-miss "allow list does not pin this Mac's web app UUID" "2C07FD29" "$allow_text"
-miss "allow list does not allow every Safari web app" "com.apple.Safari.WebApp|" "$allow_text"
+allow_rows="$(grep -v '^#' "$DIR/lib/login-items-allow.list")"
+miss "no allow row names a Safari web app bundle id" "com.apple.Safari.WebApp" "$allow_rows"
 has "allow list header documents the app type" "#          app " "$allow_text"
 
 has "allow list mentions Cursor BackgroundActivityCheck" \

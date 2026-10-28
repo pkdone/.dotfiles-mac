@@ -342,7 +342,7 @@ def matches(rule: dict, it: dict) -> bool:
         # Open at Login app only. A Safari web app's bundle id is
         # com.apple.Safari.WebApp.<UUID>, new on each Mac, so its path is the
         # key. Other web apps live at other paths and stay unknown.
-        return it["type"] == TYPE_APP and app_path(it) == v
+        return it.get("type") == TYPE_APP and app_path(it) == v
     if t == "LabelPrefix":
         # The launchd label, the recorded name, and the raw identifier.
         # koi.security.* is stored as koi.security.mdm.plist and shown as
