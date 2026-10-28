@@ -84,7 +84,7 @@ Scaling: off
 Origin: (-1920,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 11: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 11: res:1920x1080 hz:180 color_depth:8 <-- current mode
 
 Persistent screen id: BUILTIN-ID
 Type: MacBook built in screen
@@ -95,7 +95,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 
 # $1 profiler json (empty: system_profiler is not on PATH)
@@ -167,6 +167,21 @@ eq "a connected ARZOPA that matches is counted ok" \
   "COUNTS checked=2 ok=2 drift=0 warn=0 hand=0" \
   "$(printf '%s\n' "$pinned" | grep '^COUNTS ')"
 has "the matching ARZOPA line is ok" "  ok    ARZOPA is 1920x1080" "$pinned"
+
+# Real displayplacer list with the ARZOPA on the StarTech dock at 144Hz.
+cat > "$tmp/dock.json" <<'EOF'
+{"SPDisplaysDataType":[{"spdisplays_ndrvs":[
+  {"_name":"Color LCD","spdisplays_connection_type":"spdisplays_internal","_spdisplays_resolution":"1800 x 1169 @ 120.00Hz","spdisplays_pixelresolution":"spdisplays_3024x1964Retina"},
+  {"_name":"ARZOPA","_spdisplays_display-serial-number":"74646035","_spdisplays_resolution":"1920 x 1080 @ 144.00Hz"}
+]}]}
+EOF
+dock="$(run_display "$tmp/dock.json" "$DIR/tests/fixtures/displayplacer-dock.txt")"
+eq "the real dock list is counted ok" \
+  "COUNTS checked=2 ok=2 drift=0 warn=0 hand=0" \
+  "$(printf '%s\n' "$dock" | grep '^COUNTS ')"
+has "the real dock list passes at 144Hz" \
+  "  ok    ARZOPA is 1920x1080 at 144Hz, the highest this connection offers (180Hz needs a direct connection)" "$dock"
+miss "the real dock list does not say the mode is missing" "has no mode" "$dock"
 
 missing="$(run_display "")"
 eq "an unreadable display report is a counted warning" \

@@ -178,7 +178,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 0: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 LIST
   exit 0
 fi

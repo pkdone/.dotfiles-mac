@@ -262,11 +262,11 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
+  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on <-- current mode
   mode 1: res:1800x1169 hz:60 color_depth:8 scaling:on
   mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
   mode 3: res:1800x1169 hz:120 color_depth:4 scaling:on
-  mode 4: res:1800x1169 hz:120 color_depth:8 scaling:off
+  mode 4: res:1800x1169 hz:120 color_depth:8
 
 Persistent screen id: EXTERNAL-ID
 Contextual screen id: 2
@@ -278,8 +278,8 @@ Scaling: off
 Origin: (1800,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
-  mode 1: res:1920x1080 hz:60 color_depth:8 scaling:off
+  mode 0: res:2560x1440 hz:60 color_depth:8 <-- current mode
+  mode 1: res:1920x1080 hz:60 color_depth:8
 
 Execute the command below to set your screens to the current arrangement:
 displayplacer "id:BUILTIN-ID res:1512x982 hz:120 color_depth:8 scaling:on origin:(0,0) degree:0" "id:EXTERNAL-ID res:2560x1440 hz:60 color_depth:8 scaling:off origin:(1800,0) degree:0"
@@ -316,8 +316,8 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
-  mode 4: res:1800x1169 hz:120 color_depth:8 scaling:off
+  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on <-- current mode
+  mode 4: res:1800x1169 hz:120 color_depth:8
 EOF
 out="$(plan "$tmp/default.json" "$tmp/placer-no-mode.txt")"
 has "a scaled-off mode is not More Space" "no More Space mode 1800x1169" "$out"
@@ -334,7 +334,7 @@ Scaling: off
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
+  mode 0: res:2560x1440 hz:60 color_depth:8 <-- current mode
 EOF
 out="$(plan "$tmp/default.json" "$tmp/placer-external-only.txt")"
 has "no built-in screen in displayplacer list is a warning" "could not match the built-in display" "$out"
@@ -369,7 +369,7 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1728x1117 hz:120 color_depth:8 scaling:on
+  mode 0: res:1728x1117 hz:120 color_depth:8 scaling:on <-- current mode
   mode 8: res:2056x1329 hz:120 color_depth:8 scaling:on
 EOF
 out="$(plan "$tmp/sixteen-14mode.json" "$tmp/placer-16.txt")"
@@ -393,8 +393,8 @@ Scaling: off
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
-  mode 3: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 0: res:2560x1440 hz:60 color_depth:8 <-- current mode
+  mode 3: res:1920x1080 hz:180 color_depth:8
 
 Persistent screen id: BUILTIN-ID
 Type: MacBook built in screen
@@ -405,7 +405,7 @@ Scaling: on
 Origin: (1920,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
+  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on <-- current mode
   mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
 EOF
 out="$(plan "$tmp/other-16.json" "$tmp/placer-other-16.txt")"
@@ -432,11 +432,11 @@ Scaling: off
 Origin: (1800,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
-  mode 4: res:1920x1080 hz:60 color_depth:8 scaling:off
+  mode 0: res:2560x1440 hz:60 color_depth:8 <-- current mode
+  mode 4: res:1920x1080 hz:60 color_depth:8
   mode 7: res:1920x1080 hz:180 color_depth:8 scaling:on
-  mode 9: res:1920x1080 hz:180 color_depth:4 scaling:off
-  mode 11: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 9: res:1920x1080 hz:180 color_depth:4
+  mode 11: res:1920x1080 hz:180 color_depth:8
 
 Persistent screen id: BUILTIN-ID
 Type: MacBook built in screen
@@ -447,7 +447,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 out="$(run "$tmp/arzopa.json")"
 has "a connected ARZOPA without displayplacer list is pending" "pending|arzopa|" "$out"
@@ -484,7 +484,7 @@ Scaling: off
 Origin: (-1920,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 11: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 11: res:1920x1080 hz:180 color_depth:8 <-- current mode
 
 Persistent screen id: BUILTIN-ID
 Type: MacBook built in screen
@@ -495,7 +495,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 out="$(plan "$tmp/arzopa-serial.json" "$tmp/placer-arzopa-ok.txt")"
 eq "an already pinned ARZOPA is left alone" \
@@ -515,7 +515,7 @@ Scaling: off
 Origin: (-1920,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 1: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 1: res:1920x1080 hz:180 color_depth:8 <-- current mode
 
 Persistent screen id: BUILTIN-ID
 Type: MacBook built in screen
@@ -526,7 +526,7 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-type-only.txt")"
 has "type matches when name and serial are absent" "ok|arzopa|ARZOPA is 1920x1080" "$out"
@@ -544,7 +544,7 @@ Scaling: off
 Origin: (-1920,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 1: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 1: res:1920x1080 hz:180 color_depth:8 <-- current mode
 
 Persistent screen id: BUILTIN-ID
 Type: MacBook built in screen
@@ -555,7 +555,7 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-named-other.txt")"
 has "a different name and serial do not match" "no screen named ARZOPA" "$out"
@@ -574,7 +574,7 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 4: res:1920x1080 hz:60 color_depth:8 scaling:off
+  mode 4: res:1920x1080 hz:60 color_depth:8
   mode 7: res:1920x1080 hz:180 color_depth:8 scaling:on
 
 Persistent screen id: BUILTIN-ID
@@ -586,7 +586,7 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 out="$(plan "$tmp/arzopa.json" "$tmp/placer-no-180.txt")"
 has "a scaled 180Hz mode is skipped for the unscaled 60Hz one" \
@@ -606,7 +606,7 @@ Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
   mode 7: res:1920x1080 hz:180 color_depth:8 scaling:on
-  mode 8: res:2560x1440 hz:60 color_depth:8 scaling:off
+  mode 8: res:2560x1440 hz:60 color_depth:8
 
 Persistent screen id: BUILTIN-ID
 Type: MacBook built in screen
@@ -617,7 +617,7 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 out="$(plan "$tmp/arzopa.json" "$tmp/placer-no-unscaled.txt")"
 has "no unscaled 1920x1080 mode warns" \
@@ -626,6 +626,7 @@ miss "no unscaled 1920x1080 mode does not set a screen" "screen|" "$out"
 
 # Through the StarTech Thunderbolt 5 dock the ARZOPA lists 1920x1080 unscaled
 # at 144, 120, 100 and 60Hz, and no 180Hz.
+cur() { [ "$1" = "$2" ] && printf ' <-- current mode'; return 0; }
 dock_placer() { # current Hertz
   cat <<EOF
 Persistent screen id: DOCK-UUID
@@ -638,10 +639,10 @@ Scaling: off
 Origin: (-1920,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1920x1080 hz:144 color_depth:8 scaling:off
-  mode 1: res:1920x1080 hz:120 color_depth:8 scaling:off
-  mode 2: res:1920x1080 hz:100 color_depth:8 scaling:off
-  mode 3: res:1920x1080 hz:60 color_depth:8 scaling:off
+  mode 0: res:1920x1080 hz:144 color_depth:8$(cur "$1" 144)
+  mode 1: res:1920x1080 hz:120 color_depth:8$(cur "$1" 120)
+  mode 2: res:1920x1080 hz:100 color_depth:8$(cur "$1" 100)
+  mode 3: res:1920x1080 hz:60 color_depth:8$(cur "$1" 60)
   mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on
 
 Persistent screen id: BUILTIN-ID
@@ -653,7 +654,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 }
 dock_placer 144 > "$tmp/placer-dock-144.txt"
@@ -690,7 +691,7 @@ has "no settable rate left warns" \
 miss "no settable rate left sets nothing" "screen|" "$out"
 
 # Plugged in directly, 180Hz is listed, so 144Hz is drift.
-sed 's/mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on/mode 5: res:1920x1080 hz:180 color_depth:8 scaling:off/' \
+sed 's/mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on/mode 5: res:1920x1080 hz:180 color_depth:8/' \
   "$tmp/placer-dock-144.txt" > "$tmp/placer-direct-144.txt"
 out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-direct-144.txt")"
 has "a direct connection at 144Hz is drift" "warn|arzopa|ARZOPA is not in its place (144Hz;" "$out"
@@ -699,11 +700,72 @@ out="$(plan "$tmp/arzopa.json" "$tmp/placer-direct-144.txt")"
 has "a direct connection plan sets 180Hz" \
   "screen|id:DOCK-UUID res:1920x1080 hz:180 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" "$out"
 # A faster mode than the pin is not chosen over 180Hz.
-sed 's/mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on/mode 5: res:1920x1080 hz:180 color_depth:8 scaling:off\
-  mode 6: res:1920x1080 hz:240 color_depth:8 scaling:off/' \
+sed 's/mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on/mode 5: res:1920x1080 hz:180 color_depth:8\
+  mode 6: res:1920x1080 hz:240 color_depth:8/' \
   "$tmp/placer-dock-144.txt" > "$tmp/placer-direct-240.txt"
 out="$(plan "$tmp/arzopa.json" "$tmp/placer-direct-240.txt")"
 has "180Hz is preferred over a faster listed rate" "rate|arzopa|180" "$out"
+
+# Real `displayplacer list` from Paul's Mac with the ARZOPA on the dock.
+# Unscaled modes carry no scaling token, the mode in use ends with
+# "<-- current mode", and the ARZOPA block has a serial but no name.
+REAL="$DIR/tests/fixtures/displayplacer-dock.txt"
+cat > "$tmp/arzopa-dock.json" <<'EOF'
+{"SPDisplaysDataType":[{"spdisplays_ndrvs":[
+  {"_name":"Color LCD","spdisplays_connection_type":"spdisplays_internal","_spdisplays_resolution":"1800 x 1169 @ 120.00Hz","spdisplays_pixelresolution":"spdisplays_3024x1964Retina"},
+  {"_name":"ARZOPA","_spdisplays_display-serial-number":"74646035","_spdisplays_resolution":"1920 x 1080 @ 144.00Hz"}
+]}]}
+EOF
+has "the real list has unscaled modes without a scaling token" \
+  "mode 61: res:1920x1080 hz:144 color_depth:8 <-- current mode" "$(cat "$REAL")"
+eq "the real ARZOPA list parses its unscaled 1920x1080 rates" "144 120 100 60" "$(
+  "$PY" - "$HELPER" "$REAL" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("dr", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+screens = mod.parse_placer(open(sys.argv[2]).read())
+arzopa = [s for s in screens if s["serial"] == "s74646035"][0]
+print(" ".join(str(r) for r in mod._offered_rates(arzopa["modes"], "1920x1080", "off")))
+PY
+)"
+eq "the real lists' current modes are the marked ones" "66 61" "$(
+  "$PY" - "$HELPER" "$REAL" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("dr", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+print(" ".join(mod._current_mode(s)["n"] for s in mod.parse_placer(open(sys.argv[2]).read())))
+PY
+)"
+out="$(run_with_placer "$tmp/arzopa-dock.json" "$REAL")"
+eq "the real dock list passes at 144Hz, the highest offered" \
+  "$(printf '%s\n' \
+    "ok||Built-in display is More Space (Color LCD '1800 x 1169 @ 120.00Hz'; _spdisplays_resolution starts with 1800 x 1169)" \
+    "ok|arzopa|ARZOPA is 1920x1080 at 144Hz, the highest this connection offers (180Hz needs a direct connection), scaling off, at (-1920,0), to the left of the laptop. The laptop stays at (0,0), so the Dock and menu bar stay on it")" \
+  "$out"
+out="$(plan "$tmp/arzopa-dock.json" "$REAL")"
+miss "the real dock list needs no change" "screen|" "$out"
+# The same list with the ARZOPA dropped to 100Hz: the plan sets 144Hz unscaled.
+sed -e '151s/^Hertz: 144$/Hertz: 100/' \
+  -e 's/^\(  mode 61: res:1920x1080 hz:144 color_depth:8\) <-- current mode$/\1/' \
+  -e 's/^\(  mode 63: res:1920x1080 hz:100 color_depth:8\)$/\1 <-- current mode/' \
+  "$REAL" > "$tmp/real-dock-100.txt"
+eq "the drifted copy only changes the ARZOPA rate" "Hertz: 100" "$(sed -n 151p "$tmp/real-dock-100.txt")"
+out="$(plan "$tmp/arzopa-dock.json" "$tmp/real-dock-100.txt")"
+has "the real dock list at 100Hz is set to 144Hz unscaled" \
+  "screen|id:82BDB23E-5EA1-4C6F-925B-EB392903EC5E res:1920x1080 hz:144 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" "$out"
+has "the real dock list keeps the laptop on its marked mode" \
+  "screen|id:37D8832A-2D66-02CA-B9F7-8F30A301B230 mode:66 origin:(0,0) degree:0" "$out"
+
+# An explicit scaling:off token, as older displayplacer builds print it,
+# still reads as unscaled.
+sed 's/^\(  mode [0-9]*: res:[0-9x]* hz:[0-9]* color_depth:[0-9]*\)\( <-- current mode\)\{0,1\}$/\1 scaling:off\2/' \
+  "$REAL" > "$tmp/real-dock-token.txt"
+has "the token copy has explicit scaling:off" \
+  "mode 61: res:1920x1080 hz:144 color_depth:8 scaling:off <-- current mode" "$(cat "$tmp/real-dock-token.txt")"
+out="$(run_with_placer "$tmp/arzopa-dock.json" "$tmp/real-dock-token.txt")"
+has "an explicit scaling:off still passes at 144Hz" "ok|arzopa|ARZOPA is 1920x1080 at 144Hz, the highest" "$out"
 
 # Case-insensitive name, no serial on the profiler row.
 cat > "$tmp/arzopa-case.json" <<'EOF'
