@@ -27,6 +27,8 @@ Usage:
                                       # not read the database or run sfltool.
   btm-login-items.py --audit ALLOW    # every ENABLED login/background item, one per line:
                                       #   class|kind|name|developer|team|id|detail
+                                      # ALLOW rows: team, bundle, label, label-prefix, or
+                                      # app (the full path of an open-at-login app)
                                       # class: allow (on ALLOW list) | mdm (approved by an MDM
                                       # Service Management rule) | unknown | stale (its app is gone)
                                       # kind: app (opens at login) | login-item | agent | daemon
@@ -292,9 +294,9 @@ def mdm_rules(base: Path | None) -> list[dict]:
 
 
 def read_allow(path: str) -> list[dict]:
-    """lib/login-items-allow.list: type|value|note (team, bundle, label, label-prefix)."""
+    """lib/login-items-allow.list: type|value|note (team, bundle, label, label-prefix, app)."""
     kinds = {"team": "TeamIdentifier", "bundle": "BundleIdentifier",
-             "label": "Label", "label-prefix": "LabelPrefix"}
+             "label": "Label", "label-prefix": "LabelPrefix", "app": "AppPath"}
     rules = []
     with open(path, encoding="utf-8") as f:
         for n, line in enumerate(f, 1):
@@ -306,8 +308,23 @@ def read_allow(path: str) -> list[dict]:
                 print(f"allowlist: line {n}: expected type, value and note separated "
                       f"by pipes (type: {', '.join(kinds)})", file=sys.stderr)
                 continue
-            rules.append({"type": kinds[parts[0]], "value": parts[1], "team": ""})
+            value = parts[1]
+            if parts[0] == "app":
+                value = os.path.normpath(os.path.expanduser(value))
+                if not os.path.isabs(value) or not value.endswith(".app"):
+                    print(f"allowlist: line {n}: an app row needs the full path of a .app, "
+                          "such as ~/Applications/WhatsApp Web.app", file=sys.stderr)
+                    continue
+            rules.append({"type": kinds[parts[0]], "value": value, "team": ""})
     return rules
+
+
+def app_path(it: dict) -> str:
+    """Absolute path of the item's own file:// URL, else ''."""
+    url = it.get("url") or ""
+    if "|" in url or not url.startswith("file:///"):
+        return ""  # relative to its container app
+    return os.path.normpath(unquote(url[len("file://"):]))
 
 
 def matches(rule: dict, it: dict) -> bool:
@@ -321,6 +338,11 @@ def matches(rule: dict, it: dict) -> bool:
         return v in (it["bundle"], parent_bundle) or (not it["bundle"] and it["id"] == v)
     if t == "Label":
         return it["id"] == v
+    if t == "AppPath":
+        # Open at Login app only. A Safari web app's bundle id is
+        # com.apple.Safari.WebApp.<UUID>, new on each Mac, so its path is the
+        # key. Other web apps live at other paths and stay unknown.
+        return it["type"] == TYPE_APP and app_path(it) == v
     if t == "LabelPrefix":
         # The launchd label, the recorded name, and the raw identifier.
         # koi.security.* is stored as koi.security.mdm.plist and shown as
@@ -347,10 +369,9 @@ def kind_of(t: int) -> str | None:
 
 def stale_path(it: dict) -> str:
     """Absolute file:// URL of an app/agent that no longer exists on disk, else ''."""
-    url = it["url"]
-    if "|" in url or not url.startswith("file:///"):
+    p = app_path(it)
+    if not p:
         return ""  # relative to its container app: can't go stale on its own
-    p = unquote(url[len("file://"):]).rstrip("/")
     return "" if os.path.exists(p) else p
 
 

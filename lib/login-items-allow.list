@@ -13,6 +13,12 @@
 #          bundle        bundle id (also covers login items/agents inside that app)
 #          label         launchd label (LaunchAgents / LaunchDaemons)
 #          label-prefix  launchd label prefix
+#          app           full path of an app under Open at Login (~ is your home
+#                        folder). Only that app matches, and only as an
+#                        open-at-login app. For an app whose bundle id differs on
+#                        each Mac, such as a Safari web app
+#                        (com.apple.Safari.WebApp.<UUID>). Other web apps stay
+#                        unexpected
 # See what's enabled now: python3 lib/btm-login-items.py --audit lib/login-items-allow.list
 # Blank lines and lines beginning with # are ignored.
 
@@ -26,6 +32,7 @@ bundle|com.granola.app|Granola opens at login
 bundle|com.tinyspeck.slackmacgap|Slack opens at login
 bundle|com.anysphere.sand|Grok Bot opens at login (/Applications/Grok Bot.app; replaced the stale 'Sand' entry)
 bundle|com.spotify.client.startuphelper|Spotify StartUpHelper: opens Spotify at login (kept on purpose)
+app|~/Applications/WhatsApp Web.app|WhatsApp Web opens at login (Safari web app, manual step whatsapp-web; its bundle id is new on each Mac)
 label-prefix|com.microsoft.teams2|Microsoft Teams agent (cask microsoft-teams)
 team|X4QN7LTP59|Multipass daemon (cask multipass)
 label|com.pdone.pin-dictation-hotkey-164|this repo's LaunchAgent (launchagents/)
