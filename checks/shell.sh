@@ -6,9 +6,10 @@
 # docker_path_block FILE — line number of the first line of Docker Desktop's
 # own PATH block in FILE (its "were added by Docker Desktop" comment or its
 # export of ~/.docker/bin). Prints nothing when the block is not there.
+# Always exits 0: macconfig-check.sh runs under set -euo pipefail.
 docker_path_block() {
-  grep -n -E '^[[:space:]]*(# The following lines were added by Docker Desktop|export PATH=.*/\.docker/bin)' "$1" 2>/dev/null |
-    head -n 1 | cut -d: -f1
+  [ -r "$1" ] || return 0
+  awk '/^[[:space:]]*(# The following lines were added by Docker Desktop|export PATH=.*\/\.docker\/bin)/ { print NR; exit }' "$1"
 }
 
 if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then

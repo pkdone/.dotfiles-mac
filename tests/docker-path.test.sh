@@ -72,8 +72,10 @@ eq "a missing file prints nothing" "" "$(docker_path_block "$tmp/no-such.fish")"
 
 # ---- the Login shell section ------------------------------------------------
 # run_shell_section HOME — run checks/shell.sh with brew and dscl answering
-# that fish is already the login shell.
+# that fish is already the login shell. Same shell options as
+# macconfig-check.sh, so a failing command in the section stops it here too.
 run_shell_section() (
+  set -euo pipefail
   HOME="$1"
   USER=tester
   CHECKED=0
