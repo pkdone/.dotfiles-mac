@@ -49,6 +49,7 @@ developer-folder|PAUL||~/Developer is missing — install.sh creates it
 unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
 dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
 login-shell|PAUL||login shell change needs sudo / chsh — shell.sh
+docker-path-block|PAUL||Docker Desktop put its own "added by Docker Desktop" PATH block back in fish/config.fish — delete the block by hand (config.fish already adds ~/.docker/bin); --fix never edits repo files
 hostname|PAUL||hostname change needs sudo — hostname.sh
 auto-brightness|PAUL||Automatically adjust brightness — System Settings → Displays. Readable without sudo via corebrightnessdiag; the saved CoreBrightness plist is root-owned and its keys move between macOS versions, so --fix never writes it. True Tone and battery dim are left alone
 ac-sleep|PAUL||Power — sudo pmset for AC sleep 0, AC display sleep 10, battery display sleep 2, and AC wake for network access (manual step ac-sleep). pmset -g custom is readable without sudo; --fix never runs sudo. Battery idle sleep is not changed. Closing the lid still sleeps the Mac
