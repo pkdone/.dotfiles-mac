@@ -60,3 +60,18 @@ To recalibrate after a macOS update: toggle Allow Notifications for one app, rea
 To recalibrate the style bits: set Hammerspoon to Banners, then back to Alerts, and point `ALERT_STYLE_BIT` at the bit that is set only for Alerts. Then run `./tests/notification-prefs.test.sh`.
 
 How those bits are read, and what a warning means, is in [Settings](settings.md#notifications).
+
+## A Finder folder is not sorted by name
+
+Finder's default view sorts by name, and so does the Desktop (`macconfig` checks both, and `macconfig --fix` puts them back). A folder that saved its own view ignores that default. Finder keeps the saved view in a hidden `.DS_Store` file inside the folder, so files can sit where they were dropped, or overlap a folder icon, even though the default is Sort By Name.
+
+To reset every folder in your home folder at once:
+
+```bash
+macconfig --reset-folder-views --dry-run   # list the .DS_Store files it would delete; changes nothing
+macconfig --reset-folder-views             # delete them and restart Finder
+```
+
+This removes every folder's own view settings: sort order, icon size, list or column view, and icon positions, on the Desktop too. Each folder then opens with the default view. It skips `~/Library`, `~/.Trash`, hidden folders (names starting with `.`), `node_modules`, app and Photos/Music library bundles, other volumes mounted under your home folder, and symlinks. A file it isn't allowed to delete is left alone and counted. Close Finder windows first, because an open window may save its view again. It never runs on its own: `macconfig --fix` and the plain check don't delete these files. If the default itself is not Sort By Name, it says to run `macconfig --fix`.
+
+To fix a single folder instead, open it and choose **View → Show View Options** (`Command + J`) → **Sort By Name**. More on the Finder defaults is in [Settings](settings.md#finder).

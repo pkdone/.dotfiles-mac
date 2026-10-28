@@ -62,6 +62,13 @@ macconfig --fix    # check, fix anything that's safe to fix automatically, then 
 
 `macconfig --fix` only changes settings it can safely put back on its own. Anything else is listed under "Needs Paul" for you to do by hand.
 
+If a Finder folder isn't sorted by name, it has saved its own view. This puts every folder in your home folder, Desktop included, back on the default view. Each folder's own view settings and icon positions are lost, and it only runs when you ask:
+
+```bash
+macconfig --reset-folder-views --dry-run   # list what it would clear; changes nothing
+macconfig --reset-folder-views             # clear the saved folder views and restart Finder
+```
+
 What the check's output means, including the Mac health summary at the end, is explained in [Verifying the setup](docs/setup.md#verifying-the-setup).
 
 ### brewsync

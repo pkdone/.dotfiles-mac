@@ -31,7 +31,7 @@ defaults|SAFE|macos|macOS default from lib/macos-defaults.list (Dock icon size /
 dictation-164|SAFE|macos|dictation hotkey 164 re-pinned by scripts/pin-dictation-hotkey-164.sh
 quicknote-190|SAFE|macos|Quick Note hotkey 190 (Globe/Fn+Q) disabled by scripts/pin-quicknote-hotkey-190.sh
 spotlight-64|SAFE|macos|Spotlight hotkey 64 (Command+Space) restored by scripts/pin-spotlight-hotkey-64.sh when it differs. No LaunchAgent. The script runs activateSettings -u
-finder-icon-view|SAFE|macos|Finder icon view 72/13 and Sort By Name (arrangeBy=name) re-pinned by scripts/pin-finder-icon-view.sh. Desktop view is not written
+finder-icon-view|SAFE|macos|Finder icon view 72/13 and Sort By Name (arrangeBy=name) re-pinned by scripts/pin-finder-icon-view.sh, and Sort By Name on the Desktop (DesktopViewSettings arrangeBy only; the Desktop icon size is not written). Restarts Finder. Folder .DS_Store files are never deleted by --fix (macconfig --reset-folder-views, on request)
 finder-recents|SAFE|macos|Finder sidebar Recents hidden by lib/finder-sidebar-recents.py
 finder-show|SAFE|macos|Finder menu shortcut Show Finder set to Cmd-Ctrl-Shift-F (NSUserKeyEquivalents, -dict-add)
 titlebar-double-click|SAFE|macos|delete AppleMiniaturizeOnDoubleClick when it is set, so double-click fills the window (AppleActionOnDoubleClick Fill is the defaults row)

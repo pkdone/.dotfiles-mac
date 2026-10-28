@@ -27,6 +27,12 @@
 #                  is idempotent and logged to ~/Library/Logs/com.pdone.check-fix.log.
 #                  Exit status then reflects the drift left AFTER the fixes.
 #   --dry-run      With --fix: show what would be fixed; change nothing.
+#                  With --reset-folder-views: list what would be removed.
+#   --reset-folder-views
+#                  On request only: delete the per-folder Finder views (.DS_Store
+#                  files under $HOME, Desktop included) with
+#                  scripts/reset-folder-views.sh, restart Finder, and exit. No
+#                  checks run. --fix and the plain check never do this.
 #   --issues       Internal (used by --fix to re-check): print one line per drift/warning
 #                  (kind, id, arg, message, section; separated by \x1f) on stdout and nothing else.
 #   --only AREA[,AREA]
@@ -50,6 +56,7 @@ HEALTH_JSON=0
 FIX=0
 DRY_RUN=0
 ISSUES=0
+RESET_VIEWS=0
 
 # Area names match checks/<area>.sh. finder is one area with two sections.
 KNOWN_AREAS=" symlinks brew mdm defaults dock desktops shell hostname display power handlers files apps hotkeys finder karabiner hammerspoon login-items coteditor ghostty logi modes notifications backups security health manual "
@@ -106,6 +113,7 @@ while [ $# -gt 0 ]; do
     --fix) FIX=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --issues) ISSUES=1; shift ;;
+    --reset-folder-views) RESET_VIEWS=1; shift ;;
     --only)
       if [ $# -lt 2 ] || [ "${2#--}" != "$2" ]; then
         echo "--only needs an area list, for example: --only dock,power (try --help)" >&2
@@ -123,6 +131,7 @@ while [ $# -gt 0 ]; do
     -h|--help)
       cat <<EOF
 Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]] [--only AREA[,AREA]]
+       macconfig-check.sh --reset-folder-views [--dry-run]
   Default: read-only. Reports drift between this machine and the repo; writes nothing.
   Exit status: 0 = everything matches, 1 = drift found.
   --no-color     Disable ANSI colour (also honours the NO_COLOR env var).
@@ -135,6 +144,14 @@ Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]] [--on
                  app stays a warning. In a terminal the check offers to open Fleet
                  Self service first. --fix does not install it.
   --dry-run      With --fix: show what would be fixed; change nothing.
+                 With --reset-folder-views: list what would be removed.
+  --reset-folder-views
+                 Delete the view each folder saved for itself (.DS_Store files
+                 under your home folder, Desktop included), restart Finder, and
+                 exit, so every folder sorts by name. Custom views and icon
+                 positions in those folders are lost. Skips ~/Library, ~/.Trash,
+                 hidden folders, and other volumes. Runs only when asked: --fix
+                 never does this. No checks run.
   --only AREA[,AREA]
                  Run only these areas, in the usual order (not the order you type).
                  Areas:${KNOWN_AREAS}
@@ -149,8 +166,17 @@ done
 if [ "$ONLY_SET" = 1 ]; then
   normalize_only "$ONLY_RAW"
 fi
+if [ "$RESET_VIEWS" = 1 ]; then
+  if [ "$FIX" = 1 ] || [ "$HEALTH_JSON" = 1 ] || [ "$ISSUES" = 1 ] || [ "$ONLY_SET" = 1 ]; then
+    echo "--reset-folder-views runs on its own (with --dry-run to preview); it can't be combined with --fix, --health-json, --issues or --only" >&2; exit 2
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    exec "$DOTDIR/scripts/reset-folder-views.sh" --dry-run
+  fi
+  exec "$DOTDIR/scripts/reset-folder-views.sh"
+fi
 if [ "$DRY_RUN" = 1 ] && [ "$FIX" != 1 ]; then
-  echo "--dry-run only applies to --fix (macconfig-check.sh is read-only without --fix)" >&2; exit 2
+  echo "--dry-run only applies to --fix or --reset-folder-views (macconfig-check.sh is read-only without --fix)" >&2; exit 2
 fi
 if [ "$ISSUES" = 1 ]; then
   if [ "$FIX" = 1 ] || [ "$HEALTH_JSON" = 1 ]; then
