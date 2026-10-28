@@ -59,12 +59,12 @@ miss "note does not name Okta Extension" "Okta Extension" "$section"
 miss "README does not mention check.sh" "check.sh" "$(cat "$README")"
 
 # An exact integer count would go stale each time a step is added. The README
-# says "up to about 40" / "about 10" instead, and this test must not require a
+# says "up to about 50" / "about 15" instead, and this test must not require a
 # particular integer.
 readme="$(cat "$README")"
-has "README approximates the manual-step count" "up to about 40" "$readme"
+has "README approximates the manual-step count" "up to about 50" "$readme"
 has "README says fewer steps are usually open" "Usually far fewer are still open" "$readme"
-has "README approximates the by-eye count" "about 10 you confirm by eye" "$readme"
+has "README approximates the by-eye count" "about 15 you confirm by eye" "$readme"
 has "README says to wait for the Homebrew paste" "wait for it to finish" "$readme"
 has "README says bootstrap offers the walk-through" "offers to walk you through them" "$readme"
 has "README keeps later commands for a re-run" "go through them again later" "$readme"
