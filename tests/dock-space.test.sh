@@ -62,6 +62,8 @@ EOF
 cat > "$bin/hs" <<'EOF'
 #!/bin/sh
 printf 'hs %s\n' "$1" >> "$STATE/calls"
+# BACK_AFTER=N: launchd brings the Dock back by itself after N earlier answers.
+if [ -n "${BACK_AFTER:-}" ] && [ "$(grep -c '^hs ' "$STATE/calls")" -gt "$BACK_AFTER" ]; then : > "$STATE/restarted"; fi
 if [ -f "$STATE/restarted" ] && [ -n "${AFTER_OUT+x}" ]; then printf '%s\n' "$AFTER_OUT"; else printf '%s\n' "${HS_OUT:-}"; fi
 exit "${HS_RC:-0}"
 EOF
@@ -90,7 +92,7 @@ chmod +x "$bin"/*
 reset() {
   rm -f "$state/calls" "$state/restarted"
   : > "$state/calls"
-  unset DOCK_AUTOHIDE DOCK_ORIENT HS_OUT HS_RC JXA_OUT AFTER_OUT KILLALL_RC
+  unset DOCK_AUTOHIDE DOCK_ORIENT HS_OUT HS_RC JXA_OUT AFTER_OUT KILLALL_RC BACK_AFTER
   HS_RUNNING=0
 }
 export STATE="$state" HS_RUNNING=0
@@ -278,11 +280,30 @@ eq "a restart that can't be measured afterwards fails" 1 "$rc"
 has "it says so" "could not be measured afterwards" "$out"
 
 reset
-KILLALL_RC=1; export KILLALL_RC
+HS_RUNNING=1; HS_OUT="$FIXED"; export HS_RUNNING HS_OUT
 rc=0; out="$(restart)" || rc=$?
-eq "killall failing fails" 1 "$rc"
-eq "killall failing says so" "killall Dock failed" "$out"
-eq "killall failing does not wait" 0 "$(grep -c '^sleep' "$state/calls")"
+eq "an earlier Dock restart already brought the space back" 0 "$rc"
+eq "it says so" \
+  "macOS already keeps 48 points for the Dock at the bottom again (an earlier Dock restart in this --fix brought it back)" "$out"
+miss "it does not restart the Dock again" "killall" "$(calls)"
+eq "it does not wait" 0 "$(grep -c '^sleep' "$state/calls")"
+
+reset
+HS_RUNNING=1; HS_OUT="$BROKEN"; AFTER_OUT="$FIXED"; BACK_AFTER=2; KILLALL_RC=1
+export HS_RUNNING HS_OUT AFTER_OUT BACK_AFTER KILLALL_RC
+rc=0; out="$(restart)" || rc=$?
+eq "no Dock to kill (still starting), and it comes back: ok" 0 "$rc"
+eq "it says the Dock was still starting" \
+  "found no Dock to restart (it was still starting); macOS keeps 48 points for it at the bottom again" "$out"
+eq "it waited for the Dock" 2 "$(grep -c '^sleep' "$state/calls")"
+
+reset
+HS_RUNNING=1; HS_OUT="$BROKEN"; KILLALL_RC=1; export HS_RUNNING HS_OUT KILLALL_RC
+rc=0; out="$(restart)" || rc=$?
+eq "no Dock to kill, and the space never comes back: fails" 1 "$rc"
+has "it says the space is still missing" \
+  "found no Dock to restart (it was still starting), but macOS still isn't keeping space for it" "$out"
+eq "it waits DOCK_SPACE_WAIT seconds for it" 3 "$(grep -c '^sleep' "$state/calls")"
 
 # ---- macconfig-check.sh --only dock --fix, end to end ----------------------
 # The real lib/dock-apps.list is used and dockutil lists nothing, so the Dock

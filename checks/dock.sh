@@ -111,18 +111,28 @@ dock_edge_words() {
 
 # dock_space_restart — the --fix for dock-space. Restart the Dock, wait up to
 # DOCK_SPACE_WAIT seconds for macOS to keep its space again, and say what it
-# keeps now. 0 = the space is back, 1 = it is not or the restart failed.
+# keeps now. 0 = the space is back, 1 = it is not.
+# macos.sh and desktop-bindings.py run first and may have restarted the Dock
+# already. When the space is back it is left alone. When killall finds no Dock,
+# launchd is still starting it, so this waits the same way.
 dock_space_restart() {
-  local edge verdict="" i=0 rest
+  local edge verdict="" i=0 rest did="restarted the Dock"
   edge="$(dock_orientation)"
   if [ "${DRY_RUN:-0}" = 1 ]; then
     echo "would restart the Dock (killall Dock) and measure the screen again"
     return 0
   fi
+  verdict="$(dock_screen_frames | dock_space_verdict "$edge")"
+  case "$verdict" in
+    ok\|*)
+      echo "macOS already keeps ${verdict#ok|} points for the Dock $(dock_edge_words "$edge") again (an earlier Dock restart in this --fix brought it back)"
+      return 0
+      ;;
+  esac
   if ! killall Dock >/dev/null 2>&1; then
-    echo "killall Dock failed"
-    return 1
+    did="found no Dock to restart (it was still starting)"
   fi
+  verdict=""
   while [ "$i" -lt "${DOCK_SPACE_WAIT:-10}" ]; do
     sleep 1
     i=$((i + 1))
@@ -131,16 +141,16 @@ dock_space_restart() {
   done
   case "$verdict" in
     ok\|*)
-      echo "restarted the Dock; macOS keeps ${verdict#ok|} points for it $(dock_edge_words "$edge") again"
+      echo "$did; macOS keeps ${verdict#ok|} points for it $(dock_edge_words "$edge") again"
       return 0
       ;;
     missing\|*)
       rest="${verdict#missing|}"
-      echo "restarted the Dock, but macOS still isn't keeping space for it (usable area ${rest%%|*} of ${rest#*|})"
+      echo "$did, but macOS still isn't keeping space for it (usable area ${rest%%|*} of ${rest#*|})"
       return 1
       ;;
   esac
-  echo "restarted the Dock, but the screen could not be measured afterwards"
+  echo "$did, but the screen could not be measured afterwards"
   return 1
 }
 
