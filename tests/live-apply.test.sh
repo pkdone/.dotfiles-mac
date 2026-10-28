@@ -242,7 +242,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
+  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on <-- current mode
   mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
 
 Persistent screen id: EXTERNAL-ID
@@ -254,7 +254,7 @@ Scaling: off
 Origin: (1800,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
+  mode 0: res:2560x1440 hz:60 color_depth:8 <-- current mode
 EOF
 cat > "$tmp/placer-no-mode.txt" <<'EOF'
 Persistent screen id: BUILTIN-ID
@@ -266,7 +266,7 @@ Scaling: on
 Origin: (0,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on
+  mode 0: res:1512x982 hz:120 color_depth:8 scaling:on <-- current mode
 EOF
 
 # Stub directory first, then ordinary Unix tools only. The host PATH is not
@@ -558,7 +558,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 
 Persistent screen id: FRESH-UUID
 Serial screen id: s74646035
@@ -570,14 +570,17 @@ Scaling: off
 Origin: (1800,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:2560x1440 hz:60 color_depth:8 scaling:off
-  mode 9: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 0: res:2560x1440 hz:60 color_depth:8 <-- current mode
+  mode 9: res:1920x1080 hz:180 color_depth:8
 EOF
 PROFILER_JSON="$tmp/arzopa.json"
 DISPLAYPLACER_LIST="$tmp/placer-arzopa.txt"
 DISPLAYPLACER_RC=0
 sed -e 's/^Resolution: 2560x1440/Resolution: 1920x1080/' -e 's/^Hertz: 60/Hertz: 180/' \
-  -e 's/^Origin: (1800,0)/Origin: (-1920,0)/' "$tmp/placer-arzopa.txt" > "$tmp/placer-arzopa.txt.180"
+  -e 's/^Origin: (1800,0)/Origin: (-1920,0)/' \
+  -e 's/^\(  mode 0: res:2560x1440 hz:60 color_depth:8\) <-- current mode$/\1/' \
+  -e 's/^\(  mode 9: res:1920x1080 hz:180 color_depth:8\)$/\1 <-- current mode/' \
+  "$tmp/placer-arzopa.txt" > "$tmp/placer-arzopa.txt.180"
 out="$(run_macos --only @arzopa-display)"
 rc=$?
 eq "ARZOPA apply exits 0" 0 "$rc"
@@ -611,7 +614,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 
 Persistent screen id: FRESH-UUID
 Serial screen id: s74646035
@@ -623,7 +626,7 @@ Scaling: off
 Origin: (-1920,0)
 Rotation: 0
 Resolutions for rotation 0:
-  mode 9: res:1920x1080 hz:180 color_depth:8 scaling:off
+  mode 9: res:1920x1080 hz:180 color_depth:8 <-- current mode
 EOF
 PROFILER_JSON="$tmp/arzopa.json"
 DISPLAYPLACER_LIST="$tmp/placer-arzopa-ok.txt"
@@ -638,6 +641,7 @@ miss "an already pinned ARZOPA does not set a mode" "CALL id:" "$(cat "$placerlo
 
 # ---- ARZOPA through the StarTech Thunderbolt 5 dock ---------------------
 # 1920x1080 unscaled is listed at 144, 120, 100 and 60Hz, and not at 180Hz.
+cur() { [ "$1" = "$2" ] && printf ' <-- current mode'; return 0; }
 dock_placer() { # current Hertz, ARZOPA origin
   cat <<EOF
 Persistent screen id: BUILTIN-ID
@@ -649,7 +653,7 @@ Scaling: on
 Origin: (0,0) - main display
 Rotation: 0
 Resolutions for rotation 0:
-  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on <-- current mode
 
 Persistent screen id: DOCK-UUID
 Serial screen id: s74646035
@@ -661,10 +665,10 @@ Scaling: off
 Origin: ${2:-(-1920,0)}
 Rotation: 0
 Resolutions for rotation 0:
-  mode 0: res:1920x1080 hz:144 color_depth:8 scaling:off
-  mode 1: res:1920x1080 hz:120 color_depth:8 scaling:off
-  mode 2: res:1920x1080 hz:100 color_depth:8 scaling:off
-  mode 3: res:1920x1080 hz:60 color_depth:8 scaling:off
+  mode 0: res:1920x1080 hz:144 color_depth:8$(cur "$1" 144)
+  mode 1: res:1920x1080 hz:120 color_depth:8$(cur "$1" 120)
+  mode 2: res:1920x1080 hz:100 color_depth:8$(cur "$1" 100)
+  mode 3: res:1920x1080 hz:60 color_depth:8$(cur "$1" 60)
 EOF
 }
 dock_placer 144 > "$tmp/dock-144.txt"
@@ -744,6 +748,40 @@ has "no settable rate warns by hand" \
 miss "no settable rate does not claim a set" "set ARZOPA" "$out"
 DISPLAYPLACER_REFUSE_HZ=""
 DISPLAYPLACER_REFUSE=fail
+
+# Real displayplacer list from Paul's Mac, ARZOPA on the dock at 144Hz.
+REAL="$DIR/tests/fixtures/displayplacer-dock.txt"
+cat > "$tmp/arzopa-dock.json" <<'EOF'
+{"SPDisplaysDataType":[{"spdisplays_ndrvs":[
+  {"_name":"Color LCD","spdisplays_connection_type":"spdisplays_internal","_spdisplays_resolution":"1800 x 1169 @ 120.00Hz","spdisplays_pixelresolution":"spdisplays_3024x1964Retina"},
+  {"_name":"ARZOPA","_spdisplays_display-serial-number":"74646035","_spdisplays_resolution":"1920 x 1080 @ 144.00Hz"}
+]}]}
+EOF
+PROFILER_JSON="$tmp/arzopa-dock.json"
+DISPLAYPLACER_LIST="$REAL"
+out="$(run_macos --only @arzopa-display)"
+has "the real dock list is ok at 144Hz" \
+  "ok    ARZOPA is 1920x1080 at 144Hz, the highest this connection offers (180Hz needs a direct connection)" "$out"
+miss "the real dock list does not set a mode" "CALL id:" "$(cat "$placerlog")"
+has "the real dock list is not a warning" "0 warning(s)" "$out"
+
+# The same list with the ARZOPA on 100Hz: macos.sh sets the 144Hz mode.
+sed -e '151s/^Hertz: 144$/Hertz: 100/' \
+  -e 's/^\(  mode 61: res:1920x1080 hz:144 color_depth:8\) <-- current mode$/\1/' \
+  -e 's/^\(  mode 63: res:1920x1080 hz:100 color_depth:8\)$/\1 <-- current mode/' \
+  "$REAL" > "$tmp/real-dock-100.txt"
+cp "$REAL" "$tmp/real-dock-100.txt.144"
+DISPLAYPLACER_LIST="$tmp/real-dock-100.txt"
+out="$(run_macos --only @arzopa-display)"
+has "the real dock list at 100Hz is set to 144Hz" \
+  "set ARZOPA 1920x1080 at 144Hz, scaling off, left of the laptop" "$out"
+has "that set uses the real ARZOPA id, unscaled" \
+  "id:82BDB23E-5EA1-4C6F-925B-EB392903EC5E res:1920x1080 hz:144 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" \
+  "$(cat "$placerlog")"
+has "that set keeps the laptop on its marked mode" \
+  "id:37D8832A-2D66-02CA-B9F7-8F30A301B230 mode:66 origin:(0,0) degree:0" "$(cat "$placerlog")"
+miss "that set is not a warning" "could not set" "$out"
+PROFILER_JSON="$tmp/arzopa.json"
 
 # Dry run: the plan is shown and no rate is tried.
 DISPLAYPLACER_LIST="$tmp/dock-100.txt"

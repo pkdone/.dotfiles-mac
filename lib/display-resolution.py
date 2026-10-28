@@ -235,9 +235,14 @@ def describe(builtins: list[dict], prefixes: dict[str, str]) -> None:
     )
 
 
+# displayplacer prints `scaling:on` on a scaled mode and nothing on an unscaled
+# one, and marks the mode in use with `<-- current mode`:
+#   mode 61: res:1920x1080 hz:144 color_depth:8 <-- current mode
+#   mode 97: res:1920x1080 hz:144 color_depth:8 scaling:on
 MODE_RE = re.compile(
-    r"mode\s+(\d+):\s+res:(\d+)x(\d+)\s+hz:(\d+)\s+color_depth:(\d+)\s+scaling:(on|off)",
-    re.I,
+    r"^[ \t]*mode[ \t]+(\d+):[ \t]+res:(\d+)x(\d+)[ \t]+hz:(\d+)[ \t]+color_depth:(\d+)"
+    r"(?:[ \t]+scaling:(on|off))?([ \t]*<--[ \t]*current mode)?",
+    re.I | re.M,
 )
 
 
@@ -282,8 +287,9 @@ def _modes(block: str) -> list[dict]:
                 "h": int(match.group(3)),
                 "hz": match.group(4),
                 "depth": match.group(5),
-                "scaling": match.group(6).lower(),
+                "scaling": (match.group(6) or "off").lower(),
                 "res": f"{match.group(2)}x{match.group(3)}",
+                "current": bool(match.group(7)),
             }
         )
     return found
@@ -385,6 +391,10 @@ def _pick_mode(modes: list[dict], width: int, height: int, hz: str, depth: str) 
 
 
 def _current_mode(screen: dict) -> dict | None:
+    """The mode marked `<-- current mode`, else the first one that matches the header."""
+    marked = [mode for mode in screen["modes"] if mode.get("current")]
+    if len(marked) == 1:
+        return marked[0]
     matches = [
         mode
         for mode in screen["modes"]
