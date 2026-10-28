@@ -958,18 +958,25 @@ if selected @ac-sleep; then apply_ac_sleep; fi
 # is made again without it (--max-hz) and the next listed rate is tried.
 # Either --only id runs this once: displayplacer sets every screen together.
 
+# display_pin_listed JSON HELPER LIST RATE FILE — 0 when FILE, a
+# displayplacer list, shows the ARZOPA pinned at RATE.
+display_pin_listed() {
+  printf '%s\n' "$1" | "$DOT_PYTHON" "$2" --list "$3" --placer "$5" --max-hz "$4" 2>/dev/null \
+    | grep '^ok|arzopa|' >/dev/null
+}
+
 # display_pin_rate_took JSON HELPER LIST RATE — 0 when displayplacer list now
 # shows the ARZOPA pinned at RATE. A mode change can take a moment to show.
 display_pin_rate_took() {
-  local json="$1" helper="$2" list="$3" rate="$4" file line tries=0
+  local file tries=0 rc
   local settle="${DISPLAYPLACER_SETTLE_SECONDS:-1}"
   while [ "$tries" -lt 3 ]; do
     tries=$((tries + 1))
     file="$(mktemp)"
     displayplacer list >"$file" 2>/dev/null || true
-    line="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" --placer "$file" --max-hz "$rate" 2>/dev/null | grep '^ok|arzopa|' || true)"
+    if display_pin_listed "$1" "$2" "$3" "$4" "$file"; then rc=0; else rc=1; fi
     rm -f "$file"
-    [ -n "$line" ] && return 0
+    [ "$rc" = 0 ] && return 0
     [ "$tries" -lt 3 ] && sleep "$settle"
   done
   return 1
@@ -979,7 +986,7 @@ apply_display_arrangement() {
   local helper="$DOTDIR/lib/display-resolution.py"
   local list="$DOTDIR/lib/display-resolution.list"
   local json report row status rest msg plan placer_file saw_builtin w
-  local rate max_hz skipped shown
+  local rate max_hz skipped shown took
   local -a args apply_msgs warn_msgs ok_msgs plan_warns max_args
   args=()
   apply_msgs=()
@@ -1146,7 +1153,31 @@ apply_display_arrangement() {
       done
       return 0
     fi
-    if displayplacer "${args[@]}" && { [ -z "$rate" ] || display_pin_rate_took "$json" "$helper" "$list" "$rate"; }; then
+    took=0
+    if displayplacer "${args[@]}"; then
+      if [ -z "$rate" ] || display_pin_rate_took "$json" "$helper" "$list" "$rate"; then
+        took=1
+      fi
+    fi
+    if [ "$took" = 0 ]; then
+      case "$rate" in
+        ''|*[!0-9]*)
+          WARNINGS=$((WARNINGS + 1))
+          say_warn "built-in display: displayplacer failed — set More Space by hand (System Settings → Displays)"
+          return 0
+          ;;
+      esac
+      # The next plan reads this list. A slow dock can show the rate only
+      # now, and then it must not be stepped down.
+      placer_file="$(mktemp)"
+      displayplacer list >"$placer_file" 2>/dev/null || true
+      if display_pin_listed "$json" "$helper" "$list" "$rate" "$placer_file"; then
+        took=1
+        rm -f "$placer_file"
+        placer_file=""
+      fi
+    fi
+    if [ "$took" = 1 ]; then
       CHANGED=$((CHANGED + 1))
       for msg in "${apply_msgs[@]+"${apply_msgs[@]}"}"; do
         case "$msg" in
@@ -1164,17 +1195,8 @@ apply_display_arrangement() {
       done
       return 0
     fi
-    case "$rate" in
-      ''|*[!0-9]*)
-        WARNINGS=$((WARNINGS + 1))
-        say_warn "built-in display: displayplacer failed — set More Space by hand (System Settings → Displays)"
-        return 0
-        ;;
-    esac
     skipped="${skipped:+$skipped, }${rate}Hz"
     max_hz=$((rate - 1))
-    placer_file="$(mktemp)"
-    displayplacer list >"$placer_file" 2>/dev/null || true
   done
 }
 run_displays=0

@@ -168,11 +168,18 @@ EOF
 # A set that names a pinned rate (enabled:true ... hz:N) is recorded, and
 # list then prints "$DISPLAYPLACER_LIST.N" when that file exists. A rate in
 # DISPLAYPLACER_REFUSE_HZ is not set: it exits 1, or exits 0 and leaves the
-# screen as it was when DISPLAYPLACER_REFUSE=silent.
+# screen as it was when DISPLAYPLACER_REFUSE=silent. DISPLAYPLACER_LATE_LISTS=N
+# keeps the old screen for the next N lists after a set, like a slow dock.
 cat > "$bin/displayplacer" <<'EOF'
 #!/usr/bin/env bash
 printf 'CALL %s\n' "$*" >> "${DISPLAYPLACER_LOG:?}"
 if [ "${1:-}" = "list" ]; then
+  late="$(cat "$DISPLAYPLACER_STATE.late" 2>/dev/null || true)"
+  if [ -n "$late" ] && [ "$late" -gt 0 ]; then
+    printf '%s\n' "$((late - 1))" > "$DISPLAYPLACER_STATE.late"
+    cat "$DISPLAYPLACER_STATE.before" 2>/dev/null || true
+    exit 0
+  fi
   now="$(cat "${DISPLAYPLACER_STATE:?}" 2>/dev/null || true)"
   if [ -n "$now" ] && [ -f "${DISPLAYPLACER_LIST:?}.$now" ]; then
     cat "$DISPLAYPLACER_LIST.$now"
@@ -194,6 +201,10 @@ if [ -n "$hz" ]; then
       exit 1
       ;;
   esac
+  if [ "${DISPLAYPLACER_LATE_LISTS:-0}" -gt 0 ]; then
+    "$0" list > "$DISPLAYPLACER_STATE.before"
+    printf '%s\n' "$DISPLAYPLACER_LATE_LISTS" > "$DISPLAYPLACER_STATE.late"
+  fi
   printf '%s\n' "$hz" > "$DISPLAYPLACER_STATE"
 fi
 exit "${DISPLAYPLACER_RC:-0}"
@@ -273,6 +284,7 @@ run_macos() {
   : > "$plog"
   : > "$placerlog"
   : > "$placerstate"
+  rm -f "$placerstate.late" "$placerstate.before"
   : > "$logout"
   PATH="$bin:$BASE_PATH" \
     DEFAULTS_LOG="$dlog" DEFAULTS_STATE="$state" \
@@ -282,7 +294,7 @@ run_macos() {
     DISPLAYPLACER_LOG="$placerlog" DISPLAYPLACER_LIST="${DISPLAYPLACER_LIST:-$tmp/placer.txt}" \
     DISPLAYPLACER_RC="${DISPLAYPLACER_RC:-0}" DISPLAYPLACER_STATE="$placerstate" \
     DISPLAYPLACER_REFUSE_HZ="${DISPLAYPLACER_REFUSE_HZ:-}" DISPLAYPLACER_REFUSE="${DISPLAYPLACER_REFUSE:-fail}" \
-    DISPLAYPLACER_SETTLE_SECONDS=0 \
+    DISPLAYPLACER_SETTLE_SECONDS=0 DISPLAYPLACER_LATE_LISTS="${DISPLAYPLACER_LATE_LISTS:-0}" \
     DOTFILES_ACTIVATE_SETTINGS="${DOTFILES_ACTIVATE_SETTINGS:-$bin/activateSettings}" \
     DOTFILES_LOGOUT_FILE="$logout" \
     "$MACOS" --no-color --yes "$@"
@@ -679,6 +691,16 @@ has "the dock set uses the 144Hz unscaled mode" \
   "$(cat "$placerlog")"
 miss "the dock set does not ask for 180Hz" "hz:180" "$(cat "$placerlog")"
 miss "the dock set that took is not a warning" "could not set" "$out"
+
+# A slow dock shows 144Hz only after the check after the set gave up. The
+# list read for the next plan shows it, so 144Hz stays and 120Hz is not set.
+DISPLAYPLACER_LATE_LISTS=3
+out="$(run_macos --only @arzopa-display)"
+DISPLAYPLACER_LATE_LISTS=0
+has "a slow dock keeps the 144Hz that took" "set ARZOPA 1920x1080 at 144Hz, scaling off, left of the laptop" "$out"
+miss "a slow dock is not stepped down to 120Hz" "hz:120" "$(cat "$placerlog")"
+miss "a slow dock is not a warning" "could not set" "$out"
+eq "a slow dock sets once" "1" "$(grep -c 'CALL id:' "$placerlog")"
 
 # 144Hz fails: the next listed rate down is set, with a warning.
 DISPLAYPLACER_REFUSE_HZ="144"
