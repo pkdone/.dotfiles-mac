@@ -48,7 +48,9 @@ check_step_auto_brightness() {
 # not apply. The check prints an info line and does not count it in the ok
 # total or the by-hand count. displayplacer list is read-only, and only when that
 # tool is installed and the ARZOPA is connected, so the position can be
-# checked. This section does not change a display. macos.sh applies a
+# checked. The ARZOPA wants 180Hz, or the highest rate its connection lists
+# at 1920x1080 unscaled when 180Hz is not listed (a dock). A lower rate than
+# that is drift. This section does not change a display. macos.sh applies a
 # mismatch when it can. Manual steps display-more-space and arzopa-display
 # are the fallback.
 #
