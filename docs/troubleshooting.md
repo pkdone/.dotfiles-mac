@@ -41,6 +41,12 @@ A `com.pdone.*` file in `~/Library/LaunchAgents` that does not match the repo, o
 
 A symlink under `~/.config`, `~/Library/LaunchAgents`, or a home dotfile that points into this repo but whose target is gone is a warning. `--fix` does not recreate it. Restore the file from git, or run `install.sh` again for the links it manages.
 
+## Windows fill under the Dock
+
+The Dock is showing, but double-clicking a title bar (Fill) makes the window go under it. macOS has stopped keeping space for the Dock. This can happen after a macOS update or after a display is plugged back in. On the MacBook, the screen is 1800x1169 and the usable area was 1800x1130, so only the menu bar was taken off. After the Dock was restarted, the usable area was 1800x1082: the Dock got its 48 points back.
+
+`macconfig` warns about this in the Dock section: "The Dock is showing but macOS isn't keeping space for it, so Fill puts windows under it". It checks only when the Dock does not hide itself. It compares each screen's usable area with its full size on the Dock's side (bottom, left or right). It asks Hammerspoon when Hammerspoon is running, and otherwise macOS directly. If neither answers, or if a full-screen app hides the menu bar too, nothing is reported. `macconfig --fix` restarts the Dock (`killall Dock`; macOS starts it again at once), waits up to 10 seconds, and measures again. To do it by hand, run `killall Dock` in a terminal.
+
 ## Docker Desktop and fish/config.fish
 
 On its first start, Docker Desktop may put its own block at the top of `~/.config/fish/config.fish`, which is a link to this repo's `fish/config.fish`. The block starts with the comment "The following lines were added by Docker Desktop" and adds a fixed `export PATH` line with your home folder in it. Don't commit it. `fish/config.fish` already adds `~/.docker/bin` the fish way, after Homebrew, and only when that folder exists. Delete Docker's block, from its first comment through "End of Docker Desktop section". `macconfig` warns under Login shell while the block is there. `--fix` does not remove it, because it never edits repo files.

@@ -16,6 +16,8 @@
 #             symlink      ln -sfn to the repo source, ONLY if the target is a symlink or
 #                          missing — a real file is never overwritten
 #             hammerspoon  open -g -a Hammerspoon (only if installed and not running)
+#             dockrestart  killall Dock (launchd starts it again), then measure the
+#                          screen again for up to 10 seconds (checks/dock.sh)
 #             desktop      lib/desktop-bindings.py --apply (backs up com.apple.spaces,
 #                          writes app-bindings, restarts Dock only if a pin changed)
 #             fileext      lib/file-handlers.py --apply (duti -s BUNDLE .ext all).
@@ -37,6 +39,7 @@ coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
 launchagent|SAFE|launchagent|repo LaunchAgent rendered from launchagents/ (@HOME@ -> $HOME) and loaded; a plist that differs from the repo is rewritten and reloaded with launchctl bootout then bootstrap
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
 hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon)
+dock-space|SAFE|dockrestart|the Dock is showing (auto-hide off) but macOS keeps no space for it on its edge, so Fill puts windows under it. Measured with Hammerspoon (hs -c) or NSScreen (osascript), usable area against the full screen. Restarting the Dock (killall Dock) brings the space back; no preference is written
 desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; an @APP@ path reads CFBundleIdentifier and a missing app is not written; restarts Dock)
 file-handler|SAFE|fileext|Finder double-click defaults from lib/file-handlers.list (duti -s BUNDLE .ext all; an extension with only a dyn.* UTI is skipped, not drift)
 display-more-space|SAFE|macos|Built-in display More Space. macos.sh runs displayplacer for the built-in panel (14" 1800x1169, 16" 2056x1329 from lib/display-resolution.list), keeping the current refresh rate when that scaled mode exists. Other displays are repeated unchanged, except the ARZOPA pin (arzopa-display) when that monitor is connected. A missing displayplacer or a missing mode stays the manual step (System Settings → Displays)

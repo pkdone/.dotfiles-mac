@@ -8,7 +8,7 @@
 # from lib/autofix.list (reversible preference writes via the existing setters), re-checks,
 # and prints a "Fixed" and a "Needs Paul" list.
 #
-# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock, Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + Spotlight shortcut (Command+Space, no LaunchAgent) + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH; commit signing only when it is on), account picture (the Dog), placed desktop widgets (notificationcenterui widgets.instances, read-only), Karabiner background items, Finder sidebar rows the sidebar files name, Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, British input, GitHub CLI, 1Password CLI, pointer size, by-hand settings).
+# Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock (apps, and the space macOS keeps for it), Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + Spotlight shortcut (Command+Space, no LaunchAgent) + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH; commit signing only when it is on), account picture (the Dog), placed desktop widgets (notificationcenterui widgets.instances, read-only), Karabiner background items, Finder sidebar rows the sidebar files name, Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, British input, GitHub CLI, 1Password CLI, pointer size, by-hand settings).
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py and lib/defaults-lib.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
@@ -505,7 +505,8 @@ if [ "$FIX" = 1 ]; then
   # desktop-bindings.py --apply (one backup, one Dock restart), then one batched
   # file-handlers.py --apply (duti -s for each drifted extension), then LaunchAgents
   # (rewrite a drifted plist and bootout/bootstrap, or bootstrap only if it isn't
-  # loaded) and Hammerspoon. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
+  # loaded), Hammerspoon, and last a Dock restart when macOS stopped keeping space
+  # for the Dock. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
   FIX_RESULTS=()
   MACOS_OUT=""
   macos_line() {  # id arg — this item's chg / warn / ok line from the macos.sh output
@@ -531,6 +532,7 @@ if [ "$FIX" = 1 ]; then
       symlink)     fix_symlink "$2" ;;
       launchagent) fix_launchagent "$2" ;;
       hammerspoon) fix_hammerspoon ;;
+      dockrestart) dock_space_restart ;;
       desktop)
         ml="$(printf '%s\n' "$DESKTOP_OUT" | awk -F'|' -v b="$2" '$2 == b { print; exit }')"
         if [ -z "$ml" ]; then echo "desktop-bindings.py printed nothing for this item"; return 1; fi
@@ -640,6 +642,7 @@ if [ "$FIX" = 1 ]; then
     printf '%s\n' "$FILE_OUT" | awk -F'|' 'NF >= 3 && $3 != "" { print "        " $3 }'
   fi
   fix_pass macos desktop fileext launchagent hammerspoon
+  fix_pass dockrestart
   # Items with a fixer name the dispatcher doesn't know (a typo in lib/autofix.list).
   n=0
   for item in ${SAFE_ITEMS[@]+"${SAFE_ITEMS[@]}"}; do
