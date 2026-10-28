@@ -68,6 +68,7 @@ olog="$tmp/osascript.log"
 alog="$tmp/activate.log"
 plog="$tmp/profiler.log"
 placerlog="$tmp/displayplacer.log"
+placerstate="$tmp/displayplacer.state"
 logout="$tmp/logout.txt"
 mkdir -p "$bin"
 : > "$state"
@@ -164,12 +165,47 @@ if [ "${1:-}" = "SPDisplaysDataType" ]; then
 fi
 exit 1
 EOF
+# A set that names a pinned rate (enabled:true ... hz:N) is recorded, and
+# list then prints "$DISPLAYPLACER_LIST.N" when that file exists. A rate in
+# DISPLAYPLACER_REFUSE_HZ is not set: it exits 1, or exits 0 and leaves the
+# screen as it was when DISPLAYPLACER_REFUSE=silent. DISPLAYPLACER_LATE_LISTS=N
+# keeps the old screen for the next N lists after a set, like a slow dock.
 cat > "$bin/displayplacer" <<'EOF'
 #!/usr/bin/env bash
 printf 'CALL %s\n' "$*" >> "${DISPLAYPLACER_LOG:?}"
 if [ "${1:-}" = "list" ]; then
-  cat "${DISPLAYPLACER_LIST:?}"
+  late="$(cat "$DISPLAYPLACER_STATE.late" 2>/dev/null || true)"
+  if [ -n "$late" ] && [ "$late" -gt 0 ]; then
+    printf '%s\n' "$((late - 1))" > "$DISPLAYPLACER_STATE.late"
+    cat "$DISPLAYPLACER_STATE.before" 2>/dev/null || true
+    exit 0
+  fi
+  now="$(cat "${DISPLAYPLACER_STATE:?}" 2>/dev/null || true)"
+  if [ -n "$now" ] && [ -f "${DISPLAYPLACER_LIST:?}.$now" ]; then
+    cat "$DISPLAYPLACER_LIST.$now"
+  else
+    cat "${DISPLAYPLACER_LIST:?}"
+  fi
   exit 0
+fi
+hz=""
+for arg in "$@"; do
+  case "$arg" in
+    *enabled:true*) hz="${arg#* hz:}"; hz="${hz%% *}" ;;
+  esac
+done
+if [ -n "$hz" ]; then
+  case " ${DISPLAYPLACER_REFUSE_HZ:-} " in
+    *" $hz "*)
+      [ "${DISPLAYPLACER_REFUSE:-fail}" = silent ] && exit 0
+      exit 1
+      ;;
+  esac
+  if [ "${DISPLAYPLACER_LATE_LISTS:-0}" -gt 0 ]; then
+    "$0" list > "$DISPLAYPLACER_STATE.before"
+    printf '%s\n' "$DISPLAYPLACER_LATE_LISTS" > "$DISPLAYPLACER_STATE.late"
+  fi
+  printf '%s\n' "$hz" > "$DISPLAYPLACER_STATE"
 fi
 exit "${DISPLAYPLACER_RC:-0}"
 EOF
@@ -247,6 +283,8 @@ run_macos() {
   : > "$alog"
   : > "$plog"
   : > "$placerlog"
+  : > "$placerstate"
+  rm -f "$placerstate.late" "$placerstate.before"
   : > "$logout"
   PATH="$bin:$BASE_PATH" \
     DEFAULTS_LOG="$dlog" DEFAULTS_STATE="$state" \
@@ -254,7 +292,9 @@ run_macos() {
     ACTIVATE_LOG="$alog" ACTIVATE_RC="${ACTIVATE_RC:-0}" \
     PROFILER_LOG="$plog" PROFILER_JSON="${PROFILER_JSON:-$tmp/not-more-space.json}" \
     DISPLAYPLACER_LOG="$placerlog" DISPLAYPLACER_LIST="${DISPLAYPLACER_LIST:-$tmp/placer.txt}" \
-    DISPLAYPLACER_RC="${DISPLAYPLACER_RC:-0}" \
+    DISPLAYPLACER_RC="${DISPLAYPLACER_RC:-0}" DISPLAYPLACER_STATE="$placerstate" \
+    DISPLAYPLACER_REFUSE_HZ="${DISPLAYPLACER_REFUSE_HZ:-}" DISPLAYPLACER_REFUSE="${DISPLAYPLACER_REFUSE:-fail}" \
+    DISPLAYPLACER_SETTLE_SECONDS=0 DISPLAYPLACER_LATE_LISTS="${DISPLAYPLACER_LATE_LISTS:-0}" \
     DOTFILES_ACTIVATE_SETTINGS="${DOTFILES_ACTIVATE_SETTINGS:-$bin/activateSettings}" \
     DOTFILES_LOGOUT_FILE="$logout" \
     "$MACOS" --no-color --yes "$@"
@@ -536,10 +576,16 @@ EOF
 PROFILER_JSON="$tmp/arzopa.json"
 DISPLAYPLACER_LIST="$tmp/placer-arzopa.txt"
 DISPLAYPLACER_RC=0
+sed -e 's/^Resolution: 2560x1440/Resolution: 1920x1080/' -e 's/^Hertz: 60/Hertz: 180/' \
+  -e 's/^Origin: (1800,0)/Origin: (-1920,0)/' "$tmp/placer-arzopa.txt" > "$tmp/placer-arzopa.txt.180"
 out="$(run_macos --only @arzopa-display)"
 rc=$?
 eq "ARZOPA apply exits 0" 0 "$rc"
 has "ARZOPA apply says it set the monitor" "set ARZOPA 1920x1080 at 180Hz, scaling off, left of the laptop" "$out"
+has "ARZOPA apply reads the list again to see the rate took" \
+  "CALL list" "$(sed -n '3p' "$placerlog")"
+miss "a rate that took is not stepped down" "hz:144" "$(cat "$placerlog")"
+miss "a rate that took is not a warning" "could not set" "$out"
 has "ARZOPA apply uses the pinned mode and origin" \
   "id:FRESH-UUID res:1920x1080 hz:180 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" \
   "$(cat "$placerlog")"
@@ -589,6 +635,121 @@ has "an already pinned laptop keeps its own ok line" \
 miss "an already pinned ARZOPA is not relabelled as More Space" "already More Space" "$out"
 has "an already pinned ARZOPA still reads displayplacer list" "CALL list" "$(cat "$placerlog")"
 miss "an already pinned ARZOPA does not set a mode" "CALL id:" "$(cat "$placerlog")"
+
+# ---- ARZOPA through the StarTech Thunderbolt 5 dock ---------------------
+# 1920x1080 unscaled is listed at 144, 120, 100 and 60Hz, and not at 180Hz.
+dock_placer() { # current Hertz, ARZOPA origin
+  cat <<EOF
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1800x1169
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0) - main display
+Rotation: 0
+Resolutions for rotation 0:
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+
+Persistent screen id: DOCK-UUID
+Serial screen id: s74646035
+Type: 16 inch external screen
+Resolution: 1920x1080
+Hertz: $1
+Color Depth: 8
+Scaling: off
+Origin: ${2:-(-1920,0)}
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:1920x1080 hz:144 color_depth:8 scaling:off
+  mode 1: res:1920x1080 hz:120 color_depth:8 scaling:off
+  mode 2: res:1920x1080 hz:100 color_depth:8 scaling:off
+  mode 3: res:1920x1080 hz:60 color_depth:8 scaling:off
+EOF
+}
+dock_placer 144 > "$tmp/dock-144.txt"
+dock_placer 100 > "$tmp/dock-100.txt"
+for hz in 144 120 100 60; do
+  dock_placer "$hz" > "$tmp/dock-100.txt.$hz"
+done
+PROFILER_JSON="$tmp/arzopa.json"
+
+DISPLAYPLACER_LIST="$tmp/dock-144.txt"
+out="$(run_macos --only @arzopa-display)"
+has "the dock at 144Hz is ok" \
+  "ok    ARZOPA is 1920x1080 at 144Hz, the highest this connection offers (180Hz needs a direct connection)" "$out"
+miss "the dock at 144Hz does not set a mode" "CALL id:" "$(cat "$placerlog")"
+has "the dock at 144Hz is not a warning" "0 warning(s)" "$out"
+
+DISPLAYPLACER_LIST="$tmp/dock-100.txt"
+out="$(run_macos --only @arzopa-display)"
+rc=$?
+eq "the dock at 100Hz exits 0" 0 "$rc"
+has "the dock at 100Hz is set to 144Hz" "set ARZOPA 1920x1080 at 144Hz, scaling off, left of the laptop" "$out"
+has "the dock set uses the 144Hz unscaled mode" \
+  "id:DOCK-UUID res:1920x1080 hz:144 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" \
+  "$(cat "$placerlog")"
+miss "the dock set does not ask for 180Hz" "hz:180" "$(cat "$placerlog")"
+miss "the dock set that took is not a warning" "could not set" "$out"
+
+# A slow dock shows 144Hz only after the check after the set gave up. The
+# list read for the next plan shows it, so 144Hz stays and 120Hz is not set.
+DISPLAYPLACER_LATE_LISTS=3
+out="$(run_macos --only @arzopa-display)"
+DISPLAYPLACER_LATE_LISTS=0
+has "a slow dock keeps the 144Hz that took" "set ARZOPA 1920x1080 at 144Hz, scaling off, left of the laptop" "$out"
+miss "a slow dock is not stepped down to 120Hz" "hz:120" "$(cat "$placerlog")"
+miss "a slow dock is not a warning" "could not set" "$out"
+eq "a slow dock sets once" "1" "$(grep -c 'CALL id:' "$placerlog")"
+
+# 144Hz fails: the next listed rate down is set, with a warning.
+DISPLAYPLACER_REFUSE_HZ="144"
+DISPLAYPLACER_REFUSE=fail
+out="$(run_macos --only @arzopa-display)"
+rc=$?
+eq "a failed 144Hz set still exits 0" 0 "$rc"
+has "a failed 144Hz set tries 144Hz first" "hz:144" "$(cat "$placerlog")"
+has "a failed 144Hz set falls back to 120Hz" \
+  "id:DOCK-UUID res:1920x1080 hz:120 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" \
+  "$(cat "$placerlog")"
+has "a failed 144Hz set says 120Hz was set" "set ARZOPA 1920x1080 at 120Hz" "$out"
+has "a failed 144Hz set says which rate did not take" "ARZOPA: displayplacer could not set 144Hz, so 120Hz was used" "$out"
+miss "a failed 144Hz set is not called a More Space failure" "displayplacer failed" "$out"
+
+# displayplacer exits 0 but the rate does not take (the dock stayed on
+# 100Hz while 144Hz was listed). 144Hz and 120Hz are tried, then 100Hz is
+# what the connection can be set to, and it is already there.
+DISPLAYPLACER_REFUSE_HZ="144 120"
+DISPLAYPLACER_REFUSE=silent
+out="$(run_macos --only @arzopa-display)"
+rc=$?
+eq "rates that do not take still exit 0" 0 "$rc"
+has "rates that do not take name what was tried" "ARZOPA: displayplacer could not set 144Hz or 120Hz" "$out"
+has "rates that do not take leave the ARZOPA at 100Hz" \
+  "ARZOPA is 1920x1080 at 100Hz, the highest rate displayplacer could set" "$out"
+eq "rates that do not take are tried once each" "2" "$(grep -c 'CALL id:' "$placerlog")"
+miss "rates that do not take do not try 60Hz" "hz:60" "$(cat "$placerlog")"
+
+# No listed rate can be set: one warning, by hand.
+dock_placer 100 "(1800,0)" > "$tmp/dock-away.txt"
+DISPLAYPLACER_LIST="$tmp/dock-away.txt"
+DISPLAYPLACER_REFUSE_HZ="144 120 100 60"
+DISPLAYPLACER_REFUSE=fail
+out="$(run_macos --only @arzopa-display)"
+rc=$?
+eq "no settable rate still exits 0" 0 "$rc"
+eq "no settable rate tries each listed rate" "4" "$(grep -c 'CALL id:' "$placerlog")"
+has "no settable rate warns by hand" \
+  "ARZOPA: displayplacer could not set 1920x1080 with scaling off at any listed refresh rate (144, 120, 100, 60Hz) — set it by hand" "$out"
+miss "no settable rate does not claim a set" "set ARZOPA" "$out"
+DISPLAYPLACER_REFUSE_HZ=""
+DISPLAYPLACER_REFUSE=fail
+
+# Dry run: the plan is shown and no rate is tried.
+DISPLAYPLACER_LIST="$tmp/dock-100.txt"
+out="$(run_macos --dry-run --only @arzopa-display)"
+has "dry-run would set the dock to 144Hz" "would set ARZOPA 1920x1080 at 144Hz" "$out"
+miss "dry-run does not set the dock" "CALL id:" "$(cat "$placerlog")"
 
 printf 'live-apply tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

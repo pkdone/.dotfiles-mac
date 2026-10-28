@@ -49,7 +49,9 @@
 #     or fails, they stay on the logout list.
 #   - @display-more-space sets the built-in panel with displayplacer.
 #     @arzopa-display sets the ARZOPA portable monitor when it is connected
-#     (1920x1080, 180Hz, scaling off, to the left). Either id runs both,
+#     (1920x1080, scaling off, to the left, at 180Hz or the highest rate the
+#     connection lists at 1920x1080). When a rate does not take, the next
+#     listed rate is tried. Either id runs both,
 #     because displayplacer sets every screen in one command. Other displays
 #     are passed through unchanged. A missing tool or mode is a warning and
 #     stays the manual step. When the ARZOPA is not connected, nothing is
@@ -945,16 +947,47 @@ if selected @ac-sleep; then apply_ac_sleep; fi
 
 # ---- Built-in display More Space and the ARZOPA pin (displayplacer) ------
 # The built-in panel moves to More Space when it is not already there.
-# When the ARZOPA monitor is connected and not already 1920x1080 at 180Hz,
-# scaling off, to the left, it is pinned and the laptop origin stays (0,0)
-# so the Dock and menu bar stay on the laptop. Other screens keep their
-# current mode. A missing displayplacer, or no matching mode, stays by hand.
+# When the ARZOPA monitor is connected and not already 1920x1080, scaling
+# off, to the left, at 180Hz (or the highest rate the connection lists at
+# 1920x1080 unscaled, such as 144Hz through a dock), it is pinned and the
+# laptop origin stays (0,0) so the Dock and menu bar stay on the laptop.
+# Other screens keep their current mode. A missing displayplacer, or no
+# matching mode, stays by hand.
+# displayplacer can exit 0 and leave the ARZOPA on another rate, so after a
+# set displayplacer list is read again. When the rate did not take, the plan
+# is made again without it (--max-hz) and the next listed rate is tried.
 # Either --only id runs this once: displayplacer sets every screen together.
+
+# display_pin_listed JSON HELPER LIST RATE FILE — 0 when FILE, a
+# displayplacer list, shows the ARZOPA pinned at RATE.
+display_pin_listed() {
+  printf '%s\n' "$1" | "$DOT_PYTHON" "$2" --list "$3" --placer "$5" --max-hz "$4" 2>/dev/null \
+    | grep '^ok|arzopa|' >/dev/null
+}
+
+# display_pin_rate_took JSON HELPER LIST RATE — 0 when displayplacer list now
+# shows the ARZOPA pinned at RATE. A mode change can take a moment to show.
+display_pin_rate_took() {
+  local file tries=0 rc
+  local settle="${DISPLAYPLACER_SETTLE_SECONDS:-1}"
+  while [ "$tries" -lt 3 ]; do
+    tries=$((tries + 1))
+    file="$(mktemp)"
+    displayplacer list >"$file" 2>/dev/null || true
+    if display_pin_listed "$1" "$2" "$3" "$4" "$file"; then rc=0; else rc=1; fi
+    rm -f "$file"
+    [ "$rc" = 0 ] && return 0
+    [ "$tries" -lt 3 ] && sleep "$settle"
+  done
+  return 1
+}
+
 apply_display_arrangement() {
   local helper="$DOTDIR/lib/display-resolution.py"
   local list="$DOTDIR/lib/display-resolution.list"
   local json report row status rest msg plan placer_file saw_builtin w
-  local -a args apply_msgs warn_msgs ok_msgs plan_warns
+  local rate max_hz skipped shown took
+  local -a args apply_msgs warn_msgs ok_msgs plan_warns max_args
   args=()
   apply_msgs=()
   warn_msgs=()
@@ -1049,64 +1082,122 @@ apply_display_arrangement() {
     placer_file="$(mktemp)"
     displayplacer list >"$placer_file" 2>/dev/null || true
   fi
-  plan="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" --plan --placer "$placer_file" || true)"
-  rm -f "$placer_file"
-  placer_file=""
-  while IFS= read -r row; do
-    [ -n "$row" ] || continue
-    case "$row" in
-      apply\|*)
-        rest="${row#apply|}"
-        apply_msgs+=("${rest#|}")
-        ;;
-      screen\|*) args+=("${row#screen|}") ;;
-      warn\|*)
-        rest="${row#warn|}"
-        plan_warns+=("${rest#|}")
-        ;;
+  max_hz=""
+  skipped=""
+  while :; do
+    max_args=()
+    [ -n "$max_hz" ] && max_args=(--max-hz "$max_hz")
+    plan="$(printf '%s\n' "$json" | "$DOT_PYTHON" "$helper" --list "$list" --plan --placer "$placer_file" "${max_args[@]+"${max_args[@]}"}" || true)"
+    rm -f "$placer_file"
+    placer_file=""
+    args=()
+    apply_msgs=()
+    plan_warns=()
+    ok_msgs=()
+    rate=""
+    while IFS= read -r row; do
+      [ -n "$row" ] || continue
+      case "$row" in
+        apply\|*)
+          rest="${row#apply|}"
+          apply_msgs+=("${rest#|}")
+          ;;
+        screen\|*) args+=("${row#screen|}") ;;
+        rate\|*) rate="${row##*|}" ;;
+        warn\|*)
+          rest="${row#warn|}"
+          plan_warns+=("${rest#*|}")
+          ;;
+        ok\|*|info\|*)
+          rest="${row#*|}"
+          ok_msgs+=("${rest#*|}")
+          ;;
+      esac
+    done <<< "$plan"
+    shown="$skipped"
+    case "$shown" in
+      *", "*) shown="${shown%, *} or ${shown##*, }" ;;
     esac
-  done <<< "$plan"
-  if [ "${#apply_msgs[@]}" -eq 0 ] || [ "${#args[@]}" -eq 0 ]; then
-    if [ "${#plan_warns[@]}" -eq 0 ]; then
-      for w in "${warn_msgs[@]+"${warn_msgs[@]}"}"; do
-        plan_warns+=("$w")
+    if [ "${#apply_msgs[@]}" -eq 0 ] || [ "${#args[@]}" -eq 0 ]; then
+      if [ -n "$skipped" ]; then
+        # An earlier rate did not take. The plan now says what the ARZOPA
+        # was left on, or that no listed rate is left to try.
+        if [ "${#plan_warns[@]}" -eq 0 ]; then
+          WARNINGS=$((WARNINGS + 1))
+          say_warn "ARZOPA: displayplacer could not set ${shown}"
+          for msg in "${ok_msgs[@]+"${ok_msgs[@]}"}"; do
+            say_ok "$msg"
+          done
+        fi
+      elif [ "${#plan_warns[@]}" -eq 0 ]; then
+        for w in "${warn_msgs[@]+"${warn_msgs[@]}"}"; do
+          plan_warns+=("$w")
+        done
+      fi
+      if [ "${#plan_warns[@]}" -eq 0 ] && [ -z "$skipped" ]; then
+        plan_warns+=("built-in display: could not choose a More Space mode — set it by hand (System Settings → Displays)")
+      fi
+      for w in "${plan_warns[@]+"${plan_warns[@]}"}"; do
+        WARNINGS=$((WARNINGS + 1))
+        say_warn "$w"
       done
+      return 0
     fi
-    if [ "${#plan_warns[@]}" -eq 0 ]; then
-      plan_warns+=("built-in display: could not choose a More Space mode — set it by hand (System Settings → Displays)")
+    if [ "$DRY_RUN" = 1 ]; then
+      CHANGED=$((CHANGED + 1))
+      for msg in "${apply_msgs[@]+"${apply_msgs[@]}"}"; do
+        case "$msg" in
+          *"More Space"*) say_chg "built-in display would be set to More Space (${msg})" ;;
+          *) say_chg "would set ${msg}" ;;
+        esac
+      done
+      return 0
     fi
-    for w in "${plan_warns[@]+"${plan_warns[@]}"}"; do
-      WARNINGS=$((WARNINGS + 1))
-      say_warn "$w"
-    done
-    return 0
-  fi
-  if [ "$DRY_RUN" = 1 ]; then
-    CHANGED=$((CHANGED + 1))
-    for msg in "${apply_msgs[@]+"${apply_msgs[@]}"}"; do
-      case "$msg" in
-        *"More Space"*) say_chg "built-in display would be set to More Space (${msg})" ;;
-        *) say_chg "would set ${msg}" ;;
+    took=0
+    if displayplacer "${args[@]}"; then
+      if [ -z "$rate" ] || display_pin_rate_took "$json" "$helper" "$list" "$rate"; then
+        took=1
+      fi
+    fi
+    if [ "$took" = 0 ]; then
+      case "$rate" in
+        ''|*[!0-9]*)
+          WARNINGS=$((WARNINGS + 1))
+          say_warn "built-in display: displayplacer failed — set More Space by hand (System Settings → Displays)"
+          return 0
+          ;;
       esac
-    done
-    return 0
-  fi
-  if displayplacer "${args[@]}"; then
-    CHANGED=$((CHANGED + 1))
-    for msg in "${apply_msgs[@]+"${apply_msgs[@]}"}"; do
-      case "$msg" in
-        *"More Space"*) say_chg "built-in display set to More Space (${msg})" ;;
-        *) say_chg "set ${msg}" ;;
-      esac
-    done
-    for w in "${plan_warns[@]+"${plan_warns[@]}"}"; do
-      WARNINGS=$((WARNINGS + 1))
-      say_warn "$w"
-    done
-  else
-    WARNINGS=$((WARNINGS + 1))
-    say_warn "built-in display: displayplacer failed — set More Space by hand (System Settings → Displays)"
-  fi
+      # The next plan reads this list. A slow dock can show the rate only
+      # now, and then it must not be stepped down.
+      placer_file="$(mktemp)"
+      displayplacer list >"$placer_file" 2>/dev/null || true
+      if display_pin_listed "$json" "$helper" "$list" "$rate" "$placer_file"; then
+        took=1
+        rm -f "$placer_file"
+        placer_file=""
+      fi
+    fi
+    if [ "$took" = 1 ]; then
+      CHANGED=$((CHANGED + 1))
+      for msg in "${apply_msgs[@]+"${apply_msgs[@]}"}"; do
+        case "$msg" in
+          *"More Space"*) say_chg "built-in display set to More Space (${msg})" ;;
+          *) say_chg "set ${msg}" ;;
+        esac
+      done
+      if [ -n "$skipped" ] && [ -n "$rate" ]; then
+        WARNINGS=$((WARNINGS + 1))
+        say_warn "ARZOPA: displayplacer could not set ${shown}, so ${rate}Hz was used"
+      fi
+      for w in "${plan_warns[@]+"${plan_warns[@]}"}"; do
+        WARNINGS=$((WARNINGS + 1))
+        say_warn "$w"
+      done
+      return 0
+    fi
+    skipped="${skipped:+$skipped, }${rate}Hz"
+    max_hz=$((rate - 1))
+  done
 }
 run_displays=0
 if selected @display-more-space; then run_displays=1; fi

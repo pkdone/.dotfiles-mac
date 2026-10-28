@@ -137,10 +137,11 @@ auto-brightness|Display, keyboard & desktop|Automatically adjust brightness Off.
 # displayplacer is missing or the mode is not listed, set it by hand here.
 display-more-space|Display, keyboard & desktop|Built-in display: More Space. macos.sh sets this with displayplacer when that mode is listed for the built-in panel (14 inch 1800x1169, 16 inch 2056x1329). Other displays are left as they are. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
 # The ARZOPA 16.1" portable monitor. Not connected is an info skip, not drift.
-# macos.sh pins 1920x1080, 180Hz, scaling off, origin (-1920,0), and keeps the
+# macos.sh pins 1920x1080, scaling off, origin (-1920,0), at 180Hz, or at the
+# highest rate offered at 1920x1080 when 180Hz is not (through a dock), and keeps the
 # laptop at (0,0) so the Dock and menu bar stay on it. Matched by name or
 # serial, not by the persistent screen id. A missing mode stays by hand.
-arzopa-display|Display, keyboard & desktop|ARZOPA portable monitor, when it is plugged in: 1920x1080, 180Hz, scaling off, to the left of the laptop with the tops aligned. The laptop stays the main display so the Dock and menu bar stay on it. macos.sh sets this with displayplacer when that mode is listed. When the monitor is not connected, nothing is wrong. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
+arzopa-display|Display, keyboard & desktop|ARZOPA portable monitor, when it is plugged in: 1920x1080, scaling off, to the left of the laptop with the tops aligned. The refresh rate is 180Hz when the monitor is plugged straight into the Mac. Through a dock that does not offer 180Hz, it is the highest rate the dock offers (144Hz on the StarTech Thunderbolt 5 dock). The laptop stays the main display so the Dock and menu bar stay on it. macos.sh sets this with displayplacer when that mode is listed. When the monitor is not connected, nothing is wrong. If displayplacer is missing or the mode is not listed, set it by hand|System Settings → Displays|x-apple.systempreferences:com.apple.Displays-Settings.extension|@macconfig:display
 # Tahoe Night (Landscape) is a wallpaper-catalog asset, not a file under
 # /System/Library/Desktop Pictures. System Events "set picture" cannot select
 # that asset, and the wallpaper store is not written.

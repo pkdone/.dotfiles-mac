@@ -451,7 +451,7 @@ Resolutions for rotation 0:
 EOF
 out="$(run "$tmp/arzopa.json")"
 has "a connected ARZOPA without displayplacer list is pending" "pending|arzopa|" "$out"
-has "pending names the pinned mode" "1920x1080 at 180Hz, scaling off" "$out"
+has "pending names the pinned mode" "1920x1080 at 180Hz (or the highest rate the connection offers), scaling off" "$out"
 out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-arzopa-wrong.txt")"
 has "wrong ARZOPA mode warns" "warn|arzopa|" "$out"
 has "warning wants the left-hand origin" "origin (-1920,0)" "$out"
@@ -462,6 +462,7 @@ has "plan sets 1920x1080 at 180Hz scaling off to the left" \
 has "plan keeps the laptop at (0,0) on its current mode" \
   "screen|id:BUILTIN-ID mode:2 origin:(0,0) degree:0" "$out"
 has "plan names the ARZOPA change" "apply||ARZOPA 1920x1080 at 180Hz, scaling off, left of the laptop" "$out"
+has "plan names the rate it set" "rate|arzopa|180" "$out"
 miss "plan does not call the ARZOPA change More Space" "More Space" "$out"
 
 # Serial matches even when the persistent id differs and the profiler name differs.
@@ -560,7 +561,8 @@ out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-named-other.txt")"
 has "a different name and serial do not match" "no screen named ARZOPA" "$out"
 miss "a different panel is not reported as pinned" "ok|arzopa|" "$out"
 
-# 180Hz scaling off is required. A scaled or 60Hz mode is not the pin.
+# A scaled 180Hz mode is not the pin. With only 60Hz listed unscaled, 60Hz
+# is the highest this connection offers, so the plan uses it.
 cat > "$tmp/placer-no-180.txt" <<'EOF'
 Persistent screen id: OTHER-UUID
 Serial screen id: s74646035
@@ -587,8 +589,121 @@ Resolutions for rotation 0:
   mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
 EOF
 out="$(plan "$tmp/arzopa.json" "$tmp/placer-no-180.txt")"
-has "missing 180Hz scaling-off mode warns" "no mode 1920x1080 at 180Hz with scaling off" "$out"
-miss "missing 180Hz mode does not set a screen" "screen|" "$out"
+has "a scaled 180Hz mode is skipped for the unscaled 60Hz one" \
+  "screen|id:OTHER-UUID res:1920x1080 hz:60 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" "$out"
+miss "a scaled 180Hz mode is not set" "hz:180" "$out"
+
+# No unscaled 1920x1080 mode at all: by hand, nothing is set.
+cat > "$tmp/placer-no-unscaled.txt" <<'EOF'
+Persistent screen id: OTHER-UUID
+Serial screen id: s74646035
+Type: 16 inch external screen
+Resolution: 1920x1080
+Hertz: 60
+Color Depth: 8
+Scaling: on
+Origin: (0,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 7: res:1920x1080 hz:180 color_depth:8 scaling:on
+  mode 8: res:2560x1440 hz:60 color_depth:8 scaling:off
+
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1800x1169
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+EOF
+out="$(plan "$tmp/arzopa.json" "$tmp/placer-no-unscaled.txt")"
+has "no unscaled 1920x1080 mode warns" \
+  "warn|arzopa|ARZOPA: displayplacer has no mode 1920x1080 with scaling off at any refresh rate — set it by hand" "$out"
+miss "no unscaled 1920x1080 mode does not set a screen" "screen|" "$out"
+
+# Through the StarTech Thunderbolt 5 dock the ARZOPA lists 1920x1080 unscaled
+# at 144, 120, 100 and 60Hz, and no 180Hz.
+dock_placer() { # current Hertz
+  cat <<EOF
+Persistent screen id: DOCK-UUID
+Serial screen id: s74646035
+Type: 16 inch external screen
+Resolution: 1920x1080
+Hertz: $1
+Color Depth: 8
+Scaling: off
+Origin: (-1920,0)
+Rotation: 0
+Resolutions for rotation 0:
+  mode 0: res:1920x1080 hz:144 color_depth:8 scaling:off
+  mode 1: res:1920x1080 hz:120 color_depth:8 scaling:off
+  mode 2: res:1920x1080 hz:100 color_depth:8 scaling:off
+  mode 3: res:1920x1080 hz:60 color_depth:8 scaling:off
+  mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on
+
+Persistent screen id: BUILTIN-ID
+Type: MacBook built in screen
+Resolution: 1800x1169
+Hertz: 120
+Color Depth: 8
+Scaling: on
+Origin: (0,0) - main display
+Rotation: 0
+Resolutions for rotation 0:
+  mode 2: res:1800x1169 hz:120 color_depth:8 scaling:on
+EOF
+}
+dock_placer 144 > "$tmp/placer-dock-144.txt"
+dock_placer 100 > "$tmp/placer-dock-100.txt"
+out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-dock-144.txt")"
+eq "dock at 144Hz passes as the highest the connection offers" \
+  "ok|arzopa|ARZOPA is 1920x1080 at 144Hz, the highest this connection offers (180Hz needs a direct connection), scaling off, at (-1920,0), to the left of the laptop. The laptop stays at (0,0), so the Dock and menu bar stay on it" \
+  "$(printf '%s\n' "$out" | grep '|arzopa|')"
+out="$(plan "$tmp/arzopa.json" "$tmp/placer-dock-144.txt")"
+miss "dock at 144Hz is left alone" "screen|" "$out"
+
+out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-dock-100.txt")"
+has "dock at 100Hz is drift" "warn|arzopa|ARZOPA is not in its place (100Hz;" "$out"
+has "dock drift wants the highest offered rate" \
+  "want 1920x1080 at 144Hz, the highest this connection offers (180Hz needs a direct connection), scaling off" "$out"
+out="$(plan "$tmp/arzopa.json" "$tmp/placer-dock-100.txt")"
+has "dock drift plan sets 144Hz unscaled" \
+  "screen|id:DOCK-UUID res:1920x1080 hz:144 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" "$out"
+has "dock drift plan names 144Hz" "apply||ARZOPA 1920x1080 at 144Hz, scaling off, left of the laptop" "$out"
+has "dock drift plan names the rate it set" "rate|arzopa|144" "$out"
+has "dock drift plan keeps the laptop" "screen|id:BUILTIN-ID mode:2 origin:(0,0) degree:0" "$out"
+
+# 144Hz did not take: --max-hz 143 asks for the next rate down.
+out="$("$PY" "$HELPER" --json "$tmp/arzopa.json" --list "$LIST" --plan --placer "$tmp/placer-dock-100.txt" --max-hz 143)"
+has "max-hz plan falls back to 120Hz" \
+  "screen|id:DOCK-UUID res:1920x1080 hz:120 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" "$out"
+has "max-hz plan names 120Hz" "rate|arzopa|120" "$out"
+out="$("$PY" "$HELPER" --json "$tmp/arzopa.json" --list "$LIST" --placer "$tmp/placer-dock-100.txt" --max-hz 100)"
+has "max-hz at the current rate passes" \
+  "ok|arzopa|ARZOPA is 1920x1080 at 100Hz, the highest rate displayplacer could set" "$out"
+out="$("$PY" "$HELPER" --json "$tmp/arzopa.json" --list "$LIST" --plan --placer "$tmp/placer-dock-100.txt" --max-hz 59)"
+has "no settable rate left warns" \
+  "ARZOPA: displayplacer could not set 1920x1080 with scaling off at any listed refresh rate (144, 120, 100, 60Hz)" "$out"
+miss "no settable rate left sets nothing" "screen|" "$out"
+
+# Plugged in directly, 180Hz is listed, so 144Hz is drift.
+sed 's/mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on/mode 5: res:1920x1080 hz:180 color_depth:8 scaling:off/' \
+  "$tmp/placer-dock-144.txt" > "$tmp/placer-direct-144.txt"
+out="$(run_with_placer "$tmp/arzopa.json" "$tmp/placer-direct-144.txt")"
+has "a direct connection at 144Hz is drift" "warn|arzopa|ARZOPA is not in its place (144Hz;" "$out"
+has "a direct connection wants 180Hz" "want 1920x1080 at 180Hz, scaling off" "$out"
+out="$(plan "$tmp/arzopa.json" "$tmp/placer-direct-144.txt")"
+has "a direct connection plan sets 180Hz" \
+  "screen|id:DOCK-UUID res:1920x1080 hz:180 color_depth:8 enabled:true scaling:off origin:(-1920,0) degree:0" "$out"
+# A faster mode than the pin is not chosen over 180Hz.
+sed 's/mode 4: res:1920x1080 hz:144 color_depth:8 scaling:on/mode 5: res:1920x1080 hz:180 color_depth:8 scaling:off\
+  mode 6: res:1920x1080 hz:240 color_depth:8 scaling:off/' \
+  "$tmp/placer-dock-144.txt" > "$tmp/placer-direct-240.txt"
+out="$(plan "$tmp/arzopa.json" "$tmp/placer-direct-240.txt")"
+has "180Hz is preferred over a faster listed rate" "rate|arzopa|180" "$out"
 
 # Case-insensitive name, no serial on the profiler row.
 cat > "$tmp/arzopa-case.json" <<'EOF'

@@ -20,5 +20,10 @@
 # displayplacer block has no different name and no different serial.
 # place "left" means origin (-width, 0). The laptop display stays at (0,0),
 # so it stays the main display (Dock and menu bar) and the tops line up.
+# hz is the preferred refresh rate. Plugged straight into the MacBook the
+# ARZOPA offers 180Hz. Through the StarTech Thunderbolt 5 dock
+# (215-TB5USB4DOCK) 1920x1080 unscaled only goes up to 144Hz. When hz is not
+# listed at that resolution and scaling, the highest rate that is listed
+# there is expected instead, and macos.sh sets it.
 # Format: external | name | serial | type | res | hz | scaling | place
 external|ARZOPA|s74646035|16 inch external screen|1920x1080|180|off|left

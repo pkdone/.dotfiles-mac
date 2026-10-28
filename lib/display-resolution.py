@@ -18,7 +18,10 @@ connected when some non-built-in display's `_name` is the row's name, or
 when a serial field on that display matches the row's serial. The persistent
 screen id is not used: macOS replaces it when the cable moves to another
 port. The check then reads `displayplacer list` (passed with `--placer`) and
-compares resolution, refresh, scaling, and origin. A matching displayplacer
+compares resolution, refresh, scaling, and origin. The row's refresh rate is
+the preferred one. When that screen lists no mode at the pinned resolution and
+scaling at that rate (a dock that tops out at 144Hz), the highest rate it does
+list there is expected instead. A matching displayplacer
 screen is chosen by serial, then by name, then by type — and type counts
 only when that block does not name a different product or serial. When the
 monitor is absent the line is info, not a warning. Without `--placer` a
@@ -43,9 +46,12 @@ the More Space mode (scaling on, current refresh rate when that mode exists).
 Every other screen is repeated with its current mode so it is not changed,
 except a connected ARZOPA that is not already on its pin: that screen is set
 to the pinned mode and origin `(-width,0)`, and the laptop display's origin
-is set to `(0,0)` so it stays the main display. This file does not run
-displayplacer. A missing mode is a warning and no screen lines. Exit status
-is 0 whenever a line was printed.
+is set to `(0,0)` so it stays the main display. A pinned monitor that is set
+also prints `rate|arzopa|<hz>`, the refresh rate in its screen line.
+`--max-hz N` leaves out the pinned monitor's rates above N, so a caller whose
+displayplacer set did not take can ask for the next rate down. This file does
+not run displayplacer. A missing mode is a warning and no screen lines. Exit
+status is 0 whenever a line was printed.
 """
 from __future__ import annotations
 
@@ -541,8 +547,39 @@ def _read_screens(placer_text: str) -> tuple[list[dict] | None, str | None]:
     return screens, None
 
 
-def _arrangement(screen: dict, screens: list[dict], pin: dict) -> tuple[bool, str]:
+def _offered_rates(modes: list[dict], res: str, scaling: str) -> list[int]:
+    """Refresh rates listed at this resolution and scaling, highest first."""
+    width, height = (int(part) for part in res.split("x", 1))
+    rates = {
+        int(mode["hz"])
+        for mode in modes
+        if mode["w"] == width and mode["h"] == height and mode["scaling"] == scaling
+    }
+    return sorted(rates, reverse=True)
+
+
+def _target_rate(pin: dict, offered: list[int], max_hz: int | None) -> tuple[str, str]:
+    """(rate to expect, why it is not the pinned rate). ("", "") when none is left.
+
+    The pinned rate wins when it is listed. Otherwise the highest listed rate
+    does. --max-hz drops the rates a caller could not set.
+    """
+    usable = [rate for rate in offered if max_hz is None or rate <= max_hz]
+    if not usable:
+        return "", ""
+    preferred = int(pin["hz"])
+    if preferred in usable:
+        return pin["hz"], ""
+    if usable[0] == offered[0]:
+        return str(usable[0]), (
+            f"the highest this connection offers ({pin['hz']}Hz needs a direct connection)"
+        )
+    return str(usable[0]), "the highest rate displayplacer could set"
+
+
+def _arrangement(screen: dict, screens: list[dict], pin: dict, why: str = "") -> tuple[bool, str]:
     want = _want_origin(pin)
+    rate = f"{pin['hz']}Hz, {why}," if why else f"{pin['hz']}Hz,"
     problems: list[str] = []
     if screen.get("res") != pin["res"]:
         problems.append(f"resolution {screen.get('res') or 'unknown'}")
@@ -563,20 +600,22 @@ def _arrangement(screen: dict, screens: list[dict], pin: dict) -> tuple[bool, st
         problems.append(f"laptop display origin {laptops[0].get('origin') or 'unknown'}")
     if not problems:
         return True, (
-            f"{pin['name']} is {pin['res']} at {pin['hz']}Hz, scaling {pin['scaling']}, "
+            f"{pin['name']} is {pin['res']} at {rate} scaling {pin['scaling']}, "
             f"at {want}, to the left of the laptop. The laptop stays at (0,0), "
             "so the Dock and menu bar stay on it"
         )
     return False, (
         f"{pin['name']} is not in its place ({'; '.join(problems)}; "
-        f"want {pin['res']} at {pin['hz']}Hz, scaling {pin['scaling']}, "
+        f"want {pin['res']} at {rate} scaling {pin['scaling']}, "
         f"origin {want}, laptop at (0,0)). "
         "macos.sh sets this with displayplacer when that mode is listed; "
         "otherwise System Settings → Displays"
     )
 
 
-def evaluate_pin(displays: list[dict], pin: dict, placer_text: str | None) -> dict:
+def evaluate_pin(
+    displays: list[dict], pin: dict, placer_text: str | None, max_hz: int | None = None
+) -> dict:
     """One external pin: info if absent, pending if its list was not read."""
     origin = _want_origin(pin)
     base = {
@@ -601,7 +640,8 @@ def evaluate_pin(displays: list[dict], pin: dict, placer_text: str | None) -> di
             "status": "pending",
             "message": (
                 f"{pin['name']} is connected but displayplacer list was not read, so "
-                f"{pin['res']} at {pin['hz']}Hz, scaling {pin['scaling']}, "
+                f"{pin['res']} at {pin['hz']}Hz (or the highest rate the connection "
+                f"offers), scaling {pin['scaling']}, "
                 f"to the left of the laptop (origin {origin}) was not checked. "
                 "Run brewsync to install displayplacer, or set it by hand "
                 "(System Settings → Displays)"
@@ -635,20 +675,34 @@ def evaluate_pin(displays: list[dict], pin: dict, placer_text: str | None) -> di
             )
         return {**base, "status": "warn", "message": message}
     screen = hits[0]
-    mode = _pick_exact(screen["modes"], pin["res"], pin["hz"], pin["scaling"])
-    ok, message = _arrangement(screen, screens, pin)
-    if ok:
-        return {**base, "status": "ok", "message": message, "screen": screen, "mode": mode}
-    if mode is None:
+    offered = _offered_rates(screen["modes"], pin["res"], pin["scaling"])
+    hz, why = _target_rate(pin, offered, max_hz)
+    if not hz:
+        if offered:
+            listed = ", ".join(str(rate) for rate in offered)
+            problem = (
+                f"displayplacer could not set {pin['res']} with scaling {pin['scaling']} "
+                f"at any listed refresh rate ({listed}Hz)"
+            )
+        else:
+            problem = (
+                f"displayplacer has no mode {pin['res']} with scaling {pin['scaling']} "
+                "at any refresh rate"
+            )
         return {
             **base,
             "status": "warn",
             "message": (
-                f"{pin['name']}: displayplacer has no mode {pin['res']} at {pin['hz']}Hz "
-                f"with scaling {pin['scaling']} — set it by hand "
+                f"{pin['name']}: {problem} — set it by hand "
                 "(System Settings → Displays). Other displays were not changed"
             ),
         }
+    want = {**pin, "hz": hz}
+    base["hz"] = hz
+    mode = _pick_exact(screen["modes"], pin["res"], hz, pin["scaling"])
+    ok, message = _arrangement(screen, screens, want, why)
+    if ok:
+        return {**base, "status": "ok", "message": message, "screen": screen, "mode": mode}
     laptops = [other for other in screens if _builtin_screen(other)]
     return {
         **base,
@@ -838,6 +892,7 @@ def _plan_with_pins(
             f"{ev['name']} {ev['res']} at {ev['hz']}Hz, scaling {ev['scaling']},"
             " left of the laptop",
         )
+        print(f"rate|arzopa|{ev['hz']}")
     for arg in args:
         print(f"screen|{arg}")
 
@@ -848,9 +903,10 @@ def plan_apply(
     prefixes: dict[str, str],
     pins: list[dict],
     placer_text: str,
+    max_hz: int | None = None,
 ) -> None:
     """Print a displayplacer plan, or the check lines when nothing should change."""
-    evals = [evaluate_pin(displays, pin, placer_text) for pin in pins]
+    evals = [evaluate_pin(displays, pin, placer_text, max_hz) for pin in pins]
     actionable = [ev for ev in evals if ev.get("fix")]
     if actionable:
         _plan_with_pins(builtins, prefixes, actionable, placer_text)
@@ -883,6 +939,12 @@ def main(argv: list[str] | None = None) -> int:
         default="",
         help="file of displayplacer list output (checks the ARZOPA pin, and --plan)",
     )
+    parser.add_argument(
+        "--max-hz",
+        type=int,
+        default=None,
+        help="leave out the pinned monitor's refresh rates above this",
+    )
     args = parser.parse_args(argv)
     try:
         prefixes, pins = load_config(args.list)
@@ -913,11 +975,13 @@ def main(argv: list[str] | None = None) -> int:
             emit("warn", f"could not read displayplacer list ({exc})")
             return 0
     if args.plan:
-        plan_apply(displays, builtins, prefixes, pins, "" if placer is None else placer)
+        plan_apply(
+            displays, builtins, prefixes, pins, "" if placer is None else placer, args.max_hz
+        )
     else:
         describe(builtins, prefixes)
         for pin in pins:
-            ev = evaluate_pin(displays, pin, placer)
+            ev = evaluate_pin(displays, pin, placer, args.max_hz)
             emit_pin(ev["status"], ev["message"])
     return 0
 
