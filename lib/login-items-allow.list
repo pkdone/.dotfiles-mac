@@ -35,6 +35,8 @@ bundle|com.spotify.client.startuphelper|Spotify StartUpHelper: opens Spotify at 
 app|~/Applications/WhatsApp Web.app|WhatsApp Web opens at login (Safari web app, manual step whatsapp-web; its bundle id is new on each Mac)
 label-prefix|com.microsoft.teams2|Microsoft Teams agent (cask microsoft-teams)
 team|X4QN7LTP59|Multipass daemon (cask multipass)
+team|9BNSXJN65R|Docker Desktop helper (com.docker.helper, cask docker-desktop)
+bundle|com.docker.helper|Docker Desktop helper, if the store records it without a team id
 label|com.pdone.pin-dictation-hotkey-164|this repo's LaunchAgent (launchagents/)
 
 # ---- Company / MDM apps (most are also covered by MDM rules) ----

@@ -41,6 +41,12 @@ A `com.pdone.*` file in `~/Library/LaunchAgents` that does not match the repo, o
 
 A symlink under `~/.config`, `~/Library/LaunchAgents`, or a home dotfile that points into this repo but whose target is gone is a warning. `--fix` does not recreate it. Restore the file from git, or run `install.sh` again for the links it manages.
 
+## Docker Desktop and fish/config.fish
+
+On its first start, Docker Desktop may put its own block at the top of `~/.config/fish/config.fish`, which is a link to this repo's `fish/config.fish`. The block starts with the comment "The following lines were added by Docker Desktop" and adds a fixed `export PATH` line with your home folder in it. Don't commit it. `fish/config.fish` already adds `~/.docker/bin` the fish way, after Homebrew, and only when that folder exists. Delete Docker's block, from its first comment through "End of Docker Desktop section". `macconfig` warns under Login shell while the block is there. `--fix` does not remove it, because it never edits repo files.
+
+Docker Desktop's CLI tools setting is under Settings → Advanced. User keeps the tools in `~/.docker/bin`, the folder `config.fish` adds. System links them into `/usr/local/bin` instead and asks for the Mac password.
+
 ## Recalibrating notification bits
 
 To recalibrate after a macOS update: toggle Allow Notifications for one app, read that app's `flags` again, and set `ALLOW_NOTIFICATIONS_BIT` to the bit that flipped. Then run `./tests/notification-prefs.test.sh`.
