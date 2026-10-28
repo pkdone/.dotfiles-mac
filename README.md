@@ -35,7 +35,7 @@ What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md).
 
 ### 2. Manual steps
 
-A completely fresh Mac has up to about 40 steps you set by hand: privacy permissions, sign-ins, company-managed apps, and a few System Settings pages. Usually far fewer are still open. Company device management (Fleet) covers many of them, some apps sign back in through iCloud or 1Password, and an earlier run may already have done the rest. `macconfig` checks most of them afterwards; about 10 you confirm by eye.
+A completely fresh Mac has up to about 50 steps you set by hand: privacy permissions, sign-ins, company-managed apps, and a few System Settings pages. Usually far fewer are still open. Company device management (Fleet) covers many of them, some apps sign back in through iCloud or 1Password, and an earlier run may already have done the rest. `macconfig` checks most of them afterwards; about 15 you confirm by eye.
 
 When `bootstrap.sh` finishes, it lists the steps still open on this Mac, including any it can't check, and offers to walk you through them. You don't need to run anything else.
 

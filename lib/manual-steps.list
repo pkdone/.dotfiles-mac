@@ -186,6 +186,13 @@ user-picture|Display, keyboard & desktop|Set your user picture to the Dog. A dif
 # uses that same line. open launches Photo Booth so the camera is on
 # and Video Effects appears in Control Centre.
 edge-light|Video calls|Edge Light Off|Start a video call (or open Photo Booth / FaceTime) so the camera is on → click Control Centre in the menu bar → Video Effects → click Edge Light so it is Off|app:Photo Booth|edge-light
+# Center Stage is a per-app Video Effect. macOS keeps it in the system camera
+# service, not in a user preference: no defaults domain and no plist under
+# ~/Library holds it. Leave the check empty. The why-line is
+# MANUAL: Can't check this automatically. If it's already set, press s.
+# macconfig uses that same line. Do not add a check that guesses a key, and
+# do not write a plist. open launches Zoom so a test video can be started.
+zoom-center-stage|Video calls|Center Stage Off for Zoom|Start a Zoom call or test video (Zoom → Settings → Video) with the camera on → click the green camera icon in the menu bar → under MacBook Pro Camera, turn off Centre Stage. macOS remembers this per app|app:zoom.us|
 
 # ---- Printer ----
 # Read-only: lpstat -p, or lpstat -v if -p does not name the queue.
