@@ -9,9 +9,11 @@
 # and prints a "Fixed" and a "Needs Paul" list.
 #
 # Sections: symlinks, Homebrew (Brewfile + cleanup extras), macOS defaults, Dock (apps, and the space macOS keeps for it), Dock desktop assignments, login shell, hostname, display auto-brightness, built-in display More Space, AC idle sleep (pmset -g custom, AC Power sleep only), URL handlers, Finder file handlers, unwanted apps, dictation shortcut + Quick Note shortcut + Spotlight shortcut (Command+Space, no LaunchAgent) + login LaunchAgents, Finder icon view defaults, Karabiner Fn-kill + Finder Trash + hidden menu bar icon, Hammerspoon (running), login items guard, Finder Recents, CotEditor, Ghostty config (valid, not overridden, effective = repo), Logi Options+ (MX Master 3S wheel / thumb wheel / gesture button / pointer speed vs lib/logi-expected.list, from a temp copy of settings.db), Modes (hammerspoon/modes.lua valid, Focus Shortcuts + Focus modes exist, current mode not left on > HEALTH_MODE_MAX_HOURS), Notifications (per-app Allow Notifications vs lib/notifications-off.list, Hammerspoon alert style, read-only usernoted plist), MDM apps, leftover *.app.back, security hygiene (FileVault, firewall stealth, automatic updates, pending-update age from the local plist, SSH; commit signing only when it is on), account picture (the Dog), placed desktop widgets (notificationcenterui widgets.instances, read-only), Karabiner background items, Finder sidebar rows the sidebar files name, Mac health (battery, disk, uptime, memory, storage hogs, security basics, MDM, crashes, background jobs, dotfiles sync, unexpected login items), manual steps (scripts/manual-steps.sh check: permissions, sign-ins, British input, GitHub CLI, 1Password CLI, pointer size, by-hand settings).
-# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py and lib/defaults-lib.sh
+# Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py, lib/defaults-lib.sh and lib/safe-fixers.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
+# Hammerspoon's start and the Desktop pins go through lib/safe-fixers.sh, which
+# install.sh and dock.sh also call.
 #
 # Each section is a checks/<area>.sh file sourced below, in this order, so the
 # report, the summary, and the exit status stay the same. --only runs a subset.
@@ -421,8 +423,11 @@ AFTER_DRIFT="$DRIFT"; AFTER_WARN="$WARN"
 if [ "$FIX" = 1 ]; then
   require_file "$DOTDIR/lib/autofix.list"
   require_file "$DOTDIR/lib/autofix-lib.sh"
+  require_file "$DOTDIR/lib/safe-fixers.sh"
   # shellcheck source=lib/autofix-lib.sh disable=SC1091
   . "$DOTDIR/lib/autofix-lib.sh"
+  # shellcheck source=lib/safe-fixers.sh disable=SC1091
+  . "$DOTDIR/lib/safe-fixers.sh"
   AUTOFIX_LIST="$DOTDIR/lib/autofix.list"
   FIX_LOG="$HOME/Library/Logs/com.pdone.check-fix.log"
   fix_log() {
@@ -487,18 +492,7 @@ if [ "$FIX" = 1 ]; then
     fi
     echo "LaunchAgent $label: ${out:-load failed}"; return 1
   }
-  fix_hammerspoon() {
-    local i=0
-    if [ ! -d /Applications/Hammerspoon.app ]; then
-      echo "Hammerspoon.app not installed — run brewsync"; return 2
-    fi
-    if pgrep -xq Hammerspoon; then echo "Hammerspoon already running"; return 0; fi
-    if [ "$DRY_RUN" = 1 ]; then echo "would start Hammerspoon (open -g -a Hammerspoon)"; return 0; fi
-    open -g -a Hammerspoon 2>/dev/null || true
-    while [ "$i" -lt 15 ] && ! pgrep -xq Hammerspoon; do sleep 1; i=$((i + 1)); done
-    if pgrep -xq Hammerspoon; then echo "started Hammerspoon"; return 0; fi
-    echo "open -a Hammerspoon didn't start it"; return 1
-  }
+  fix_hammerspoon() { safe_start_hammerspoon; }
 
   # Classify every drift / warning. SAFE items are de-duplicated on id|arg.
   SAFE_ITEMS=()                 # "id US arg US message US fixer"
@@ -528,7 +522,8 @@ if [ "$FIX" = 1 ]; then
 
   # Run the fixers in dependency order: symlinks, then one batched macos.sh call
   # (one backup, at most one restart per process), then one batched
-  # desktop-bindings.py --apply (one backup, one Dock restart), then one batched
+  # safe_apply_desktops (desktop-bindings.py --apply: one backup, one Dock
+  # restart), the same helper dock.sh uses, then one batched
   # file-handlers.py --apply (duti -s for each drifted extension), then LaunchAgents
   # (rewrite a drifted plist and bootout/bootstrap, or bootstrap only if it isn't
   # loaded), Hammerspoon, and last a Dock restart when macOS stopped keeping space
@@ -620,23 +615,16 @@ if [ "$FIX" = 1 ]; then
   fi
   # One apply for every drifted bundle: resolve Desktop N → current Space UUID,
   # write app-bindings, restart Dock once. DESKTOP_OUT is status|bundle|message.
+  # safe_apply_desktops is the helper dock.sh calls for the full list.
   DESKTOP_OUT=""
   if [ -n "$DESKTOP_ONLY" ]; then
-    if ! desk_py="$(dot_python)"; then
-      while IFS= read -r b; do
-        [ -n "$b" ] || continue
-        DESKTOP_OUT="${DESKTOP_OUT}fail|${b}|python3 not found — desktop assignment not changed"$'\n'
-      done < <(printf '%s\n' "$DESKTOP_ONLY" | tr ',' '\n')
+    if [ "$DRY_RUN" = 1 ]; then
+      DESKTOP_OUT="$(safe_apply_desktops --dry-run --only "$DESKTOP_ONLY" 2>&1)" || true
     else
-      desk_cmd=("$desk_py" "$DOTDIR/lib/desktop-bindings.py" --apply)
-      if [ "$DRY_RUN" = 1 ]; then desk_cmd+=(--dry-run); fi
-      desk_cmd+=(--only "$DESKTOP_ONLY" "$DOTDIR/lib/desktop-bindings.list")
-      DESKTOP_OUT="$("${desk_cmd[@]}" 2>&1)" || true
-      if [ "$DRY_RUN" != 1 ]; then
-        while IFS= read -r dl; do
-          if [ -n "$dl" ]; then fix_log "desktop: $dl"; fi
-        done <<< "$DESKTOP_OUT"
-      fi
+      DESKTOP_OUT="$(safe_apply_desktops --only "$DESKTOP_ONLY" 2>&1)" || true
+      while IFS= read -r dl; do
+        if [ -n "$dl" ]; then fix_log "desktop: $dl"; fi
+      done <<< "$DESKTOP_OUT"
     fi
     printf '%s\n' "$DESKTOP_OUT" | awk -F'|' 'NF >= 3 && $3 != "" { print "        " $3 }'
   fi

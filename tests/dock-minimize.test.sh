@@ -260,7 +260,43 @@ cat > "$dockbin/killall" <<'EOF'
 printf 'killall %s\n' "$*" >> "${DOCK_LOG:?}"
 exit 0
 EOF
-chmod +x "$dockbin/dockutil" "$dockbin/killall"
+cat > "$dockbin/defaults" <<'EOF'
+#!/bin/sh
+# com.apple.spaces is the fixture, so dock.sh can apply Desktop pins without
+# touching a real Dock. Every other defaults command is the system one, so the
+# Dock check still reads autohide and orientation on a Mac.
+if [ "${2:-}" = "com.apple.spaces" ]; then
+  if [ "${1:-}" = "export" ]; then
+    if [ "${3:-}" = "-" ]; then
+      cat "${FAKE_PLIST:?}"
+    else
+      cp "${FAKE_PLIST:?}" "$3"
+    fi
+    exit 0
+  fi
+  exit 0
+fi
+if [ -x /usr/bin/defaults ]; then
+  exec /usr/bin/defaults "$@"
+fi
+exit 0
+EOF
+chmod +x "$dockbin/dockutil" "$dockbin/killall" "$dockbin/defaults"
+python3 - "$docktmp/spaces.plist" <<'PY'
+import plistlib, sys
+def desk(uuid, typ=0):
+    return {"type": typ, "uuid": uuid}
+p = {
+  "app-bindings": {},
+  "SpacesDisplayConfiguration": {"Management Data": {"Monitors": [
+    {"Display Identifier": "Main", "Spaces": [
+      desk(""), desk("UUID-2"), desk("UUID-3"), desk("UUID-4"),
+    ]},
+  ]}},
+}
+with open(sys.argv[1], "wb") as fh:
+    plistlib.dump(p, fh)
+PY
 dock_list() { # home, omit_manual (1 to drop manual: rows)
   awk -F'|' -v home="$1" -v omit="$2" '
     $1 ~ /^[[:space:]]*#/ || $1 ~ /^[[:space:]]*$/ { next }
@@ -276,7 +312,10 @@ dock_list() { # home, omit_manual (1 to drop manual: rows)
 }
 run_dock() { # home
   : > "$docktmp/log"
-  HOME="$1" PATH="$dockbin:$PATH" DOCK_LOG="$docktmp/log" "$DIR/dock.sh"
+  HOME="$1" PATH="$dockbin:$PATH" DOCK_LOG="$docktmp/log" \
+    FAKE_PLIST="$docktmp/spaces.plist" \
+    DESKTOP_BINDINGS_BACKUP_DIR="$docktmp/backups" \
+    "$DIR/dock.sh"
 }
 run_check() { # home, omit_manual
   dock_list "$1" "$2" > "$docktmp/list"
@@ -294,7 +333,15 @@ eq "dock.sh does not add the missing app" "" \
   "$(grep -F 'WhatsApp Web.app' "$docktmp/log" || true)"
 
 have_home="$docktmp/have-home"
-mkdir -p "$have_home/Applications/WhatsApp Web.app"
+mkdir -p "$have_home/Applications/WhatsApp Web.app/Contents"
+# A real Safari web app has a bundle id. An empty directory is not one, and
+# the Desktop pin refuses to guess. This fixture is enough for dock.sh to add
+# the app and to write the pin.
+python3 - "$have_home/Applications/WhatsApp Web.app/Contents/Info.plist" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], "wb") as fh:
+    plistlib.dump({"CFBundleIdentifier": "com.apple.Safari.WebApp.test"}, fh)
+PY
 out="$(run_dock "$have_home")"; rc=$?
 eq "dock.sh adds WhatsApp Web when the app exists" 0 "$rc"
 has "dock.sh adds the web app path" \

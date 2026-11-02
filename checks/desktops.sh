@@ -3,8 +3,9 @@
 # Sourced by macconfig-check.sh. Runs in the current shell (not a subshell)
 # so a failing command still stops the check the way it did before the split.
 # ---- 4b. Dock "Assign To" desktop pins ----------------------------------
-# Read-only here. --fix writes the drifted bundles back (same Desktop N → Space
-# UUID map) via the desktop fixer below.
+# Read-only here. dock.sh applies the whole list on bootstrap, and --fix writes
+# the drifted bundles back (same Desktop N → Space UUID map). Both call
+# lib/safe-fixers.sh.
 hdr "Desktop assignments (Dock → Options → Assign To)"
 fixid desktop-assign
 if PY="$(dot_python)"; then

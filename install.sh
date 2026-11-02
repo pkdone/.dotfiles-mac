@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
 #
 # install.sh — bootstrap this machine: symlink configs into ~/.config, install the
-# Brewfile, and trust the mise config. Login shell, hostname, macOS defaults and the
-# Dock are separate scripts; bootstrap.sh runs the whole sequence in order. Ends by
-# printing the manual steps (lib/manual-steps.list) and, on a terminal, offering to
-# walk through them.
+# Brewfile, start Hammerspoon if it is installed and not running, and trust the
+# mise config. Login shell, hostname, macOS defaults and the Dock are separate
+# scripts; bootstrap.sh runs the whole sequence in order. Ends by printing the
+# manual steps (lib/manual-steps.list) and, on a terminal, offering to walk
+# through them.
+#
+# Flags:
+#   --dry-run    Describe the steps, including the Hammerspoon start; change nothing.
+#   -h, --help   Show usage.
 #
 # Safe to re-run. Existing correct symlinks are repointed harmlessly; if a *real*
 # file is ever in the way of a symlink, it's moved into backups/pre-symlink-<ts>/
@@ -24,7 +29,42 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/dotfiles-log.sh disable=SC1091
 . "$SCRIPT_DIR/lib/dotfiles-log.sh"
+# shellcheck source=lib/safe-fixers.sh disable=SC1091
+. "$SCRIPT_DIR/lib/safe-fixers.sh"
 dotfiles_refuse_root "install.sh"
+
+DRY_RUN=0
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    -h|--help)
+      cat <<'USAGE'
+Usage: install.sh [--dry-run]
+  Symlink configs, install the Brewfile, and trust mise. After the Hammerspoon
+  cask and the hammerspoon/ symlink, start Hammerspoon if it is installed and
+  not already running. Idempotent. The start is lib/safe-fixers.sh, the same
+  helper macconfig --fix uses.
+  --dry-run    Describe those steps, including the Hammerspoon start; change nothing.
+  -h, --help   Show this help.
+USAGE
+      exit 0 ;;
+    *) echo "Unknown argument: $arg (try --help)" >&2; exit 2 ;;
+  esac
+done
+
+if [ "$DRY_RUN" = 1 ]; then
+  echo "install.sh — dry run (nothing is changed)"
+  echo "  would symlink configs from lib/links.list, including hammerspoon/ → ~/.hammerspoon"
+  echo "  would install the Brewfile, including the Hammerspoon cask"
+  echo "  would render login LaunchAgents, trust mise, and enable the pre-push hook"
+  echo "  Hammerspoon:"
+  # The cask install above would put the app on disk first, so describe the
+  # start even when Hammerspoon.app is not there yet. The real run below uses
+  # the same helper with DRY_RUN unset.
+  SAFE_HAMMERSPOON_DESCRIBE=1 safe_start_hammerspoon
+  echo "Dry run complete."
+  exit 0
+fi
 
 if [ "$(uname -s)" != Darwin ]; then
   echo "install.sh is for macOS (Darwin); detected $(uname -s). Aborting." >&2
@@ -130,6 +170,22 @@ echo "🍺 Installing from Brewfile..."
 # the hook, and the manual-steps list still run.
 bundle_rc=0
 "$SCRIPT_DIR/scripts/brew-bundle-install.sh" --install-homebrew --file "$DOTFILES/Brewfile" || bundle_rc=$?
+
+# The hammerspoon/ symlink is earlier in this script (lib/links.list). The cask
+# install is the Brewfile step above. Start the app only when both of those
+# have been attempted, and only if it is installed and not already running.
+# A missing app does not fail setup: the Brewfile summary above already named
+# it. Same helper as macconfig-check.sh --fix (lib/safe-fixers.sh).
+echo ""
+echo "🥄 Hammerspoon (start it when it is installed and not already running)..."
+# Return 2 means the app is not installed yet. The Brewfile summary above
+# already named a missing cask, and a later run of this script starts it.
+# Do not fail the rest of setup for that.
+hs_rc=0
+safe_start_hammerspoon || hs_rc=$?
+if [ "$hs_rc" -eq 1 ]; then
+  echo "  not started."
+fi
 
 echo ""
 echo "🔧 Trusting mise config..."

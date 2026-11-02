@@ -433,5 +433,51 @@ has "unreadable Info.plist is a warning" "warn||WhatsApp Web:" "$out"
 eq "unreadable Info.plist is not drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
 eq "unreadable Info.plist is not skip" "" "$(printf '%s\n' "$out" | grep '^skip|' || true)"
 
+# dock.sh applies the same helper. Preview must not call dockutil, defaults write,
+# or killall. A second apply against an already-correct plist must not write.
+cat > "$bin/dockutil" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "${DOCKUTIL_LOG:?}"
+exit 0
+EOF
+chmod +x "$bin/dockutil"
+mkdir -p "$tmp/dock-home" "$tmp/dock-backups"
+export DOCKUTIL_LOG="$tmp/dockutil.log"
+export DESKTOP_BINDINGS_BACKUP_DIR="$tmp/dock-backups"
+make_plist "$tmp/dock-in.plist" ''
+export FAKE_PLIST="$tmp/dock-in.plist"
+: > "$DOCKUTIL_LOG"
+: > "$FAKE_LOG"
+preview="$(HOME="$tmp/dock-home" "$DIR/dock.sh" --list)"; preview_rc=$?
+eq "dock.sh --list exits 0" 0 "$preview_rc"
+has "dock.sh --list names Slack first" " 1. Slack" "$preview"
+has "dock.sh --list previews a Desktop pin" "would assign Slack to Desktop 1" "$preview"
+eq "dock.sh --list does not call dockutil" "" "$(cat "$DOCKUTIL_LOG")"
+eq "dock.sh --list does not write defaults" "" "$(grep -F '["write"' "$FAKE_LOG" || true)"
+eq "dock.sh --list does not restart Dock" "" "$(grep -F killall "$FAKE_LOG" || true)"
+: > "$FAKE_LOG"
+dry="$(HOME="$tmp/dock-home" "$DIR/dock.sh" --dry-run)"; dry_rc=$?
+eq "dock.sh --dry-run exits 0" 0 "$dry_rc"
+has "dock.sh --dry-run previews a Desktop pin" "would assign Slack to Desktop 1" "$dry"
+eq "dock.sh --dry-run does not call dockutil" "" "$(cat "$DOCKUTIL_LOG")"
+eq "dock.sh --dry-run does not write defaults" "" "$(grep -F '["write"' "$FAKE_LOG" || true)"
+eq "dock.sh --dry-run does not restart Dock" "" "$(grep -F killall "$FAKE_LOG" || true)"
+: > "$FAKE_LOG"
+: > "$DOCKUTIL_LOG"
+apply="$(HOME="$tmp/dock-home" "$DIR/dock.sh")"; apply_rc=$?
+eq "dock.sh apply exits 0" 0 "$apply_rc"
+has "dock.sh apply clears the Dock" "--remove all" "$(cat "$DOCKUTIL_LOG")"
+has "dock.sh apply assigns Slack" "assign Slack to Desktop 1" "$apply"
+has "dock.sh apply writes app-bindings" '["write"' "$(cat "$FAKE_LOG")"
+eq "dock.sh apply restarts Dock for the app list and the pin change" 2 "$(grep -cF killall "$FAKE_LOG" || true)"
+"$PY" "$HELPER" --apply --plist "$tmp/dock-in.plist" --out "$tmp/dock-done.plist" "$REAL_LIST" >/dev/null
+export FAKE_PLIST="$tmp/dock-done.plist"
+: > "$FAKE_LOG"
+again="$(HOME="$tmp/dock-home" "$DIR/dock.sh")"; again_rc=$?
+eq "dock.sh second apply exits 0" 0 "$again_rc"
+has "dock.sh second apply sees Slack already assigned" "Slack already assigned to Desktop 1" "$again"
+eq "dock.sh second apply does not write defaults" "" "$(grep -F '["write"' "$FAKE_LOG" || true)"
+eq "dock.sh second apply restarts Dock only for the app list" 1 "$(grep -cF killall "$FAKE_LOG" || true)"
+
 printf 'desktop-bindings tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
