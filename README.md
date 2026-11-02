@@ -90,6 +90,7 @@ Apps and tools come from three places:
 
 ## Docs
 
+- [Agent rules](AGENTS.md) — standing rule for changing this Mac's configuration
 - [Setup](docs/setup.md) — full setup walkthrough
 - [Settings](docs/settings.md) — what each managed setting does and why
 - [Manual steps](docs/manual-steps.md) — by-hand checklist (`lib/manual-steps.list`)

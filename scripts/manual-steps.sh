@@ -101,7 +101,7 @@ check_spec_ok() {
     @macconfig:*)
       rest="${spec#@macconfig:}"
       case "$rest" in
-        mdm|karabiner|display|power|notifications|login-items|finder|modes) return 0 ;;
+        mdm|karabiner|display|power|notifications|login-items|finder|modes|menubar) return 0 ;;
       esac
       return 1
       ;;

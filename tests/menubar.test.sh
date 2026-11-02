@@ -58,17 +58,20 @@ eq "defaults fixer is still SAFE macos" "SAFE|macos" \
 has "autofix comment names ControlCenter" "SystemUIServer / ControlCenter" \
   "$(cat "$DIR/lib/autofix.list")"
 
-has "manual step hides Raycast, Logi Options+ and Docker" \
-  "menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off Raycast, Logi Options+ and Docker." \
+has "manual step turns off the pinned apps" \
+  "menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Granola, Microsoft Teams, Slack, Zoom, Raycast and Logi Options+." \
   "$(grep -v '^#' "$DIR/lib/manual-steps.list")"
-has "manual step keeps the other icons" "Leave Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop as they are." \
+has "manual step leaves the unpinned icons" "Leave Tailscale, Hammerspoon, Fleet Desktop and the rest as they are" \
   "$(grep '^menubar-third-party-hide|' "$DIR/lib/manual-steps.list")"
-eq "manual step is by hand" "" "$(awk -F'|' '$1=="menubar-third-party-hide" { print $6 }' "$DIR/lib/manual-steps.list")"
+eq "manual step is the menubar check" "@macconfig:menubar" \
+  "$(awk -F'|' '$1=="menubar-third-party-hide" { print $6 }' "$DIR/lib/manual-steps.list")"
 
 settings="$(cat "$DIR/docs/settings.md")"
 has "settings names the intended menu bar" \
   "clock, the mode icon, battery percentage, Wi-Fi, Bluetooth and Control Centre" "$settings"
-has "settings names kept third-party icons" "Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop" "$settings"
+has "settings names kept third-party icons" "Tailscale, Hammerspoon and Fleet Desktop" "$settings"
+miss "settings does not keep 1Password and Granola in the menu bar" \
+  "Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop" "$settings"
 
 # ---- repo karabiner.json (the file the directory symlink installs) ----
 kb="$(python3 - "$KJ" <<'PY'
