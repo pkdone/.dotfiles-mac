@@ -62,6 +62,8 @@ macconfig --fix    # check, fix anything that's safe to fix automatically, then 
 
 `macconfig --fix` only changes settings it can safely put back on its own. Anything else is listed under "Needs Paul" for you to do by hand.
 
+A manual step that an earlier section already checked still shows under Manual steps, as one line in its numbered place (`checked above under` that section's heading). The line is not counted a second time, and it does not ask you to press s.
+
 If a Finder folder isn't sorted by name, it has saved its own view. This puts every folder in your home folder, Desktop included, back on the default view. Each folder's own view settings and icon positions are lost, and it only runs when you ask:
 
 ```bash

@@ -38,6 +38,8 @@ if [ -z "$PY" ]; then echo "does-not-apply tests: python3 not found, skipped"; e
 # The same pass/warn/info/note/skip macconfig-check.sh uses, so a skip that
 # went back to counting by hand fails here.
 COUNTERS="$(awk '
+  /^# ---- section rollup ---$/ {p=1}
+  /^# ---- end section rollup ---$/ {p=0}
   /^pass\(\) \{/ {p=1}
   /^with_timeout\(\) \{/ {p=0}
   p

@@ -3,6 +3,7 @@
 # Manual steps whose check is @macconfig:<area> use the section's step function.
 # A failing step is shown by open. A passing step is skipped. macconfig's own
 # Manual steps section asks for covered so it does not count the step twice.
+# It prints a pointer line instead of dropping the number.
 # Run: ./tests/covered-steps.test.sh
 #
 set -uo pipefail
@@ -134,7 +135,9 @@ eq "macconfig asks for covered instead of a second result" "covered" \
   "$(printf '%s\n' "$owned" | cut -d'|' -f1)"
 has "manual section sets the owns flag" "MACCONFIG_OWNS_SECTIONS=1" \
   "$(cat "$DIR/checks/manual.sh")"
-has "manual section ignores covered rows" "covered|'') : ;;" \
+has "manual section prints a pointer for a covered row" "manual_covered_line" \
+  "$(grep -v '^[[:space:]]*#' "$DIR/checks/manual.sh")"
+miss "manual section does not drop covered rows" "covered|'') : ;;" \
   "$(grep -v '^[[:space:]]*#' "$DIR/checks/manual.sh")"
 miss "covered-steps does not launch macconfig" "macconfig-check.sh" \
   "$(cat "$DIR/lib/covered-steps.sh")"

@@ -210,6 +210,73 @@ SECTION=""
 # info lines never land here. RECHECK_* is the same shape for what's still outstanding
 # after a real --fix re-check. ATTN_LINES is the plain bullet text (summary + JSON).
 ATTN_ITEMS=(); RECHECK_ITEMS=(); RECHECK_RAN=0; ATTN_LINES=()
+# ---- section rollup ---
+# Worst pass / warn / bad under each heading. The Manual steps pointer reads
+# this so a step already printed above can repeat its section's ok, warn, or
+# fail without counting again. info, note, and skip do not record: a heading
+# that only skipped stays unknown, and the pointer must not say ok.
+# RS separates headings. It is not a newline, so a heading can be matched whole.
+RS=$'\036'
+SECTION_ROLLUP=""
+
+section_rank() { # status -> 3 fail, 2 warn, 1 ok, 0 else
+  case "$1" in
+    fail) printf '3' ;;
+    warn) printf '2' ;;
+    ok) printf '1' ;;
+    *) printf '0' ;;
+  esac
+}
+
+section_record() { # status
+  local heading="${SECTION:-}" status="$1" rest row name cur found
+  [ -n "$heading" ] || return 0
+  [ -n "$status" ] || return 0
+  rest="${SECTION_ROLLUP:-}"
+  SECTION_ROLLUP=""
+  found=0
+  while [ -n "$rest" ]; do
+    row="${rest%%"$RS"*}"
+    case "$rest" in
+      *"$RS"*) rest="${rest#*"$RS"}" ;;
+      *) rest="" ;;
+    esac
+    [ -n "$row" ] || continue
+    name="${row%%"$US"*}"
+    cur="${row#*"$US"}"
+    if [ "$name" = "$heading" ]; then
+      found=1
+      if [ "$(section_rank "$status")" -gt "$(section_rank "$cur")" ]; then
+        cur="$status"
+      fi
+    fi
+    SECTION_ROLLUP="${SECTION_ROLLUP}${name}${US}${cur}${RS}"
+  done
+  if [ "$found" -eq 0 ]; then
+    SECTION_ROLLUP="${SECTION_ROLLUP}${heading}${US}${status}${RS}"
+  fi
+}
+
+# Prints ok, warn, or fail. Status 1 when this heading recorded nothing.
+section_status_of() { # heading
+  local rest="${SECTION_ROLLUP:-}" row name cur
+  while [ -n "$rest" ]; do
+    row="${rest%%"$RS"*}"
+    case "$rest" in
+      *"$RS"*) rest="${rest#*"$RS"}" ;;
+      *) rest="" ;;
+    esac
+    [ -n "$row" ] || continue
+    name="${row%%"$US"*}"
+    cur="${row#*"$US"}"
+    if [ "$name" = "$1" ]; then
+      printf '%s' "$cur"
+      return 0
+    fi
+  done
+  return 1
+}
+# ---- end section rollup ---
 fixid() { FIX_ID="$1"; FIX_ARG="${2:-}"; }   # fixid ID [ARG] — tag the following lines
 record() { FIX_ITEMS+=("$1$US$FIX_ID$US$FIX_ARG$US${2//$US/ }"); }
 attn_push() { # kind message — alongside record, from bad/warn only
@@ -217,9 +284,9 @@ attn_push() { # kind message — alongside record, from bad/warn only
   msg="${msg//$'\n'/ }"
   ATTN_ITEMS+=("$1$US$SECTION$US$FIX_ID$US$msg")
 }
-pass() { OKS=$((OKS + 1));    printf '  %sok%s    %s\n'  "$C_OK"   "$C_OFF" "$1"; }
-bad()  { DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); record drift "$1"; attn_push drift "$1"; printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
-warn() { WARN=$((WARN + 1));   WARN_MSGS+=("$1");  record warn "$1";  attn_push warn "$1";  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
+pass() { section_record ok;   OKS=$((OKS + 1));    printf '  %sok%s    %s\n'  "$C_OK"   "$C_OFF" "$1"; }
+bad()  { section_record fail; DRIFT=$((DRIFT + 1)); DRIFT_MSGS+=("$1"); record drift "$1"; attn_push drift "$1"; printf '  %sDRIFT%s %s\n' "$C_BAD"  "$C_OFF" "$1"; }
+warn() { section_record warn; WARN=$((WARN + 1));   WARN_MSGS+=("$1");  record warn "$1";  attn_push warn "$1";  printf '  %swarn%s  %s\n'  "$C_WARN" "$C_OFF" "$1"; }
 info() { HAND=$((HAND + 1));   printf '  info  %s\n' "$1"; }   # check-by-hand item: not drift, not a warning
 note() { printf '  info  %s\n' "$1"; }                         # FYI line: not counted anywhere
 # Same printed line as info. A skip does not apply, so it is left out of the

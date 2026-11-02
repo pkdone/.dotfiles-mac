@@ -257,8 +257,9 @@ check_step_wallpaper
 # it and does not kill NotificationCenter or chronod. macconfig --fix does
 # not either (remove-widgets in lib/autofix.list is report-only). Manual step
 # remove-widgets is the removal. WIDGETS_SECTION_RAN tells checks/manual.sh
-# not to print the same result again; `manualsteps open` still uses the check,
-# so the step is shown only when a widget is placed.
+# to print one pointer line in that numbered place (checked above under
+# Desktop widgets) and not count it again. `manualsteps open` still uses the
+# check, so the step is shown only when a widget is placed.
 hdr "Desktop widgets"
 WIDGETS_SECTION_RAN=1
 fixid remove-widgets
