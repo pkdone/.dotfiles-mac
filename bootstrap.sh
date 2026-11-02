@@ -3,11 +3,12 @@
 # bootstrap.sh — set up this machine end to end by running the individual scripts in
 # order, each behind a confirmation prompt:
 #
-#   1. install.sh   symlinks, Brewfile, mise trust
+#   1. install.sh   symlinks, Brewfile, mise trust, and start Hammerspoon when it
+#                   is installed and not already running
 #   2. shell.sh     make fish the login shell
 #   3. hostname.sh  set HostName / LocalHostName / ComputerName
 #   4. macos.sh     apply the managed macOS defaults
-#   5. dock.sh      pin the Dock apps in order
+#   5. dock.sh      pin the Dock apps in order, then apply Desktop assignments
 #   6. handlers.sh  set URL-scheme default apps (mailto → Chrome) and Finder file handlers
 #   7. prune-apps.sh remove unwanted App Store apps (GarageBand, iMovie)
 #
@@ -79,7 +80,9 @@ for arg in "$@"; do
 Usage: bootstrap.sh [--dry-run] [--yes]
   Run the full machine setup in order: install.sh, shell.sh, hostname.sh,
   macos.sh, dock.sh, handlers.sh, prune-apps.sh — each behind a confirmation prompt. Idempotent and safe
-  to re-run. After install.sh, names any missing company app and, in a terminal,
+  to re-run. install.sh starts Hammerspoon when it is installed and not already
+  running. dock.sh applies the Desktop assignments after it pins the Dock apps.
+  After install.sh, names any missing company app and, in a terminal,
   offers to open Fleet Self service. A missing company app is a warning, not a
   failed step. Ends with the checklist of manual steps (scripts/manual-steps.sh).
   A step that fails is recorded. Later steps still run. At the end the failed
@@ -120,7 +123,8 @@ confirm() {  # prompt -> 0 to proceed, 1 to skip
 
 # Before the Dock step, flag any app in lib/dock-apps.list that isn't installed yet
 # (e.g. the manual installs under docs/setup.md "Apps not in the Brewfile"). dock.sh already
-# skips a missing app, so this just surfaces it before the confirm below — install them
+# skips a missing app, and it does not write a Desktop pin for an app path that is
+# not installed, so this just surfaces it before the confirm below — install them
 # first and answer N, or proceed and re-run dock.sh later. Mirrors dock.sh's own parsing.
 precheck_dock() {
   local list="$DOTDIR/lib/dock-apps.list" name path manual apps step
@@ -146,7 +150,7 @@ precheck_dock() {
     echo "  ⚠️  Not set up yet — dock.sh will skip these:"
     for name in "${manual_missing[@]}"; do echo "        - $name"; done
     echo "      They are missing because the manual step hasn't been done."
-    echo "      Do that step, then re-run dock.sh (and macconfig --fix for the Desktop pin)."
+    echo "      Do that step, then re-run dock.sh."
   fi
   if [ "${#missing[@]}" -gt 0 ]; then
     echo "  ⚠️  Not installed yet — dock.sh will skip these:"
@@ -165,7 +169,7 @@ done
 # ---- run one step -------------------------------------------------------
 # step NUM "label" SCRIPT PREVIEW_FLAG
 #   PREVIEW_FLAG is the script's own preview option (--dry-run, --list), or "" for a
-#   script with no preview mode (install.sh) — that one is described, not run, in --dry-run.
+#   script with no preview mode — that one is described, not run, in --dry-run.
 #
 # set -e is on, and the log wrapper tees this whole script. A bare non-zero
 # status from a step would exit here, close that tee, and skip every later
@@ -200,7 +204,7 @@ echo "bootstrap.sh — $([ "$DRYRUN" = 1 ] && echo 'DRY RUN (previewing every st
 # install.sh would otherwise print the manual-steps checklist mid-run; show it once at the end.
 export DOTFILES_BOOTSTRAP=1
 
-step 1 "install.sh — symlinks, Brewfile, mise trust"  install.sh  ""
+step 1 "install.sh — symlinks, Brewfile, start Hammerspoon, mise trust"  install.sh  --dry-run
 # Company apps are not in the Brewfile. Name any that are missing and, on a
 # terminal, offer to open Fleet Self service. --yes and --dry-run only print
 # how to install them. A missing app is a warning; setup continues.
@@ -213,7 +217,7 @@ fleet_company_apps_prompt "$DOTDIR/lib/mdm-apps.list"
 step 2 "shell.sh — make fish the login shell"         shell.sh    --dry-run
 step 3 "hostname.sh — set host names"                 hostname.sh --dry-run
 step 4 "macos.sh — apply managed macOS defaults"      macos.sh    --dry-run
-step 5 "dock.sh — pin the Dock apps in order"         dock.sh     --list      precheck_dock
+step 5 "dock.sh — pin the Dock apps and Desktop assignments"  dock.sh  --list  precheck_dock
 step 6 "handlers.sh — URL schemes and Finder file handlers"   handlers.sh --dry-run
 step 7 "prune-apps.sh — remove unwanted apps"         prune-apps.sh --dry-run
 

@@ -384,7 +384,7 @@ has "whatsapp step keeps the name" 'keep the name "WhatsApp Web"' "$wa_where"
 has "whatsapp step names Linked devices" "Linked devices" "$wa_where"
 has "whatsapp step says the phone link can't be checked" "Linking the phone can't be checked." "$wa_where"
 has "whatsapp step names dock.sh" "dock.sh" "$wa_where"
-has "whatsapp step names macconfig --fix" "macconfig --fix" "$wa_where"
+miss "whatsapp step does not send you to macconfig --fix for the Desktop pin" "macconfig --fix" "$wa_where"
 has "whatsapp step puts it between Slack and Granola" "between Slack and Granola on Desktop 1" "$wa_where"
 eq "whatsapp step check is the named check" "whatsapp-web" \
   "$(awk -F'|' '$1=="whatsapp-web" { print $6; exit }' "$LIST")"

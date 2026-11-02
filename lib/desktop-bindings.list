@@ -1,5 +1,7 @@
-# Dock "Options → Assign To" desktop pins. macconfig-check.sh compares them; macconfig-check.sh --fix applies them
-# (lib/desktop-bindings.py --apply) by writing com.apple.spaces app-bindings.
+# Dock "Options → Assign To" desktop pins. macconfig-check.sh compares them.
+# dock.sh (bootstrap) and macconfig-check.sh --fix apply them through
+# lib/safe-fixers.sh (lib/desktop-bindings.py --apply), writing com.apple.spaces
+# app-bindings.
 # Format (pipe-delimited): Display name | bundle id | desktop | optional manual step
 #   desktop: 1..N = "This Desktop" on Desktop N of the main display; none = not assigned
 #   Bundle ids are matched case-insensitively (macOS stores them lowercased).

@@ -20,6 +20,14 @@ eq() {  # description expected actual
 ok() {  # description status
   if [ "$2" = 0 ]; then pass=$((pass + 1)); else fail=$((fail + 1)); printf 'FAIL: %s\n' "$1"; fi
 }
+has() {  # description needle haystack
+  case "$3" in *"$2"*) pass=$((pass + 1)) ;; *)
+    fail=$((fail + 1)); printf 'FAIL: %s\n  missing: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;; esac
+}
+miss() {  # description needle haystack
+  case "$3" in *"$2"*) fail=$((fail + 1)); printf 'FAIL: %s\n  unexpected: [%s]\n  in:      [%s]\n' "$1" "$2" "$3" ;;
+    *) pass=$((pass + 1)) ;; esac
+}
 
 rows() { awk -F'|' '$1 !~ /^#/ && NF' "$LIST"; }
 
@@ -77,6 +85,21 @@ done
 for id in $(rows | awk -F'|' '$2 == "SAFE" && $3 == "macos" && $1 != "defaults" {print $1}'); do
   grep -q "selected @$id" "$DIR/macos.sh"; ok "macos.sh --only knows @$id" "$?"
 done
+
+# Hammerspoon and desktop pins are one helper, shared by --fix and bootstrap.
+helper="$(cat "$DIR/lib/safe-fixers.sh")"
+has "helper starts Hammerspoon" "safe_start_hammerspoon" "$helper"
+has "helper applies desktop pins" "safe_apply_desktops" "$helper"
+has "helper opens Hammerspoon in the background" "open -g -a Hammerspoon" "$helper"
+has "helper runs desktop-bindings.py --apply" 'desktop-bindings.py" --apply' "$helper"
+has "macconfig-check.sh starts Hammerspoon through the helper" "safe_start_hammerspoon" "$(cat "$DIR/macconfig-check.sh")"
+has "macconfig-check.sh applies desktops through the helper" "safe_apply_desktops" "$(cat "$DIR/macconfig-check.sh")"
+has "install.sh starts Hammerspoon through the helper" "safe_start_hammerspoon" "$(cat "$DIR/install.sh")"
+has "dock.sh applies desktops through the helper" "safe_apply_desktops" "$(cat "$DIR/dock.sh")"
+miss "macconfig-check.sh does not open Hammerspoon itself" "open -g -a Hammerspoon" "$(cat "$DIR/macconfig-check.sh")"
+miss "install.sh does not open Hammerspoon itself" "open -g -a Hammerspoon" "$(cat "$DIR/install.sh")"
+miss "macconfig-check.sh does not call desktop-bindings.py --apply itself" 'desktop-bindings.py" --apply' "$(cat "$DIR/macconfig-check.sh")"
+miss "dock.sh does not call desktop-bindings.py --apply itself" 'desktop-bindings.py" --apply' "$(cat "$DIR/dock.sh")"
 
 printf 'autofix tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

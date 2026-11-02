@@ -1,22 +1,30 @@
 #!/usr/bin/env bash
 #
-# dock.sh — pin a fixed, ordered set of apps to the Dock (idempotent).
+# dock.sh — pin a fixed, ordered set of apps to the Dock, then apply the
+# Desktop assignments (idempotent).
 #
 # With no arguments: clears the Dock's app section and re-adds each app below
-# in order, then restarts the Dock. Safe to re-run — it converges to exactly
-# this layout. Requires dockutil (in the Brewfile).
+# in order, restarts the Dock, then applies lib/desktop-bindings.list through
+# lib/safe-fixers.sh — the same helper macconfig-check.sh --fix uses. That
+# writes com.apple.spaces app-bindings and restarts the Dock only if a pin
+# changed. Safe to re-run — it converges to exactly this layout. Requires
+# dockutil (in the Brewfile) for the app section.
 #
 # Flags:
-#   --list       Print the Dock apps in order and exit (no changes; no dockutil needed).
+#   --list       Print the Dock apps and the Desktop pins; change nothing.
+#   --dry-run    Same preview as --list (no dockutil, no preference writes).
 #   -h, --help   Show usage.
 #
 set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/safe-fixers.sh disable=SC1091
+. "$DOTDIR/lib/safe-fixers.sh"
 
 # Fail early with a clear message if a required data file is missing.
 require_file() { [ -r "$1" ] || { echo "Error: required file not found: $1" >&2; exit 1; }; }
 require_file "$DOTDIR/lib/dock-apps.list"
+require_file "$DOTDIR/lib/desktop-bindings.list"
 
 # The Dock app list lives in lib/dock-apps.list (one "Display name | path" per line,
 # with an optional "manual:<step-id>" field; see that file's header). Loaded so the
@@ -33,23 +41,53 @@ list_apps() {
   done <<< "$APPS"
 }
 
+# Print desktop-bindings.py lines as plain sentences. Returns the helper status.
+# --dry-run (and any other helper args) are passed through.
+run_desktop_pins() {
+  local out="" rc=0 status="" bundle="" msg=""
+  if out="$(safe_apply_desktops "$@" 2>&1)"; then
+    rc=0
+  else
+    rc=$?
+  fi
+  while IFS='|' read -r status bundle msg; do
+    [ -n "${status:-}" ] || continue
+    printf '  %s\n' "${msg:-$bundle}"
+  done <<< "$out"
+  return "$rc"
+}
+
 usage() {
   cat <<'USAGE'
-Usage: dock.sh [--list]
-  --list       Print the Dock apps in order and exit (no changes; dockutil not required).
+Usage: dock.sh [--list | --dry-run]
+  --list       Print the Dock apps and the Desktop pins; change nothing.
+  --dry-run    Same preview as --list (no dockutil, no preference writes).
   -h, --help   Show this help.
 
 With no arguments, dock.sh rebuilds the Dock's app section to exactly these
-apps, in order (idempotent), and restarts the Dock.
+apps, in order (idempotent), restarts the Dock, then applies
+lib/desktop-bindings.list (com.apple.spaces app-bindings). The Dock is
+restarted again only if a Desktop pin changed.
 USAGE
 }
 
+PREVIEW=0
 case "${1:-}" in
-  --list)     list_apps; exit 0 ;;
-  -h|--help)  usage; exit 0 ;;
-  "")         : ;;
-  *)          echo "Unknown argument: $1 (try --help)" >&2; exit 2 ;;
+  --list|--dry-run) PREVIEW=1 ;;
+  -h|--help)        usage; exit 0 ;;
+  "")               : ;;
+  *)                echo "Unknown argument: $1 (try --help)" >&2; exit 2 ;;
 esac
+
+if [ "$PREVIEW" = 1 ]; then
+  list_apps
+  echo ""
+  echo "Desktop pins (lib/desktop-bindings.list) — preview, nothing is changed:"
+  # A missing Space is reported and not created. The preview itself still
+  # succeeds: it did not write anything.
+  run_desktop_pins --dry-run || true
+  exit 0
+fi
 
 if ! command -v dockutil >/dev/null 2>&1; then
   echo "dockutil not found — install it first (it's in the Brewfile)." >&2
@@ -80,3 +118,7 @@ done <<< "$APPS"
 
 killall Dock || true
 echo "✅ Dock set."
+
+echo ""
+echo "🖥  Desktop pins (lib/desktop-bindings.list)..."
+run_desktop_pins

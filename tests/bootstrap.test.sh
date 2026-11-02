@@ -145,5 +145,29 @@ walk_order="$(printf '%s\n' "$walk_out" | awk '
 ')"
 eq "walk-through runs before the failure summary" "ok" "$walk_order"
 
+# A missing Dock app is still named. The Desktop pin for it is applied by
+# re-running dock.sh, not by a separate macconfig --fix.
+boot_src="$(cat "$DIR/bootstrap.sh")"
+miss "bootstrap does not send you back to macconfig --fix for the Desktop pin" \
+  "macconfig --fix for the Desktop pin" "$boot_src"
+has "bootstrap still says to re-run dock.sh after a manual step" "re-run dock.sh." "$boot_src"
+has "bootstrap still warns about apps that are not installed" "Not installed yet" "$boot_src"
+has "bootstrap dry-run previews install.sh" 'install.sh  --dry-run' "$boot_src"
+has "bootstrap dry-run previews dock.sh with --list" 'dock.sh  --list' "$boot_src"
+
+pin_home="$tmp/home-pin"
+pin_sandbox="$tmp/pin-repo"
+make_sandbox "$pin_sandbox"
+cp "$DIR/lib/dock-apps.list" "$pin_sandbox/lib/dock-apps.list"
+pin_out="$(HOME="$pin_home" "$pin_sandbox/bootstrap.sh" --dry-run --yes 2>&1)"
+pin_rc=$?
+eq "dry-run with the Dock list exits 0" 0 "$pin_rc"
+has "dry-run names a manual-step Dock app" "Not set up yet" "$pin_out"
+has "dry-run names a Dock app that is not installed" "Not installed yet" "$pin_out"
+has "dry-run tells you to re-run dock.sh" "re-run dock.sh." "$pin_out"
+miss "dry-run output does not mention macconfig --fix" "macconfig --fix" "$pin_out"
+has "dry-run previews install.sh" "STEP install.sh --dry-run" "$pin_out"
+has "dry-run previews dock.sh without applying" "STEP dock.sh --list" "$pin_out"
+
 printf 'bootstrap tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
