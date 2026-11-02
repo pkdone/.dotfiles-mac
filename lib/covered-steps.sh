@@ -10,7 +10,7 @@
 
 covered_step_file() { # area
   case "$1" in
-    mdm|karabiner|display|power|notifications|login-items|finder|modes)
+    mdm|karabiner|display|power|notifications|login-items|finder|modes|menubar)
       printf '%s\n' "$DOTDIR/checks/$1.sh"
       return 0
       ;;
@@ -38,6 +38,7 @@ covered_checked_part() { # id
     karabiner-login-items) printf '%s' "the Karabiner background items that can be read" ;;
     mode-focus-modes) printf '%s' "the Focus modes that can be read" ;;
     mode-hammerspoon-alerts) printf '%s' "Hammerspoon's notification style" ;;
+    menubar-third-party-hide) printf '%s' "Allow in the Menu Bar for the listed apps" ;;
     user-picture) printf '%s' "the account picture" ;;
     *) printf '%s' "the part this check can read" ;;
   esac
@@ -47,8 +48,10 @@ covered_checked_part() { # id
 # Read-only. Does not prompt (FLEET_OFFER=0). The step function's own stdout
 # is discarded; pass/warn/bad/info/note record the lines macconfig would print.
 # A listed app that has never posted a notification ("nothing to turn off")
-# counts as done. A third-party app that is only flagged for review is not
-# part of the manual step. Any other info or note is a part the check does
+# counts as done. An Allow in the Menu Bar app that is not installed, or not
+# in trackedApplications yet, counts as done too. A third-party app that is
+# only flagged for review is not part of the manual step. Any other info or
+# note is a part the check does
 # not cover: the step stays up, and the detail names the part that was checked.
 covered_step_run() { # id area
   local id="$1" area="$2" file fn detail line partial
@@ -69,7 +72,8 @@ covered_step_run() { # id area
   # skip is "this check does not apply" (a clamshell, an unlisted panel).
   info() {
     case "$1" in
-      *"nothing to turn off"*) COVERED_OKS="${COVERED_OKS}$1"$'\n' ;;
+      *"nothing to turn off"*|*"not installed, or not in Allow in the Menu Bar yet"*)
+        COVERED_OKS="${COVERED_OKS}$1"$'\n' ;;
       *"third-party app is not in"*) ;;
       *) COVERED_PARTIAL="${COVERED_PARTIAL}$1"$'\n' ;;
     esac
