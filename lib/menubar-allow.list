@@ -1,0 +1,26 @@
+# Apps whose Allow in the Menu Bar value is pinned
+# (System Settings → Menu Bar → Allow in the Menu Bar).
+# macconfig-check.sh reads trackedApplications in the Control Center group
+# plist via lib/menubar-allow.py. An app in this list that is allowed when
+# it should be off is drift (Needs Paul). The check never writes the plist,
+# and there is no --fix: the blob is undocumented and Control Center may
+# overwrite it.
+#
+# An app that is not installed, or not in trackedApplications yet, is an
+# info line, not drift. Anything not listed here is left as it is
+# (Tailscale, Hammerspoon, Fleet Desktop, Karabiner, Okta, SentinelAgent, …).
+#
+# Format: bundle-id | on|off | display name
+# Blank lines and lines beginning with # are ignored. Keep the display
+# names in the menubar-third-party-hide title in lib/manual-steps.list.
+
+com.1password.1password|off|1Password
+com.todesktop.230313mzl4w4u92|off|Cursor
+co.anysphere.cursor.nightly|off|Cursor Nightly
+com.docker.docker|off|Docker
+com.granola.app|off|Granola
+com.microsoft.teams2|off|Microsoft Teams
+com.tinyspeck.slackmacgap|off|Slack
+us.zoom.xos|off|Zoom
+com.raycast.macos|off|Raycast
+com.logi.cp-dev-mgr|off|Logi Options+
