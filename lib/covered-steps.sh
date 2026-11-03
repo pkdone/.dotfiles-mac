@@ -3,8 +3,10 @@
 #
 # covered-steps.sh — one result for a manual step whose check is @macconfig:<area>.
 # The step functions live in checks/<area>.sh (the same ones the section calls).
-# Sourced by scripts/manual-steps.sh. The main check already reported the section
-# and sets MACCONFIG_OWNS_SECTIONS so the manual-steps list does not count it again.
+# Sourced by scripts/manual-steps.sh and checks/manual.sh. The main check already
+# reported the section and sets MACCONFIG_OWNS_SECTIONS so the manual-steps list
+# does not count it again. checks/manual.sh still prints one pointer line, using
+# covered_section_heading for the words in that section's hdr.
 # shellcheck source=defaults-lib.sh disable=SC1091
 . "$DOTDIR/lib/defaults-lib.sh"
 
@@ -16,6 +18,30 @@ covered_step_file() { # area
       ;;
   esac
   return 1
+}
+
+# The heading hdr prints for this manual step. Display has several headings,
+# so the id decides, not the area. remove-widgets is the Desktop widgets
+# section (the named check, not @macconfig:display). menubar is Allow in the
+# Menu Bar. Status 1 when this id is not one of those steps.
+covered_section_heading() { # id
+  case "$1" in
+    mdm-apps) printf '%s\n' "MDM / company apps" ;;
+    tailscale-login|login-items-off) printf '%s\n' "Login Items (banned open-at-login)" ;;
+    karabiner-login-items) printf '%s\n' "Karabiner background" ;;
+    auto-brightness) printf '%s\n' "Display auto-brightness" ;;
+    display-more-space) printf '%s\n' "Display (More Space)" ;;
+    arzopa-display) printf '%s\n' "ARZOPA display" ;;
+    wallpaper) printf '%s\n' "Wallpaper" ;;
+    ac-sleep) printf '%s\n' "Power (sleep and wake)" ;;
+    remove-widgets) printf '%s\n' "Desktop widgets" ;;
+    user-picture) printf '%s\n' "User picture" ;;
+    notifications-apps|mode-hammerspoon-alerts) printf '%s\n' "Notifications" ;;
+    finder-sidebar) printf '%s\n' "Finder sidebar rows" ;;
+    mode-focus-modes|mode-focus-shortcuts) printf '%s\n' "Modes (Hammerspoon)" ;;
+    menubar-third-party-hide) printf '%s\n' "Allow in the Menu Bar" ;;
+    *) return 1 ;;
+  esac
 }
 
 # One line, messages separated by "; ". Blank lines are dropped.

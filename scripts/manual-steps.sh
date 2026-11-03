@@ -435,6 +435,9 @@ run_check() {  # spec [id]
     '@macconfig-check.sh') res covered "verified by macconfig-check.sh" ;;
     @macconfig:*)
       # macconfig already ran the section. Do not run it again or count it twice.
+      # Porcelain status stays covered. checks/manual.sh prints one pointer
+      # from the section status recorded above. open and pending still skip
+      # covered, so they do not ask to press s.
       if [ "${MACCONFIG_OWNS_SECTIONS:-}" = 1 ]; then
         res covered "verified by macconfig-check.sh"
         return 0

@@ -32,7 +32,9 @@
 #                                           menubar).
 #                                           manualsteps open/check run that step's
 #                                           function. macconfig's Manual steps section
-#                                           does not count it again.
+#                                           prints one pointer line in that numbered
+#                                           place (checked above under the section
+#                                           heading) and does not count it again.
 #            @macconfig-check.sh            legacy: report covered, do not run a section
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
 #            | spotlight-results | remove-widgets | home-printer | tailscale-signin
@@ -49,8 +51,9 @@
 #                                           notificationcenterui plist (lib/desktop-widgets.py;
 #                                           never written, and NotificationCenter / chronod are
 #                                           not killed). The Desktop widgets section reports
-#                                           it. Manual steps skips that duplicate when the section
-#                                           ran. open still uses the check, so the step is shown
+#                                           it. When that section ran, Manual steps keeps one
+#                                           pointer line in that numbered place and does not
+#                                           count it again. open still uses the check, so the step is shown
 #                                           only when a widget is placed. home-printer only reads
 #                                           lpstat. It never adds a queue. The HP ENVY 6000 series
 #                                           is visible on Bonjour only on the home network.
