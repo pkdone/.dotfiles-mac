@@ -214,7 +214,14 @@ eq "desktop apply without defaults fails closed" 2 "$desk_rc"
 has "desktop apply without defaults does not claim a write" "could not read com.apple.spaces" "$desk_out"
 
 inst_home="$tmp/inst-home"
-inst="$(HOME="$inst_home" "$DIR/install.sh" --dry-run 2>&1)" || inst_rc=$?
+# Run the dry run as if Hammerspoon is installed but not running, so the
+# result does not depend on whether it is running on the machine running tests.
+nohs_bin="$tmp/nohs-bin"
+mkdir -p "$nohs_bin"
+printf '#!/bin/sh\nexit 1\n' > "$nohs_bin/pgrep"
+chmod +x "$nohs_bin/pgrep"
+inst="$(HOME="$inst_home" PATH="$nohs_bin:$PATH" HAMMERSPOON_APP="$tmp/hs-app" \
+  "$DIR/install.sh" --dry-run 2>&1)" || inst_rc=$?
 inst_rc=${inst_rc:-0}
 eq "install.sh --dry-run exits 0" 0 "$inst_rc"
 has "install.sh --dry-run describes the Hammerspoon start" \
