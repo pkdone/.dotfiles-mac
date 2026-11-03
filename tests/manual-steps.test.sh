@@ -309,7 +309,7 @@ cc_row="$(grep '^control-centre-controls|' "$LIST")"
 eq "control-centre row exists" 1 "$(printf '%s\n' "$cc_row" | grep -c .)"
 eq "control-centre group" "Menu bar" "$(printf '%s\n' "$cc_row" | cut -d'|' -f2)"
 eq "control-centre title" \
-  "Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display and Sound." \
+  "Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display, Sound and Keyboard Brightness." \
   "$(printf '%s\n' "$cc_row" | cut -d'|' -f3)"
 eq "control-centre where" \
   "Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it." \
@@ -340,11 +340,23 @@ has "manual-steps doc names the stale modules" "still listed AirDrop and FocusMo
 has "manual-steps doc says a tile cannot be read" \
   "so it can't tell whether a tile is showing." "$doc"
 has "manual-steps doc writes nothing" "Nothing writes that file. The step stays by hand." "$doc"
+has "manual-steps doc keeps Keyboard Brightness" \
+  "Sound and Keyboard Brightness" "$doc"
+has "manual-steps doc names the group container" "trackedApplications" "$doc"
+has "manual-steps doc says the integers are menu-bar rows" \
+  "Bluetooth is \`2\` (Show in Menu Bar) and Now Playing is \`8\` (Don't Show)" "$doc"
 has "manual-steps doc lists Control Centre tiles with the other by-hand settings" \
   "the Control Centre tiles" "$doc"
 has "table row is by hand" \
-  "| Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display and Sound. | Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it. | by hand |" \
+  "| Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display, Sound and Keyboard Brightness. | Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it. | by hand |" \
   "$doc"
+settings="$(cat "$DIR/../docs/settings.md")"
+has "settings names the Control Centre keep list" \
+  "Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display, Sound and Keyboard Brightness" \
+  "$settings"
+has "settings says Keyboard Brightness is not a menu-bar pin" \
+  "Keyboard Brightness stays in Control Centre and is not a menu-bar pin" \
+  "$settings"
 
 cc_checks="$(cat "$DIR"/../checks/*.sh "$DIR/../macos.sh" "$DIR/../macconfig-check.sh")"
 miss "no control-centre fixid" "fixid control-centre" "$cc_checks"

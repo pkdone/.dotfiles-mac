@@ -32,12 +32,20 @@ if [ ! -f "$FISH_FN" ]; then
   exit 1
 fi
 
+# The flag has to be function scope. `set -lx` inside `if` is local to that
+# block and never reaches the bash script. This does not need a fish binary.
+has "brewsync exports the interactive flag at function scope" \
+  "set -fx DOTFILES_INTERACTIVE 0" "$(cat "$FISH_FN")"
+miss "brewsync does not use a block-local export for the flag" \
+  "set -lx DOTFILES_INTERACTIVE" "$(cat "$FISH_FN")"
+
 # fish is often /opt/homebrew/bin/fish and absent from a non-interactive PATH.
 # Resolve it before the wrapper replaces PATH with the brew stub directory.
 if ! FISH_BIN="$(hermetic_fish)"; then
   echo "SKIP: fish not available — fish-wrapper cases not run (looked on PATH and in /opt/homebrew/bin, /usr/local/bin, /usr/bin). The CI fish-syntax job still parses *.fish."
-  echo "brewsync tests: $pass passed, $fail failed"
-  exit 0
+  printf 'brewsync tests: %d passed, %d failed\n' "$pass" "$fail"
+  [ "$fail" -eq 0 ]
+  exit
 fi
 
 fish_err="$("$FISH_BIN" -n "$FISH_FN" 2>&1)"
@@ -102,6 +110,64 @@ has "preflight failure skips upgrade" "Skipping upgrade and cleanup because the 
 has "preflight failure exits 2" "STATUS:2" "$out"
 miss "preflight failure does not upgrade" "brew update" "$out"
 miss "preflight failure is not the crash message" "failed before it could finish" "$out"
+
+# The Brewfile script is replaced so this records the flag the bash side saw.
+# A pipe is not a terminal. A pty is. The body is piped through tee either way,
+# so the script's own stdout is not a tty; the flag is what it has to trust.
+cat > "$home/.dotfiles-mac/scripts/brew-bundle-install.sh" <<'EOF'
+#!/bin/sh
+printf 'interactive=%s t0=%s t1=%s\n' "${DOTFILES_INTERACTIVE-unset}" "$([ -t 0 ] && echo y || echo n)" "$([ -t 1 ] && echo y || echo n)"
+exit 0
+EOF
+chmod +x "$home/.dotfiles-mac/scripts/brew-bundle-install.sh"
+
+pipe_out="$(HOME="$home" PATH="$bin:/usr/bin:/bin" \
+  "$FISH_BIN" --no-config -c "source \"$FISH_FN\"; brewsync" </dev/null)"
+has "a pipe records non-interactive" "interactive=0" "$pipe_out"
+miss "a pipe does not leave the flag unset" "interactive=unset" "$pipe_out"
+has "a pipe installer's stdout is not a tty" "t1=n" "$pipe_out"
+
+# shellcheck disable=SC2016  # the python program is quoted so fish sees $FISH_FN
+pty_out="$(
+  HOME="$home" PATH="$bin:/usr/bin:/bin" FISH_FN="$FISH_FN" \
+    python3 - "$FISH_BIN" <<'PY'
+import os, pty, select, subprocess, sys, time
+fish = sys.argv[1]
+master, slave = pty.openpty()
+proc = subprocess.Popen(
+    [fish, "--no-config", "-c", 'source "$FISH_FN"; brewsync'],
+    stdin=slave, stdout=slave, stderr=slave, close_fds=True,
+)
+os.close(slave)
+data = b""
+deadline = time.time() + 8
+while time.time() < deadline:
+    ready, _, _ = select.select([master], [], [], 0.2)
+    if master in ready:
+        try:
+            chunk = os.read(master, 4096)
+        except OSError:
+            break
+        if not chunk:
+            break
+        data += chunk
+    if proc.poll() is not None and not ready:
+        break
+if proc.poll() is None:
+    proc.kill()
+    proc.wait()
+    sys.stderr.write("brewsync pty run did not finish\n")
+    sys.exit(1)
+os.close(master)
+sys.stdout.buffer.write(data)
+sys.exit(proc.returncode)
+PY
+)"
+pty_rc=$?
+eq "a terminal brewsync exits 0" 0 "$pty_rc"
+has "a terminal records interactive" "interactive=1" "$pty_out"
+has "a terminal installer's stdin is a tty" "t0=y" "$pty_out"
+has "a terminal installer's stdout is not a tty" "t1=n" "$pty_out"
 
 printf 'brewsync tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

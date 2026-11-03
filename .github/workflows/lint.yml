@@ -77,7 +77,8 @@ jobs:
           # That includes manual-steps.test.sh, which checks that
           # docs/manual-steps.md matches scripts/render-manual-steps-doc.sh.
           # modes.test.sh needs Lua; without it that suite skips.
-          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc >/dev/null
+          # fish runs the brewsync terminal test. `fish -n` alone does not.
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc fish >/dev/null
           ./tests/run-all.sh
           # Same suite with /Applications/Tailscale.app appearing present, so a
           # test that reads the host install fails here.
@@ -96,7 +97,7 @@ jobs:
           # instead of "tool missing", which is the failure seen on a real
           # Mac, so it fails here too. lua5.4 is for modes.test.sh. gcc builds
           # the Tailscale view used by the second run.
-          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc fish >/dev/null
           ./tests/run-all.sh --configured-mac
           ./tests/run-all.sh --configured-mac --tailscale installed
 
@@ -111,5 +112,5 @@ jobs:
           # used to pass here and fail locally. Copy the tree under
           # /Users/<name>/.dotfiles-mac-style, set HOME, and run the same
           # runner. The macOS runner is only used for the Brewfile job.
-          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 fish >/dev/null
           ./tests/run-all.sh --mac-home
