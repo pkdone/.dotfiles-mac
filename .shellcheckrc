@@ -1,0 +1,4 @@
+# SC2329 (shellcheck 0.11+, info): "function is never invoked". This repo defines
+# stub and helper functions that are called indirectly (sourced libs, test stubs),
+# which newer shellcheck flags but CI's shellcheck does not.
+disable=SC2329
