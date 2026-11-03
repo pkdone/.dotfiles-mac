@@ -154,6 +154,8 @@ Terminal applications often use Linux/Emacs-style bindings, which override stand
 | Command palette | Command + Shift + P |
 | Toggle fullscreen | Command + Enter |
 | Clear screen | Command + K |
+| Scroll page up | Fn + Command + Up Arrow |
+| Scroll page down | Fn + Command + Down Arrow |
 | New tab | Command + T |
 | Next tab | Control + Tab |
 | Previous tab | Control + Shift + Tab |
