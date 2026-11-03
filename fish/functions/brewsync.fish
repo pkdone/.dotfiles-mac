@@ -19,13 +19,18 @@ function brewsync --description "Install, update, and clean up Homebrew packages
         return 1
     end
 
-    # The log wrapper in bash pipes stdout through tee, so the inner command's
-    # stdout is not a tty. Record the real terminal before that, the same way
-    # install.sh does, so an admin-password prompt still happens here.
+    # The body below is piped through tee, so brew-bundle-install.sh's stdout
+    # is not a terminal. Record the real one first, the same way install.sh's
+    # log wrapper does, or an admin-password prompt is skipped.
+    #
+    # `set -l` inside `if` is local to that block and is erased when the block
+    # ends. `set -lx` in each branch never reached the bash script, and the
+    # script then saw a pipe for stdout and reported "not a terminal" in
+    # Ghostty. Function scope survives the block, is exported to the script,
+    # and is gone when brewsync returns.
+    set -fx DOTFILES_INTERACTIVE 0
     if isatty stdin; and isatty stdout
-        set -lx DOTFILES_INTERACTIVE 1
-    else
-        set -lx DOTFILES_INTERACTIVE 0
+        set DOTFILES_INTERACTIVE 1
     end
 
     set -l lib "$HOME/.dotfiles-mac/lib/dotfiles-log.sh"

@@ -175,6 +175,10 @@ case "$cmd" in
     exit 0
     ;;
   list)
+    if [ -f "$STUB_DIR/list-fail" ]; then
+      echo "brew stub: list failed" >&2
+      exit 1
+    fi
     _kind=formula
     for _a in "$@"; do
       case "$_a" in
@@ -190,15 +194,27 @@ case "$cmd" in
   install)
     do_install_names "$@"
     ;;
+  outdated)
+    if [ -f "$STUB_DIR/outdated-fail" ]; then
+      echo "brew stub: outdated failed" >&2
+      exit 1
+    fi
+    if [ -f "$STUB_DIR/outdated" ]; then
+      cat "$STUB_DIR/outdated"
+    fi
+    exit 0
+    ;;
   bundle)
     _action=install
     _bfile=""
     _prev=""
     _kind=""
+    _no_upgrade=0
     for _a in "$@"; do
       case "$_a" in
         check) _action=check ;;
         list) _action=list ;;
+        --no-upgrade) _no_upgrade=1 ;;
         --formula) _kind=formula ;;
         --cask) _kind=cask ;;
         --file) _prev=file ;;
@@ -234,6 +250,15 @@ case "$cmd" in
           echo "Cask $_n needs to be installed."
         fi
       done
+      # --no-upgrade is what the missing-entry check passes. The sudo probe
+      # does not, so an outdated pkg cask is visible there and ignored here.
+      if [ "$_no_upgrade" -eq 0 ] && [ -f "$STUB_DIR/outdated" ]; then
+        while IFS= read -r _n || [ -n "$_n" ]; do
+          [ -n "$_n" ] || continue
+          echo "Cask $_n needs to be updated."
+          echo 1 > "$STUB_DIR/check-missing"
+        done < "$STUB_DIR/outdated"
+      fi
       if [ -f "$STUB_DIR/check-missing" ]; then
         exit 1
       fi
@@ -354,6 +379,22 @@ sample="$(printf '%s\n' \
 parsed="$(brew_missing_from_verbose "$sample")"
 eq "parser keeps only not-yet-installed entries" "$(printf '%s\n' "formula git" "cask raycast" "cask slack")" "$parsed"
 
+action="$(brew_casks_needing_action "$(printf '%s\n' \
+  "→ Cask karabiner-elements needs to be installed or updated." \
+  "Cask raycast needs to be updated." \
+  "Formula jq needs to be installed." \
+  "Cask hammerspoon is installed." \
+  "→ Cask slack needs to be installed.")")"
+eq "sudo probe keeps install and update casks" \
+  "$(printf '%s\n' "karabiner-elements" "raycast" "slack")" "$action"
+eq "outdated lines keep the token" \
+  "$(printf '%s\n' "karabiner-elements" "raycast")" \
+  "$(brew_outdated_names "$(printf '%s\n' \
+    "karabiner-elements (14.13.0) < 15.3.0" \
+    "raycast" \
+    "==> Upgrading" \
+    "Error: ignored")")"
+
 harmless_doc="$(printf '%s\n' "Warning: A newer Command Line Tools release is available." "" "Warning: You have unlinked kegs.")"
 eq "harmless doctor notes are dropped" "" "$(printf '%s\n' "$harmless_doc" | brew_doctor_filter)"
 serious_doc="$(printf '%s\n' "Warning: /opt/homebrew/bin is not in your PATH." "A shell restart may be needed.")"
@@ -374,6 +415,8 @@ eq "second install exits 0" 0 "$rc"
 has "second install reports success" "All Brewfile entries are installed." "$out"
 miss "second install does not retry" "Retrying" "$out"
 eq "second install does not change what is installed" "$installed_snapshot" "$(sort "$STUB_DIR/installed")"
+miss "second install does not warn about a terminal" "not a terminal" "$out"
+miss "second install does not mention a password" "admin password" "$out"
 mut_after="$(wc -l < "$STUB_DIR/mutations" | tr -d ' ')"
 eq "second install performs no installs" "$mut_before" "$mut_after"
 eq "second install does not retry a cask" 0 "$(count_line "install --cask --adopt raycast" "$STUB_DIR/commands")"
@@ -520,6 +563,87 @@ sudo_before="$(wc -l < "$STUB_DIR/sudo.log" | tr -d ' ')"
 sleep 2
 sudo_after="$(wc -l < "$STUB_DIR/sudo.log" | tr -d ' ')"
 eq "sudo keepalive is not still running" "$sudo_before" "$sudo_after"
+
+# --- pkg cask already current: no password talk ---
+seed_installed() {
+  cat > "$STUB_DIR/installed" <<'EOF'
+formula jq
+cask hammerspoon
+cask raycast
+cask karabiner-elements
+EOF
+}
+
+new_case current_quiet
+cp "$tmp/full.Brewfile" "$brewfile"
+seed_installed
+run_case
+eq "current pkg cask exits 0" 0 "$rc"
+miss "current pkg cask does not warn about a terminal" "not a terminal" "$out"
+miss "current pkg cask does not mention a password" "admin password" "$out"
+check "current pkg cask does not call sudo" test ! -s "$STUB_DIR/sudo.log"
+
+new_case current_tty
+cp "$tmp/full.Brewfile" "$brewfile"
+seed_installed
+DOTFILES_INTERACTIVE=1
+run_case
+eq "current pkg cask in a terminal exits 0" 0 "$rc"
+miss "current pkg cask in a terminal does not ask" "admin password" "$out"
+check "current pkg cask in a terminal does not call sudo" test ! -s "$STUB_DIR/sudo.log"
+
+# --- outdated pkg cask: warn, and ask when interactive ---
+new_case outdated_pkg
+cp "$tmp/full.Brewfile" "$brewfile"
+seed_installed
+printf '%s\n' karabiner-elements > "$STUB_DIR/outdated"
+run_case
+eq "outdated pkg cask exits 0" 0 "$rc"
+has "outdated pkg cask warns when there is no terminal" "not a terminal" "$out"
+has "outdated pkg cask names karabiner-elements" "karabiner-elements" "$out"
+check "outdated pkg cask does not call sudo" test ! -s "$STUB_DIR/sudo.log"
+
+new_case outdated_pkg_tty
+cp "$tmp/full.Brewfile" "$brewfile"
+seed_installed
+printf '%s\n' karabiner-elements > "$STUB_DIR/outdated"
+DOTFILES_INTERACTIVE=1
+run_case
+eq "outdated pkg cask in a terminal exits 0" 0 "$rc"
+has "outdated pkg cask in a terminal names it" "karabiner-elements" "$out"
+has "outdated pkg cask in a terminal asks" "admin password" "$out"
+eq "outdated pkg cask asks sudo once" 1 "$(count_line "-v" "$STUB_DIR/sudo.log")"
+
+# A non-pkg cask going outdated does not need the password.
+new_case outdated_app
+cp "$tmp/full.Brewfile" "$brewfile"
+seed_installed
+printf '%s\n' raycast > "$STUB_DIR/outdated"
+run_case
+eq "outdated app cask exits 0" 0 "$rc"
+miss "outdated app cask does not warn about a terminal" "not a terminal" "$out"
+miss "outdated app cask does not mention a password" "admin password" "$out"
+
+# Another entry missing, pkg cask already current: still no password noise.
+new_case missing_other
+cp "$tmp/full.Brewfile" "$brewfile"
+seed_installed
+# jq is "installed" in the seed; drop it so the bundle still has work to do.
+grep -vxF "formula jq" "$STUB_DIR/installed" > "$STUB_DIR/installed.tmp"
+mv "$STUB_DIR/installed.tmp" "$STUB_DIR/installed"
+run_case
+eq "missing formula with a current pkg cask exits 0" 0 "$rc"
+miss "missing formula does not warn about the pkg cask" "not a terminal" "$out"
+check "missing formula still installed jq" grep -qxF "formula jq" "$STUB_DIR/installed"
+
+# Probes that cannot be read still warn, so a password is not skipped.
+new_case probes_down
+cp "$tmp/full.Brewfile" "$brewfile"
+touch "$STUB_DIR/check-garbage" "$STUB_DIR/outdated-fail" "$STUB_DIR/list-fail"
+run_case
+eq "unreadable brew probes still exit 1" 1 "$rc"
+has "unreadable brew probes still warn" "not a terminal" "$out"
+has "unreadable brew probes still name the pkg cask" "karabiner-elements" "$out"
 
 # --- no Homebrew, and a missing Brewfile ---
 new_case nobrew

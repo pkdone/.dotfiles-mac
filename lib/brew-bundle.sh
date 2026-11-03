@@ -423,16 +423,114 @@ EOF
   BREW_SUDO_PID=$!
 }
 
+# Cask tokens in `brew bundle check --verbose` text that still need an
+# install or an upgrade. "needs to be installed or updated" counts as both.
+# A satisfied line ("is installed") is ignored.
+brew_casks_needing_action() {
+  local text="$1" line name
+  printf '%s\n' "$text" | while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    case "$line" in
+      "→ "*|"↳ "*|"-> "*) line="${line#* }" ;;
+    esac
+    case "$line" in
+      "Cask "*" needs to be installed"*|"Cask "*" needs to be updated"*)
+        name="${line#Cask }"
+        name="${name%% needs to be *}"
+        name="${name##*/}"
+        [ -n "$name" ] || continue
+        printf '%s\n' "$name"
+        ;;
+    esac
+  done
+}
+
+# One token per line from `brew outdated --cask`. Quiet output is the token.
+# The long form is "token (old) < new". Headers and errors are skipped.
+brew_outdated_names() {
+  local text="$1" line name
+  printf '%s\n' "$text" | while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    [ -n "$line" ] || continue
+    case "$line" in
+      '==>'*|Error:*|Warning:*|'#'*) continue ;;
+    esac
+    name="${line%% *}"
+    name="${name##*/}"
+    [ -n "$name" ] || continue
+    printf '%s\n' "$name"
+  done
+}
+
+# Print pkg-cask tokens that still need an install or an upgrade.
+# An installed, current pkg cask is omitted, so a routine brewsync does not
+# ask for a password. `brew bundle check` (without --no-upgrade) and
+# `brew outdated --cask` are both read. When the bundle check did not say the
+# Brewfile is satisfied and `brew list --cask` cannot be read, every pkg cask
+# is printed so a password is not skipped on a failed probe.
+brew_pkg_casks_pending() {
+  local file="$1" pkg check_text outdated_text listed actionable name short
+  local check_rc=0 outdated_rc=0 list_rc=0
+  pkg="$(brew_pkg_casks "$file")"
+  [ -n "$pkg" ] || return 0
+
+  check_text="$(brew bundle check --file "$file" --verbose 2>&1)" || check_rc=$?
+  # --quiet is "names only". An older Homebrew rejects it; the long form is
+  # the same tokens with a version suffix.
+  outdated_text="$(brew outdated --cask --quiet 2>/dev/null)" || outdated_rc=$?
+  if [ "$outdated_rc" -ne 0 ]; then
+    outdated_rc=0
+    outdated_text="$(brew outdated --cask 2>/dev/null)" || outdated_rc=$?
+  fi
+  actionable="$(brew_casks_needing_action "$check_text")"
+  if [ "$outdated_rc" -eq 0 ]; then
+    actionable="$(printf '%s\n%s\n' "$actionable" "$(brew_outdated_names "$outdated_text")")"
+  fi
+  # A clean check (exit 0, and that call does not pass --no-upgrade) already
+  # includes upgrades. list is only needed when that check failed.
+  if [ "$check_rc" -eq 0 ] && [ "$outdated_rc" -eq 0 ]; then
+    list_rc=0
+    listed=""
+  else
+    listed="$(brew list --cask 2>/dev/null)" || list_rc=$?
+  fi
+
+  printf '%s\n' "$pkg" | while IFS= read -r name || [ -n "$name" ]; do
+    [ -n "$name" ] || continue
+    short="${name##*/}"
+    if printf '%s\n' "$actionable" | grep -qxF "$short"; then
+      printf '%s\n' "$short"
+      continue
+    fi
+    # Both probes succeeded and neither named this cask.
+    if [ "$check_rc" -eq 0 ] && [ "$outdated_rc" -eq 0 ]; then
+      continue
+    fi
+    if [ "$list_rc" -eq 0 ]; then
+      if ! printf '%s\n' "$listed" | grep -qxF "$short"; then
+        printf '%s\n' "$short"
+      fi
+      continue
+    fi
+    # Check did not say the Brewfile is satisfied, and brew list could not
+    # be read. A missing pkg cask would be invisible. Ask.
+    if [ "$check_rc" -ne 0 ]; then
+      printf '%s\n' "$short"
+    fi
+  done
+  return 0
+}
+
 brew_prepare_sudo() {
   local file="$1" pkg names
-  pkg="$(brew_pkg_casks "$file")"
+  pkg="$(brew_pkg_casks_pending "$file")"
   if [ -z "$pkg" ]; then
     return 0
   fi
   names="$(printf '%s\n' "$pkg" | join_and)"
   if dotfiles_is_interactive; then
     echo "Some installers need an admin password: ${names}."
-    echo "Asking once now so those installs are not stopped halfway through."
+    echo "Asking once now so those installs and upgrades are not stopped halfway through."
     if sudo -v; then
       brew_sudo_keepalive_start
     else

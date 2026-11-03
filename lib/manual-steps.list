@@ -260,11 +260,25 @@ mode-menubar-pin|Modes (menu-bar switcher)|Pin the mode-switcher menu-bar icon s
 menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Granola, Microsoft Teams, Slack, Zoom, Raycast and Logi Options+. Leave Tailscale, Hammerspoon, Fleet Desktop and the rest as they are|System Settings → Menu Bar → Allow in the Menu Bar|x-apple.systempreferences:com.apple.ControlCenter-Settings.extension|@macconfig:menubar
 # Control Centre tiles are Edit Controls in the menu-bar Control Centre, not
 # the allow-list above and not the @host/com.apple.controlcenter menu-bar
-# icon rows. The only readable layout file,
-# ~/Library/Preferences/ByHost/com.apple.controlcenter.bentoboxes.<host UUID>.plist,
-# keeps a history of module instances in an undocumented nested binary format
-# and was not updated when the tiles were removed (on 25 Oct 2026 it still
-# listed AirDrop and FocusModes hours after they were gone from Control
-# Centre), so it can't tell whether a tile is showing. Leave the check empty.
+# icon rows. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display,
+# Sound and Keyboard Brightness. Keyboard Brightness is already in Control
+# Centre on this Mac; it is not a menu-bar pin.
+#
+# Not a macconfig check. Three stores were looked at, and none is the tile set:
+# - ~/Library/Preferences/ByHost/com.apple.controlcenter.bentoboxes.<host UUID>.plist
+#   keeps a history of module instances in an undocumented nested binary format
+#   and was not updated when the tiles were removed (on 25 Oct 2026 it still
+#   listed AirDrop and FocusModes hours after they were gone from Control
+#   Centre), so it can't tell whether a tile is showing.
+# - group.com.apple.controlcenter trackedApplications is the third-party
+#   Allow in the Menu Bar list (manual step menubar-third-party-hide), not
+#   built-in modules.
+# - The @host/com.apple.controlcenter integers are the menu-bar rows in
+#   lib/macos-defaults.list. Bluetooth is 2 (Show in Menu Bar) and Now Playing
+#   is 8 (Don't Show), and both stay in Control Centre, so the integer is not
+#   "tile showing" versus "tile hidden". A published mapping (2 hidden
+#   everywhere, 8 Control Centre only, 18 both) disagrees with this Mac.
+#   KeyboardBrightness is not one of those rows.
+# Nothing writes that file. Leave the check empty.
 # Do not add a macconfig check and do not write that plist.
-control-centre-controls|Menu bar|Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display and Sound.|Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it.||
+control-centre-controls|Menu bar|Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display, Sound and Keyboard Brightness.|Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it.||
