@@ -19,8 +19,8 @@
 #   --no-color  Disable ANSI colour (also honours the NO_COLOR env var).
 #   --list      Print the managed settings as a Markdown table and exit.
 #   --only ID   Apply only this item (repeatable): a "domain|key" row from
-#               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @spotlight-64 /
-#               @coteditor /
+#               lib/macos-defaults.list, or @dictation-164 / @quicknote-190 / @gameoverlay-260 /
+#               @spotlight-64 / @services-off / @coteditor /
 #               @finder-recents / @finder-icon-view / @finder-favorites /
 #               @finder-show / @titlebar-double-click / @ac-sleep /
 #               @display-more-space / @arzopa-display. Values that already match are left alone
@@ -94,8 +94,8 @@ Usage: macos.sh [--dry-run] [--no-color] [--list] [--only ID]... [--yes]
   --no-color   Disable ANSI colour (also honours the NO_COLOR env var).
   --list       Print the managed settings as a Markdown table and exit.
   --only ID    Apply only this item (repeatable): "domain|key" from
-               lib/macos-defaults.list, or @dictation-164, @quicknote-190, @spotlight-64,
-               @coteditor,
+               lib/macos-defaults.list, or @dictation-164, @quicknote-190, @gameoverlay-260,
+               @spotlight-64, @services-off, @coteditor,
                @finder-recents, @finder-icon-view, @finder-favorites, @finder-show,
                @titlebar-double-click, @ac-sleep, @display-more-space,
                @arzopa-display. Matching
@@ -580,6 +580,41 @@ apply_quicknote_hotkey() {
 }
 if selected @quicknote-190; then apply_quicknote_hotkey; fi
 
+# ---- Game Overlay hotkey 260 (Command+Escape; not a macos-defaults row) --
+# Keep "Game Overlay" disabled. A software update rewrites symbolichotkeys
+# and turns the shortcut back on. Write only when the value differs,
+# including a full setup (no re-assert). The LaunchAgent calls this script
+# at login and when the plist changes.
+apply_gameoverlay_hotkey() {
+  local pin="$DOTDIR/scripts/pin-gameoverlay-hotkey-260.sh"
+  CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -x "$pin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "scripts/pin-gameoverlay-hotkey-260.sh missing — skip Game Overlay hotkey"
+    return 0
+  fi
+  if "$pin" --check >/dev/null 2>&1; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Game Overlay hotkey 260 already disabled (dry-run)"
+    else
+      say_ok "Game Overlay hotkey 260 already disabled (left alone)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Game Overlay hotkey 260 -> disabled (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS com.apple.symbolichotkeys"
+  ensure_backup
+  "$pin" >/dev/null
+  CHANGED=$((CHANGED + 1))
+  say_chg "Game Overlay hotkey 260 -> disabled"
+  queue_restart logout "Game Overlay shortcut (symbolic hotkey 260)"
+}
+if selected @gameoverlay-260; then apply_gameoverlay_hotkey; fi
+
 # ---- Spotlight hotkey 64 (Command+Space; not a macos-defaults row) -------
 # Keep "Show Spotlight search" on Command+Space. Raycast's Replace Spotlight
 # button sets enabled=0. Write only when the value differs, including a full
@@ -613,6 +648,44 @@ apply_spotlight_hotkey() {
   queue_restart logout "Spotlight shortcut (symbolic hotkey 64)"
 }
 if selected @spotlight-64; then apply_spotlight_hotkey; fi
+
+# ---- Services shortcuts (pbs NSServicesStatus; not a macos-defaults row) -
+# Keys in lib/services-off.list stay off. -dict-add merges one key and leaves
+# every other service alone. Write only when a listed key differs. pbs -flush
+# reloads the menu. No LaunchAgent.
+apply_services_off() {
+  local pin="$DOTDIR/scripts/pin-services-off.sh"
+  CONSIDERED=$((CONSIDERED + 1))
+  if [ ! -x "$pin" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "scripts/pin-services-off.sh missing — skip Services shortcuts"
+    return 0
+  fi
+  if [ ! -r "$DOTDIR/lib/services-off.list" ]; then
+    WARNINGS=$((WARNINGS + 1))
+    say_warn "lib/services-off.list missing — skip Services shortcuts"
+    return 0
+  fi
+  if "$pin" --check >/dev/null 2>&1; then
+    if [ "$DRY_RUN" = 1 ]; then
+      say_ok "Services shortcuts already off (dry-run)"
+    else
+      say_ok "Services shortcuts already off (left alone)"
+    fi
+    return 0
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    CHANGED=$((CHANGED + 1))
+    say_chg "Services shortcuts -> off (dry-run)"
+    return 0
+  fi
+  BACKUP_DOMAINS="$BACKUP_DOMAINS pbs"
+  ensure_backup
+  "$pin" >/dev/null
+  CHANGED=$((CHANGED + 1))
+  say_chg "Services shortcuts -> off"
+}
+if selected @services-off; then apply_services_off; fi
 
 # ---- CotEditor theme + monospaced font (nested prefs via export/import) ----
 apply_coteditor() {

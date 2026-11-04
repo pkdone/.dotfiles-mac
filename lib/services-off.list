@@ -1,0 +1,27 @@
+# Services kept off.
+# System Settings → Keyboard → Keyboard Shortcuts → Services.
+#
+# One pbs NSServicesStatus key per line. Text after # is a note.
+# Blank lines and lines beginning with # are ignored.
+#
+# macos.sh merges each key into NSServicesStatus (it does not replace the
+# dictionary). A key is off when enabled_context_menu, enabled_services_menu,
+# and presentation_modes ContextMenu and ServicesMenu are 0 or false.
+# A missing key is written. A key that is already off is left alone.
+# Stickies had only enabled_services_menu saved; the pin sets both menus off.
+#
+# These three are unticked in System Settings and have no saved entry, because
+# they are off by default. Do not add them:
+#   New CotEditor Window Containing Selection
+#   New TextEdit Window Containing Selection
+#   Summarise
+
+com.apple.Safari - Add to Reading List - addToReadingList
+com.apple.ChineseTextConverterService - Convert Text from Simplified to Traditional Chinese - convertTextToTraditionalChinese
+com.apple.ChineseTextConverterService - Convert Text from Traditional to Simplified Chinese - convertTextToSimplifiedChinese
+com.apple.Stickies - Make Sticky - makeStickyFromTextService
+com.apple.Terminal - Open man Page in Terminal - openManPage
+com.apple.Terminal - Search man Page Index in Terminal - searchManPages
+com.apple.services.addToiTunesAsSpokenTrack - Add to Music as a Spoken Track - runWorkflowAsService
+com.apple.services.showMap - Show Map - runWorkflowAsService
+org.hammerspoon.Hammerspoon - Send to Hammerspoon - processDockIconDraggedText

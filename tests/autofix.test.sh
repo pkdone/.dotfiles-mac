@@ -43,7 +43,7 @@ eq "every autofix.list row is well formed" "" "$bad_rows"
 eq "ids are unique" "" "$(rows | cut -d'|' -f1 | sort | uniq -d)"
 
 # ---- the classes Paul asked for ----
-for id in defaults dictation-164 quicknote-190 spotlight-64 finder-icon-view finder-recents coteditor launchagent symlink hammerspoon desktop-assign file-handler display-more-space arzopa-display dock-space; do
+for id in defaults dictation-164 quicknote-190 gameoverlay-260 spotlight-64 services-off finder-icon-view finder-recents coteditor launchagent symlink hammerspoon desktop-assign file-handler display-more-space arzopa-display dock-space; do
   eq "$id is SAFE" SAFE "$(autofix_class "$LIST" "$id")"
 done
 eq "desktop-assign fixer is desktop" desktop "$(autofix_lookup "$LIST" desktop-assign | cut -d'|' -f2)"

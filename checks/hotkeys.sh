@@ -91,16 +91,155 @@ check_pdone_launchagents() {
 # Sets hk_enabled, hk_type, hk_p1, hk_p2, hk_p3 (empty when the key is absent).
 read_symbolic_hotkey() { # key  plist-text
   local key="$1" text="$2" blk
-  blk="$(printf '%s\n' "$text" | awk -v key="$key" '
+  # A here-string, not a pipe: awk exits at the end of the block, and a pipe
+  # plus pipefail would abort the check on a hotkey that was already correct.
+  blk="$(awk -v key="$key" '
     $0 ~ "^[[:space:]]*" key " =" { grab = 1 }
     grab { print }
     grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ { exit }
-  ')"
-  hk_enabled="$(printf '%s\n' "$blk" | awk '/enabled/ { print $3; exit }' | tr -d ';')"
-  hk_type="$(printf '%s\n' "$blk" | awk '/type/ { print $3; exit }' | tr -d '";')"
-  hk_p1="$(printf '%s\n' "$blk" | awk '/parameters/ { getline; print $1; exit }' | tr -d ',')"
-  hk_p2="$(printf '%s\n' "$blk" | awk '/parameters/ { getline; getline; print $1; exit }' | tr -d ',')"
-  hk_p3="$(printf '%s\n' "$blk" | awk '/parameters/ { getline; getline; getline; print $1; exit }' | tr -d ',')"
+  ' <<<"$text")"
+  hk_enabled="$(awk '/enabled/ { print $3; exit }' <<<"$blk" | tr -d ';')"
+  hk_type="$(awk '/type/ { print $3; exit }' <<<"$blk" | tr -d '";')"
+  hk_p1="$(awk '/parameters/ { getline; print $1; exit }' <<<"$blk" | tr -d ',')"
+  hk_p2="$(awk '/parameters/ { getline; getline; print $1; exit }' <<<"$blk" | tr -d ',')"
+  hk_p3="$(awk '/parameters/ { getline; getline; getline; print $1; exit }' <<<"$blk" | tr -d ',')"
+}
+
+# Command+Escape unchecked: enabled 0 or false, type=standard,
+# parameters (65535, 53, 1048576).
+gameoverlay_260_ok() {
+  case "${hk_enabled:-}" in 0|false|False) ;; *) return 1 ;; esac
+  [ "${hk_type:-}" = standard ] && [ "${hk_p1:-}" = 65535 ] \
+    && [ "${hk_p2:-}" = 53 ] && [ "${hk_p3:-}" = 1048576 ]
+}
+
+check_gameoverlay_hotkey() {
+  local hk
+  fixid gameoverlay-260
+  CHECKED=$((CHECKED + 1))
+  hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
+  if [ -z "$hk" ]; then
+    bad "symbolichotkeys not readable"
+  else
+    read_symbolic_hotkey 260 "$hk"
+    if gameoverlay_260_ok; then
+      pass "Game Overlay hotkey 260 = disabled (not Command+Escape)"
+    else
+      bad "Game Overlay hotkey 260 enabled=${hk_enabled:-missing} type=${hk_type:-?} parameters=${hk_p1:-?},${hk_p2:-?},${hk_p3:-?} (expected enabled=0 type=standard parameters 65535,53,1048576)"
+    fi
+  fi
+  CHECKED=$((CHECKED + 1))
+  fixid repo-file
+  if [ -x "$DOTDIR/scripts/pin-gameoverlay-hotkey-260.sh" ]; then
+    pass "scripts/pin-gameoverlay-hotkey-260.sh present"
+  else
+    bad "scripts/pin-gameoverlay-hotkey-260.sh missing"
+  fi
+}
+
+# One lib/services-off.list line: the NSServicesStatus key, or empty when
+# the line is blank or a comment. Text after # is a note.
+service_off_key() { # line
+  local t="${1-}"
+  t="${t#"${t%%[![:space:]]*}"}"
+  t="${t%"${t##*[![:space:]]}"}"
+  case "$t" in
+    ''|\#*) printf '' ; return 0 ;;
+  esac
+  t="${t%%#*}"
+  t="${t%"${t##*[![:space:]]}"}"
+  printf '%s' "$t"
+}
+
+# Fields of one NSServicesStatus entry. Missing fields stay empty.
+# 0 and false both count as off.
+read_service_block() { # key  plist-text
+  local key="$1" text="$2" blk
+  svc_context=""
+  svc_services=""
+  svc_context_mode=""
+  svc_services_mode=""
+  blk="$(awk -v key="$key" '
+    function ltrim(s) { sub(/^[[:space:]]+/, "", s); return s }
+    BEGIN { depth = 0; grab = 0 }
+    {
+      if (!grab) {
+        t = ltrim($0)
+        if (substr(t, 1, 1) == "\"") {
+          rest = substr(t, 2)
+          q = index(rest, "\"")
+          if (q < 1) next
+          got = substr(rest, 1, q - 1)
+          after = ltrim(substr(rest, q + 1))
+        } else {
+          eq = index(t, " =")
+          if (eq < 1) next
+          got = substr(t, 1, eq - 1)
+          after = ltrim(substr(t, eq + 1))
+        }
+        if (got != key || substr(after, 1, 1) != "=") next
+        grab = 1
+      }
+      print
+      nopen = gsub(/{/, "{")
+      nclose = gsub(/}/, "}")
+      depth += nopen - nclose
+      if (depth <= 0) exit
+    }
+  ' <<<"$text")"
+  svc_context="$(awk '/^[[:space:]]*enabled_context_menu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
+  svc_services="$(awk '/^[[:space:]]*enabled_services_menu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
+  svc_context_mode="$(awk '/^[[:space:]]*ContextMenu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
+  svc_services_mode="$(awk '/^[[:space:]]*ServicesMenu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
+}
+
+service_flag_off() {
+  case "$1" in
+    0|false|False) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+service_block_off() {
+  service_flag_off "${svc_context:-}" && service_flag_off "${svc_services:-}" \
+    && service_flag_off "${svc_context_mode:-}" && service_flag_off "${svc_services_mode:-}"
+}
+
+check_services_off() {
+  local list hk line key drifted=""
+  list="$DOTDIR/lib/services-off.list"
+  fixid services-off
+  CHECKED=$((CHECKED + 1))
+  if [ ! -r "$list" ]; then
+    bad "lib/services-off.list missing"
+  else
+    hk="$(defaults read pbs NSServicesStatus 2>/dev/null || true)"
+    if [ -z "$hk" ]; then
+      bad "pbs NSServicesStatus not readable"
+    else
+      while IFS= read -r line || [ -n "$line" ]; do
+        key="$(service_off_key "$line")"
+        [ -n "$key" ] || continue
+        read_service_block "$key" "$hk"
+        if service_block_off; then
+          continue
+        fi
+        drifted="${drifted}${drifted:+, }${key}"
+      done < "$list"
+      if [ -z "$drifted" ]; then
+        pass "Services shortcuts in lib/services-off.list are off"
+      else
+        bad "Services shortcuts still on: ${drifted} (expected enabled_context_menu=0 enabled_services_menu=0 presentation_modes 0). Fix: macconfig --fix"
+      fi
+    fi
+  fi
+  CHECKED=$((CHECKED + 1))
+  fixid repo-file
+  if [ -x "$DOTDIR/scripts/pin-services-off.sh" ]; then
+    pass "scripts/pin-services-off.sh present"
+  else
+    bad "scripts/pin-services-off.sh missing"
+  fi
 }
 
 # Command+Space: enabled, type=standard, parameters (32, 49, 1048576).
@@ -212,6 +351,18 @@ fi
 check_repo_launchagent com.pdone.pin-quicknote-hotkey-190 \
   "re-disables 190 at login and when symbolichotkeys changes"
 
+# ---- 9a2. Game Overlay (Command+Escape) -----------------------------------
+# Symbolic hotkey 260 is "Game Overlay". The default is enabled, Command+Escape.
+# Desired: disabled, type=standard, parameters (65535, 53, 1048576), which is
+# what System Settings writes when the box is unticked. enabled=0 and
+# enabled=false both count. A software update rewrites symbolichotkeys and
+# turns this back on, so a LaunchAgent re-pins it (same reason as Quick Note).
+# macos.sh and the agent write only when the value differs.
+hdr "Game Overlay shortcut"
+check_gameoverlay_hotkey
+check_repo_launchagent com.pdone.pin-gameoverlay-hotkey-260 \
+  "re-disables 260 at login and when symbolichotkeys changes"
+
 # ---- 9b. Spotlight search (Command+Space) --------------------------------
 # Symbolic hotkey 64 is "Show Spotlight search". Desired: enabled, type=standard,
 # parameters (32, 49, 1048576). Raycast's Replace Spotlight button sets enabled=0.
@@ -219,3 +370,10 @@ check_repo_launchagent com.pdone.pin-quicknote-hotkey-190 \
 hdr "Spotlight shortcut"
 check_spotlight_hotkey
 check_pdone_launchagents
+
+# ---- 9c. Services shortcuts (pbs NSServicesStatus) -----------------------
+# Keys in lib/services-off.list stay off: both menus and both presentation
+# modes are 0 or false. Other services are not written. No LaunchAgent.
+# CotEditor, TextEdit, and Summarise have no saved entry and are not listed.
+hdr "Services shortcuts"
+check_services_off
