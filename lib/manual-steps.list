@@ -200,6 +200,17 @@ edge-light|Video calls|Edge Light Off|Start a video call (or open Photo Booth / 
 # macconfig uses that same line. Do not add a check that guesses a key, and
 # do not write a plist. open launches Zoom so a test video can be started.
 zoom-center-stage|Video calls|Center Stage Off for Zoom|Start a Zoom call or test video (Zoom → Settings → Video) with the camera on → click the green camera icon in the menu bar → under MacBook Pro Camera, turn off Centre Stage. macOS remembers this per app|app:zoom.us|
+# Framing is Google Meet's own effect (Backgrounds and effects → Appearance).
+# With it on, Meet zooms the built-in MacBook camera in too far. The value
+# lives in the Meet web app and the Google account: no defaults domain and
+# no plist under ~/Library holds it. Leave the check empty.
+# Do not read a Chrome profile to guess it, and do not write one.
+# The why-line is
+# MANUAL: Can't check this automatically. If it's already set, press s.
+# macconfig uses that same line. macOS Centre Stage stays as it is.
+# Settings → Video only says video enhancement has moved. open opens Meet
+# in the default browser (Chrome).
+meet-framing|Video calls|Framing Off in Google Meet|In a Google Meet call, with the camera on, open Backgrounds and effects → Appearance tab → turn Framing off. The toggle says it puts you in the center of the screen. Settings → Video only says video enhancement has moved. Leave macOS Centre Stage as it is|https://meet.google.com|
 
 # ---- Printer ----
 # Read-only: lpstat -p, or lpstat -v if -p does not name the queue.
