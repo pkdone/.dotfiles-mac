@@ -205,7 +205,7 @@ while read -r id area; do
   want=""
   case "$id" in
     karabiner-login-items|user-picture|finder-sidebar) want=hand ;;
-    auto-brightness|display-more-space|arzopa-display|ac-sleep|mode-focus-shortcuts|wallpaper|notifications-apps|login-items-off|menubar-third-party-hide) want=warn ;;
+    auto-brightness|display-more-space|arzopa-display|ac-sleep|mode-focus-shortcuts|wallpaper|notifications-apps|menubar-third-party-hide) want=warn ;;
     mode-focus-modes) want=ok ;;
   esac
   if [ -n "$want" ]; then

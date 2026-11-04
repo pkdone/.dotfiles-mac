@@ -70,7 +70,7 @@ done
 has "Messages Critical is still off" "Critical Alerts stay allowed" "$where"
 off_entries="$(grep -E '^[^#[:space:]]' "$OFF" || true)"
 for gone in "Cursor Nightly" Mail "Microsoft Teams" Slack Spotify Tailscale \
-  "Logi Options+" Cog "Grok Bot" ChatGPT Multipass "Yubico Authenticator" \
+  "Logi Options+" Cog "Grok Bot" Multipass "Yubico Authenticator" \
   "YouTube Music" Sonos Santa Sentinel Kerberos Chrome Ghostty Zoom Hammerspoon \
   "Find My" Finder WhatsApp
 do
@@ -119,7 +119,7 @@ SAMPLE='{
     {"bundle-id": "com.google.Chrome.framework.AlertNotificationService", "flags": 33554432},
     {"bundle-id": "us.zoom.xos", "flags": 33554432},
     {"bundle-id": "com.mitchellh.ghostty", "flags": 33554432},
-    {"bundle-id": "com.anthropic.claudefordesktop", "flags": 33554432},
+    {"bundle-id": "com.raycast.macos", "flags": 33554432},
     {"bundle-id": "com.todesktop.230313mzl4w4u92", "flags": 33554432},
     {"bundle-id": "com.electron.dockerdesktop", "flags": 33554432},
     {"bundle-id": "com.apple.Safari", "flags": 33554432},
@@ -141,7 +141,7 @@ SAMPLE='{
     {"bundle-id": "com.logi.cp-dev-mgr", "flags": 1},
     {"bundle-id": "org.cogx.cog", "flags": 1},
     {"bundle-id": "com.anysphere.sand", "flags": 1},
-    {"bundle-id": "com.openai.codex", "flags": 1},
+    {"bundle-id": "io.tailscale.ipn.macos", "flags": 1},
     {"bundle-id": "com.canonical.multipassGui", "flags": 1},
     {"bundle-id": "com.yubico.yubioath", "flags": 1},
     {"bundle-id": "com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod", "flags": 1},
@@ -173,7 +173,7 @@ for quiet in \
   com.google.Chrome.framework.AlertNotificationService \
   us.zoom.xos \
   com.mitchellh.ghostty \
-  com.anthropic.claudefordesktop \
+  com.raycast.macos \
   com.todesktop.230313mzl4w4u92 \
   com.electron.dockerdesktop
 do

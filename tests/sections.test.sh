@@ -92,7 +92,7 @@ Finder icon view defaults
 Karabiner Fn-kill
 Karabiner background
 Hammerspoon
-Login Items (banned open-at-login)
+Login Items
 Finder sidebar Recents
 Finder Favorites
 Finder sidebar rows

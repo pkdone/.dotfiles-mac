@@ -364,7 +364,7 @@ fixid login-items
 # Login / background items: every ENABLED item must be on lib/login-items-allow.list or
 # approved by an MDM Service Management rule; stale items (app gone) are flagged too.
 # Company MDM items on that list, including koi.security.*, are not told to turn Off.
-# Reuses lib/btm-login-items.py (same BTM store as the banned-item guard above).
+# Reuses lib/btm-login-items.py (same BTM store as the Open at Login check).
 CHECKED=$((CHECKED + 1))
 ALLOW_LIST="$DOTDIR/lib/login-items-allow.list"
 if [ ! -r "$BTM_HELPER" ] || [ ! -r "$ALLOW_LIST" ] || [ -z "$DOT_PYTHON" ]; then

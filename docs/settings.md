@@ -15,7 +15,7 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 - **Dock minimize, bounce, and the desktop-switch delay** — [macOS defaults](#macos-defaults)
 - **Finder** sidebar, icon view, tidy, extensions, and CotEditor — [Finder](#finder)
 - **Window tiling, desktop widgets, and Stage Manager** — [macOS defaults](#macos-defaults). Shortcuts are in [SHORTCUTS.md](../SHORTCUTS.md)
-- **Login Items:** `macconfig-check.sh` drifts if ChatGPT is enabled at login (the app may stay installed; turn it **Off** in **System Settings → General → Login Items**). Tailscale must be in Open at Login. It has no launch-at-login option of its own. When `/Applications/Tailscale.app` is installed and missing from that list, the check says: System Settings → General → Login Items & Extensions → under Open at Login click + → Applications → Tailscale → Open. The list is only read. `--fix` does not add it. An uninstalled Tailscale is left alone. Tailscale's team and bundle ids are on `lib/login-items-allow.list`, so that entry is expected. WhatsApp Web (the Safari web app at `~/Applications/WhatsApp Web.app`) is also expected under Open at Login. Its bundle id is different on each Mac, so the list names it by that path, and no other Safari web app is allowed by it. Docker Desktop's helper (DockerHelper, `com.docker.helper`, Docker Inc team `9BNSXJN65R`) is expected too, because the Brewfile installs Docker Desktop
+- **Login Items:** Tailscale must be in Open at Login. It has no launch-at-login option of its own. When `/Applications/Tailscale.app` is installed and missing from that list, the check says: System Settings → General → Login Items & Extensions → under Open at Login click + → Applications → Tailscale → Open. The list is only read. `--fix` does not add it. An uninstalled Tailscale is left alone. Tailscale's team and bundle ids are on `lib/login-items-allow.list`, so that entry is expected. WhatsApp Web (the Safari web app at `~/Applications/WhatsApp Web.app`) is also expected under Open at Login. Its bundle id is different on each Mac, so the list names it by that path, and no other Safari web app is allowed by it. Docker Desktop's helper (DockerHelper, `com.docker.helper`, Docker Inc team `9BNSXJN65R`) is expected too, because the Brewfile installs Docker Desktop
 
 Universal Links like `https://music.apple.com` may still open Apple apps — use Chrome when it matters.
 
@@ -169,7 +169,7 @@ Cloud backup: sign in to your Logi account first, then **MX Master 3S → Settin
 
 Raycast is set by hand. The click path is manual steps `raycast-hotkey` and `raycast-clipboard` in [Manual steps](manual-steps.md).
 
-Move Raycast off `Option + Space` (clashes with ChatGPT). The hotkey is `Shift + Control + Command + R`. Don't click the **Replace Spotlight** button. That turns off Spotlight's Command+Space. `macos.sh` puts Command+Space back when it differs, and so does `macconfig --fix`.
+The hotkey is `Shift + Control + Command + R`, not `Option + Space`. Don't click the **Replace Spotlight** button. That turns off Spotlight's Command+Space. `macos.sh` puts Command+Space back when it differs, and so does `macconfig --fix`.
 
 Hammerspoon brings Finder to the front with `Shift + Control + Command + F` ([Modes](modes.md#finder-hotkey)).
 
