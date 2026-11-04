@@ -48,17 +48,18 @@ prev="$(awk -F'|' '
 eq "charge-limit follows ac-sleep" "ac-sleep" "$prev"
 
 doc="$(cat "$DOC")"
+settings="$(cat "$DIR/docs/settings.md")"
 # shellcheck disable=SC2016  # needles are markdown, compared literally
-has "manual-steps doc names the step" 'manual step `charge-limit`' "$doc"
-has "manual-steps doc says 80%" "is 80% on an Apple silicon laptop" "$doc"
+has "settings names the step" 'manual step `charge-limit`' "$settings"
+has "settings says 80%" "is 80% on an Apple silicon laptop" "$settings"
 # shellcheck disable=SC2016
-has "manual-steps doc says there is no pmset setter" '`pmset` has none' "$doc"
-has "manual-steps doc names pmset -g battlimit" "pmset -g battlimit" "$doc"
-has "manual-steps doc names the private entitlement" "com.apple.private.iokit.soc-limit" "$doc"
-has "manual-steps doc names ioreg" "ioreg -rn AppleSmartBattery" "$doc"
-has "manual-steps doc names system_profiler" "system_profiler SPPowerDataType" "$doc"
-has "manual-steps doc says a desktop has no battery" "A desktop has no battery." "$doc"
-has "manual-steps doc leaves the step by hand" "The step stays by hand." "$doc"
+has "settings says there is no pmset setter" '`pmset` has none' "$settings"
+has "settings names pmset -g battlimit" "pmset -g battlimit" "$settings"
+has "settings names the private entitlement" "com.apple.private.iokit.soc-limit" "$settings"
+has "settings names ioreg" "ioreg -rn AppleSmartBattery" "$settings"
+has "settings names system_profiler" "system_profiler SPPowerDataType" "$settings"
+has "settings says a desktop has no battery" "A desktop has no battery." "$settings"
+has "settings leaves the step by hand" "The step stays by hand." "$settings"
 has "table row is by hand" \
   "| Charge Limit 80% (Apple silicon laptops). | System Settings → Battery → click ⓘ next to Charging → drag Charge Limit to 80% (leave Optimised Battery Charging on) → Done | by hand |" \
   "$doc"

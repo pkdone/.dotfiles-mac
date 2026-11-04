@@ -99,8 +99,9 @@ has "second paste installs gh" "brew install gh" "$second_paste"
 has "second paste signs in to GitHub" "gh auth status || gh auth login" "$second_paste"
 if bash -n <<<"$second_paste"; then second_rc=0; else second_rc=$?; fi
 eq "second paste is valid bash" 0 "$second_rc"
-setup_second="$(bash_fence 2 "$DIR/docs/setup.md")"
-eq "setup doc second paste matches the README" "$second_paste" "$setup_second"
+setup_doc="$(cat "$DIR/docs/setup.md")"
+has "setup doc points at the README paste blocks" "README.md#1-bootstrap" "$setup_doc"
+miss "setup doc does not repeat the Homebrew installer" "Homebrew/install/HEAD/install.sh" "$setup_doc"
 miss "second paste does not clone" "gh repo clone" "$second_paste"
 miss "second paste does not run bootstrap" "bootstrap.sh" "$second_paste"
 eq "third paste puts brew on PATH first" "$shellenv_line" \

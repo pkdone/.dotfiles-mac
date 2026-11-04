@@ -24,9 +24,9 @@ The dropdown ticks the current mode. Under the tick, a disabled line says why yo
 - Every switch is logged to `~/Library/Logs/pdone-modes.log` (time, mode, how long the previous mode lasted).
 - Menu-bar notification badges can't be switched off (macOS has no API for it), so the Focus is what hides them.
 
-**Focus modes.** Create WebConf and DeepWork once: System Settings → Focus → click Add Focus… (opens a sheet) → Custom → name it WebConf (or DeepWork) → pick any icon → Done → Allowed Apps → Add. WebConf allows Granola. DeepWork allows Hammerspoon, so the end-of-session notification gets through. Allowed People can stay None. An app only appears in that Add list after it has asked macOS for notification permission at least once, so open the app and allow notifications first.
+**Focus modes.** Create WebConf and DeepWork once. The click path is manual step `mode-focus-modes` in [Manual steps](manual-steps.md). WebConf allows Granola. DeepWork allows Hammerspoon, so the end-of-session notification gets through.
 
-**Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs four Shortcuts you create once, each with one **Set Focus** action. In Shortcuts, click + in the toolbar, click the title at the top and rename it exactly, then in Search Actions on the right type Set Focus and double-click it. Click the blue placeholder words to set them, then close the window to save. The action starts as Turn Do Not Disturb On, so click Do Not Disturb and pick WebConf or DeepWork. The name has to match exactly: `Mode WebConf On` is Turn WebConf On until Turned Off, `Mode WebConf Off` is Turn WebConf Off, `Mode DeepWork On` is Turn DeepWork On until Turned Off, and `Mode DeepWork Off` is Turn DeepWork Off. If any of the Focus shortcuts are missing, the mode still runs. The menu item **Create missing: …** copies those Shortcut names and opens Shortcuts. The switch also shows a short alert naming the Shortcut, for example `WebConf Focus skipped — create 'Mode WebConf On' in Shortcuts`, so you notice without opening the menu. A Shortcut that is present does not raise that alert. The manual steps `mode-*` in [Manual steps](manual-steps.md) walk through it, and `macconfig-check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
+**Focus needs Shortcuts.** macOS doesn't let apps set a Focus, so the switcher runs four Shortcuts you create once, each with one **Set Focus** action. The click path is manual step `mode-focus-shortcuts` in [Manual steps](manual-steps.md). If any of the Focus shortcuts are missing, the mode still runs. The menu item **Create missing: …** copies those Shortcut names and opens Shortcuts. The switch also shows a short alert naming the Shortcut, for example `WebConf Focus skipped — create 'Mode WebConf On' in Shortcuts`, so you notice without opening the menu. A Shortcut that is present does not raise that alert. `macconfig-check.sh` (section **Modes (Hammerspoon)**) checks that the Shortcuts and the WebConf / DeepWork Focus modes exist, that `modes.lua` is valid, and warns if a non-Normal mode has been on for more than `HEALTH_MODE_MAX_HOURS` (4). Apps a mode quit or hid on purpose are listed as info, never drift.
 
 From a terminal:
 
@@ -35,3 +35,20 @@ hs -c "return loaded.mode_switcher.status()"
 hs -c "return loaded.mode_switcher.dryRun('WebConf')"   # or DeepWork / Normal; changes nothing
 hs -c "loaded.mode_switcher.switch('Normal')"
 ```
+
+## Slack on the ARZOPA monitor
+
+`external_slack.lua` puts Slack on the ARZOPA portable monitor:
+
+- **The monitor connects** (a screen whose name is exactly `ARZOPA`, ignoring case, including when it is already connected as Hammerspoon starts): Slack's main window moves onto that screen and goes full screen. Slack's zoom is left alone.
+- **The monitor disconnects:** Slack leaves full screen, comes back to the built-in display, and returns to the size and position it had before the move when that frame still fits.
+- Does nothing if Slack isn't running. Screen changes are debounced, and only a real connect or disconnect acts. The Dock and menu bar stay on the built-in display.
+- **Manual toggle / test:** `Shift + Control + Option + Command + S`.
+- Screen names are logged to the Hammerspoon Console (menu-bar icon → Console). Status from a terminal: `hs -c 'loaded.external_slack.status()'`. If the panel shows up under another name: `hs -c "hs.settings.set('external_slack.screenNames', {'ARZOPA'}); hs.reload()"`.
+- `macconfig-check.sh` drifts if the `~/.hammerspoon` symlink or the cask is missing, warns if Hammerspoon isn't running, and (Manual steps section) warns if it lacks Accessibility. `macos.sh` / `macconfig-check.sh` also manage its Dock-icon and crash-upload prefs (`lib/macos-defaults.list`).
+
+The display mode itself is in [Settings](settings.md#macos-defaults). Accessibility is manual step `hammerspoon-ax` in [Manual steps](manual-steps.md). Test by plugging the ARZOPA monitor in and unplugging it. Restart Hammerspoon after granting Accessibility (it can't move windows without it), then menu-bar icon → **Reload Config**.
+
+## Finder hotkey
+
+`finder_hotkey.lua` brings Finder to the front from any app. `Shift + Control + Command + F` launches Finder, or focuses it when it is already running (`hs.application.launchOrFocus("Finder")`). Hammerspoon owns that shortcut. The same keys are the Finder menu shortcut. It is also in [Shortcuts](../SHORTCUTS.md#hammerspoon).

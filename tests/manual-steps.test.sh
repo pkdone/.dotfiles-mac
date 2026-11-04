@@ -140,7 +140,7 @@ has "Allowed People can stay None" "Allowed People can stay None" "$focus_modes"
 has "an app must have asked for notifications" \
   "notification permission at least once" "$focus_modes"
 focus_shortcuts="$(grep '^mode-focus-shortcuts|' "$LIST")"
-eq "focus shortcuts where is Search Actions" \
+has "focus shortcuts where starts at Search Actions" \
   'Shortcuts → + → Search Actions "Set Focus"' \
   "$(printf '%s\n' "$focus_shortcuts" | cut -d'|' -f4)"
 has "shortcut step clicks + and renames the title" \
@@ -160,8 +160,9 @@ miss "shortcut step does not send you through Spotlight" "Spotlight" "$focus_sho
 miss "shortcut step does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$focus_shortcuts"
 miss "focus modes step does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$focus_modes"
 modes_doc="$(cat "$DIR/../docs/modes.md")"
-has "modes doc walks through Set Focus" "Turn Do Not Disturb On" "$modes_doc"
-has "modes doc names the notification ask" "notification permission at least once" "$modes_doc"
+has "modes doc points at the Focus mode step" "mode-focus-modes" "$modes_doc"
+has "modes doc points at the Focus shortcut step" "mode-focus-shortcuts" "$modes_doc"
+has "modes doc points at the manual-steps click path" "manual-steps.md" "$modes_doc"
 miss "modes doc does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$modes_doc"
 miss "modes doc does not tell you to open Shortcuts" "open the Shortcuts app" "$modes_doc"
 miss "look up note does not mention Force Click" "Force Click" "$(grep '^trackpad-lookup|' "$LIST")"
@@ -330,27 +331,27 @@ has "control-centre comment forbids a macconfig check" \
     END { print buf }
   ' "$LIST")"
 
+settings="$(cat "$DIR/../docs/settings.md")"
 # shellcheck disable=SC2016  # needles are markdown, compared literally
 has "manual-steps doc names the Control Centre step" 'manual step `control-centre-controls`' "$doc"
-has "manual-steps doc names the layout file" \
-  'com.apple.controlcenter.bentoboxes.<host UUID>.plist' "$doc"
-has "manual-steps doc names the nested format" "undocumented nested binary format" "$doc"
-has "manual-steps doc names the date the file was stale" "On 25 Oct 2026" "$doc"
-has "manual-steps doc names the stale modules" "still listed AirDrop and FocusModes" "$doc"
-has "manual-steps doc says a tile cannot be read" \
-  "so it can't tell whether a tile is showing." "$doc"
-has "manual-steps doc writes nothing" "Nothing writes that file. The step stays by hand." "$doc"
 has "manual-steps doc keeps Keyboard Brightness" \
   "Sound and Keyboard Brightness" "$doc"
-has "manual-steps doc names the group container" "trackedApplications" "$doc"
-has "manual-steps doc says the integers are menu-bar rows" \
-  "Bluetooth is \`2\` (Show in Menu Bar) and Now Playing is \`8\` (Don't Show)" "$doc"
 has "manual-steps doc lists Control Centre tiles with the other by-hand settings" \
   "the Control Centre tiles" "$doc"
+has "settings names the layout file" \
+  'com.apple.controlcenter.bentoboxes.<host UUID>.plist' "$settings"
+has "settings names the nested format" "undocumented nested binary format" "$settings"
+has "settings names the date the file was stale" "On 25 Oct 2026" "$settings"
+has "settings names the stale modules" "still listed AirDrop and FocusModes" "$settings"
+has "settings says a tile cannot be read" \
+  "so it can't tell whether a tile is showing." "$settings"
+has "settings writes nothing for the tile file" "Nothing writes that file. The step stays by hand." "$settings"
+has "settings names the group container" "trackedApplications" "$settings"
+has "settings says the integers are menu-bar rows" \
+  "Bluetooth is \`2\` (Show in Menu Bar) and Now Playing is \`8\` (Don't Show)" "$settings"
 has "table row is by hand" \
   "| Control Centre: remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display, Sound and Keyboard Brightness. | Click Control Centre in the menu bar → Edit Controls → remove AirDrop, Stage Manager, Dark Mode, Screenshot and Focus (click the minus on each, or drag it out) → Done. Clicking Done is what saves it. | by hand |" \
   "$doc"
-settings="$(cat "$DIR/../docs/settings.md")"
 has "settings names the Control Centre keep list" \
   "Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display, Sound and Keyboard Brightness" \
   "$settings"

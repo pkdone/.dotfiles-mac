@@ -10,19 +10,15 @@ The dictation, Quick Note, and Game Overlay pin values, Spotlight's Command+Spac
 
 ## Spotlight Command+Space
 
-**Command+Space should open Spotlight.** That is symbolic hotkey 64: enabled, type standard, parameters (32, 49, 1048576). Raycast's hotkey recorder has a Replace Spotlight button next to Raycast Hotkey. Clicking it turns hotkey 64 off (`enabled=0`), and Command+Space stops opening Spotlight.
+**Command+Space should open Spotlight.** Raycast's Replace Spotlight button turns that shortcut off, and Command+Space stops opening Spotlight.
 
-There is no LaunchAgent for this hotkey. Dictation (164), Quick Note (190), and Game Overlay (260) are re-pinned at login. Spotlight is not. `macos.sh` sets hotkey 64 only when it differs. `macconfig --fix` writes it and runs `activateSettings -u`.
-
-To put it back by hand: System Settings → Keyboard → Keyboard Shortcuts… → Spotlight → tick Show Spotlight search (Command+Space) → Done.
+To put it back by hand: System Settings → Keyboard → Keyboard Shortcuts… → Spotlight → tick Show Spotlight search (Command+Space) → Done. The plist shape, and the fact that there is no LaunchAgent, are in [Settings](settings.md#keyboard-dictation-fn).
 
 ## Services shortcuts
 
-**Services shortcuts stay off.** System Settings → Keyboard → Keyboard Shortcuts → Services. The keys in `lib/services-off.list` are saved in `pbs` `NSServicesStatus` with both menus off (`enabled_context_menu` and `enabled_services_menu` are 0 or false, and `presentation_modes` ContextMenu and ServicesMenu are 0 or false). On macOS Tahoe, `defaults read pbs NSServicesStatus` quotes the menu names (`"enabled_context_menu" = 0`) and leaves `ContextMenu` and `ServicesMenu` bare. Those quoted zeroes are off. A missing name, or a value other than 0 or false, is still on. Stickies only had the Services menu saved; the pin writes both menus off, and the same presentation modes Safari already has.
+**Services shortcuts stay off.** System Settings → Keyboard → Keyboard Shortcuts → Services. Untick the rows in `lib/services-off.list`.
 
-`macos.sh` and `macconfig --fix` merge each drifted key with `defaults write pbs NSServicesStatus -dict-add` and leave every other service as it is. They write only when a listed key differs. After a write, `/System/Library/CoreServices/pbs -flush` reloads the Services menu. There is no LaunchAgent. `macos.sh` on a fresh Mac and `macconfig --fix` put a drifted key back, the same way Spotlight's Command+Space is repaired.
-
-New CotEditor Window Containing Selection, New TextEdit Window Containing Selection, and Summarise are unticked and have no saved entry. They are off by default, so nothing writes them.
+`macconfig --fix` puts a drifted key back. The plist shape, the Tahoe quoting rules, and the fact that there is no LaunchAgent, are in [Settings](settings.md#keyboard-dictation-fn).
 
 ## Reloading a LaunchAgent on this Mac
 
