@@ -128,39 +128,89 @@ miss "a pipe does not leave the flag unset" "interactive=unset" "$pipe_out"
 has "a pipe installer's stdout is not a tty" "t1=n" "$pipe_out"
 
 # shellcheck disable=SC2016  # the python program is quoted so fish sees $FISH_FN
+# Linux pty masters return EIO when the slave has no open fd. Fish does that
+# for a moment while it starts the tee pipeline, and the child is still
+# running. Treating that EIO as EOF used to kill brewsync and report a
+# timeout, which is what failed the Mac-like-home job. EIO is EOF only after
+# the process has exited. The window size is set because a 0x0 pty makes some
+# fish versions wait for SIGWINCH. The child is a session leader so job
+# control matches a real terminal (Ghostty) and a pipeline write is not
+# stopped with SIGTTOU.
 pty_out="$(
   HOME="$home" PATH="$bin:/usr/bin:/bin" FISH_FN="$FISH_FN" \
     python3 - "$FISH_BIN" <<'PY'
-import os, pty, select, subprocess, sys, time
+import errno, fcntl, os, pty, select, struct, subprocess, sys, termios, time
+
 fish = sys.argv[1]
 master, slave = pty.openpty()
+try:
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+except OSError:
+    pass
+
+def take_tty():
+    os.setsid()
+    try:
+        fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+    except OSError:
+        pass
+
 proc = subprocess.Popen(
     [fish, "--no-config", "-c", 'source "$FISH_FN"; brewsync'],
-    stdin=slave, stdout=slave, stderr=slave, close_fds=True,
+    stdin=slave,
+    stdout=slave,
+    stderr=slave,
+    preexec_fn=take_tty,
+    close_fds=True,
 )
 os.close(slave)
+
 data = b""
-deadline = time.time() + 8
-while time.time() < deadline:
-    ready, _, _ = select.select([master], [], [], 0.2)
-    if master in ready:
+deadline = time.time() + 15
+rc = None
+# Two idle polls after exit, so the last line is not dropped if it arrives
+# just after the process is reaped. A pending read returns immediately.
+idle_after_exit = 0
+while True:
+    if rc is None:
+        got = proc.poll()
+        if got is not None:
+            rc = got
+        elif time.time() >= deadline:
+            proc.kill()
+            proc.wait()
+            sys.stderr.write("brewsync pty run did not finish\n")
+            sys.stdout.buffer.write(data)
+            sys.exit(1)
+    ready, _, _ = select.select([master], [], [], 0.05)
+    if ready:
         try:
-            chunk = os.read(master, 4096)
-        except OSError:
+            chunk = os.read(master, 65536)
+        except OSError as exc:
+            # EIO while the child is alive is fish rearranging the pipeline
+            # fds, not EOF. EIO after it has exited is EOF.
+            if exc.errno == errno.EIO:
+                if rc is not None:
+                    break
+                time.sleep(0.02)
+                continue
+            raise
+        if chunk:
+            data += chunk
+            idle_after_exit = 0
+            continue
+        if rc is not None:
             break
-        if not chunk:
-            break
-        data += chunk
-    if proc.poll() is not None and not ready:
+        continue
+    if rc is None:
+        continue
+    idle_after_exit += 1
+    if idle_after_exit >= 2:
         break
-if proc.poll() is None:
-    proc.kill()
-    proc.wait()
-    sys.stderr.write("brewsync pty run did not finish\n")
-    sys.exit(1)
+
 os.close(master)
 sys.stdout.buffer.write(data)
-sys.exit(proc.returncode)
+sys.exit(rc)
 PY
 )"
 pty_rc=$?
