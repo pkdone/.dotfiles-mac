@@ -74,9 +74,6 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 | Paste file as a move (cut & paste) | Option + Command + V (in Finder, after Command + C) |
 | Show/hide hidden files in Finder | Command + Shift + . |
 | Ghostty Quick Launcher | Command + ` |
-| Claude Browser | Command + E (in Chrome) |
-| Claude Chat | Option, Option (double-tap) |
-| ChatGPT | Option + Space (Raycast was moved off this — see [Settings](docs/settings.md#raycast)) |
 
 #### Hammerspoon
 

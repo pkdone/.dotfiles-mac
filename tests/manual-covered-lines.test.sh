@@ -146,7 +146,7 @@ run_manual() { # porcelain widgets-flag status-mode
         section_status_of() {
           case "$1" in
             "MDM / company apps") printf '%s' ok ;;
-            "Login Items (banned open-at-login)") printf '%s' warn ;;
+            "Login Items") printf '%s' warn ;;
             "Allow in the Menu Bar") printf '%s' fail ;;
             "Desktop widgets") printf '%s' ok ;;
             *) return 1 ;;
@@ -178,7 +178,7 @@ eq "small fixture order" "1 2 6 7 30 50 99" "$(nums_of "$out")"
 has "company apps uses the section ok" \
   "  ok    1. Install the company apps — checked above under MDM / company apps" "$out"
 has "tailscale uses the section warn" \
-  "  warn  6. Add Tailscale to Open at Login — checked above under Login Items (banned open-at-login)" "$out"
+  "  warn  6. Add Tailscale to Open at Login — checked above under Login Items" "$out"
 has "menu bar uses the section fail" \
   "  fail  50. Allow in the Menu Bar — checked above under Allow in the Menu Bar" "$out"
 has "placed widgets use the Desktop widgets ok" \

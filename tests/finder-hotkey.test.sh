@@ -57,7 +57,7 @@ list="$(cat "$LIST")"
 miss "old Raycast Finder hotkey step is gone" "raycast-finder-hotkey|" "$list"
 miss "finder unbind step is gone" "raycast-finder-unbind|" "$list"
 has "Raycast launcher hotkey stays" \
-  "raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|" \
+  "raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space)|" \
   "$list"
 has "Clipboard History stays" \
   "raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|" \

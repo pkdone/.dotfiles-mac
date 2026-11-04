@@ -27,7 +27,7 @@ covered_step_file() { # area
 covered_section_heading() { # id
   case "$1" in
     mdm-apps) printf '%s\n' "MDM / company apps" ;;
-    tailscale-login|login-items-off) printf '%s\n' "Login Items (banned open-at-login)" ;;
+    tailscale-login) printf '%s\n' "Login Items" ;;
     karabiner-login-items) printf '%s\n' "Karabiner background" ;;
     auto-brightness) printf '%s\n' "Display auto-brightness" ;;
     display-more-space) printf '%s\n' "Display (More Space)" ;;

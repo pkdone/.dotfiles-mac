@@ -241,7 +241,6 @@ notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar
 spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, and System Settings on.|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----
-login-items-off|Login Items & Finder|Keep ChatGPT Off at login|System Settings → General → Login Items & Extensions|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:login-items
 finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents and Shared stay hidden, and, when the sidebar files name the row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar|app:Finder|@macconfig:finder
 # FavoriteTagNames is not what the sidebar shows. On pdone-mac2 every box
 # under Show these tags in the sidebar is unticked and the sidebar has no
@@ -255,7 +254,7 @@ finder-sidebar-tags|Login Items & Finder|No tags shown in the sidebar|Finder →
 # ---- App settings ----
 # Raycast is set by hand: the launcher hotkey, then Clipboard History.
 # Do not click Replace Spotlight. That turns off Command+Space (symbolic hotkey 64).
-raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space, which clashes with ChatGPT)|Open Raycast → Settings (Command+,) → General → Raycast Hotkey → click the hotkey recorder and press Shift+Control+Command+R. Don't click the Replace Spotlight button next to it (it turns off Spotlight's Command+Space)|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15
+raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space)|Open Raycast → Settings (Command+,) → General → Raycast Hotkey → click the hotkey recorder and press Shift+Control+Command+R. Don't click the Replace Spotlight button next to it (it turns off Spotlight's Command+Space)|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15
 raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|Open Raycast, run Clipboard History once and allow Accessibility if asked. Then Raycast Settings → Clipboard History (in the left sidebar; there is no Extensions tab) → Keep history for = 1 Day → under Disabled Applications click + and add 1Password and 1Password for Safari (Keychain Access and Passwords are already listed) → in Commands, on the Clipboard History row click Add Hotkey and press Control+Command+V|app:Raycast|
 
 # ---- Modes (Hammerspoon menu-bar switcher; see docs/modes.md) ----

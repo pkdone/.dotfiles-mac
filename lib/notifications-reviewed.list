@@ -41,11 +41,9 @@ us.zoom.xos # Zoom
 # Reviewed earlier. Not required off, so on is allowed.
 com.logi.cp-dev-mgr # Logi Options+
 org.cogx.cog # Cog
-com.openai.codex # ChatGPT
 com.canonical.multipassGui # Multipass
 com.yubico.yubioath # Yubico Authenticator
 com.google.Chrome.app.cinhimbnkkaeohfgghhklpknlkffjgod # YouTube Music
 com.sonos.macController2 # Sonos
-com.anthropic.claudefordesktop # Claude
 com.electron.dockerdesktop # Docker Desktop
 com.raycast.macos # Raycast
