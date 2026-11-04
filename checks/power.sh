@@ -4,11 +4,14 @@
 # so a failing command still stops the check the way it did before the split.
 # scripts/manual-steps.sh calls check_step_ac_sleep (manual step ac-sleep).
 # ---- 6d. Sleep, display sleep, and wake (check-only) --------------------
-# pmset -g custom needs no sudo. lib/ac-sleep.py reads AC sleep 0, AC display
-# sleep 10, battery display sleep 2, and AC wake for network access (womp 1).
-# Battery idle sleep is not read. A miss is a warning, not drift: setting it
-# needs sudo (manual step ac-sleep). --fix does not run sudo.
-# Closing the lid still sleeps the Mac.
+# pmset -g custom needs no sudo. lib/ac-sleep.py reads the AC Power `sleep`
+# line (want 0: System Settings → Battery → Options → Prevent automatic
+# sleeping on power adapter when the display is off, or sudo pmset -c sleep 0),
+# AC display sleep 10, battery display sleep 2, and AC wake for network
+# access (womp 1). Plain `pmset -g` is not used. A desktop Mac has no AC Power
+# section; that is a warning and no command is guessed. Battery idle sleep is
+# not read. A miss is a warning, not drift: setting it needs sudo (manual step
+# ac-sleep). --fix does not run sudo. Closing the lid still sleeps the Mac.
 check_step_ac_sleep() {
   fixid ac-sleep
   CHECKED=$((CHECKED + 1))

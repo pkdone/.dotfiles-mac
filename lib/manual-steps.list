@@ -150,12 +150,15 @@ arzopa-display|Display, keyboard & desktop|ARZOPA portable monitor, when it is p
 # /System/Library/Desktop Pictures. System Events "set picture" cannot select
 # that asset, and the wallpaper store is not written.
 wallpaper|Display, keyboard & desktop|Wallpaper: Tahoe Night (Landscape). Set it by hand. There is no reliable command for this system picture (it is a wallpaper-catalog asset, not a file), and the wallpaper store is not written. macconfig warns if it is a different picture|System Settings → Wallpaper|x-apple.systempreferences:com.apple.Wallpaper-Settings.extension|@macconfig:display
-# Mains power: sleep 0, display sleep 10 minutes, wake for network access on.
+# Mains power: sleep 0 (System Settings → Battery → Options → Prevent automatic
+# sleeping on power adapter when the display is off; sudo pmset -c sleep 0),
+# display sleep 10 minutes, wake for network access on.
 # Battery: display sleep 2 minutes. Battery idle sleep is not changed.
 # Closing the lid still sleeps the Mac. The screen still locks.
-# macconfig-check.sh reads `pmset -g custom` and warns. --fix does not run sudo.
+# macconfig-check.sh reads `pmset -g custom` (the AC Power sleep line) and warns.
+# A desktop Mac has no AC Power section. --fix does not run sudo.
 # macos.sh may run the sudo pmset commands and skips them when sudo is not available.
-ac-sleep|Display, keyboard & desktop|On mains power the Mac does not sleep on its own, the display sleeps after 10 minutes, and wake for network access is on. On battery the display sleeps after 2 minutes. Closing the lid still sleeps the Mac. Battery idle sleep is not changed|Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1||@macconfig:power
+ac-sleep|Display, keyboard & desktop|On mains power, turn on Prevent automatic sleeping on power adapter when the display is off (the Mac does not sleep on its own while the display is off), the display sleeps after 10 minutes, and wake for network access is on. On battery the display sleeps after 2 minutes. Closing the lid still sleeps the Mac. Battery idle sleep is not changed|System Settings → Battery → Options → turn on Prevent automatic sleeping on power adapter when the display is off. Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1|x-apple.systempreferences:com.apple.Battery-Settings.extension|@macconfig:power
 # Charge Limit 80% (macOS Tahoe 26.4 or later, Apple silicon laptops).
 # Apple documents this only in System Settings. There is no pmset or defaults
 # write. The Shortcuts action Set Battery Charge Limit is not a shell command.

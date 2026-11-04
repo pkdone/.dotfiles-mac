@@ -34,13 +34,15 @@
 #
 # Safety:
 #   - sudo is only used for power, and only for the pmset commands that are
-#     still wrong: AC sleep 0, AC display sleep 10 minutes, battery display
-#     sleep 2 minutes, and AC wake for network access (womp 1). Skipped when
-#     sudo isn't available (no passwordless sudo and no terminal) or isn't
-#     wanted (--dry-run, or you answer no). Values that already match do not
-#     call sudo. Battery idle sleep is not changed. Closing the lid still
-#     sleeps the Mac. Other sudo-only items (hostname, display auto-brightness)
-#     stay manual. macconfig --fix never selects @ac-sleep.
+#     still wrong: AC sleep 0 (System Settings → Battery → Options → Prevent
+#     automatic sleeping on power adapter when the display is off), AC display
+#     sleep 10 minutes, battery display sleep 2 minutes, and AC wake for
+#     network access (womp 1). Skipped when sudo isn't available (no
+#     passwordless sudo and no terminal) or isn't wanted (--dry-run, or you
+#     answer no). Values that already match do not call sudo. Battery idle
+#     sleep is not changed. Closing the lid still sleeps the Mac. Other
+#     sudo-only items (hostname, display auto-brightness) stay manual.
+#     macconfig --fix never selects @ac-sleep.
 #   - Dark mode is also applied live with System Events when it is not already
 #     on. A missing Automation permission is a warning, not a failure, and does
 #     not ask for a logout.
@@ -853,9 +855,11 @@ if selected @titlebar-double-click; then apply_titlebar_double_click; fi
 
 # ---- Power (sudo pmset; skipped when sudo is not available) --------------
 # lib/ac-sleep.py reads the same pmset -g custom text as the check. sudo runs
-# only the commands that are still wrong (AC sleep 0, AC display sleep 10,
-# battery display sleep 2, AC wake for network access). Skipped when sudo
-# isn't available or isn't wanted. Battery idle sleep is not changed.
+# only the commands that are still wrong. AC sleep 0 is System Settings →
+# Battery → Options → Prevent automatic sleeping on power adapter when the
+# display is off (sudo pmset -c sleep 0). The other commands are AC display
+# sleep 10, battery display sleep 2, and AC wake for network access. Skipped
+# when sudo isn't available or isn't wanted. Battery idle sleep is not changed.
 # Closing the lid still sleeps the Mac. --fix never selects @ac-sleep.
 apply_ac_sleep() {
   local helper="$DOTDIR/lib/ac-sleep.py" custom line rest cmds msg shown reply c failed
