@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.pdone.pin-gameoverlay-hotkey-260</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>-c</string>
+		<string>exec "$HOME/.dotfiles-mac/scripts/pin-gameoverlay-hotkey-260.sh"</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<!-- The WatchPaths entry is a placeholder replaced with the absolute home
+	     directory when this plist is installed. launchd does not expand a
+	     tilde or HOME, so those cannot be used here. -->
+	<key>WatchPaths</key>
+	<array>
+		<string>@HOME@/Library/Preferences/com.apple.symbolichotkeys.plist</string>
+	</array>
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+</dict>
+</plist>

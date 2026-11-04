@@ -76,6 +76,7 @@ team|6KKW3K37TU|Cyberhaven
 team|Z2FDA4QHGU|Phorion EDR
 team|8VBZ3948LU|Fleet orbit
 label|com.pdone.pin-quicknote-hotkey-190|this repo's LaunchAgent (launchagents/)
+label|com.pdone.pin-gameoverlay-hotkey-260|this repo's LaunchAgent (launchagents/)
 
 # Cursor and Cursor Nightly each register a BackgroundActivityCheck agent.
 # The app bundle id also covers a helper stored inside that app. The helper's

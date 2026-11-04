@@ -18,6 +18,7 @@ PIN190="$DIR/scripts/pin-quicknote-hotkey-190.sh"
 LINKS="$DIR/lib/links.list"
 LABEL164=com.pdone.pin-dictation-hotkey-164
 LABEL190=com.pdone.pin-quicknote-hotkey-190
+LABEL260=com.pdone.pin-gameoverlay-hotkey-260
 WATCH='@HOME@/Library/Preferences/com.apple.symbolichotkeys.plist'
 
 pass=0
@@ -39,7 +40,7 @@ ok() {  # description status
 }
 
 # ---- repo plists: RunAtLoad stays, WatchPaths is a placeholder ------------
-for label in "$LABEL164" "$LABEL190"; do
+for label in "$LABEL164" "$LABEL190" "$LABEL260"; do
   plist="$DIR/launchagents/${label}.plist"
   body="$(cat "$plist")"
   has "$label keeps RunAtLoad" '<key>RunAtLoad</key>' "$body"
@@ -55,6 +56,7 @@ for label in "$LABEL164" "$LABEL190"; do
   case "$label" in
     *164*) script=pin-dictation-hotkey-164.sh ;;
     *190*) script=pin-quicknote-hotkey-190.sh ;;
+    *260*) script=pin-gameoverlay-hotkey-260.sh ;;
   esac
   # shellcheck disable=SC2016  # the needle is plist text, compared literally
   has "$label ProgramArguments still lets bash expand \$HOME" \

@@ -85,7 +85,9 @@ Folders
 Unwanted apps
 Dictation shortcut
 Quick Note shortcut
+Game Overlay shortcut
 Spotlight shortcut
+Services shortcuts
 Finder icon view defaults
 Karabiner Fn-kill
 Karabiner background

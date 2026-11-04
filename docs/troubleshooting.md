@@ -2,19 +2,27 @@
 
 See [README.md](../README.md).
 
-The dictation and Quick Note pin values, Spotlight's Command+Space, and the Karabiner rules, are in [Settings](settings.md#keyboard-dictation-fn).
+The dictation, Quick Note, and Game Overlay pin values, Spotlight's Command+Space, the Services shortcuts, and the Karabiner rules, are in [Settings](settings.md#keyboard-dictation-fn).
 
 ## After a macOS Software Update
 
-**After a macOS Software Update:** Apple often rewrites `com.apple.symbolichotkeys` and resets hotkey 164 to the unbound default (`enabled=0`, `type=standard`, `parameters=(65535,65535,0)`). That is what happened after Tahoe **26.7** / **27.0**. The same rewrite turns Quick Note hotkey 190 back on. Two LaunchAgents (`com.pdone.pin-dictation-hotkey-164` and `com.pdone.pin-quicknote-hotkey-190`) run the pin scripts at login (`RunAtLoad`) and again when `~/Library/Preferences/com.apple.symbolichotkeys.plist` changes (`WatchPaths`). launchd does not expand `~` or `$HOME`, so the repo plists store that path as `@HOME@`. `install.sh` and `macconfig-check.sh --fix` write a regular file under `~/Library/LaunchAgents` with `/Users/<you>` filled in. They are not symlinks. `ThrottleInterval` is 10 seconds, so a burst of writes starts each agent at most once per 10 seconds. Each pin script reads the hotkey and calls `defaults write` only when the value differs. A correct value does not touch the plist, so the watch cannot loop. A repair write changes the plist once more; launchd runs the agent again after the throttle, that run sees the right value and leaves it alone. The weekday drift check and `macos.sh` remain backups. Other managed `defaults` usually survive; this nested hotkey map does not. The same rewrite can turn off Spotlight's Command+Space (hotkey 64). That one has no LaunchAgent. `macconfig --fix` writes it back. See [Spotlight Command+Space](#spotlight-commandspace).
+**After a macOS Software Update:** Apple often rewrites `com.apple.symbolichotkeys` and resets hotkey 164 to the unbound default (`enabled=0`, `type=standard`, `parameters=(65535,65535,0)`). That is what happened after Tahoe **26.7** / **27.0**. The same rewrite turns Quick Note hotkey 190 back on, and turns Game Overlay hotkey 260 back on (Command+Escape). Three LaunchAgents (`com.pdone.pin-dictation-hotkey-164`, `com.pdone.pin-quicknote-hotkey-190`, and `com.pdone.pin-gameoverlay-hotkey-260`) run the pin scripts at login (`RunAtLoad`) and again when `~/Library/Preferences/com.apple.symbolichotkeys.plist` changes (`WatchPaths`). launchd does not expand `~` or `$HOME`, so the repo plists store that path as `@HOME@`. `install.sh` and `macconfig-check.sh --fix` write a regular file under `~/Library/LaunchAgents` with `/Users/<you>` filled in. They are not symlinks. `ThrottleInterval` is 10 seconds, so a burst of writes starts each agent at most once per 10 seconds. Each pin script reads the hotkey and calls `defaults write` only when the value differs. A correct value does not touch the plist, so the watch cannot loop. A repair write changes the plist once more; launchd runs the agent again after the throttle, that run sees the right value and leaves it alone. The weekday drift check and `macos.sh` remain backups. Other managed `defaults` usually survive; this nested hotkey map does not. The same rewrite can turn off Spotlight's Command+Space (hotkey 64). That one has no LaunchAgent. `macconfig --fix` writes it back. See [Spotlight Command+Space](#spotlight-commandspace).
 
 ## Spotlight Command+Space
 
 **Command+Space should open Spotlight.** That is symbolic hotkey 64: enabled, type standard, parameters (32, 49, 1048576). Raycast's hotkey recorder has a Replace Spotlight button next to Raycast Hotkey. Clicking it turns hotkey 64 off (`enabled=0`), and Command+Space stops opening Spotlight.
 
-There is no LaunchAgent for this hotkey. Dictation (164) and Quick Note (190) are re-pinned at login. Spotlight is not. `macos.sh` sets hotkey 64 only when it differs. `macconfig --fix` writes it and runs `activateSettings -u`.
+There is no LaunchAgent for this hotkey. Dictation (164), Quick Note (190), and Game Overlay (260) are re-pinned at login. Spotlight is not. `macos.sh` sets hotkey 64 only when it differs. `macconfig --fix` writes it and runs `activateSettings -u`.
 
 To put it back by hand: System Settings → Keyboard → Keyboard Shortcuts… → Spotlight → tick Show Spotlight search (Command+Space) → Done.
+
+## Services shortcuts
+
+**Services shortcuts stay off.** System Settings → Keyboard → Keyboard Shortcuts → Services. The keys in `lib/services-off.list` are saved in `pbs` `NSServicesStatus` with both menus off (`enabled_context_menu` and `enabled_services_menu` are 0 or false, and `presentation_modes` ContextMenu and ServicesMenu are 0 or false). Stickies only had the Services menu saved; the pin writes both menus off, and the same presentation modes Safari already has.
+
+`macos.sh` and `macconfig --fix` merge each drifted key with `defaults write pbs NSServicesStatus -dict-add` and leave every other service as it is. They write only when a listed key differs. After a write, `/System/Library/CoreServices/pbs -flush` reloads the Services menu. There is no LaunchAgent. `macos.sh` on a fresh Mac and `macconfig --fix` put a drifted key back, the same way Spotlight's Command+Space is repaired.
+
+New CotEditor Window Containing Selection, New TextEdit Window Containing Selection, and Summarise are unticked and have no saved entry. They are off by default, so nothing writes them.
 
 ## Reloading a LaunchAgent on this Mac
 
@@ -37,7 +45,7 @@ The `macos.sh` step that runs the same command is in [Settings](settings.md#maco
 
 The security check does not run `softwareupdate`, so it does not sit on the network. Automatic security updates are managed by the employer (MDM). The check says so and does not warn about those toggles. It still reads the local Software Update preferences for a recommended update that has been sitting since a successful check more than 7 days ago. Install that update in System Settings when that warning appears.
 
-A `com.pdone.*` file in `~/Library/LaunchAgents` that does not match the repo, or that has no repo template, is a warning. `--fix` still repairs the two pin agents (dictation and Quick Note) when those sections report drift. It does not delete an unknown plist. Remove that file yourself, or add a template under `launchagents/`, then re-run install.
+A `com.pdone.*` file in `~/Library/LaunchAgents` that does not match the repo, or that has no repo template, is a warning. `--fix` still repairs the three pin agents (dictation, Quick Note, and Game Overlay) when those sections report drift. It does not delete an unknown plist. Remove that file yourself, or add a template under `launchagents/`, then re-run install.
 
 A symlink under `~/.config`, `~/Library/LaunchAgents`, or a home dotfile that points into this repo but whose target is gone is a warning. `--fix` does not recreate it. Restore the file from git, or run `install.sh` again for the links it manages.
 
