@@ -29,8 +29,9 @@ miss() {
 
 row="$(awk -F'|' '$1=="tailscale-signin" { print; exit }' "$LIST")"
 eq "step is in Sign-ins" Sign-ins "$(printf '%s\n' "$row" | cut -d'|' -f2)"
-eq "step title" "Open Tailscale, turn it on, and sign in as paul.done@anysphere.co" \
+eq "step title" "Open Tailscale, turn it on, and sign in with your work account" \
   "$(printf '%s\n' "$row" | cut -d'|' -f3)"
+miss "step row does not print an email address" "@" "$row"
 has "step opens Tailscale from Applications" "Open Tailscale from Applications" "$row"
 has "step names the menu bar login" "click Log in" "$row"
 eq "step opens the Tailscale app" app:Tailscale "$(printf '%s\n' "$row" | cut -d'|' -f5)"

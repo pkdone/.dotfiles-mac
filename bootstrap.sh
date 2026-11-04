@@ -10,7 +10,7 @@
 #   4. macos.sh     apply the managed macOS defaults
 #   5. dock.sh      pin the Dock apps in order, then apply Desktop assignments
 #   6. handlers.sh  set URL-scheme default apps (mailto → Chrome) and Finder file handlers
-#   7. prune-apps.sh remove unwanted App Store apps (GarageBand, iMovie)
+#   7. prune-apps.sh remove unwanted App Store apps (GarageBand, iMovie, Pages)
 #
 # It ends by printing the manual steps (lib/manual-steps.list: permissions, sign-ins,
 # by-hand settings) and, on a terminal, offering scripts/manual-steps.sh open.

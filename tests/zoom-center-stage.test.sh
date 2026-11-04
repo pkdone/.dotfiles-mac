@@ -56,15 +56,16 @@ has "the list comment forbids a guessed key" \
   ' "$LIST")"
 
 doc="$(cat "$DOC")"
+settings="$(cat "$DIR/docs/settings.md")"
 # shellcheck disable=SC2016  # needles are markdown, compared literally
-has "manual-steps doc names the step" 'manual step `zoom-center-stage`' "$doc"
-has "manual-steps doc says it is Off for Zoom" "is Off for Zoom." "$doc"
-has "manual-steps doc says it is per app" "macOS remembers this per app" "$doc"
-has "manual-steps doc names the camera service" "in the system camera service, not in a user preference." "$doc"
+has "settings names the step" 'manual step `zoom-center-stage`' "$settings"
+has "settings says it is Off for Zoom" "is Off for Zoom." "$settings"
+has "settings says it is per app" "macOS remembers this per app" "$settings"
+has "settings names the camera service" "in the system camera service, not in a user preference." "$settings"
 # shellcheck disable=SC2016
-has "manual-steps doc says no plist holds it" 'No `defaults` domain and no plist under `~/Library` holds it.' "$doc"
-has "manual-steps doc says nothing reads or writes it" "Nothing reads it and nothing writes it." "$doc"
-has "manual-steps doc uses the MANUAL line" "label the step \`$MANUAL\`" "$doc"
+has "settings says no plist holds it" 'No `defaults` domain and no plist under `~/Library` holds it.' "$settings"
+has "settings says nothing reads or writes it" "Nothing reads it and nothing writes it." "$settings"
+has "settings uses the MANUAL line" "label the step \`$MANUAL\`" "$settings"
 has "manual-steps doc lists it with the other by-hand settings" \
   "the Control Centre tiles, Center Stage for Zoom, the battery charge limit" "$doc"
 has "table row is by hand" "| $TITLE | $WHERE | by hand |" "$doc"

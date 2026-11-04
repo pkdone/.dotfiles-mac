@@ -22,7 +22,7 @@ A scripted setting is applied by `bootstrap.sh` on a fresh Mac, and checked by `
 | A Homebrew package | `Brewfile` | `install.sh` (later, `brewsync`) |
 | A login agent | `launchagents/*.plist` (`@HOME@`, which launchd does not expand). Rendered to a regular file, not a symlink | `install.sh` |
 | Karabiner, Hammerspoon config, fish, Ghostty | `karabiner/`, `hammerspoon/`, `fish/`, `ghostty/`, linked from `lib/links.list` | `install.sh` |
-| Dictation, Quick Note, Spotlight, Finder icon view | the existing `scripts/pin-*.sh` | a full `macos.sh`. `selected` is true when `--only` is absent, which is how bootstrap runs it. `macos.sh --only @<id>` is the same code `--fix` calls |
+| Dictation, Quick Note, Game Overlay, Spotlight, Services, Finder icon view | the existing `scripts/pin-*.sh` | a full `macos.sh`. `selected` is true when `--only` is absent, which is how bootstrap runs it. `macos.sh --only @<id>` is the same code `--fix` calls |
 
 Tag the check with `fixid <id>` in the `checks/<area>.sh` section that already owns it. `macconfig-check.sh` sources those files. `hdr` clears the id, so set `fixid` immediately before `pass`, `bad`, or `warn`.
 
