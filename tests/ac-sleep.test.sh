@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 #
-# Unit tests for lib/ac-sleep.py and the macos.sh sudo guard. Synthetic
-# `pmset -g custom` text only — pmset and sudo are fakes, and nothing changes
-# a power profile.
+# Unit tests for lib/ac-sleep.py, the power section, and the macos.sh sudo
+# guard. Synthetic `pmset -g custom` text only — pmset and sudo are fakes,
+# and nothing changes a power profile.
 # Run: ./tests/ac-sleep.test.sh
 #
+# SC2317: pass/warn/bad/hdr/fixid/with_timeout are stubs the sourced
+# checks/power.sh calls. Shellcheck does not follow those calls.
+# shellcheck disable=SC2317
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,7 +36,8 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 chmod +x "$HELPER"
 
-OK_MSG="ok||On mains power the Mac does not sleep on its own (sleep 0). On mains power the display sleeps after 10 minutes. On battery the display sleeps after 2 minutes. On mains power, wake for network access is on. Closing the lid still sleeps the Mac. Battery idle sleep is not changed. macconfig --fix does not change this (it needs sudo)"
+OK_MSG="ok||On mains power the Mac does not sleep on its own while the display is off (sleep 0). On mains power the display sleeps after 10 minutes. On battery the display sleeps after 2 minutes. On mains power, wake for network access is on. Closing the lid still sleeps the Mac. Battery idle sleep is not changed. macconfig --fix does not change this (it needs sudo)"
+PREVENT_WHERE="System Settings → Battery → Options → Prevent automatic sleeping on power adapter when the display is off"
 field() { # line index — 1 status, 2 commands, 3 message
   printf '%s\n' "$2" | cut -d'|' -f"$1"
 }
@@ -73,6 +77,8 @@ out="$(run "$tmp/on.txt")"; rc=$?
 eq "on exits 0" 0 "$rc"
 eq "AC sleep 1 asks only for sleep 0" "pmset -c sleep 0" "$(field 2 "$out")"
 has "AC sleep 1 names the wanted value" "want 0" "$out"
+has "AC sleep 1 names the System Settings toggle" "$PREVENT_WHERE" "$out"
+has "AC sleep 1 names the sudo command" "sudo pmset -c sleep 0" "$out"
 miss "AC sleep 1 does not change display sleep" "displaysleep" "$(field 2 "$out")"
 
 write_custom "$tmp/ten.txt" 10 0
@@ -108,6 +114,7 @@ out="$(run "$tmp/button.txt")"
 eq "Sleep On Power Button is not the sleep key" "bad" "$(field 1 "$out")"
 has "displaysleep 0 is its own command" "pmset -c displaysleep 10" "$(field 2 "$out")"
 miss "Sleep On Power Button does not count as sleep" "pmset -c sleep" "$(field 2 "$out")"
+miss "sleep already 0 does not ask for the prevent-sleep toggle" "$PREVENT_WHERE" "$(field 3 "$out")"
 
 cat > "$tmp/spaced.txt" <<'EOF'
 Battery Power:
@@ -130,6 +137,7 @@ out="$(run "$tmp/battery-only.txt")"
 eq "battery sleep 0 with no AC block is not a pass" "warn" "$(field 1 "$out")"
 has "missing AC block is named" "no 'AC Power:' section" "$out"
 eq "missing AC block does not invent a command" "" "$(field 2 "$out")"
+miss "missing AC block does not name a sudo command" "sudo pmset" "$out"
 
 cat > "$tmp/no-key.txt" <<'EOF'
 Battery Power:
@@ -168,12 +176,17 @@ writers="$(grep -nE 'subprocess|os\.system|Popen' "$HELPER" || true)"
 eq "helper does not shell out" "" "$writers"
 
 # ---- list / check wiring ------------------------------------------------
-eq "ac-sleep where lists the sudo commands" \
-  "Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1" \
+eq "ac-sleep where lists the Settings path and the sudo commands" \
+  "System Settings → Battery → Options → turn on Prevent automatic sleeping on power adapter when the display is off. Terminal: sudo pmset -c sleep 0; sudo pmset -c displaysleep 10; sudo pmset -b displaysleep 2; sudo pmset -c womp 1" \
   "$(awk -F'|' '$1 == "ac-sleep" { print $4; exit }' "$STEPS")"
+eq "ac-sleep opens Battery settings" \
+  "x-apple.systempreferences:com.apple.Battery-Settings.extension" \
+  "$(awk -F'|' '$1 == "ac-sleep" { print $5; exit }' "$STEPS")"
 eq "ac-sleep is checked by macconfig-check.sh" "@macconfig:power" \
   "$(awk -F'|' '$1 == "ac-sleep" { print $6; exit }' "$STEPS")"
 title="$(awk -F'|' '$1 == "ac-sleep" { print $3; exit }' "$STEPS")"
+has "manual step names the prevent-sleep toggle" \
+  "Prevent automatic sleeping on power adapter when the display is off" "$title"
 has "manual step says the lid still sleeps" "Closing the lid still sleeps the Mac" "$title"
 has "manual step says battery idle sleep is not changed" "Battery idle sleep is not changed" "$title"
 has "manual step names display sleep" "10 minutes" "$title"
@@ -326,6 +339,47 @@ PY
 eq "prompt was shown" 0 "$prompt_rc"
 has "answering no skips because sudo is not wanted" "sudo not wanted" "$prompt_out"
 miss "answering no does not run pmset" "pmset -c sleep 0" "$(cat "$tmp/sudo-prompt.log")"
+
+# The power section itself, with the same fake pmset. AC sleep 0 is ok.
+# A non-zero value is a warning, not DRIFT: putting it back needs sudo, so
+# macconfig --fix does not write it. The warning names the Settings toggle
+# and sudo pmset -c sleep 0. No AC Power section (a desktop Mac) is a warning
+# and does not invent a command.
+run_ac_sleep_check() ( # custom-file
+  CHECKED=0
+  DOTDIR="$DIR"
+  DOT_PYTHON="$PY"
+  export DOTDIR DOT_PYTHON
+  export PATH="$bin:$PATH"
+  export PMSET_CUSTOM="$1"
+  export PMSET_LOG="$tmp/section-pmset.log"
+  with_timeout() { shift; "$@"; }
+  hdr() { printf '[%s]\n' "$1"; }
+  fixid() { printf 'fixid %s\n' "$1"; }
+  pass() { printf 'ok %s\n' "$*"; }
+  warn() { printf 'warn %s\n' "$*"; }
+  bad() { printf 'DRIFT %s\n' "$*"; }
+  # shellcheck source=../checks/power.sh disable=SC1091
+  . "$DIR/checks/power.sh"
+  printf 'checked %s\n' "$CHECKED"
+)
+
+out="$(run_ac_sleep_check "$tmp/off.txt")"
+has "section reports ok when AC sleep is 0" \
+  "ok On mains power the Mac does not sleep on its own while the display is off (sleep 0)." "$out"
+miss "section does not warn when AC sleep is 0" "warn " "$out"
+miss "section does not call a match drift" "DRIFT " "$out"
+
+out="$(run_ac_sleep_check "$tmp/on.txt")"
+has "section warns when AC sleep is not 0" "warn " "$out"
+has "section how-to names the Settings toggle" "$PREVENT_WHERE" "$out"
+has "section how-to names sudo pmset -c sleep 0" "sudo pmset -c sleep 0" "$out"
+miss "section does not fail the run for a sudo-only miss" "DRIFT " "$out"
+
+out="$(run_ac_sleep_check "$tmp/battery-only.txt")"
+has "section warns when there is no AC Power section" "warn " "$out"
+has "section names the missing AC section" "no 'AC Power:' section" "$out"
+miss "section does not invent a command for a desktop Mac" "sudo pmset" "$out"
 
 printf 'ac-sleep tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

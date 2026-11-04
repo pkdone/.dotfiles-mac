@@ -3,13 +3,17 @@
 
 `pmset -g custom` prints one block per power profile. This reads:
 
-  - AC Power `sleep` — want 0 (the Mac does not sleep on its own while plugged in)
+  - AC Power `sleep` — want 0. That is System Settings → Battery → Options →
+    Prevent automatic sleeping on power adapter when the display is off
+    (`sudo pmset -c sleep 0`). The Mac stays awake on the charger while the
+    display is off.
   - AC Power `displaysleep` — want 10 (the display sleeps after 10 minutes)
   - Battery Power `displaysleep` — want 2 (the display sleeps after 2 minutes)
   - AC Power `womp` — want 1 (wake for network access while plugged in)
 
-Battery idle sleep, the lock screen, and Sleep On Power Button are not read.
-Closing the lid still sleeps the Mac.
+A desktop Mac has no AC Power section. That is a warning, and no `pmset`
+command is guessed. Battery idle sleep, the lock screen, and Sleep On Power
+Button are not read. Closing the lid still sleeps the Mac.
 
 One line, fields separated by `|`:
 
@@ -34,7 +38,7 @@ CHECKS = (
         "sleep",
         "0",
         "pmset -c sleep 0",
-        "on mains power the Mac does not sleep on its own (sleep 0)",
+        "on mains power the Mac does not sleep on its own while the display is off (sleep 0)",
     ),
     (
         "AC Power:",
@@ -63,6 +67,14 @@ OK_TAIL = (
     " Closing the lid still sleeps the Mac. Battery idle sleep is not changed."
     " macconfig --fix does not change this (it needs sudo)"
 )
+
+# The Battery → Options toggle. Named in the how-to-fix line when AC sleep
+# is not 0, next to the sudo command. Not used when that value already matches.
+PREVENT_SLEEP_WHERE = (
+    "System Settings → Battery → Options → "
+    "Prevent automatic sleeping on power adapter when the display is off"
+)
+PREVENT_SLEEP_CMD = "pmset -c sleep 0"
 
 
 def emit(status: str, commands: list[str], message: str) -> None:
@@ -146,13 +158,22 @@ def judge(text: str) -> tuple[str, list[str], str]:
             commands.append(command)
             problems.append(f"{plain}, but it is {token} (want {want})")
     if saw_bad:
-        shown = "; ".join(f"sudo {cmd}" for cmd in commands)
         body = ". ".join(problems)
         if not body.endswith("."):
             body += "."
+        if PREVENT_SLEEP_CMD in commands:
+            others = [cmd for cmd in commands if cmd != PREVENT_SLEEP_CMD]
+            how = f" Turn on {PREVENT_SLEEP_WHERE}, or run sudo {PREVENT_SLEEP_CMD}."
+            if others:
+                also = "; ".join(f"sudo {cmd}" for cmd in others)
+                how += f" Also run {also}."
+        else:
+            shown = "; ".join(f"sudo {cmd}" for cmd in commands)
+            how = f" Run {shown}."
         message = (
             body
-            + f" Run {shown}. macconfig --fix does not run sudo."
+            + how
+            + " macconfig --fix does not run sudo."
             + " Closing the lid still sleeps the Mac."
             + " Battery idle sleep is not changed."
         )

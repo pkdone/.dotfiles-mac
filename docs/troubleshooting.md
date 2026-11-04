@@ -24,12 +24,12 @@ To put it back by hand: System Settings → Keyboard → Keyboard Shortcuts… �
 
 Power settings that need sudo (manual step `ac-sleep`):
 
-- on mains power, the Mac does not sleep on its own (`sudo pmset -c sleep 0`)
+- on mains power, the Mac stays awake while the display is off. That is System Settings → Battery → Options → Prevent automatic sleeping on power adapter when the display is off (`sudo pmset -c sleep 0`). `macconfig` reads the `sleep` line under `AC Power:` in `pmset -g custom`
 - on mains power, the display sleeps after 10 minutes (`sudo pmset -c displaysleep 10`)
 - on battery, the display sleeps after 2 minutes (`sudo pmset -b displaysleep 2`)
 - on mains power, wake for network access is on (`sudo pmset -c womp 1`)
 
-Closing the lid still sleeps the Mac. Battery idle sleep is not changed. The screen still locks. `macconfig-check.sh` reads `pmset -g custom` and warns when one of those values is different. A Fleet reset often puts the sleep timer back. `--fix` does not run the commands, because they need sudo. `macos.sh` may run them and skips them when sudo is not available or you answer no. Run the manual step again in a terminal.
+Closing the lid still sleeps the Mac. Battery idle sleep is not changed. The screen still locks. A desktop Mac has no `AC Power:` section, so the check warns and does not guess a command. `macconfig-check.sh` reads `pmset -g custom` and warns when one of those values is different. A Fleet reset often puts the sleep timer back. `--fix` does not run the commands, because they need sudo. `macos.sh` may run them and skips them when sudo is not available or you answer no. Run the manual step again in a terminal.
 
 The `macos.sh` step that runs the same command is in [Settings](settings.md#macos-defaults).
 
