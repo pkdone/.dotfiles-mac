@@ -79,3 +79,7 @@ macconfig --reset-folder-views             # delete them and restart Finder
 This removes every folder's own view settings: sort order, icon size, list or column view, and icon positions, on the Desktop too. Each folder then opens with the default view. It skips `~/Library`, `~/.Trash`, hidden folders (names starting with `.`), `node_modules`, app and Photos/Music library bundles, other volumes mounted under your home folder, and symlinks. A file it isn't allowed to delete is left alone and counted. Close Finder windows first, because an open window may save its view again. It never runs on its own: `macconfig --fix` and the plain check don't delete these files. If the default itself is not Sort By Name, it says to run `macconfig --fix`.
 
 To fix a single folder instead, open it and choose **View → Show View Options** (`Command + J`) → **Sort By Name**. More on the Finder defaults is in [Settings](settings.md#finder).
+
+## Google Meet Framing
+
+**Framing stays off in Google Meet** (manual step `meet-framing`). With it on, Meet zooms the built-in MacBook camera in too far. In a call, with the camera on: Backgrounds and effects → Appearance tab → Framing off. The toggle says it puts you in the center of the screen. Settings → Video only says video enhancement has moved and points at Backgrounds and effects. The toggle is on the Appearance tab. macOS Centre Stage stays as it is. The value lives in the Meet web app and the Google account, so `macconfig` leaves the step by hand and does not put it back. The full note is in [By hand](settings.md#by-hand).
