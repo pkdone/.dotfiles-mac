@@ -4,10 +4,13 @@
 # other service stays. Writes only when a listed key differs, then runs
 # pbs -flush once. There is no LaunchAgent: this is not the symbolichotkeys
 # map a software update rewrites.
-# 0 and false are the same (defaults prints both).
+# 0 and false are the same (defaults prints both). A quoted field name
+# ("enabled_context_menu" = 0) is the same field as a bare one (ContextMenu = 0).
 set -euo pipefail
 
 DOTDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=../lib/defaults-lib.sh disable=SC1091
+. "$DOTDIR/lib/defaults-lib.sh"
 LIST="${DOTFILES_SERVICES_OFF_LIST:-$DOTDIR/lib/services-off.list}"
 LABEL='Services shortcuts'
 DESIRED='{ enabled_context_menu = 0; enabled_services_menu = 0; presentation_modes = { ContextMenu = 0; ServicesMenu = 0; }; }'
@@ -42,6 +45,8 @@ read_status() {
 }
 
 # The "key" = { ... }; block, including a nested presentation_modes dict.
+# A quoted key keeps its spaces and hyphens. Depth stops at this entry,
+# so the next service is left outside the block.
 service_block() { # key
   awk -v key="$1" '
     function ltrim(s) { sub(/^[[:space:]]+/, "", s); return s }
@@ -81,14 +86,7 @@ flag_off() {
 }
 
 block_field() { # block, field name
-  awk -v name="$2" '
-    $0 ~ ("^[[:space:]]*" name "[[:space:]]*=") {
-      v = $NF
-      gsub(/[;"]/, "", v)
-      print v
-      exit
-    }
-  ' <<<"$1"
+  defaults_read_field "$2" "$1"
 }
 
 block_off() { # block text
