@@ -121,5 +121,27 @@ eq "Show Finder among other shortcuts" '@^$f' "$(finder_show_value '{
 }')"
 eq "missing Show Finder shortcut" "" "$(finder_show_value '{ "Other" = "@o"; }')"
 
+# macOS Tahoe quotes some NSServicesStatus names and leaves others bare.
+# The block below is one entry from `defaults read pbs NSServicesStatus`.
+TAHOE_SAFARI='    "com.apple.Safari - Add to Reading List - addToReadingList" =     {
+        "enabled_context_menu" = 0;
+        "enabled_services_menu" = 0;
+        "presentation_modes" =         {
+            ContextMenu = 0;
+            ServicesMenu = 0;
+        };
+    };'
+eq "tahoe quoted context menu" 0 "$(defaults_read_field enabled_context_menu "$TAHOE_SAFARI")"
+eq "tahoe quoted services menu" 0 "$(defaults_read_field enabled_services_menu "$TAHOE_SAFARI")"
+eq "tahoe bare ContextMenu" 0 "$(defaults_read_field ContextMenu "$TAHOE_SAFARI")"
+eq "tahoe bare ServicesMenu" 0 "$(defaults_read_field ServicesMenu "$TAHOE_SAFARI")"
+eq "bare context menu" 0 "$(defaults_read_field enabled_context_menu '        enabled_context_menu = 0;')"
+eq "quoted context menu on" 1 "$(defaults_read_field enabled_context_menu '        "enabled_context_menu" = 1;')"
+eq "quoted false" false "$(defaults_read_field enabled_context_menu '        "enabled_context_menu" = false;')"
+eq "quoted zero value" 0 "$(defaults_read_field enabled_context_menu '        "enabled_context_menu" = "0";')"
+eq "quoted ContextMenu" 0 "$(defaults_read_field ContextMenu '            "ContextMenu" = 0;')"
+eq "missing services field" "" "$(defaults_read_field enabled_context_menu '        "enabled_services_menu" = 0;')"
+eq "longer field name is not a match" "" "$(defaults_read_field enabled_context_menu '        "enabled_context_menu_extra" = 1;')"
+
 printf '\n%d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

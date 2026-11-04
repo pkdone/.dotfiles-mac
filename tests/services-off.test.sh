@@ -4,7 +4,9 @@
 # lib/services-off.list. A listed key that is already off is not written.
 # A drifted key is merged with -dict-add. Other services stay. pbs -flush
 # runs once after a write, and not when nothing changed. enabled=0 and
-# enabled=false both count as off.
+# enabled=false both count as off. macOS Tahoe quotes some field names.
+# tests/fixtures/pbs-NSServicesStatus-off.txt is that defaults read output.
+# A quoted 0 is off. A quoted 1 is still drift.
 # Run: ./tests/services-off.test.sh
 #
 set -uo pipefail
@@ -13,8 +15,10 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PIN="$DIR/scripts/pin-services-off.sh"
 MACOS="$DIR/macos.sh"
 LIST="$DIR/lib/services-off.list"
+FIXTURE="$DIR/tests/fixtures/pbs-NSServicesStatus-off.txt"
 SAFARI="com.apple.Safari - Add to Reading List - addToReadingList"
 STICKIES="com.apple.Stickies - Make Sticky - makeStickyFromTextService"
+BEFORE="com.example.Before - Leave On - leaveOn"
 KEEP="com.example.Keep - Leave On - leaveOn"
 
 pass=0
@@ -361,6 +365,125 @@ has "a change names its own restore snapshot" "backups -> " "$out"
 eq "a change names one restore snapshot" 1 \
   "$(printf '%s\n' "$out" | grep -c 'backups -> ' || true)"
 miss "macos does not write the service left on" "$KEEP" "$(writes)"
+
+# Tahoe `defaults read`: quoted menu names, bare ContextMenu / ServicesMenu,
+# service keys with spaces and hyphens. An unlisted service stays on at
+# either end so a block that runs past its closing brace looks like drift.
+has "fixture quotes the menu name" '        "enabled_context_menu" = 0;' "$(cat "$FIXTURE")"
+has "fixture quotes the services menu" '        "enabled_services_menu" = 0;' "$(cat "$FIXTURE")"
+has "fixture quotes presentation_modes" '        "presentation_modes" =         {' "$(cat "$FIXTURE")"
+has "fixture leaves ContextMenu bare" '            ContextMenu = 0;' "$(cat "$FIXTURE")"
+has "fixture leaves ServicesMenu bare" '            ServicesMenu = 0;' "$(cat "$FIXTURE")"
+has "fixture quotes the Safari key" "    \"$SAFARI\" =     {" "$(cat "$FIXTURE")"
+has "fixture leaves another service on" '        "enabled_context_menu" = 1;' "$(cat "$FIXTURE")"
+while IFS= read -r key; do
+  has "fixture includes $key" "\"$key\"" "$(cat "$FIXTURE")"
+done <<EOF
+$(list_keys)
+EOF
+
+cp "$FIXTURE" "$state"
+out="$(run_pin "$PIN" --check)"
+rc=$?
+ok "quoted off --check exits 0" "$rc"
+has "quoted off --check says off" "ok (off)" "$out"
+out="$(run_pin "$PIN")"
+rc=$?
+ok "quoted off pin exits 0" "$rc"
+has "quoted off pin leaves them alone" "left alone" "$out"
+eq "quoted off pin does not write" 0 "$(write_count)"
+eq "quoted off pin does not flush" 0 "$(flush_count)"
+miss "quoted off pin does not write the service before" "$BEFORE" "$(writes)"
+miss "quoted off pin does not write the keeper" "$KEEP" "$(writes)"
+out="$(run_check)"
+has "quoted check passes when every listed service is off" \
+  "PASS Services shortcuts in lib/services-off.list are off" "$out"
+miss "quoted check does not drift when off" "BAD Services shortcuts still on" "$out"
+out="$(run_macos --only @services-off)"
+rc=$?
+note_backups "$out"
+ok "macos leaves quoted-off services" "$rc"
+has "macos says quoted services were left alone" "Services shortcuts already off (left alone)" "$out"
+eq "macos does not write when the quoted keys are off" 0 "$(write_count)"
+eq "macos does not flush when the quoted keys are off" 0 "$(flush_count)"
+
+# false, with the same quoted names Tahoe prints for 0.
+awk '{ gsub(/ = 0;/, " = false;"); print }' "$FIXTURE" > "$state"
+out="$(run_pin "$PIN" --check)"
+rc=$?
+ok "quoted false --check exits 0" "$rc"
+out="$(run_pin "$PIN")"
+eq "quoted false does not write" 0 "$(write_count)"
+out="$(run_check)"
+has "quoted check passes when the flags are false" \
+  "PASS Services shortcuts in lib/services-off.list are off" "$out"
+
+# Nested presentation names quoted as well. Still off.
+awk '{
+  gsub(/ContextMenu = /, "\"ContextMenu\" = ")
+  gsub(/ServicesMenu = /, "\"ServicesMenu\" = ")
+  print
+}' "$FIXTURE" > "$state"
+out="$(run_pin "$PIN" --check)"
+rc=$?
+ok "quoted ContextMenu --check exits 0" "$rc"
+out="$(run_check)"
+has "quoted check passes when ContextMenu is quoted" \
+  "PASS Services shortcuts in lib/services-off.list are off" "$out"
+
+# Safari's context menu is on. The other listed services stay off.
+awk '
+  /Add to Reading List/ { grab = 1 }
+  grab && /"enabled_context_menu"/ { sub(/= 0;/, "= 1;"); grab = 0 }
+  { print }
+' "$FIXTURE" > "$state"
+out="$(run_pin "$PIN" --check)"
+rc=$?
+eq "quoted safari on --check fails" 1 "$rc"
+has "quoted safari on --check names Safari" "$SAFARI" "$out"
+miss "quoted safari on --check does not name Stickies" "$STICKIES" "$out"
+miss "quoted safari on --check does not name the keeper" "$KEEP" "$out"
+out="$(run_pin "$PIN")"
+eq "quoted safari on writes once" 1 "$(write_count)"
+has "quoted safari on uses dict-add" "NSServicesStatus -dict-add" "$(writes)"
+has "quoted safari on writes the Safari key" "$SAFARI" "$(writes)"
+miss "quoted safari on does not write Stickies" "$STICKIES" "$(writes)"
+miss "quoted safari on does not write the service before" "$BEFORE" "$(writes)"
+miss "quoted safari on does not write the keeper" "$KEEP" "$(writes)"
+eq "quoted safari on flushes once" 1 "$(flush_count)"
+out="$(run_check)"
+has "quoted check names Safari when the menu is on" "BAD Services shortcuts still on: $SAFARI " "$out"
+miss "quoted check does not name Stickies when only Safari is on" "$STICKIES" "$out"
+out="$(run_macos --dry-run --only @services-off)"
+rc=$?
+note_backups "$out"
+ok "macos dry-run sees the quoted menu that is on" "$rc"
+has "macos dry-run names the quoted change" "Services shortcuts -> off (dry-run)" "$out"
+eq "macos dry-run does not write the quoted menu" 0 "$(write_count)"
+out="$(run_macos --only @services-off)"
+rc=$?
+note_backups "$out"
+ok "macos repairs the quoted menu that is on" "$rc"
+eq "macos writes once for the quoted menu" 1 "$(write_count)"
+eq "macos flushes once for the quoted menu" 1 "$(flush_count)"
+miss "macos does not write the quoted keeper" "$KEEP" "$(writes)"
+
+# Menus off, ContextMenu on. Still drift.
+awk '
+  /Add to Reading List/ { grab = 1 }
+  grab && /ContextMenu = 0;/ { sub(/= 0;/, "= 1;"); grab = 0 }
+  { print }
+' "$FIXTURE" > "$state"
+out="$(run_pin "$PIN" --check)"
+rc=$?
+eq "quoted ContextMenu on --check fails" 1 "$rc"
+has "quoted ContextMenu on --check names Safari" "$SAFARI" "$out"
+miss "quoted ContextMenu on --check does not name Stickies" "$STICKIES" "$out"
+out="$(run_check)"
+has "quoted check names Safari when ContextMenu is on" "BAD Services shortcuts still on: $SAFARI " "$out"
+out="$(run_pin "$PIN")"
+eq "quoted ContextMenu on writes once" 1 "$(write_count)"
+has "quoted ContextMenu on writes the Safari key" "$SAFARI" "$(writes)"
 
 printf 'services-off tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

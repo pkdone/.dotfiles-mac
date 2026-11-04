@@ -18,7 +18,7 @@ To put it back by hand: System Settings → Keyboard → Keyboard Shortcuts… �
 
 ## Services shortcuts
 
-**Services shortcuts stay off.** System Settings → Keyboard → Keyboard Shortcuts → Services. The keys in `lib/services-off.list` are saved in `pbs` `NSServicesStatus` with both menus off (`enabled_context_menu` and `enabled_services_menu` are 0 or false, and `presentation_modes` ContextMenu and ServicesMenu are 0 or false). Stickies only had the Services menu saved; the pin writes both menus off, and the same presentation modes Safari already has.
+**Services shortcuts stay off.** System Settings → Keyboard → Keyboard Shortcuts → Services. The keys in `lib/services-off.list` are saved in `pbs` `NSServicesStatus` with both menus off (`enabled_context_menu` and `enabled_services_menu` are 0 or false, and `presentation_modes` ContextMenu and ServicesMenu are 0 or false). On macOS Tahoe, `defaults read pbs NSServicesStatus` quotes the menu names (`"enabled_context_menu" = 0`) and leaves `ContextMenu` and `ServicesMenu` bare. Those quoted zeroes are off. A missing name, or a value other than 0 or false, is still on. Stickies only had the Services menu saved; the pin writes both menus off, and the same presentation modes Safari already has.
 
 `macos.sh` and `macconfig --fix` merge each drifted key with `defaults write pbs NSServicesStatus -dict-add` and leave every other service as it is. They write only when a listed key differs. After a write, `/System/Library/CoreServices/pbs -flush` reloads the Services menu. There is no LaunchAgent. `macos.sh` on a fresh Mac and `macconfig --fix` put a drifted key back, the same way Spotlight's Command+Space is repaired.
 

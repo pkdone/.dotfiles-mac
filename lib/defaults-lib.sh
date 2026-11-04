@@ -113,6 +113,41 @@ type_token() {  # our type -> `defaults read-type` word
   esac
 }
 
+# One field from a `defaults read` old-style block. macOS Tahoe quotes some
+# dictionary names ("enabled_context_menu" = 0;) and leaves others bare
+# (ContextMenu = 0;). Both are the same field. Prints the value with the
+# trailing semicolon and any quotes removed. A missing name prints nothing.
+# Callers isolate one service entry first. A later entry with the same field
+# name is not this value. A here-string, not a pipe: awk exits at the match,
+# and pipefail would otherwise abort the caller on a value that was found.
+defaults_read_field() { # name  block-text
+  awk -v name="$1" '
+    function ltrim(s) { sub(/^[[:space:]]+/, "", s); return s }
+    {
+      t = ltrim($0)
+      if (substr(t, 1, 1) == "\"") {
+        rest = substr(t, 2)
+        q = index(rest, "\"")
+        if (q < 1) next
+        got = substr(rest, 1, q - 1)
+        after = ltrim(substr(rest, q + 1))
+      } else {
+        eq = index(t, " =")
+        if (eq < 1) next
+        got = substr(t, 1, eq - 1)
+        after = ltrim(substr(t, eq + 1))
+      }
+      if (got != name || substr(after, 1, 1) != "=") next
+      sub(/^=[[:space:]]*/, "", after)
+      sub(/;.*/, "", after)
+      sub(/[[:space:]]+$/, "", after)
+      gsub(/"/, "", after)
+      print after
+      exit
+    }
+  ' <<<"$2"
+}
+
 # The Show Finder menu shortcut is one entry in a dictionary, so it is not a
 # row in lib/macos-defaults.list. Pull that entry out of `defaults read` text.
 # Prints the key equivalent (for example @^$f) or nothing.

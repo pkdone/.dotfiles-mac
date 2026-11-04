@@ -7,6 +7,8 @@
 # macos.sh merges each key into NSServicesStatus (it does not replace the
 # dictionary). A key is off when enabled_context_menu, enabled_services_menu,
 # and presentation_modes ContextMenu and ServicesMenu are 0 or false.
+# defaults read may quote a name ("enabled_context_menu" = 0) or leave it
+# bare (ContextMenu = 0). Both are the same field.
 # A missing key is written. A key that is already off is left alone.
 # Stickies had only enabled_services_menu saved; the pin sets both menus off.
 #

@@ -6,6 +6,10 @@
 # (@HOME@ -> $HOME). launchd does not expand ~ or $HOME, so a symlink to the
 # repo plist would watch the literal placeholder. Drift when the installed
 # bytes differ or the job isn't loaded.
+# defaults_read_field is shared with scripts/pin-services-off.sh. The path is
+# relative to this file so a test can source the check without DOTDIR.
+# shellcheck source=../lib/defaults-lib.sh disable=SC1091
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/defaults-lib.sh"
 check_repo_launchagent() {  # label  loaded-ok-text
   local label="$1" loaded_ok="$2" plist la_msg
   case " ${LAUNCHAGENT_CHECKED:-} " in
@@ -152,7 +156,10 @@ service_off_key() { # line
 }
 
 # Fields of one NSServicesStatus entry. Missing fields stay empty.
-# 0 and false both count as off.
+# 0 and false both count as off. Quoted and bare names both count.
+# The walk matches a quoted service key (spaces and hyphens stay inside the
+# quotes) and stops when that entry's braces close, so the next service is
+# not part of this block.
 read_service_block() { # key  plist-text
   local key="$1" text="$2" blk
   svc_context=""
@@ -187,10 +194,10 @@ read_service_block() { # key  plist-text
       if (depth <= 0) exit
     }
   ' <<<"$text")"
-  svc_context="$(awk '/^[[:space:]]*enabled_context_menu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
-  svc_services="$(awk '/^[[:space:]]*enabled_services_menu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
-  svc_context_mode="$(awk '/^[[:space:]]*ContextMenu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
-  svc_services_mode="$(awk '/^[[:space:]]*ServicesMenu[[:space:]]*=/ { v=$NF; gsub(/[;"]/, "", v); print v; exit }' <<<"$blk")"
+  svc_context="$(defaults_read_field enabled_context_menu "$blk")"
+  svc_services="$(defaults_read_field enabled_services_menu "$blk")"
+  svc_context_mode="$(defaults_read_field ContextMenu "$blk")"
+  svc_services_mode="$(defaults_read_field ServicesMenu "$blk")"
 }
 
 service_flag_off() {
@@ -373,7 +380,8 @@ check_pdone_launchagents
 
 # ---- 9c. Services shortcuts (pbs NSServicesStatus) -----------------------
 # Keys in lib/services-off.list stay off: both menus and both presentation
-# modes are 0 or false. Other services are not written. No LaunchAgent.
+# modes are 0 or false. defaults read may quote the name. Other services are
+# not written. No LaunchAgent.
 # CotEditor, TextEdit, and Summarise have no saved entry and are not listed.
 hdr "Services shortcuts"
 check_services_off
