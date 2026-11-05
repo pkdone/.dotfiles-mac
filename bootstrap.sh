@@ -4,8 +4,10 @@
 # order, each behind a confirmation prompt:
 #
 #   1. install.sh   symlinks, the Cursor origin CLI when ~/.local/bin/origin is
-#                   missing or not executable, Brewfile, mise trust, and start
-#                   Hammerspoon when it is installed and not already running
+#                   missing or not executable, Brewfile, mise trust, start
+#                   Hammerspoon when it is installed and not already running,
+#                   and Tailscale on with the recommended exit node when that
+#                   CLI is signed in. A missing Tailscale does not fail setup.
 #   2. shell.sh     make fish the login shell
 #   3. hostname.sh  set HostName / LocalHostName / ComputerName
 #   4. macos.sh     apply the managed macOS defaults

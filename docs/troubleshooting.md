@@ -57,6 +57,12 @@ Homebrew does not ship the Cursor `origin` command, so `brewsync` will not insta
 
 That installer rewrites the global git config, and the published script has no switch to skip it. `~/.gitconfig` is a symlink to this repo's `gitconfig`, so a hand run (`curl -fsSL https://downloads.cursor.com/origin/install.sh | sh`) edits the tracked file: the `!$HOME` credential helpers become an absolute home path, and the blank `helper =` lines move. Do not commit that. `install.sh` and `macconfig --fix` copy `gitconfig` before the installer and put the copy back when the bytes change. A hand run does not. If the file is already dirty, restore that one file with `git checkout -- gitconfig`.
 
+## Tailscale exit node
+
+**Tailscale should be running with an exit node selected.** The tailnet is managed. `ExitNode.AllowOverride` can be false, and then the Tailscale menu bar ignores an exit-node change. `tailscale set --exit-node=...` can fail the same way. `macconfig` still passes when Tailscale is running and any exit node is already selected. It does not try to switch that node for the current recommendation.
+
+If Tailscale is running and no exit node is selected, the Tailscale section warns. `macconfig --fix` and `install.sh` try the recommended node (`auto:any` when the CLI offers it, otherwise `tailscale exit-node suggest`). When that command is refused, the warning stays. Nothing in this repo uses sudo for it, and nothing edits the Fleet or MDM profile. Sign-in is still manual step `tailscale-signin`. A Mac without the Tailscale CLI, or a CLI that does not answer, is the same kind of warning: setup continues.
+
 ## Docker Desktop and fish/config.fish
 
 On its first start, Docker Desktop may put its own block at the top of `~/.config/fish/config.fish`, which is a link to this repo's `fish/config.fish`. The block starts with the comment "The following lines were added by Docker Desktop" and adds a fixed `export PATH` line with your home folder in it. Don't commit it. `fish/config.fish` already adds `~/.docker/bin` the fish way, after Homebrew, and only when that folder exists. Delete Docker's block, from its first comment through "End of Docker Desktop section". `macconfig` warns under Login shell while the block is there. `--fix` does not remove it, because it never edits repo files.

@@ -93,6 +93,7 @@ Karabiner Fn-kill
 Karabiner background
 Hammerspoon
 Login Items
+Tailscale
 Finder sidebar Recents
 Finder Favorites
 Finder sidebar rows

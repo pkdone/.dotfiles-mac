@@ -3,7 +3,11 @@
 # Sourced by macconfig-check.sh. Runs in the current shell (not a subshell)
 # so a failing command still stops the check the way it did before the split.
 # scripts/manual-steps.sh calls check_step_tailscale_login (@macconfig:login-items).
+# The Tailscale heading below is the running / exit-node check. It is its own
+# heading so a warning there does not change the Login Items rollup.
 # ---- 11. Login Items (Tailscale stays in Open at Login) ----
+# shellcheck source=../lib/safe-fixers.sh disable=SC1091
+. "$DOTDIR/lib/safe-fixers.sh"
 # Tailscale has no launch-at-login switch of its own. Paul adds
 # /Applications/Tailscale.app under Open at Login. This only reads.
 # The repo does not add login items (osascript "make login item" is not
@@ -76,9 +80,47 @@ print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleIdentifier") or "")' \
   info "Open at Login could not be read, so Tailscale stays by hand — $TAILSCALE_LOGIN_HOW"
 }
 
+# Tailscale should be running with an exit node selected. Any selected node
+# passes, including one managed policy chose. Not installed, not signed in,
+# stopped, still starting, unreadable, or running with no exit node is a
+# warning: those do not fail macconfig. The message is one line and does not
+# include node ids, addresses, or keys. safe_tailscale_exit is the SAFE fixer.
+check_tailscale_exit() {
+  local bin="" state=""
+  fixid tailscale-exit
+  CHECKED=$((CHECKED + 1))
+  if ! bin="$(tailscale_bin)"; then
+    warn "Tailscale is not installed — install it from Fleet Self service (Fleet Desktop menu bar → My device → Self service). macconfig --fix does not install it"
+    return 0
+  fi
+  state="$(tailscale_exit_probe "$bin")"
+  case "$state" in
+    running-exit)
+      pass "Tailscale is running with an exit node selected"
+      ;;
+    logged-out)
+      warn "Tailscale is not signed in — open it and sign in with your work account (manual step tailscale-signin). macconfig --fix does not sign in"
+      ;;
+    starting)
+      warn "Tailscale is still starting. macconfig --fix leaves it alone until it is running"
+      ;;
+    stopped)
+      warn "Tailscale is signed in but not running. macconfig --fix turns it on and selects the recommended exit node when none is selected"
+      ;;
+    running-none)
+      warn "Tailscale is running with no exit node selected. macconfig --fix selects the recommended one. If managed policy blocks the change, this stays a warning, and any selected exit node counts"
+      ;;
+    *)
+      warn "Tailscale status could not be read. Leave it if it is offline; macconfig --fix tries again and does not fail the run"
+      ;;
+  esac
+}
+
 if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
   return 0
 fi
 
 hdr "Login Items"
 check_step_tailscale_login
+hdr "Tailscale"
+check_tailscale_exit

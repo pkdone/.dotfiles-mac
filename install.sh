@@ -2,14 +2,15 @@
 #
 # install.sh — bootstrap this machine: symlink configs into ~/.config, install the
 # Cursor origin CLI when ~/.local/bin/origin is missing or not executable, install
-# the Brewfile, start Hammerspoon if it is installed and not running, and trust the
+# the Brewfile, start Hammerspoon if it is installed and not running, turn Tailscale
+# on and select its recommended exit node when that CLI is signed in, and trust the
 # mise config. Login shell, hostname, macOS defaults and the Dock are separate
 # scripts; bootstrap.sh runs the whole sequence in order. Ends by printing the
 # manual steps (lib/manual-steps.list) and, on a terminal, offering to walk
 # through them.
 #
 # Flags:
-#   --dry-run    Describe the steps, including the origin install and the Hammerspoon start; change nothing.
+#   --dry-run    Describe the steps, including the origin install, the Hammerspoon start, and Tailscale; change nothing.
 #   -h, --help   Show usage.
 #
 # Safe to re-run. Existing correct symlinks are repointed harmlessly; if a *real*
@@ -44,9 +45,11 @@ Usage: install.sh [--dry-run]
   Symlink configs, install the Cursor origin CLI when ~/.local/bin/origin is
   missing or not executable, install the Brewfile, and trust mise. After the
   Hammerspoon cask and the hammerspoon/ symlink, start Hammerspoon if it is
-  installed and not already running. Idempotent. The origin install and the
-  Hammerspoon start are lib/safe-fixers.sh, the same helpers macconfig --fix uses.
-  --dry-run    Describe those steps, including origin and the Hammerspoon start; change nothing.
+  installed and not already running. When the Tailscale CLI is signed in,
+  turn it on if it is stopped and select the recommended exit node when none
+  is selected. Idempotent. The origin install, the Hammerspoon start, and
+  Tailscale are lib/safe-fixers.sh, the same helpers macconfig --fix uses.
+  --dry-run    Describe those steps, including origin, the Hammerspoon start, and Tailscale; change nothing.
   -h, --help   Show this help.
 USAGE
       exit 0 ;;
@@ -66,6 +69,8 @@ if [ "$DRY_RUN" = 1 ]; then
   # start even when Hammerspoon.app is not there yet. The real run below uses
   # the same helper with DRY_RUN unset.
   SAFE_HAMMERSPOON_DESCRIBE=1 safe_start_hammerspoon
+  echo "  Tailscale:"
+  safe_tailscale_exit || true
   echo "Dry run complete."
   exit 0
 fi
@@ -202,6 +207,17 @@ hs_rc=0
 safe_start_hammerspoon || hs_rc=$?
 if [ "$hs_rc" -eq 1 ]; then
   echo "  not started."
+fi
+
+echo ""
+echo "Tailscale (turn it on when it is signed in, and select the recommended exit node when none is selected)..."
+# Same helper as macconfig --fix. A missing CLI, a signed-out app, an offline
+# daemon, or a managed policy that refuses the exit node does not stop setup.
+# The helper already says which of those it was. No sudo.
+ts_rc=0
+safe_tailscale_exit || ts_rc=$?
+if [ "$ts_rc" -ne 0 ]; then
+  echo "  left unchanged."
 fi
 
 echo ""

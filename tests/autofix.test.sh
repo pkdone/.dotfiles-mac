@@ -35,7 +35,7 @@ rows() { awk -F'|' '$1 !~ /^#/ && NF' "$LIST"; }
 bad_rows="$(rows | awk -F'|' '
   NF != 4                                   { print NR ": " $0 " (want 4 fields)"; next }
   $2 != "SAFE" && $2 != "PAUL"              { print NR ": " $0 " (class must be SAFE or PAUL)"; next }
-  $2 == "SAFE" && $3 !~ /^(macos|launchagent|symlink|hammerspoon|desktop|fileext|dockrestart|origin)$/ { print NR ": " $0 " (unknown fixer)"; next }
+  $2 == "SAFE" && $3 !~ /^(macos|launchagent|symlink|hammerspoon|desktop|fileext|dockrestart|origin|tailscale)$/ { print NR ": " $0 " (unknown fixer)"; next }
   $2 == "PAUL" && $3 != ""                  { print NR ": " $0 " (PAUL rows have no fixer)"; next }
   $4 == ""                                  { print NR ": " $0 " (missing description)"; next }
   $1 !~ /^[a-z0-9-]+$/                      { print NR ": " $0 " (id must be [a-z0-9-])" }')"
@@ -43,13 +43,14 @@ eq "every autofix.list row is well formed" "" "$bad_rows"
 eq "ids are unique" "" "$(rows | cut -d'|' -f1 | sort | uniq -d)"
 
 # ---- the classes Paul asked for ----
-for id in defaults dictation-164 quicknote-190 gameoverlay-260 spotlight-64 services-off finder-icon-view finder-recents coteditor launchagent symlink hammerspoon origin desktop-assign file-handler display-more-space arzopa-display dock-space; do
+for id in defaults dictation-164 quicknote-190 gameoverlay-260 spotlight-64 services-off finder-icon-view finder-recents coteditor launchagent symlink hammerspoon origin tailscale-exit desktop-assign file-handler display-more-space arzopa-display dock-space; do
   eq "$id is SAFE" SAFE "$(autofix_class "$LIST" "$id")"
 done
 eq "desktop-assign fixer is desktop" desktop "$(autofix_lookup "$LIST" desktop-assign | cut -d'|' -f2)"
 eq "file-handler fixer is fileext" fileext "$(autofix_lookup "$LIST" file-handler | cut -d'|' -f2)"
 eq "dock-space fixer is dockrestart" dockrestart "$(autofix_lookup "$LIST" dock-space | cut -d'|' -f2)"
 eq "origin fixer is origin" origin "$(autofix_lookup "$LIST" origin | cut -d'|' -f2)"
+eq "tailscale-exit fixer is tailscale" tailscale "$(autofix_lookup "$LIST" tailscale-exit | cut -d'|' -f2)"
 for id in brew app-install unwanted-app dock-apps login-shell docker-path-block hostname auto-brightness ac-sleep notifications url-handler \
           login-items tcc manual-step mouse-settings pointer-size input-british gh-auth 1password-cli mdm security software-update delete-files dotfiles-git \
           karabiner-rules repo-file launchagent-exit health tooling broken-symlink hammerspoon-config launchagent-template; do
@@ -110,6 +111,13 @@ has "macconfig-check.sh installs origin through the helper" "safe_install_origin
 has "install.sh installs origin through the helper" "safe_install_origin" "$(cat "$DIR/install.sh")"
 miss "macconfig-check.sh does not curl the origin installer" "downloads.cursor.com/origin/install.sh" "$(cat "$DIR/macconfig-check.sh")"
 miss "install.sh does not curl the origin installer" "downloads.cursor.com/origin/install.sh" "$(cat "$DIR/install.sh")"
+
+has "helper sets the Tailscale exit node" "safe_tailscale_exit" "$helper"
+has "macconfig-check.sh sets Tailscale through the helper" "safe_tailscale_exit" "$(cat "$DIR/macconfig-check.sh")"
+has "install.sh sets Tailscale through the helper" "safe_tailscale_exit" "$(cat "$DIR/install.sh")"
+has "a Tailscale miss does not abort install.sh" 'safe_tailscale_exit || ts_rc=$?' "$(cat "$DIR/install.sh")"
+miss "macconfig-check.sh does not invoke the Tailscale CLI" "exit-node" "$(cat "$DIR/macconfig-check.sh")"
+miss "install.sh does not invoke the Tailscale CLI" "exit-node" "$(cat "$DIR/install.sh")"
 
 printf 'autofix tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
