@@ -41,3 +41,16 @@ if [ -f "$fish_config" ]; then
     pass "fish/config.fish has no Docker Desktop PATH block"
   fi
 fi
+
+# gitconfig calls this path. fish/config.fish adds ~/.local/bin to PATH.
+# Homebrew has no origin formula. install.sh and macconfig --fix run Cursor's
+# installer only when the file is missing or not executable (lib/safe-fixers.sh).
+# A directory is not a binary: -x is true for a searchable directory.
+fixid origin
+CHECKED=$((CHECKED + 1))
+origin_bin="${ORIGIN_BIN:-$HOME/.local/bin/origin}"
+if [ -f "$origin_bin" ] && [ -x "$origin_bin" ]; then
+  pass "origin installed at $origin_bin"
+else
+  warn "origin missing or not executable at $origin_bin — run install.sh, or macconfig --fix (Cursor installer, no sudo)"
+fi

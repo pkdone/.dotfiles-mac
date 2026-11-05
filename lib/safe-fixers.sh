@@ -7,6 +7,9 @@
 #   safe_start_hammerspoon   open -g -a Hammerspoon, only if installed and not running
 #   safe_apply_desktops      lib/desktop-bindings.py --apply (backup, app-bindings,
 #                            restart Dock only if a pin changed)
+#   safe_install_origin      Cursor's origin installer, only when
+#                            $HOME/.local/bin/origin is missing or not an
+#                            executable file. No sudo, no version pin.
 #
 # DRY_RUN=1 prints what would happen and changes nothing. No sudo.
 
@@ -49,6 +52,42 @@ safe_start_hammerspoon() {
     return 0
   fi
   echo "open -a Hammerspoon didn't start it"
+  return 1
+}
+
+# Install the Cursor origin CLI when the binary is missing or not executable.
+# Homebrew has no formula. The official installer writes $HOME/.local/bin/origin
+# and does not use sudo. An executable file is left alone, so a later run does
+# not download and does not pin a version.
+#
+# ORIGIN_BIN overrides the path (tests). ORIGIN_INSTALL_URL overrides the
+# installer URL. Prints one line. Returns 0 (already installed, installed, or
+# dry-run) or 1 (the installer failed, or it finished without an executable).
+safe_install_origin() {
+  local bin url shown
+  bin="${ORIGIN_BIN:-$HOME/.local/bin/origin}"
+  url="${ORIGIN_INSTALL_URL:-https://downloads.cursor.com/origin/install.sh}"
+  shown="$bin"
+  case "$shown" in
+    "$HOME"/*) shown="~${shown#"$HOME"}" ;;
+  esac
+  if [ -f "$bin" ] && [ -x "$bin" ]; then
+    echo "origin already installed ($shown)"
+    return 0
+  fi
+  if [ "${DRY_RUN:-0}" = 1 ]; then
+    echo "would install origin (curl -fsSL $url | sh) because $shown is missing or not executable"
+    return 0
+  fi
+  if curl -fsSL "$url" | sh; then
+    if [ -f "$bin" ] && [ -x "$bin" ]; then
+      echo "installed origin ($shown)"
+      return 0
+    fi
+    echo "origin installer finished but $shown is still missing or not executable"
+    return 1
+  fi
+  echo "origin installer failed ($shown)"
   return 1
 }
 

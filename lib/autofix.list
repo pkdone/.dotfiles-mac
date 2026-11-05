@@ -26,6 +26,11 @@
 #             fileext      lib/file-handlers.py --apply (duti -s BUNDLE .ext all).
 #                          An extension whose only UTI is dyn.* (duti error -50)
 #                          is skipped with a warning. It is not drift.
+#             origin       lib/safe-fixers.sh safe_install_origin. Runs
+#                          curl -fsSL https://downloads.cursor.com/origin/install.sh | sh
+#                          only when $HOME/.local/bin/origin is missing or not an
+#                          executable file. No sudo, no version pin. install.sh
+#                          calls the same helper.
 # An id that isn't listed here is treated as PAUL ("not classified").
 # Blank lines and lines beginning with # are ignored.
 
@@ -44,6 +49,7 @@ coteditor|SAFE|macos|CotEditor theme + monospaced font (macos.sh)
 launchagent|SAFE|launchagent|repo LaunchAgent rendered from launchagents/ (@HOME@ -> $HOME) and loaded; a plist that differs from the repo is rewritten and reloaded with launchctl bootout then bootstrap
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
 hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon, only if installed and not running). install.sh does this after the cask and the hammerspoon/ symlink, via lib/safe-fixers.sh
+origin|SAFE|origin|Cursor origin CLI at ~/.local/bin/origin (git credential helper for origin.cursor.com). Homebrew has no formula. install.sh and --fix run https://downloads.cursor.com/origin/install.sh only when that path is missing or not an executable file. No sudo, no version pin. A present executable is left alone
 dock-space|SAFE|dockrestart|the Dock is showing (auto-hide off) but macOS keeps no space for it on its edge, so Fill puts windows under it. Measured with Hammerspoon (hs -c) or NSScreen (osascript), usable area against the full screen. Restarting the Dock (killall Dock) brings the space back; no preference is written
 desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; an @APP@ path reads CFBundleIdentifier and a missing app is not written; restarts Dock). dock.sh applies the full list the same way, via lib/safe-fixers.sh, after it pins the Dock apps
 file-handler|SAFE|fileext|Finder double-click defaults from lib/file-handlers.list (duti -s BUNDLE .ext all; an extension with only a dyn.* UTI is skipped, not drift)
