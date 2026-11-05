@@ -150,7 +150,8 @@ fi
 echo ""
 echo "📦 Origin CLI (Cursor; ~/.local/bin/origin)..."
 # gitconfig's credential helper is this path. Homebrew has no formula. The
-# helper downloads only when the file is missing or not executable. A failure
+# helper downloads only when the file is missing or not executable, and puts
+# the repo gitconfig back if the installer rewrites it. A failure
 # does not stop the rest of setup: the Login shell check warns, and a later
 # run (or macconfig --fix) tries again.
 origin_rc=0
