@@ -61,6 +61,14 @@ Spotlight's Command+Space is macOS symbolic hotkey 64, not a Raycast setting. Th
 
 **Logi Options+: checked, never written.** The values are in [Logi Options+](#logi-options). Logi Options+ keeps them as JSON inside a private SQLite database (`~/Library/Application Support/LogiOptionsPlus/settings.db`; the agent caches it and syncs it to the mouse). `lib/logi-settings.py` copies the database (plus its `-wal` / `-shm`) to a temp dir, reads the copy read-only, deletes it, and compares the MX Master 3S (model `2b034`, not serial number) with `lib/logi-expected.list`. The **Logi Options+** section of `macconfig-check.sh` reports drift as **Needs Paul** (`logi-settings` in `lib/autofix.list`; `--fix` never touches it), and a missing app, missing database or unreadable format as a warning (`logi-unreadable`), never a failure of the run. Restore is by hand in the app or from Logi's cloud backup (manual step `logi-cloud-backup`). Cloud backup itself stays **by hand**: the **Automatically backup all devices** toggle and the last-backup time aren't in any readable local file (the per-device `settings_backup_state_v2` flags in `settings.db` stay false with backup on), so there's nothing reliable to check. Manual step `logi-smooth-scrolling` uses the same helper (`logi:<id>` check). The macOS natural-scrolling switch is global and also flips the trackpad, so the wheel direction stays in Logi Options+.
 
+## Origin CLI
+
+**Scripted + checked** (`install.sh` / the **Login shell** section of `macconfig-check.sh`).
+
+Homebrew has no formula or cask for the Cursor `origin` command. `gitconfig` calls `!$HOME/.local/bin/origin credential-helper` for `https://origin.cursor.com` and `https://origin.cursor.com/git`. `fish/config.fish` adds `$HOME/.local/bin` to `PATH`.
+
+`install.sh` (the first step of `bootstrap.sh`) runs Cursor's installer, `curl -fsSL https://downloads.cursor.com/origin/install.sh | sh`, only when `$HOME/.local/bin/origin` is missing or not an executable file. A directory does not count. A second run leaves an existing executable alone. There is no version pin and no sudo. `--dry-run` describes that step and does not download. The check warns when the file is missing or not executable. That warning does not fail `macconfig`. `macconfig --fix` runs the same helper (`origin` in `lib/autofix.list`). `macconfig --only shell` includes this check.
+
 ## macOS defaults
 
 > _Run by `bootstrap.sh`; the commands below run only this step._

@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 #
 # install.sh — bootstrap this machine: symlink configs into ~/.config, install the
-# Brewfile, start Hammerspoon if it is installed and not running, and trust the
+# Cursor origin CLI when ~/.local/bin/origin is missing or not executable, install
+# the Brewfile, start Hammerspoon if it is installed and not running, and trust the
 # mise config. Login shell, hostname, macOS defaults and the Dock are separate
 # scripts; bootstrap.sh runs the whole sequence in order. Ends by printing the
 # manual steps (lib/manual-steps.list) and, on a terminal, offering to walk
 # through them.
 #
 # Flags:
-#   --dry-run    Describe the steps, including the Hammerspoon start; change nothing.
+#   --dry-run    Describe the steps, including the origin install and the Hammerspoon start; change nothing.
 #   -h, --help   Show usage.
 #
 # Safe to re-run. Existing correct symlinks are repointed harmlessly; if a *real*
@@ -40,11 +41,12 @@ for arg in "$@"; do
     -h|--help)
       cat <<'USAGE'
 Usage: install.sh [--dry-run]
-  Symlink configs, install the Brewfile, and trust mise. After the Hammerspoon
-  cask and the hammerspoon/ symlink, start Hammerspoon if it is installed and
-  not already running. Idempotent. The start is lib/safe-fixers.sh, the same
-  helper macconfig --fix uses.
-  --dry-run    Describe those steps, including the Hammerspoon start; change nothing.
+  Symlink configs, install the Cursor origin CLI when ~/.local/bin/origin is
+  missing or not executable, install the Brewfile, and trust mise. After the
+  Hammerspoon cask and the hammerspoon/ symlink, start Hammerspoon if it is
+  installed and not already running. Idempotent. The origin install and the
+  Hammerspoon start are lib/safe-fixers.sh, the same helpers macconfig --fix uses.
+  --dry-run    Describe those steps, including origin and the Hammerspoon start; change nothing.
   -h, --help   Show this help.
 USAGE
       exit 0 ;;
@@ -55,6 +57,8 @@ done
 if [ "$DRY_RUN" = 1 ]; then
   echo "install.sh — dry run (nothing is changed)"
   echo "  would symlink configs from lib/links.list, including hammerspoon/ → ~/.hammerspoon"
+  echo "  Origin CLI:"
+  safe_install_origin
   echo "  would install the Brewfile, including the Hammerspoon cask"
   echo "  would render login LaunchAgents, trust mise, and enable the pre-push hook"
   echo "  Hammerspoon:"
@@ -141,6 +145,18 @@ done
 
 if [ -n "$BACKUP_DIR" ]; then
   echo "  (real files were moved to $BACKUP_DIR)"
+fi
+
+echo ""
+echo "📦 Origin CLI (Cursor; ~/.local/bin/origin)..."
+# gitconfig's credential helper is this path. Homebrew has no formula. The
+# helper downloads only when the file is missing or not executable. A failure
+# does not stop the rest of setup: the Login shell check warns, and a later
+# run (or macconfig --fix) tries again.
+origin_rc=0
+safe_install_origin || origin_rc=$?
+if [ "$origin_rc" -ne 0 ]; then
+  echo "  not installed."
 fi
 
 echo ""

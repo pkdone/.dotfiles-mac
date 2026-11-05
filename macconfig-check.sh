@@ -12,8 +12,8 @@
 # Reuses lib/macos-defaults.list, lib/dock-apps.list, lib/desktop-bindings.list, lib/file-handlers.list, lib/hostname, lib/notification-prefs.py, lib/menubar-allow.py, lib/menubar-allow.list, lib/display-resolution.py, lib/display-resolution.list, lib/ac-sleep.py, lib/defaults-lib.sh and lib/safe-fixers.sh
 # so the verify path uses the exact same data and comparison semantics as the apply path
 # (macos.sh / dock.sh / lib/desktop-bindings.py / lib/file-handlers.py) and the two can never drift.
-# Hammerspoon's start and the Desktop pins go through lib/safe-fixers.sh, which
-# install.sh and dock.sh also call.
+# Hammerspoon's start, the Cursor origin CLI, and the Desktop pins go through
+# lib/safe-fixers.sh. install.sh calls the first two. dock.sh calls the Desktop helper.
 #
 # Each section is a checks/<area>.sh file sourced below, in this order, so the
 # report, the summary, and the exit status stay the same. --only runs a subset.
@@ -141,7 +141,8 @@ Usage: macconfig-check.sh [--no-color] [--health-json] [--fix [--dry-run]] [--on
                  warning counts and messages, plus attention[]) for the weekly health note.
                  With --fix it also carries fixed[] and needs_paul[] (would_fix[] on a dry run).
   --fix          Apply the SAFE fixes from lib/autofix.list for the drift found (reversible
-                 preference writes only), re-check, and print Fixed / Needs Paul lists.
+                 preference writes, plus the origin CLI installer when ~/.local/bin/origin
+                 is missing or not executable), re-check, and print Fixed / Needs Paul lists.
                  Exit status reflects the drift left after the fixes. A missing company
                  app stays a warning. In a terminal the check offers to open Fleet
                  Self service first. --fix does not install it.
@@ -565,6 +566,7 @@ if [ "$FIX" = 1 ]; then
     echo "LaunchAgent $label: ${out:-load failed}"; return 1
   }
   fix_hammerspoon() { safe_start_hammerspoon; }
+  fix_origin() { safe_install_origin; }
 
   # Classify every drift / warning. SAFE items are de-duplicated on id|arg.
   SAFE_ITEMS=()                 # "id US arg US message US fixer"
@@ -598,7 +600,8 @@ if [ "$FIX" = 1 ]; then
   # restart), the same helper dock.sh uses, then one batched
   # file-handlers.py --apply (duti -s for each drifted extension), then LaunchAgents
   # (rewrite a drifted plist and bootout/bootstrap, or bootstrap only if it isn't
-  # loaded), Hammerspoon, and last a Dock restart when macOS stopped keeping space
+  # loaded), Hammerspoon, the origin CLI when ~/.local/bin/origin is missing or
+  # not executable, and last a Dock restart when macOS stopped keeping space
   # for the Dock. FIX_RESULTS[n] = "rc US what happened" for SAFE_ITEMS[n].
   FIX_RESULTS=()
   MACOS_OUT=""
@@ -627,6 +630,7 @@ if [ "$FIX" = 1 ]; then
       symlink)     fix_symlink "$2" ;;
       launchagent) fix_launchagent "$2" ;;
       hammerspoon) fix_hammerspoon ;;
+      origin)      fix_origin ;;
       dockrestart) dock_space_restart ;;
       desktop)
         ml="$(printf '%s\n' "$DESKTOP_OUT" | awk -F'|' -v b="$2" '$2 == b { print; exit }')"
@@ -729,7 +733,7 @@ if [ "$FIX" = 1 ]; then
     fi
     printf '%s\n' "$FILE_OUT" | awk -F'|' 'NF >= 3 && $3 != "" { print "        " $3 }'
   fi
-  fix_pass macos desktop fileext launchagent hammerspoon
+  fix_pass macos desktop fileext launchagent hammerspoon origin
   fix_pass dockrestart
   # Items with a fixer name the dispatcher doesn't know (a typo in lib/autofix.list).
   n=0

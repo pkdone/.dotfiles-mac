@@ -3,8 +3,9 @@
 # bootstrap.sh — set up this machine end to end by running the individual scripts in
 # order, each behind a confirmation prompt:
 #
-#   1. install.sh   symlinks, Brewfile, mise trust, and start Hammerspoon when it
-#                   is installed and not already running
+#   1. install.sh   symlinks, the Cursor origin CLI when ~/.local/bin/origin is
+#                   missing or not executable, Brewfile, mise trust, and start
+#                   Hammerspoon when it is installed and not already running
 #   2. shell.sh     make fish the login shell
 #   3. hostname.sh  set HostName / LocalHostName / ComputerName
 #   4. macos.sh     apply the managed macOS defaults
@@ -80,8 +81,9 @@ for arg in "$@"; do
 Usage: bootstrap.sh [--dry-run] [--yes]
   Run the full machine setup in order: install.sh, shell.sh, hostname.sh,
   macos.sh, dock.sh, handlers.sh, prune-apps.sh — each behind a confirmation prompt. Idempotent and safe
-  to re-run. install.sh starts Hammerspoon when it is installed and not already
-  running. dock.sh applies the Desktop assignments after it pins the Dock apps.
+  to re-run. install.sh installs the Cursor origin CLI when ~/.local/bin/origin
+  is missing or not executable, and starts Hammerspoon when it is installed and
+  not already running. dock.sh applies the Desktop assignments after it pins the Dock apps.
   After install.sh, names any missing company app and, in a terminal,
   offers to open Fleet Self service. A missing company app is a warning, not a
   failed step. Ends with the checklist of manual steps (scripts/manual-steps.sh).
@@ -204,7 +206,7 @@ echo "bootstrap.sh — $([ "$DRYRUN" = 1 ] && echo 'DRY RUN (previewing every st
 # install.sh would otherwise print the manual-steps checklist mid-run; show it once at the end.
 export DOTFILES_BOOTSTRAP=1
 
-step 1 "install.sh — symlinks, Brewfile, start Hammerspoon, mise trust"  install.sh  --dry-run
+step 1 "install.sh — symlinks, origin CLI, Brewfile, start Hammerspoon, mise trust"  install.sh  --dry-run
 # Company apps are not in the Brewfile. Name any that are missing and, on a
 # terminal, offer to open Fleet Self service. --yes and --dry-run only print
 # how to install them. A missing app is a warning; setup continues.

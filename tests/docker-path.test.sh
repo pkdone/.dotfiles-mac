@@ -86,6 +86,11 @@ run_shell_section() (
   pass() { printf 'ok %s\n' "$1"; }
   bad() { printf 'DRIFT %s\n' "$1"; }
   warn() { printf 'warn %s\n' "$1"; }
+  # The Login shell section also checks ~/.local/bin/origin. Plant an
+  # executable so this fixture stays about Docker's PATH block.
+  mkdir -p "$HOME/.local/bin"
+  printf '#!/bin/sh\nexit 0\n' > "$HOME/.local/bin/origin"
+  chmod +x "$HOME/.local/bin/origin"
   # shellcheck source=../checks/shell.sh disable=SC1091
   . "$DIR/checks/shell.sh"
   printf 'checked %s\n' "$CHECKED"
@@ -97,7 +102,7 @@ ln -s "$CONFIG" "$home/.config/fish/config.fish"
 out="$(run_shell_section "$home")"
 has "linked repo config.fish passes" "ok fish/config.fish has no Docker Desktop PATH block" "$out"
 miss "linked repo config.fish does not warn" "warn " "$out"
-has "both shell checks count" "checked 2" "$out"
+has "login shell, Docker, and origin all count" "checked 3" "$out"
 
 rm "$home/.config/fish/config.fish"
 cp "$tmp/top.fish" "$home/.config/fish/config.fish"
@@ -112,7 +117,7 @@ eq "docker-path-block is report only" \
 rm "$home/.config/fish/config.fish"
 out="$(run_shell_section "$home")"
 miss "no config.fish, no Docker line" "Docker" "$out"
-has "no config.fish counts only the login shell" "checked 1" "$out"
+has "no config.fish still checks the login shell and origin" "checked 2" "$out"
 
 # ---- fish puts ~/.docker/bin last, and only when it exists ------------------
 if FISH_BIN="$(hermetic_fish)"; then
