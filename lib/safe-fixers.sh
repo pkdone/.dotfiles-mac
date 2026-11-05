@@ -10,6 +10,8 @@
 #   safe_install_origin      Cursor's origin installer, only when
 #                            $HOME/.local/bin/origin is missing or not an
 #                            executable file. No sudo, no version pin.
+#                            Copies the repo gitconfig and writes it back
+#                            if that run changes it. Only that file.
 #
 # DRY_RUN=1 prints what would happen and changes nothing. No sudo.
 
@@ -60,13 +62,25 @@ safe_start_hammerspoon() {
 # and does not use sudo. An executable file is left alone, so a later run does
 # not download and does not pin a version.
 #
+# The published installer (https://downloads.cursor.com/origin/install.sh) has
+# no option to skip git config. Its variables are ORIGIN_INSTALL_CHANNEL,
+# ORIGIN_INSTALL_DIR, ORIGIN_BIN_DIR, XDG_CONFIG_HOME, and the legacy CO_*
+# names for the first three. On Paul's Mac the installer rewrote ~/.gitconfig:
+# both origin credential helpers became an absolute home path, and the blank
+# helper lines moved. That path is a symlink to this repo's gitconfig, so the
+# tracked file changed. Copy this one file before the installer and write those
+# bytes back only when they differ. Do not restore any other path.
+#
 # ORIGIN_BIN overrides the path (tests). ORIGIN_INSTALL_URL overrides the
-# installer URL. Prints one line. Returns 0 (already installed, installed, or
-# dry-run) or 1 (the installer failed, or it finished without an executable).
+# installer URL. ORIGIN_GITCONFIG overrides the repo gitconfig path (tests).
+# Prints one line. Returns 0 (already installed, installed, or dry-run) or 1
+# (the installer failed, it finished without an executable, or gitconfig could
+# not be snapshotted or restored).
 safe_install_origin() {
-  local bin url shown
+  local bin url shown gitconfig snap rc
   bin="${ORIGIN_BIN:-$HOME/.local/bin/origin}"
   url="${ORIGIN_INSTALL_URL:-https://downloads.cursor.com/origin/install.sh}"
+  gitconfig="${ORIGIN_GITCONFIG:-$SAFE_FIXERS_ROOT/gitconfig}"
   shown="$bin"
   case "$shown" in
     "$HOME"/*) shown="~${shown#"$HOME"}" ;;
@@ -79,16 +93,42 @@ safe_install_origin() {
     echo "would install origin (curl -fsSL $url | sh) because $shown is missing or not executable"
     return 0
   fi
+
+  # Callers run this under `||`, which turns set -e off for the whole function.
+  # A failed snapshot must stop the installer: there would be nothing to put back.
+  snap=""
+  if [ -f "$gitconfig" ]; then
+    snap="$(mktemp)" || snap=""
+    if [ -z "$snap" ] || ! cat "$gitconfig" > "$snap"; then
+      rm -f "$snap"
+      echo "could not snapshot gitconfig ($gitconfig)"
+      return 1
+    fi
+  fi
+
+  rc=0
   if curl -fsSL "$url" | sh; then
     if [ -f "$bin" ] && [ -x "$bin" ]; then
       echo "installed origin ($shown)"
-      return 0
+    else
+      echo "origin installer finished but $shown is still missing or not executable"
+      rc=1
     fi
-    echo "origin installer finished but $shown is still missing or not executable"
-    return 1
+  else
+    echo "origin installer failed ($shown)"
+    rc=1
   fi
-  echo "origin installer failed ($shown)"
-  return 1
+
+  if [ -n "$snap" ]; then
+    if [ ! -f "$gitconfig" ] || ! cmp -s "$snap" "$gitconfig"; then
+      if ! cat "$snap" > "$gitconfig"; then
+        echo "could not restore gitconfig ($gitconfig); snapshot left at $snap"
+        return 1
+      fi
+    fi
+    rm -f "$snap"
+  fi
+  return "$rc"
 }
 
 # Apply lib/desktop-bindings.list. Extra arguments go to desktop-bindings.py

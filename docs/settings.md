@@ -69,6 +69,8 @@ Homebrew has no formula or cask for the Cursor `origin` command. `gitconfig` cal
 
 `install.sh` (the first step of `bootstrap.sh`) runs Cursor's installer, `curl -fsSL https://downloads.cursor.com/origin/install.sh | sh`, only when `$HOME/.local/bin/origin` is missing or not an executable file. A directory does not count. A second run leaves an existing executable alone. There is no version pin and no sudo. `--dry-run` describes that step and does not download. The check warns when the file is missing or not executable. That warning does not fail `macconfig`. `macconfig --fix` runs the same helper (`origin` in `lib/autofix.list`). `macconfig --only shell` includes this check.
 
+The published installer has no switch to skip git config. On this Mac it rewrote `~/.gitconfig`: both `!$HOME/.local/bin/origin credential-helper` lines became an absolute home path, and the blank `helper =` lines moved. That path is a symlink to this repo's `gitconfig`, so the rewrite edits the tracked file and leaves the repo dirty. The helper copies `gitconfig` before the installer runs and writes that copy back when the bytes differ. It restores only that file. It does not check out the repo. A run that does not change the file does not write it.
+
 ## macOS defaults
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
