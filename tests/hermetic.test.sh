@@ -77,7 +77,7 @@ found="$(PATH="$decoy:$PATH" command -v lpstat || true)"
 eq "a planted lpstat is what an inherited PATH would run" "$decoy/lpstat" "$found"
 closed="$(PATH="$safe" command -v lpstat || true)"
 eq "the safe path does not see a planted lpstat" "" "$closed"
-for cmd in pmset system_profiler displayplacer sfltool shortcuts dscl defaults ioreg osascript open; do
+for cmd in pmset system_profiler displayplacer sfltool shortcuts dscl defaults ioreg osascript open tailscale; do
   hit="$(PATH="$safe" command -v "$cmd" || true)"
   eq "the safe path hides $cmd" "" "$hit"
 done

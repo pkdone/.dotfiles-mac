@@ -31,6 +31,12 @@
 #                          only when $HOME/.local/bin/origin is missing or not an
 #                          executable file. No sudo, no version pin. install.sh
 #                          calls the same helper.
+#             tailscale    lib/safe-fixers.sh safe_tailscale_exit. Turns Tailscale
+#                          on when it is signed in but stopped, then selects the
+#                          recommended exit node when none is selected. An exit
+#                          node that is already selected is left alone. No sudo,
+#                          no sign-in, no Fleet or MDM change. install.sh calls
+#                          the same helper. A missing CLI does not fail bootstrap.
 # An id that isn't listed here is treated as PAUL ("not classified").
 # Blank lines and lines beginning with # are ignored.
 
@@ -50,6 +56,7 @@ launchagent|SAFE|launchagent|repo LaunchAgent rendered from launchagents/ (@HOME
 symlink|SAFE|symlink|repo-managed symlink re-pointed (only if the target is a symlink or missing)
 hammerspoon|SAFE|hammerspoon|Hammerspoon started (open -g -a Hammerspoon, only if installed and not running). install.sh does this after the cask and the hammerspoon/ symlink, via lib/safe-fixers.sh
 origin|SAFE|origin|Cursor origin CLI at ~/.local/bin/origin (git credential helper for origin.cursor.com). Homebrew has no formula. install.sh and --fix run https://downloads.cursor.com/origin/install.sh only when that path is missing or not an executable file. No sudo, no version pin. A present executable is left alone
+tailscale-exit|SAFE|tailscale|Tailscale running with an exit node selected. install.sh and macconfig --fix call safe_tailscale_exit. A signed-in stopped CLI is turned on with tailscale up (no --exit-node flag, so a policy refusal cannot keep the tunnel down). When no exit node is selected, tailscale set --exit-node=auto:any if set --help offers it, otherwise the hostname from tailscale exit-node suggest. Any selected exit node counts, and a node already selected is left alone. Not installed, not signed in, offline, or a managed policy that refuses the change is a warning. No sudo, no sign-in, no Fleet or MDM change. A missing CLI does not fail bootstrap
 dock-space|SAFE|dockrestart|the Dock is showing (auto-hide off) but macOS keeps no space for it on its edge, so Fill puts windows under it. Measured with Hammerspoon (hs -c) or NSScreen (osascript), usable area against the full screen. Restarting the Dock (killall Dock) brings the space back; no preference is written
 desktop-assign|SAFE|desktop|Dock Assign To pins from lib/desktop-bindings.list (com.apple.spaces app-bindings; Desktop N is the current Main-display Space UUID; none deletes the key; an @APP@ path reads CFBundleIdentifier and a missing app is not written; restarts Dock). dock.sh applies the full list the same way, via lib/safe-fixers.sh, after it pins the Dock apps
 file-handler|SAFE|fileext|Finder double-click defaults from lib/file-handlers.list (duti -s BUNDLE .ext all; an extension with only a dyn.* UTI is skipped, not drift)
