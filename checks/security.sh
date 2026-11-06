@@ -255,7 +255,11 @@ ssh_audit() {
     return 0
   fi
   rc=0
-  sig="$(printf 'macconfig-check\n' | SSH_ASKPASS_REQUIRE=force with_timeout 10 ssh-keygen -Y sign -n git -f "$priv" 2>&1)" || rc=$?
+  # Here-string so the status is ssh-keygen's. With pipefail, a piped printf
+  # that loses the race (SIGPIPE ignored, as on Actions) reports EPIPE's
+  # exit 1 and a successful sign looks failed. The Tailscale view's stat
+  # preload loses that race. `ssh-keygen -Y sign` still reads this line.
+  sig="$(SSH_ASKPASS_REQUIRE=force with_timeout 10 ssh-keygen -Y sign -n git -f "$priv" <<<"macconfig-check" 2>&1)" || rc=$?
   if [ "$rc" = 0 ] && [ -n "$sig" ]; then
     printf 'ok|git commit signing works (gpg.format=ssh, dry sign with ssh-keygen -Y sign)\n'
   else
