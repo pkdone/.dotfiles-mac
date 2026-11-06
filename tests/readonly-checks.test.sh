@@ -126,7 +126,11 @@ exit "${SSH_ADD_RC:-0}"
 EOF
 cat > "$bin/ssh-keygen" <<'EOF'
 #!/bin/sh
+# `ssh-keygen -Y sign` reads the message on stdin. Drain it, and record it,
+# so an early exit cannot turn the dry sign into an EPIPE under pipefail.
+payload=$(cat) || payload=""
 printf '%s\n' "$*" >> "${SIGN_LOG:?}"
+printf '%s\n' "$payload" >> "${SIGN_LOG:?}"
 if [ "${SIGN_RC:-0}" = 0 ]; then
   echo signed
   exit 0
@@ -175,16 +179,21 @@ cat > "$ssh_home/.gitconfig" <<EOF
 EOF
 sign_log="$tmp/sign.log"
 : > "$sign_log"
+# Actions inherits SIGPIPE ignored from Node. The dry sign used to report
+# that as exit 1 when the payload printf lost the race.
+trap '' PIPE
 good="$(PATH="$bin:$PATH" SSH_ADD_RC=0 SSH_ADD_OUT="256 SHA256:abc comment (ED25519)" \
   SIGN_LOG="$sign_log" SIGN_RC=0 HOME="$ssh_home" ssh_audit "$ssh_home")"
 has "700 dir passes" "ok|~/.ssh is mode 700" "$good"
 has "600 key passes" "ok|~/.ssh/id_ed25519 is mode 600" "$good"
 has "dry sign passes" "ok|git commit signing works" "$good"
 has "dry sign names the key" "id_ed25519" "$(cat "$sign_log")"
+has "dry sign reads the payload" "macconfig-check" "$(cat "$sign_log")"
 miss "dry sign does not use -Y verify" "-Y verify" "$(cat "$sign_log")"
 
 bad_sign="$(PATH="$bin:$PATH" SSH_ADD_RC=0 SSH_ADD_OUT="256 SHA256:abc" \
   SIGN_LOG="$sign_log" SIGN_RC=1 ssh_audit "$ssh_home")"
+trap - PIPE
 has "failed dry sign warns" "warn|git commit signing is configured" "$bad_sign"
 
 # Broken symlinks that point into the repo.
