@@ -31,7 +31,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 ~/.dotfiles-mac/bootstrap.sh
 ```
 
-What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md).
+What `bootstrap.sh` sets up, step by step, is in [Setup](docs/setup.md). That includes Tailscale running with an exit node selected and Allow Local Network Access on.
 
 ### 2. Manual steps
 

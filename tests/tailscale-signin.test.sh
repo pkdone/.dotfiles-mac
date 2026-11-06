@@ -29,9 +29,11 @@ miss() {
 
 row="$(awk -F'|' '$1=="tailscale-signin" { print; exit }' "$LIST")"
 eq "step is in Sign-ins" Sign-ins "$(printf '%s\n' "$row" | cut -d'|' -f2)"
-eq "step title" "Open Tailscale, turn it on, and sign in with your work account" \
+eq "step title" "Open Tailscale, turn it on, and sign in as paul.done@x.ai" \
   "$(printf '%s\n' "$row" | cut -d'|' -f3)"
-miss "step row does not print an email address" "@" "$row"
+has "step names the x.ai login" "paul.done@x.ai" "$row"
+has "step names the xAI Production Network tailnet" "xAI Production Network" "$row"
+miss "step does not name the old Anysphere login" "anysphere.co" "$row"
 has "step opens Tailscale from Applications" "Open Tailscale from Applications" "$row"
 has "step names the menu bar login" "click Log in" "$row"
 eq "step opens the Tailscale app" app:Tailscale "$(printf '%s\n' "$row" | cut -d'|' -f5)"
@@ -61,7 +63,7 @@ exit 1
 EOF
 chmod +x "$bin/open" "$bin/tailscale"
 printf '%s\n' \
-  'tailscale-signin|Sign-ins|Open Tailscale, turn it on, and sign in as paul.done@anysphere.co|Open Tailscale|app:Tailscale|tailscale-signin' \
+  'tailscale-signin|Sign-ins|Open Tailscale, turn it on, and sign in as paul.done@x.ai|Open Tailscale|app:Tailscale|tailscale-signin' \
   > "$tmp/steps.list"
 export NO_COLOR=1 TAILSCALE_LOG="$tmp/tailscale.log" MANUAL_STEPS_TAILSCALE_BIN="$bin/tailscale"
 : > "$TAILSCALE_LOG"
@@ -88,10 +90,10 @@ check() {
     "$MS" check --porcelain
 }
 
-out="$(check "$(json_for Running paul.done@anysphere.co)")"
+out="$(check "$(json_for Running paul.done@x.ai)")"
 eq "running as Paul is ok" ok "$(printf '%s\n' "$out" | cut -d'|' -f1)"
 has "the CLI is forced even when the app binary is used" "BE_CLI=1" "$(cat "$TAILSCALE_LOG")"
-has "running as Paul names the account" "paul.done@anysphere.co" "$out"
+has "running as Paul names the account" "paul.done@x.ai" "$out"
 miss "running as Paul does not print the auth key" "$AUTH" "$out"
 miss "running as Paul does not print the node key" "$NODE" "$out"
 
@@ -107,8 +109,14 @@ has "stopped names the state" "Stopped" "$out"
 out="$(check "$(json_for Running other@example.com)")"
 eq "a different account is not set yet" warn "$(printf '%s\n' "$out" | cut -d'|' -f1)"
 has "a different account is named" "signed in as other@example.com" "$out"
-has "a different account names the wanted login" "paul.done@anysphere.co" "$out"
+has "a different account names the wanted login" "paul.done@x.ai" "$out"
 miss "a different account does not print the node key" "$NODE" "$out"
+
+out="$(check "$(json_for Running paul.done@anysphere.co)")"
+eq "the old Anysphere login is not the expected account" warn "$(printf '%s\n' "$out" | cut -d'|' -f1)"
+has "the old Anysphere login is what was read" "signed in as paul.done@anysphere.co" "$out"
+has "the old Anysphere login wants the x.ai account" "want paul.done@x.ai" "$out"
+miss "the old Anysphere login does not print the node key" "$NODE" "$out"
 
 out="$(check 'not-json')"
 eq "unreadable status is check by hand" hand "$(printf '%s\n' "$out" | cut -d'|' -f1)"
@@ -132,11 +140,11 @@ open_out="$(printf 's\n' | TAILSCALE_JSON="$(json_for NeedsLogin '')" \
   PATH="$bin:$PATH" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/steps.list" \
   "$MS" open)"
 has "open shows the step when Tailscale needs login" \
-  "Open Tailscale, turn it on, and sign in as paul.done@anysphere.co" "$open_out"
+  "Open Tailscale, turn it on, and sign in as paul.done@x.ai" "$open_out"
 has "open says not set yet" "NOTSET:" "$open_out"
 miss "open does not print the auth key" "$AUTH" "$open_out"
 
-open_ok="$(printf 's\n' | TAILSCALE_JSON="$(json_for Running paul.done@anysphere.co)" \
+open_ok="$(printf 's\n' | TAILSCALE_JSON="$(json_for Running paul.done@x.ai)" \
   PATH="$bin:$PATH" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$tmp/steps.list" \
   "$MS" open)"
 has "open skips a signed-in Tailscale" "Nothing to do" "$open_ok"

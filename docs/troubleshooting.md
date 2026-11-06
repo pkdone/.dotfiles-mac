@@ -59,9 +59,11 @@ That installer rewrites the global git config, and the published script has no s
 
 ## Tailscale exit node
 
-**Tailscale should be running with an exit node selected.** The tailnet is managed. `ExitNode.AllowOverride` can be false, and then the Tailscale menu bar ignores an exit-node change. `tailscale set --exit-node=...` can fail the same way. `macconfig` still passes when Tailscale is running and any exit node is already selected. It does not try to switch that node for the current recommendation.
+**Tailscale should be running with an exit node selected, and Allow Local Network Access on.** The tailnet is managed. `ExitNode.AllowOverride` can be false, and then the Tailscale menu bar ignores an exit-node change. `tailscale set --exit-node=...` can fail the same way. `macconfig` still passes when Tailscale is running and any exit node is already selected. It does not try to switch that node for the current recommendation.
 
-If Tailscale is running and no exit node is selected, the Tailscale section warns. `macconfig --fix` and `install.sh` try the recommended node (`auto:any` when the CLI offers it, otherwise `tailscale exit-node suggest`). When that command is refused, the warning stays. Nothing in this repo uses sudo for it, and nothing edits the Fleet or MDM profile. Sign-in is still manual step `tailscale-signin`. A Mac without the Tailscale CLI, or a CLI that does not answer, is the same kind of warning: setup continues.
+Allow Local Network Access is `ExitNodeAllowLANAccess` in `tailscale debug prefs`. The Tailscale section passes that line when the value is true. When an exit node is selected and the value is false, the section warns and does not fail the run. When no exit node is selected, a false value is not that warning. `macconfig --fix` and `install.sh` run `tailscale set --exit-node-allow-lan-access=true` only after an exit node is selected. A managed policy can refuse that change the same way it can refuse an exit-node change. The warning stays. The helper does not edit the Fleet or MDM profile, and it does not use sudo.
+
+If Tailscale is running and no exit node is selected, the Tailscale section warns. `macconfig --fix` and `install.sh` try the recommended node (`auto:any` when the CLI offers it, otherwise `tailscale exit-node suggest`). When that command is refused, the warning stays. Nothing in this repo uses sudo for it, and nothing edits the Fleet or MDM profile. Sign-in is still manual step `tailscale-signin` (`paul.done@x.ai`). A Mac without the Tailscale CLI, or a CLI that does not answer, is the same kind of warning: setup continues.
 
 ## Docker Desktop and fish/config.fish
 

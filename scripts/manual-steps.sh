@@ -217,7 +217,8 @@ check_karabiner_driver() {
 # in tests. TAILSCALE_BE_CLI=1 keeps the app binary in CLI mode so a
 # non-terminal run does not open the Tailscale window.
 # ok only when BackendState is Running and the logged-in LoginName is
-# paul.done@anysphere.co.
+# paul.done@x.ai. The comparison is that one name. The result does not
+# add another address.
 check_tailscale_signin() {
   local bin="" json="" parsed="" state="" login="" py=""
   if [ -n "${MANUAL_STEPS_TAILSCALE_BIN+x}" ]; then
@@ -274,12 +275,12 @@ print(state.replace("|", "/") + "|" + login.replace("|", "/"))
     res hand "Tailscale CLI can't be run"
     return
   fi
-  if [ "$state" = Running ] && [ "$login" = "paul.done@anysphere.co" ]; then
-    res ok "Tailscale is running as paul.done@anysphere.co"
+  if [ "$state" = Running ] && [ "$login" = "paul.done@x.ai" ]; then
+    res ok "Tailscale is running as paul.done@x.ai"
     return
   fi
-  if [ -n "$login" ] && [ "$login" != "paul.done@anysphere.co" ]; then
-    res warn "signed in as $login, want paul.done@anysphere.co"
+  if [ -n "$login" ] && [ "$login" != "paul.done@x.ai" ]; then
+    res warn "signed in as $login, want paul.done@x.ai"
     return
   fi
   res warn "Tailscale is ${state:-not running}"

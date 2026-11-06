@@ -224,7 +224,7 @@ if [ "$1" = status ] && [ "$2" = --json ]; then
   exit 0
 fi
 if [ "$1" = debug ] && [ "$2" = prefs ]; then
-  printf '%s\n' '{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"auto:any","AutoExitNode":"any"}'
+  printf '%s\n' '{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"auto:any","AutoExitNode":"any","ExitNodeAllowLANAccess":true}'
   exit 0
 fi
 if [ "$1" = set ] && [ "$2" = --help ]; then

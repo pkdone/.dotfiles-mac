@@ -3,7 +3,8 @@
 # install.sh — bootstrap this machine: symlink configs into ~/.config, install the
 # Cursor origin CLI when ~/.local/bin/origin is missing or not executable, install
 # the Brewfile, start Hammerspoon if it is installed and not running, turn Tailscale
-# on and select its recommended exit node when that CLI is signed in, and trust the
+# on, select its recommended exit node, and turn on Allow Local Network Access
+# when that CLI is signed in, and trust the
 # mise config. Login shell, hostname, macOS defaults and the Dock are separate
 # scripts; bootstrap.sh runs the whole sequence in order. Ends by printing the
 # manual steps (lib/manual-steps.list) and, on a terminal, offering to walk
@@ -45,9 +46,10 @@ Usage: install.sh [--dry-run]
   Symlink configs, install the Cursor origin CLI when ~/.local/bin/origin is
   missing or not executable, install the Brewfile, and trust mise. After the
   Hammerspoon cask and the hammerspoon/ symlink, start Hammerspoon if it is
-  installed and not already running. When the Tailscale CLI is signed in,
-  turn it on if it is stopped and select the recommended exit node when none
-  is selected. Idempotent. The origin install, the Hammerspoon start, and
+  installed and not already running.   When the Tailscale CLI is signed in,
+  turn it on if it is stopped, select the recommended exit node when none
+  is selected, and turn on Allow Local Network Access when an exit node is
+  selected and that preference is off. Idempotent. The origin install, the Hammerspoon start, and
   Tailscale are lib/safe-fixers.sh, the same helpers macconfig --fix uses.
   --dry-run    Describe those steps, including origin, the Hammerspoon start, and Tailscale; change nothing.
   -h, --help   Show this help.
@@ -210,9 +212,9 @@ if [ "$hs_rc" -eq 1 ]; then
 fi
 
 echo ""
-echo "Tailscale (turn it on when it is signed in, and select the recommended exit node when none is selected)..."
+echo "Tailscale (turn it on when it is signed in, select the recommended exit node when none is selected, and turn on Allow Local Network Access)..."
 # Same helper as macconfig --fix. A missing CLI, a signed-out app, an offline
-# daemon, or a managed policy that refuses the exit node does not stop setup.
+# daemon, or a managed policy that refuses the exit node or Allow Local Network Access does not stop setup.
 # The helper already says which of those it was. No sudo.
 ts_rc=0
 safe_tailscale_exit || ts_rc=$?
