@@ -36,7 +36,7 @@ British input (`com.apple.HIToolbox` `AppleEnabledInputSources` and `AppleSelect
 | 2 | Sign in to 1Password and unlock it | 1Password app | by hand |
 | 3 | Turn on Integrate with 1Password CLI, then run op signin once in a terminal | 1Password → Settings → Developer | auto |
 | 4 | Sign in to the GitHub CLI (needed to clone this private repo) | Terminal: gh auth login | auto |
-| 5 | Open Tailscale, turn it on, and sign in with your work account | Open Tailscale from Applications (it comes from Fleet Self service) → click the Tailscale icon in the menu bar → click Log in (or turn the Connected switch on) → choose sign in with your work account → finish sign-in in the browser | auto |
+| 5 | Open Tailscale, turn it on, and sign in as paul.done@x.ai | Open Tailscale from Applications (it comes from Fleet Self service) → click the Tailscale icon in the menu bar → click Log in (or turn the Connected switch on) → sign in as paul.done@x.ai on the xAI Production Network tailnet → finish sign-in in the browser | auto |
 | 6 | Add Tailscale to Open at Login. It has no launch-at-login option of its own | System Settings → General → Login Items & Extensions → under Open at Login click + → Applications → Tailscale → Open | macconfig-check.sh |
 | 7 | Install Cursor Nightly (separate app, next to the stable Cursor) | cursor.com/nightlydownload | auto |
 | 8 | Install YouTube Music as a Chrome app | Chrome → music.youtube.com → ⋮ → Cast, save, and share → Install page as app | auto |

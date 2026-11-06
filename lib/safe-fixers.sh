@@ -13,10 +13,12 @@
 #                            Copies the repo gitconfig and writes it back
 #                            if that run changes it. Only that file.
 #   safe_tailscale_exit      Turn Tailscale on when it is signed in but
-#                            stopped, and select the recommended exit node
-#                            when none is selected. An exit node that is
-#                            already selected is left alone. No sudo, no
-#                            sign-in, no Fleet or MDM change.
+#                            stopped, select the recommended exit node
+#                            when none is selected, and turn on Allow
+#                            Local Network Access when an exit node is
+#                            selected and that pref is not true. An exit
+#                            node that is already selected is left alone.
+#                            No sudo, no sign-in, no Fleet or MDM change.
 #
 # DRY_RUN=1 prints what would happen and changes nothing. No sudo.
 
@@ -203,7 +205,9 @@ tailscale_cli() { # bin args...
 # Read one JSON blob from stdin. mode is status or prefs.
 # status prints "yes|Running" (exit node selected in ExitNodeStatus | BackendState) or "bad".
 # prefs prints "yes|no" (LoggedOut | an exit node is selected) or "bad".
-# Selected means ExitNodeID, ExitNodeIP, or AutoExitNode is a non-empty string.
+# lan prints "yes" only when ExitNodeAllowLANAccess is JSON true, else "no",
+# or "bad" when the blob cannot be read. Selected means ExitNodeID,
+# ExitNodeIP, or AutoExitNode is a non-empty string.
 # Node ids, addresses, keys, and account names are not printed.
 tailscale_parse_json() { # mode
   local py
@@ -247,6 +251,8 @@ elif mode == "prefs":
         if isinstance(item, str) and item.strip() != "":
             has = True
     print(flag(logged) + "|" + flag(has))
+elif mode == "lan":
+    print("yes" if data.get("ExitNodeAllowLANAccess") is True else "no")
 else:
     print("bad")
 ' "$1" 2>/dev/null || printf 'bad\n'
@@ -399,10 +405,66 @@ tailscale_set_exit() { # bin choice
   TAILSCALE_BE_CLI=1 safe_run_timeout 20 "$1" set --exit-node="$2" >/dev/null 2>&1
 }
 
-# Turn Tailscale on when it is signed in but stopped, and select the
-# recommended exit node when none is selected. A node that is already
-# selected is left alone: managed policy may refuse a different one, and
-# any selected exit node is the desired state.
+# ExitNodeAllowLANAccess from `tailscale debug prefs`. yes only when the
+# value is JSON true. no when it is false or absent. unreadable when the
+# prefs blob cannot be parsed. The line is one word. No ids or addresses.
+tailscale_lan_probe() { # bin
+  local bin="$1" prefs="" parsed=""
+  prefs="$(tailscale_cli "$bin" debug prefs || true)"
+  parsed="$(printf '%s' "$prefs" | tailscale_parse_json lan || true)"
+  case "$parsed" in
+    yes|no) printf '%s\n' "$parsed" ;;
+    *) printf 'unreadable\n' ;;
+  esac
+}
+
+# Turn on Allow Local Network Access. Status is the CLI's status. stderr
+# is discarded so an auth URL is not printed. No sudo.
+tailscale_set_lan() { # bin
+  TAILSCALE_BE_CLI=1 safe_run_timeout 20 "$1" set --exit-node-allow-lan-access=true >/dev/null 2>&1
+}
+
+# The exit node is already selected. Leave that node alone. When Allow
+# Local Network Access is not on, set it. Prints one line. Returns 0 when
+# the pref is true (or a dry run would set it). Returns 2 when the set was
+# refused or did not stick. $2 is "already" when nothing else changed.
+tailscale_finish_lan() { # bin [already]
+  local bin="$1" already="${2:-}" lan=""
+  lan="$(tailscale_lan_probe "$bin")"
+  if [ "$lan" = yes ]; then
+    if [ "$already" = already ]; then
+      echo "Tailscale is already running with an exit node selected and Allow Local Network Access is on"
+    else
+      echo "Tailscale is running with an exit node selected and Allow Local Network Access is on"
+    fi
+    return 0
+  fi
+  if [ "${DRY_RUN:-0}" = 1 ]; then
+    echo "would turn on Allow Local Network Access (tailscale set --exit-node-allow-lan-access=true, no sudo)"
+    return 0
+  fi
+  if ! tailscale_set_lan "$bin"; then
+    echo "could not turn on Allow Local Network Access. Managed policy may block the change. Not changed"
+    return 2
+  fi
+  lan="$(tailscale_lan_probe "$bin")"
+  if [ "$lan" = yes ]; then
+    echo "Tailscale is running with an exit node selected and Allow Local Network Access is on"
+    return 0
+  fi
+  echo "Allow Local Network Access did not stick. Managed policy may block the change. Not changed"
+  return 2
+}
+
+# Turn Tailscale on when it is signed in but stopped, select the
+# recommended exit node when none is selected, and turn on Allow Local
+# Network Access when an exit node is selected and ExitNodeAllowLANAccess
+# is not true. A node that is already selected is left alone: managed
+# policy may refuse a different one, and any selected exit node is the
+# desired state. The LAN pref is separate. It is set with
+# `tailscale set --exit-node-allow-lan-access=true` only after an exit
+# node is selected. When none is selected, a false pref is not changed
+# here, because that is not the warning.
 #
 # Prints one line. Does not print node ids, addresses, keys, or auth URLs.
 # Does not use sudo, does not sign in, and does not change Fleet or MDM.
@@ -426,8 +488,8 @@ safe_tailscale_exit() {
   state="$(tailscale_exit_probe "$bin")"
   case "$state" in
     running-exit)
-      echo "Tailscale is already running with an exit node selected"
-      return 0
+      tailscale_finish_lan "$bin" already
+      return
       ;;
     logged-out)
       echo "Tailscale is not signed in — manual step tailscale-signin. Not changed"
@@ -444,7 +506,7 @@ safe_tailscale_exit() {
       ;;
   esac
   if [ "${DRY_RUN:-0}" = 1 ]; then
-    echo "would turn Tailscale on if it is stopped and select the recommended exit node (tailscale up or tailscale set --exit-node, no sudo)"
+    echo "would turn Tailscale on if it is stopped, select the recommended exit node, and turn on Allow Local Network Access when an exit node is selected and that preference is off (tailscale up, tailscale set --exit-node, or tailscale set --exit-node-allow-lan-access=true, no sudo)"
     return 0
   fi
   if [ "$state" = stopped ]; then
@@ -454,10 +516,7 @@ safe_tailscale_exit() {
     fi
     state="$(tailscale_exit_probe "$bin")"
     case "$state" in
-      running-exit)
-        echo "Tailscale is running with an exit node selected"
-        return 0
-        ;;
+      running-exit) ;;
       running-none) ;;
       logged-out)
         echo "Tailscale is not signed in — manual step tailscale-signin. Not changed"
@@ -468,6 +527,10 @@ safe_tailscale_exit() {
         return 2
         ;;
     esac
+  fi
+  if [ "$state" = running-exit ]; then
+    tailscale_finish_lan "$bin"
+    return
   fi
   if ! choice="$(tailscale_exit_choice "$bin")"; then
     echo "no recommended exit node from tailscale exit-node suggest. Not changed"
@@ -480,8 +543,8 @@ safe_tailscale_exit() {
   state="$(tailscale_exit_probe "$bin")"
   case "$state" in
     running-exit)
-      echo "Tailscale is running with an exit node selected"
-      return 0
+      tailscale_finish_lan "$bin"
+      return
       ;;
   esac
   echo "the exit-node change did not stick. Managed policy may block it. Any exit node already selected still counts"

@@ -3,10 +3,14 @@
 # stubs the sourced checks/login-items.sh calls.
 # shellcheck disable=SC2317
 #
-# Tailscale should be running with an exit node selected. Any selected node
-# passes. The fixer turns a signed-in stopped CLI on and selects the
-# recommended node when none is selected. A missing CLI, a signed-out CLI,
-# and a refused set are warnings, not drift, and they do not fail install.
+# Tailscale should be running with an exit node selected, and Allow Local
+# Network Access should be on once a node is selected. Any selected node
+# passes. The fixer turns a signed-in stopped CLI on, selects the
+# recommended node when none is selected, and turns on Allow Local Network
+# Access when an exit node is selected and that pref is false. A missing
+# CLI, a signed-out CLI, and a refused set are warnings, not drift, and
+# they do not fail install. When no exit node is selected, a false pref
+# is not the Allow Local Network Access warning.
 # The stub is the only tailscale this file runs.
 # Run: ./tests/tailscale-exit.test.sh
 #
@@ -65,6 +69,16 @@ if [ "$1" = exit-node ] && [ "$2" = suggest ]; then
   printf '%s\n' "${TAILSCALE_SUGGEST-}"
   exit 0
 fi
+if [ "$1" = set ] && [ "$2" = "--exit-node-allow-lan-access=true" ]; then
+  if [ "${TAILSCALE_LAN_RC:-0}" != 0 ]; then
+    printf '%s\n' "${TAILSCALE_LAN_ERR-}" >&2
+    exit "$TAILSCALE_LAN_RC"
+  fi
+  if [ -n "${TAILSCALE_PREFS_AFTER_LAN-}" ]; then
+    printf '%s' "$TAILSCALE_PREFS_AFTER_LAN" > "$TAILSCALE_PREFS_FILE"
+  fi
+  exit 0
+fi
 if [ "$1" = set ]; then
   if [ "${TAILSCALE_SET_RC:-0}" != 0 ]; then
     printf '%s\n' "${TAILSCALE_SET_ERR-}" >&2
@@ -98,7 +112,7 @@ chmod +x "$bin/tailscale"
 AUTH='tskey-auth-SECRETVALUE'
 NODE='nodekey:SECRETVALUE'
 URL='https://login.tailscale.com/a/SECRETVALUE'
-HOSTN='saas-egress-app-connector-nyc-1-1'
+HOSTN='xai-ts-connector-us-east'
 DECOY_IP='100.64.0.9'
 
 json_running_exit="{\"BackendState\":\"Running\",\"AuthKey\":\"$AUTH\",\"ExitNodeStatus\":{\"Online\":true}}"
@@ -106,11 +120,14 @@ json_running_none="{\"BackendState\":\"Running\",\"Self\":{\"NodeKey\":\"$NODE\"
 json_stopped="{\"BackendState\":\"Stopped\",\"AuthKey\":\"$AUTH\"}"
 json_needs="{\"BackendState\":\"NeedsLogin\",\"AuthURL\":\"$URL\"}"
 json_starting="{\"BackendState\":\"Starting\"}"
-json_prefs_out='{"WantRunning":false,"LoggedOut":true,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":""}'
-json_prefs_none='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":""}'
-json_prefs_stopped='{"WantRunning":false,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":""}'
-json_prefs_id='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"nEXAMPLEID","ExitNodeIP":"","AutoExitNode":""}'
-json_prefs_auto='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":"any"}'
+json_prefs_out='{"WantRunning":false,"LoggedOut":true,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":"","ExitNodeAllowLANAccess":false}'
+json_prefs_none='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":"","ExitNodeAllowLANAccess":true}'
+json_prefs_none_nolan='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":"","ExitNodeAllowLANAccess":false}'
+json_prefs_stopped='{"WantRunning":false,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":"","ExitNodeAllowLANAccess":true}'
+json_prefs_stopped_nolan='{"WantRunning":false,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":"","ExitNodeAllowLANAccess":false}'
+json_prefs_id='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"nEXAMPLEID","ExitNodeIP":"","AutoExitNode":"","ExitNodeAllowLANAccess":true}'
+json_prefs_auto='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"","ExitNodeIP":"","AutoExitNode":"any","ExitNodeAllowLANAccess":true}'
+json_prefs_exit_nolan='{"WantRunning":true,"LoggedOut":false,"ExitNodeID":"nEXAMPLEID","ExitNodeIP":"","AutoExitNode":"","ExitNodeAllowLANAccess":false}'
 
 export TAILSCALE_LOG="$log" TAILSCALE_STATUS_FILE="$status_file" TAILSCALE_PREFS_FILE="$prefs_file"
 export PATH="$bin:$safe"
@@ -125,6 +142,7 @@ reset_cli() {
   export TAILSCALE_SUGGEST=""
   export TAILSCALE_STATUS_AFTER="" TAILSCALE_PREFS_AFTER=""
   export TAILSCALE_STATUS_AFTER_UP="" TAILSCALE_PREFS_AFTER_UP=""
+  export TAILSCALE_LAN_RC=0 TAILSCALE_LAN_ERR="" TAILSCALE_PREFS_AFTER_LAN=""
 }
 put() { # status prefs
   printf '%s' "$1" > "$status_file"
@@ -153,6 +171,13 @@ run_check() {
   CHECKED=0
   fixid_seen=""
   check_tailscale_exit
+  out="$lines"
+}
+run_lan() {
+  lines=""
+  CHECKED=0
+  fixid_seen=""
+  check_tailscale_lan
   out="$lines"
 }
 run_fix() { # 1 = dry run
@@ -215,6 +240,62 @@ eq "no exit node is a warning" warn "$(printf '%s\n' "$out" | head -n 1 | cut -d
 has "no exit node says any selected node counts" "any selected exit node counts" "$out"
 miss "no exit node is not drift" "bad|" "$out"
 miss "no exit node does not print the node key" "$NODE" "$out"
+run_lan
+eq "Allow Local Network Access on with no exit node passes" ok "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
+has "Allow Local Network Access on is the pass" "Allow Local Network Access is on" "$out"
+eq "Allow Local Network Access on is tagged tailscale-exit" tailscale-exit "$fixid_seen"
+miss "Allow Local Network Access on is not drift" "bad|" "$out"
+
+reset_cli
+put "$json_running_none" "$json_prefs_none_nolan"
+eq "no exit node with Allow Local Network Access off is still running-none" running-none "$(tailscale_exit_probe "$bin/tailscale")"
+eq "Allow Local Network Access off probes as no" no "$(tailscale_lan_probe "$bin/tailscale")"
+run_lan
+eq "no exit node does not warn about Allow Local Network Access" "" "$out"
+eq "no exit node does not count the Allow Local Network Access check" 0 "$CHECKED"
+
+reset_cli
+put "$json_running_exit" "$json_prefs_none"
+run_lan
+eq "Allow Local Network Access on with an exit node passes" ok "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
+eq "that pass is counted" 1 "$CHECKED"
+miss "that pass does not print the auth key" "$AUTH" "$out"
+
+reset_cli
+put "$json_running_exit" "$json_prefs_exit_nolan"
+run_check
+eq "an exit node still passes when Allow Local Network Access is off" ok "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
+run_lan
+eq "an exit node with Allow Local Network Access off is a warning" warn "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
+has "the warning names Allow Local Network Access" "Allow Local Network Access off" "$out"
+has "the warning names the setter" "--exit-node-allow-lan-access=true" "$out"
+eq "the warning is tagged tailscale-exit" tailscale-exit "$fixid_seen"
+eq "the warning is counted" 1 "$CHECKED"
+miss "Allow Local Network Access off is not drift" "bad|" "$out"
+miss "the warning does not print the exit node id" "nEXAMPLEID" "$out"
+
+reset_cli
+put "$json_stopped" "$json_prefs_stopped_nolan"
+run_lan
+eq "stopped does not warn about Allow Local Network Access" "" "$out"
+
+reset_cli
+put "$json_needs" "$json_prefs_out"
+run_lan
+eq "signed out does not warn about Allow Local Network Access" "" "$out"
+
+reset_cli
+export TAILSCALE_BIN="$tmp/no-such-tailscale"
+run_lan
+eq "a missing CLI does not add an Allow Local Network Access line" "" "$out"
+
+reset_cli
+put "$json_running_exit" "not-json"
+run_lan
+eq "unreadable Allow Local Network Access is a warning" warn "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
+has "unreadable Allow Local Network Access does not fail the run" "does not fail the run" "$out"
+miss "unreadable Allow Local Network Access is not drift" "bad|" "$out"
+miss "unreadable Allow Local Network Access does not echo the body" "not-json" "$out"
 
 reset_cli
 put "$json_needs" "$json_prefs_out"
@@ -370,6 +451,61 @@ run_fix
 eq "no suggestion exits 2" 2 "$rc"
 has "no suggestion says so" "no recommended exit node" "$out"
 miss "no suggestion does not set an exit node" "set --exit-node" "$(cat "$log")"
+miss "no suggestion does not turn on Allow Local Network Access" "--exit-node-allow-lan-access" "$(cat "$log")"
+
+reset_cli
+put "$json_running_exit" "$json_prefs_exit_nolan"
+export TAILSCALE_PREFS_AFTER_LAN="$json_prefs_id"
+run_fix
+eq "Allow Local Network Access set exits 0" 0 "$rc"
+has "Allow Local Network Access set reports it is on" "Allow Local Network Access is on" "$out"
+has "Allow Local Network Access is what was set" "set --exit-node-allow-lan-access=true" "$(cat "$log")"
+miss "an already selected node is not replaced to turn on local access" "set --exit-node=" "$(cat "$log")"
+miss "Allow Local Network Access set does not print the exit node id" "nEXAMPLEID" "$out"
+has "Allow Local Network Access set stays in CLI mode" "BE=1" "$(cat "$log")"
+
+reset_cli
+put "$json_running_exit" "$json_prefs_exit_nolan"
+export TAILSCALE_LAN_RC=1
+export TAILSCALE_LAN_ERR="$URL policy blocked"
+run_fix
+eq "a refused Allow Local Network Access set exits 2" 2 "$rc"
+has "a refused Allow Local Network Access set names managed policy" "Managed policy may block the change" "$out"
+miss "a refused Allow Local Network Access set does not print the auth URL" "SECRETVALUE" "$out"
+miss "a refused Allow Local Network Access set does not claim it is on" "Allow Local Network Access is on" "$out"
+
+reset_cli
+put "$json_running_exit" "$json_prefs_exit_nolan"
+run_fix
+eq "Allow Local Network Access that does not stick exits 2" 2 "$rc"
+has "Allow Local Network Access that does not stick says so" "did not stick" "$out"
+
+reset_cli
+put "$json_running_exit" "$json_prefs_exit_nolan"
+run_fix 1
+eq "dry-run of Allow Local Network Access exits 0" 0 "$rc"
+has "dry-run names Allow Local Network Access" "would turn on Allow Local Network Access" "$out"
+miss "dry-run does not turn on Allow Local Network Access" "--exit-node-allow-lan-access=true" "$(cat "$log")"
+
+reset_cli
+put "$json_running_none" "$json_prefs_none_nolan"
+export TAILSCALE_STATUS_AFTER="$json_running_exit"
+export TAILSCALE_PREFS_AFTER_LAN="$json_prefs_id"
+run_fix
+eq "exit node then Allow Local Network Access exits 0" 0 "$rc"
+has "exit node then Allow Local Network Access selects auto:any" "set --exit-node=auto:any" "$(cat "$log")"
+has "exit node then Allow Local Network Access sets the pref" "set --exit-node-allow-lan-access=true" "$(cat "$log")"
+miss "exit node then Allow Local Network Access does not print the node key" "$NODE" "$out"
+
+reset_cli
+put "$json_stopped" "$json_prefs_stopped_nolan"
+export TAILSCALE_STATUS_AFTER_UP="$json_running_exit"
+export TAILSCALE_PREFS_AFTER_LAN="$json_prefs_id"
+run_fix
+eq "up then Allow Local Network Access exits 0" 0 "$rc"
+has "up then Allow Local Network Access runs up" "up --timeout=15s" "$(cat "$log")"
+has "up then Allow Local Network Access sets the pref" "set --exit-node-allow-lan-access=true" "$(cat "$log")"
+miss "up then Allow Local Network Access does not select another node" "set --exit-node=" "$(cat "$log")"
 
 # ---- the section, and install.sh --dry-run ---------------------------------
 section="$(
@@ -396,6 +532,7 @@ has "the section keeps Login Items" "[Login Items]" "$section"
 has "the section has a Tailscale heading" "[Tailscale]" "$section"
 has "a missing app skips Open at Login" "skip Tailscale is not installed yet" "$section"
 has "the section passes a selected exit node" "ok Tailscale is running with an exit node selected" "$section"
+has "the section passes Allow Local Network Access" "ok Tailscale Allow Local Network Access is on" "$section"
 miss "the section does not drift" "DRIFT" "$section"
 has "the section tags the exit check" "fixid tailscale-exit" "$section"
 

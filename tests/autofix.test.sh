@@ -113,6 +113,9 @@ miss "macconfig-check.sh does not curl the origin installer" "downloads.cursor.c
 miss "install.sh does not curl the origin installer" "downloads.cursor.com/origin/install.sh" "$(cat "$DIR/install.sh")"
 
 has "helper sets the Tailscale exit node" "safe_tailscale_exit" "$helper"
+has "helper turns on Allow Local Network Access" "--exit-node-allow-lan-access=true" "$helper"
+has "the Tailscale row names Allow Local Network Access" "Allow Local Network Access" \
+  "$(awk -F'|' '$1=="tailscale-exit" { print $4; exit }' "$LIST")"
 has "macconfig-check.sh sets Tailscale through the helper" "safe_tailscale_exit" "$(cat "$DIR/macconfig-check.sh")"
 has "install.sh sets Tailscale through the helper" "safe_tailscale_exit" "$(cat "$DIR/install.sh")"
 has "a Tailscale miss does not abort install.sh" 'safe_tailscale_exit || ts_rc=$?' "$(cat "$DIR/install.sh")"
