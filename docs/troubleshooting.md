@@ -65,6 +65,21 @@ Allow Local Network Access is `ExitNodeAllowLANAccess` in `tailscale debug prefs
 
 If Tailscale is running and no exit node is selected, the Tailscale section warns. `macconfig --fix` and `install.sh` try the recommended node (`auto:any` when the CLI offers it, otherwise `tailscale exit-node suggest`). When that command is refused, the warning stays. Nothing in this repo uses sudo for it, and nothing edits the Fleet or MDM profile. Sign-in is still manual step `tailscale-signin` (`paul.done@x.ai`). A Mac without the Tailscale CLI, or a CLI that does not answer, is the same kind of warning: setup continues.
 
+## Xcode
+
+**Full Xcode is required. The Command Line Tools are not it.** `macconfig` reads four things and writes nothing: the app at `/Applications/Xcode.app` (bundle id `com.apple.dt.Xcode`), `xcode-select -p` equal to `/Applications/Xcode.app/Contents/Developer`, the GM licence major version, and `xcodebuild -checkFirstLaunchStatus` once that directory is selected. `/Library/Developer/CommandLineTools` fails the developer-directory line even when Xcode.app is installed. A machine with only the Command Line Tools fails the app line as well.
+
+Do these yourself. Each one needs an administrator or the Xcode window. `bootstrap.sh`, `install.sh`, and `macconfig --fix` do not run them and do not use sudo. `mas install` of Xcode asks for an administrator on this Mac, so it is not how setup installs it.
+
+1. Mac App Store → Xcode → Get. Manual step `xcode-app`.
+2. `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`. Manual step `xcode-select`.
+3. `sudo xcodebuild -license accept`, or open Xcode and accept the licence. Manual step `xcode-license`.
+4. Open Xcode once and let first launch finish, or `sudo xcodebuild -runFirstLaunch`. Manual step `xcode-first-launch`.
+
+A macOS or Xcode update can point `xcode-select -p` back at the Command Line Tools, and a new major version asks for the licence again. The check compares the major of `IDEXcodeVersionForAgreedToGMLicense` with the major of `CFBundleShortVersionString` in `Xcode.app/Contents/version.plist`. Run the same commands again. `--fix` will not clear the drift.
+
+Homebrew can still install with only the Command Line Tools. That preflight is `xcode-select -p` and, when it fails, `xcode-select --install`. It does not select full Xcode. How the check reads each part is in [Xcode](settings.md#xcode).
+
 ## Docker Desktop and fish/config.fish
 
 On its first start, Docker Desktop may put its own block at the top of `~/.config/fish/config.fish`, which is a link to this repo's `fish/config.fish`. The block starts with the comment "The following lines were added by Docker Desktop" and adds a fixed `export PATH` line with your home folder in it. Don't commit it. `fish/config.fish` already adds `~/.docker/bin` the fish way, after Homebrew, and only when that folder exists. Delete Docker's block, from its first comment through "End of Docker Desktop section". `macconfig` warns under Login shell while the block is there. `--fix` does not remove it, because it never edits repo files.

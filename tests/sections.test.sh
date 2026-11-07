@@ -83,6 +83,7 @@ URL handlers
 File handlers
 Folders
 Unwanted apps
+Xcode
 Dictation shortcut
 Quick Note shortcut
 Game Overlay shortcut

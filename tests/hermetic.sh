@@ -22,7 +22,7 @@
 # 0 when $1 is a command tests must stub or leave missing.
 hermetic_denied() {
   case "$1" in
-    lpstat|lpadmin|lp|lpq|lpr|cancel|cupsfilter|pmset|system_profiler|displayplacer|sfltool|shortcuts|dscl|defaults|ioreg|osascript|open|killall|pgrep|pkill|launchctl|scutil|networksetup|profiles|systemextensionsctl|mdfind|mdls|plutil|PlistBuddy|sqlite3|brew|sudo|spctl|csrutil|fdesetup|sysadminctl|diskutil|tmutil|softwareupdate|caffeinate|screencapture|say|pbcopy|pbpaste|sample|spindump|powermetrics|memory_pressure|sw_vers|nvram|codesign|xattr|xcode-select|hdiutil|pkgutil|installer|ditto|sips|textutil|automator|corebrightnessdiag|socketfilterfw|pluginkit|bioutil|assetutil|brctl|lsbom|kmutil|kextstat|kextload|netstat|df|du|sysctl|log|duti|op|gh|hs|tailscale)
+    lpstat|lpadmin|lp|lpq|lpr|cancel|cupsfilter|pmset|system_profiler|displayplacer|sfltool|shortcuts|dscl|defaults|ioreg|osascript|open|killall|pgrep|pkill|launchctl|scutil|networksetup|profiles|systemextensionsctl|mdfind|mdls|plutil|PlistBuddy|sqlite3|brew|sudo|spctl|csrutil|fdesetup|sysadminctl|diskutil|tmutil|softwareupdate|caffeinate|screencapture|say|pbcopy|pbpaste|sample|spindump|powermetrics|memory_pressure|sw_vers|nvram|codesign|xattr|xcode-select|xcodebuild|hdiutil|pkgutil|installer|ditto|sips|textutil|automator|corebrightnessdiag|socketfilterfw|pluginkit|bioutil|assetutil|brctl|lsbom|kmutil|kextstat|kextload|netstat|df|du|sysctl|log|duti|op|gh|hs|tailscale)
       return 0
       ;;
   esac
@@ -62,7 +62,7 @@ hermetic_safe_root() {
   if [ -n "${HERMETIC_SAFE_OVERRIDE:-}" ]; then
     dest="$HERMETIC_SAFE_OVERRIDE"
   else
-    dest="${TMPDIR:-/tmp}/dotfiles-hermetic-safe-${UID:-0}-7"
+    dest="${TMPDIR:-/tmp}/dotfiles-hermetic-safe-${UID:-0}-8"
   fi
   if [ -n "${HERMETIC_SAFE_DIR:-}" ] && [ -f "${HERMETIC_SAFE_DIR}/.ready" ]; then
     printf '%s\n' "$HERMETIC_SAFE_DIR"
@@ -260,7 +260,7 @@ exit 0
 EOF
   # Every other denied command is present and succeeds, so command -v does
   # not report it missing the way a bare Linux runner would.
-  for name in lpadmin lp lpq lpr cancel cupsfilter dscl defaults ioreg killall pgrep pkill launchctl scutil networksetup profiles systemextensionsctl mdfind mdls plutil PlistBuddy sqlite3 brew sudo spctl csrutil fdesetup sysadminctl diskutil tmutil softwareupdate caffeinate screencapture say pbcopy pbpaste sample spindump powermetrics memory_pressure sw_vers nvram codesign xattr xcode-select hdiutil pkgutil installer ditto sips textutil automator socketfilterfw pluginkit bioutil assetutil brctl lsbom kmutil kextstat kextload netstat df du sysctl log duti op gh hs tailscale; do
+  for name in lpadmin lp lpq lpr cancel cupsfilter dscl defaults ioreg killall pgrep pkill launchctl scutil networksetup profiles systemextensionsctl mdfind mdls plutil PlistBuddy sqlite3 brew sudo spctl csrutil fdesetup sysadminctl diskutil tmutil softwareupdate caffeinate screencapture say pbcopy pbpaste sample spindump powermetrics memory_pressure sw_vers nvram codesign xattr xcode-select xcodebuild hdiutil pkgutil installer ditto sips textutil automator socketfilterfw pluginkit bioutil assetutil brctl lsbom kmutil kextstat kextload netstat df du sysctl log duti op gh hs tailscale; do
     if [ ! -e "$dest/$name" ]; then
       printf '%s\n' '#!/bin/sh' 'exit 0' > "$dest/$name"
     fi

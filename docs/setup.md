@@ -316,6 +316,7 @@ dotpush "your message"
 - **New packages:** add to `Brewfile`, run `brewsync`. `macconfig-check.sh` warns on brew/cask/MAS installs that aren’t declared (does not auto-remove them).
 - **Origin CLI:** not in the Brewfile. `install.sh` and `macconfig --fix` run Cursor's installer when `~/.local/bin/origin` is missing or not executable. See [Origin CLI](settings.md#origin-cli).
 - **Tailscale exit node:** not installed from the Brewfile (Fleet Self service). `install.sh` and `macconfig --fix` turn it on when the CLI is signed in, select the recommended exit node when none is selected, and turn on Allow Local Network Access when an exit node is selected and that preference is off. Any selected node counts. See [Tailscale](settings.md#tailscale).
+- **Full Xcode:** checked, not installed. Command Line Tools are not enough. The Mac App Store install, `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, the licence, and first launch need an administrator or the Xcode window. `bootstrap.sh` and `macconfig --fix` do not run them. See [Xcode](settings.md#xcode).
 - **Managed macOS settings:** edit `lib/macos-defaults.list`, then run `macos.sh` (use `defaults-diff.sh` to find the key first).
 - **Dock apps:** edit `lib/dock-apps.list`, then run `dock.sh`.
 - **Desktop assignments:** edit `lib/desktop-bindings.list` (`1`..`N` = Desktop N on the main display, `none` = not assigned), then run `macconfig --fix`. The order and the Desktop 1–4 map are in [Dock](#dock).

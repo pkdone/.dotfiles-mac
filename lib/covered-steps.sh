@@ -12,7 +12,7 @@
 
 covered_step_file() { # area
   case "$1" in
-    mdm|karabiner|display|power|notifications|login-items|finder|modes|menubar)
+    mdm|karabiner|display|power|notifications|login-items|finder|modes|menubar|apps)
       printf '%s\n' "$DOTDIR/checks/$1.sh"
       return 0
       ;;
@@ -40,6 +40,7 @@ covered_section_heading() { # id
     finder-sidebar) printf '%s\n' "Finder sidebar rows" ;;
     mode-focus-modes|mode-focus-shortcuts) printf '%s\n' "Modes (Hammerspoon)" ;;
     menubar-third-party-hide) printf '%s\n' "Allow in the Menu Bar" ;;
+    xcode-app|xcode-select|xcode-license|xcode-first-launch) printf '%s\n' "Xcode" ;;
     *) return 1 ;;
   esac
 }

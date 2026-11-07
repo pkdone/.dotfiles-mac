@@ -85,6 +85,23 @@ Anything else is a warning, and a warning does not fail `macconfig`. Not install
 
 If `tailscale set` fails, or it returns and the exit node is still unset, or Allow Local Network Access stays off, the helper says managed policy may block the change and leaves the machine as it was. That is a warning on the next check, not a failed `macconfig` and not a failed `install.sh`. A missing CLI prints that Tailscale is not installed and setup continues, so a machine without Tailscale (a CI runner, a Mac that has not opened Fleet yet) still bootstraps. The helper does not run `tailscale up` when the CLI is signed out, does not log in, and does not read or write Fleet, MDM, or `tailscale syspolicy`.
 
+## Xcode
+
+**Checked, not scripted** (the **Xcode** section of `macconfig-check.sh`, manual steps `xcode-app`, `xcode-select`, `xcode-license`, `xcode-first-launch`).
+
+Full Xcode is part of this Mac's configuration. The Command Line Tools are not a substitute. `bootstrap.sh` does not install it. On pdone-mac2, `mas install` of Xcode asks for an administrator. Pointing the active developer directory at Xcode (`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`), accepting the licence (`sudo xcodebuild -license accept`, or the Xcode window), and finishing first launch (`sudo xcodebuild -runFirstLaunch`, or opening Xcode once) need an administrator or that window. There is no unprivileged way to do those, so they are not a bootstrap step and they are not a SAFE fix. `macconfig --fix` does not run them and does not use sudo. `install.sh` does not either.
+
+The check only reads, and a Command Line Tools machine fails it:
+
+- `/Applications/Xcode.app` is present and its bundle id is `com.apple.dt.Xcode`. A missing app is drift. Command Line Tools do not install that app.
+- `xcode-select -p` is `/Applications/Xcode.app/Contents/Developer`. `/Library/Developer/CommandLineTools` is the Command Line Tools and is drift, including when the app is already on disk. The check runs `xcode-select -p` only. It does not run `xcode-select -s`.
+- The GM licence matches this Xcode's major version. The installed version is `CFBundleShortVersionString` in `Contents/version.plist`. The accepted version is `IDEXcodeVersionForAgreedToGMLicense` in `/Library/Preferences/com.apple.dt.Xcode.plist`. The same major version passes (16.0 agreed covers 16.2). A missing app, a missing key, or a different major version is drift. A file that cannot be read is a warning. Nothing writes that plist.
+- First launch is done. After the active directory is that Xcode, the check runs `<developer-dir>/usr/bin/xcodebuild -checkFirstLaunchStatus` and nothing else. Exit 0 passes. Any other exit is drift. It does not run while the active directory is the Command Line Tools, because that result would not be full Xcode's first launch. It never passes `-license`, `accept`, or `-runFirstLaunch`.
+
+Homebrew's preflight is unchanged. Before `brew bundle`, setup still only checks that `xcode-select -p` prints some directory, and it still offers `xcode-select --install` when the Command Line Tools are missing. That is enough for Homebrew. It is not this check.
+
+`macconfig --only apps` includes Unwanted apps and this section. A miss is drift (`xcode` in `lib/autofix.list`, Needs Paul). A tool that is missing or does not answer is a warning (`tooling`). What a software update does to the developer directory, and the commands Paul runs himself, are in [Troubleshooting](troubleshooting.md#xcode).
+
 ## macOS defaults
 
 > _Run by `bootstrap.sh`; the commands below run only this step._
