@@ -68,6 +68,7 @@ arzopa-display|SAFE|macos|ARZOPA portable monitor, when it is connected: 1920x10
 # ---- PAUL: report only, never automated ----
 brew|PAUL||installing / uninstalling / updating apps — brewsync (the routine runs it separately)
 app-install|PAUL||an app is missing — install it (Brewfile / brewsync, or Fleet Self service)
+xcode|PAUL||Full Xcode at /Applications/Xcode.app (bundle id com.apple.dt.Xcode), the active developer directory /Applications/Xcode.app/Contents/Developer, the GM licence for that major version, and first launch. Command Line Tools do not pass. Install from the Mac App Store, then run sudo xcode-select -s /Applications/Xcode.app/Contents/Developer, accept the licence (sudo xcodebuild -license accept or the Xcode window), and finish first launch (open Xcode, or sudo xcodebuild -runFirstLaunch). Those need an administrator or the GUI. --fix does not run them and does not use sudo
 developer-folder|PAUL||~/Developer is missing — install.sh creates it
 unwanted-app|PAUL||uninstalling apps needs sudo — prune-apps.sh
 dock-apps|PAUL||Dock app layout — dock.sh rebuilds the whole Dock; run it if the change is unwanted
