@@ -87,9 +87,9 @@ If `tailscale set` fails, or it returns and the exit node is still unset, or All
 
 ## Xcode
 
-**Checked, not scripted** (the **Xcode** section of `macconfig-check.sh`, manual steps `xcode-app`, `xcode-select`, `xcode-license`, `xcode-first-launch`).
+**Checked, not scripted** (the **Xcode** section of `macconfig-check.sh`, manual steps `xcode-app`, `xcode-select`, `xcode-license`, `xcode-first-launch`). **By hand** (manual steps `xcode-components`, `xcode-agent-access`): the component list and External Agent Access. Those two cannot be read.
 
-Full Xcode is part of this Mac's configuration. The Command Line Tools are not a substitute. `bootstrap.sh` does not install it. On pdone-mac2, `mas install` of Xcode asks for an administrator. Pointing the active developer directory at Xcode (`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`), accepting the licence (`sudo xcodebuild -license accept`, or the Xcode window), and finishing first launch (`sudo xcodebuild -runFirstLaunch`, or opening Xcode once) need an administrator or that window. There is no unprivileged way to do those, so they are not a bootstrap step and they are not a SAFE fix. `macconfig --fix` does not run them and does not use sudo. `install.sh` does not either.
+Full Xcode is part of this Mac's configuration. The Command Line Tools are not a substitute. This work Mac cannot be connected to an Apple Account. Install full Xcode from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not the Mac App Store, mas, or an Apple developer download. That is how it is installed on pdone-mac2. It is a company app in `lib/mdm-apps.list`. `bootstrap.sh` does not install it, and neither does the Brewfile or `macconfig --fix`. Pointing the active developer directory at Xcode (`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`), accepting the licence (`sudo xcodebuild -license accept`, or the Xcode window), and finishing first launch (`sudo xcodebuild -runFirstLaunch`, or opening Xcode once) need an administrator or that window. There is no unprivileged way to do those, so they are not a bootstrap step and they are not a SAFE fix. `macconfig --fix` does not run them and does not use sudo. `install.sh` does not either.
 
 The check only reads, and a Command Line Tools machine fails it:
 
@@ -97,6 +97,13 @@ The check only reads, and a Command Line Tools machine fails it:
 - `xcode-select -p` is `/Applications/Xcode.app/Contents/Developer`. `/Library/Developer/CommandLineTools` is the Command Line Tools and is drift, including when the app is already on disk. The check runs `xcode-select -p` only. It does not run `xcode-select -s`.
 - The GM licence matches this Xcode's major version. The installed version is `CFBundleShortVersionString` in `Contents/version.plist`. The accepted version is `IDEXcodeVersionForAgreedToGMLicense` in `/Library/Preferences/com.apple.dt.Xcode.plist`. The same major version passes (16.0 agreed covers 16.2). A missing app, a missing key, or a different major version is drift. A file that cannot be read is a warning. Nothing writes that plist.
 - First launch is done. After the active directory is that Xcode, the check runs `<developer-dir>/usr/bin/xcodebuild -checkFirstLaunchStatus` and nothing else. Exit 0 passes. Any other exit is drift. It does not run while the active directory is the Command Line Tools, because that result would not be full Xcode's first launch. It never passes `-license`, `accept`, or `-runFirstLaunch`.
+
+Two choices on that first launch cannot be read, so they stay by hand. Nothing writes them, and `macconfig --fix` does not.
+
+- Components: macOS only. It is built in. Leave iOS, watchOS, tvOS, and visionOS unticked. Those platforms can be added later. Download sizes change, so they are not written down. Manual step `xcode-components`.
+- External Agent Access: While Xcode is Open. Change it later in Xcode → Settings → Intelligence. Manual step `xcode-agent-access`.
+
+`sudo xcodebuild -runFirstLaunch` finishes first launch without showing those two choices. Open Xcode to make them.
 
 Homebrew's preflight is unchanged. Before `brew bundle`, setup still only checks that `xcode-select -p` prints some directory, and it still offers `xcode-select --install` when the Command Line Tools are missing. That is enough for Homebrew. It is not this check.
 

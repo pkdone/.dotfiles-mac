@@ -193,8 +193,18 @@ for id in xcode-app xcode-select xcode-license xcode-first-launch; do
   eq "$id is in the Xcode group" "Xcode" \
     "$(awk -F'|' -v id="$id" '$1==id { print $2; exit }' "$LIST")"
 done
-eq "install step opens the Mac App Store" "macappstore://apps.apple.com/app/id497799835" \
+eq "install step opens Fleet Desktop" "app:Fleet Desktop" \
   "$(awk -F'|' '$1=="xcode-app" { print $5; exit }' "$LIST")"
+has "install step names Fleet Self service" \
+  "Install full Xcode from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not the Mac App Store, mas, or an Apple developer download." \
+  "$(awk -F'|' '$1=="xcode-app" { print $3; exit }' "$LIST")"
+eq "install step where is Fleet Self service" \
+  "Fleet Desktop menu bar → My device → Self service" \
+  "$(awk -F'|' '$1=="xcode-app" { print $4; exit }' "$LIST")"
+miss "install step does not open the App Store" "macappstore://" \
+  "$(awk -F'|' '$1=="xcode-app" { print; exit }' "$LIST")"
+has "Xcode is a company app" "Xcode|/Applications/Xcode.app|" \
+  "$(grep -v '^[[:space:]]*#' "$DIR/lib/mdm-apps.list" || true)"
 eq "select step names the hand command" \
   "Terminal, yourself: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer" \
   "$(awk -F'|' '$1=="xcode-select" { print $4; exit }' "$LIST")"
@@ -202,13 +212,45 @@ eq "licence step names the hand command" \
   "Open Xcode and accept the licence, or in a terminal yourself: sudo xcodebuild -license accept" \
   "$(awk -F'|' '$1=="xcode-license" { print $4; exit }' "$LIST")"
 eq "first launch step names the hand command" \
-  "Open Xcode once and let the first launch finish, or in a terminal yourself: sudo xcodebuild -runFirstLaunch" \
+  "Open Xcode once and let the first launch finish, or in a terminal yourself: sudo xcodebuild -runFirstLaunch. That command does not show Components or External Agent Access (the next two steps)" \
   "$(awk -F'|' '$1=="xcode-first-launch" { print $4; exit }' "$LIST")"
+for id in xcode-components xcode-agent-access; do
+  eq "$id stays by hand" "" \
+    "$(awk -F'|' -v id="$id" '$1==id { print $6; exit }' "$LIST")"
+  eq "$id opens Xcode" "app:Xcode" \
+    "$(awk -F'|' -v id="$id" '$1==id { print $5; exit }' "$LIST")"
+  eq "$id is in the Xcode group" "Xcode" \
+    "$(awk -F'|' -v id="$id" '$1==id { print $2; exit }' "$LIST")"
+done
+eq "components step keeps macOS only" \
+  "On first launch, install the macOS component only. Leave iOS, watchOS, tvOS, and visionOS unticked" \
+  "$(awk -F'|' '$1=="xcode-components" { print $3; exit }' "$LIST")"
+has "components step says sizes are not listed" "Download sizes are not listed" \
+  "$(awk -F'|' '$1=="xcode-components" { print $4; exit }' "$LIST")"
+miss "components step names no gigabyte size" "GB" \
+  "$(awk -F'|' '$1=="xcode-components" { print; exit }' "$LIST")"
+eq "agent access choice is While Xcode is Open" \
+  "Set External Agent Access to While Xcode is Open" \
+  "$(awk -F'|' '$1=="xcode-agent-access" { print $3; exit }' "$LIST")"
+eq "agent access can be changed in Intelligence" \
+  "Xcode first launch. Change it later in Xcode → Settings → Intelligence" \
+  "$(awk -F'|' '$1=="xcode-agent-access" { print $4; exit }' "$LIST")"
+has "settings records macOS-only components" "Leave iOS, watchOS, tvOS, and visionOS unticked" \
+  "$(cat "$DIR/docs/settings.md")"
+has "settings records While Xcode is Open" "External Agent Access: While Xcode is Open" \
+  "$(cat "$DIR/docs/settings.md")"
+has "troubleshooting records both first-launch choices" "xcode-agent-access" \
+  "$(cat "$DIR/docs/troubleshooting.md")"
+miss "the check does not choose platforms" "visionOS" "$(cat "$CHECKS")"
+miss "the check does not set External Agent Access" "While Xcode is Open" "$(cat "$CHECKS")"
 
 code="$(grep -v '^[[:space:]]*#' "$CHECKS")"
 eq "one first-launch status read" 1 "$(printf '%s\n' "$code" | grep -c -- '-checkFirstLaunchStatus 2>&1')"
 eq "one developer-directory read" 1 "$(printf '%s\n' "$code" | grep -c 'with_timeout 10 xcode-select -p')"
 miss "the check does not call mas" "mas " "$code"
+miss "the check does not mas-install Xcode" "mas install" "$code"
+has "drift names Fleet Self service" \
+  "Fleet Self service (Fleet Desktop menu bar → My device → Self service)" "$code"
 has "drift names the select command" "sudo xcode-select -s /Applications/Xcode.app/Contents/Developer" "$code"
 has "drift names licence acceptance" "sudo xcodebuild -license accept" "$code"
 has "drift names first launch" "sudo xcodebuild -runFirstLaunch" "$code"
@@ -235,6 +277,9 @@ eq "CLT-only licence is drift" bad "$(status_n "$RUN_OUT" 3)"
 eq "CLT-only first launch is drift" bad "$(status_n "$RUN_OUT" 4)"
 eq "CLT-only app tag" xcode "$(tag_n "$RUN_OUT" 1)"
 has "missing app is not full Xcode" "Command Line Tools are not full Xcode" "$(msg_n "$RUN_OUT" 1)"
+has "missing app names Fleet Self service" \
+  "Fleet Desktop menu bar → My device → Self service" "$(msg_n "$RUN_OUT" 1)"
+miss "missing app does not name the App Store URL" "macappstore://" "$(msg_n "$RUN_OUT" 1)"
 has "developer directory names Command Line Tools" \
   "/Library/Developer/CommandLineTools (Command Line Tools, not full Xcode)" \
   "$(msg_n "$RUN_OUT" 2)"
@@ -393,6 +438,8 @@ eq "macconfig on Command Line Tools exits 1" 1 "$int_rc"
 eq "macconfig stderr stays empty" "" "$(cat "$tmp/int.err")"
 has "macconfig prints the Xcode heading" "Xcode" "$int_out"
 has "macconfig names the missing app" "Full Xcode is not installed" "$int_out"
+has "macconfig names Fleet Self service" "Fleet Self service" "$int_out"
+miss "macconfig does not open the App Store" "macappstore://" "$int_out"
 has "macconfig names the Command Line Tools directory" \
   "Command Line Tools, not full Xcode" "$int_out"
 miss "macconfig does not say first launch is done" "first launch is done" "$int_out"

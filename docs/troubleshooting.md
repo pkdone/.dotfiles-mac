@@ -69,12 +69,14 @@ If Tailscale is running and no exit node is selected, the Tailscale section warn
 
 **Full Xcode is required. The Command Line Tools are not it.** `macconfig` reads four things and writes nothing: the app at `/Applications/Xcode.app` (bundle id `com.apple.dt.Xcode`), `xcode-select -p` equal to `/Applications/Xcode.app/Contents/Developer`, the GM licence major version, and `xcodebuild -checkFirstLaunchStatus` once that directory is selected. `/Library/Developer/CommandLineTools` fails the developer-directory line even when Xcode.app is installed. A machine with only the Command Line Tools fails the app line as well.
 
-Do these yourself. Each one needs an administrator or the Xcode window. `bootstrap.sh`, `install.sh`, and `macconfig --fix` do not run them and do not use sudo. `mas install` of Xcode asks for an administrator on this Mac, so it is not how setup installs it.
+Do these yourself. `bootstrap.sh`, `install.sh`, and `macconfig --fix` do not install Xcode, do not run the administrator steps, and do not use sudo. Full Xcode is a company app in `lib/mdm-apps.list`. It is not a Brewfile or `--fix` install. Selecting the developer directory, accepting the licence, and finishing first launch need an administrator or the Xcode window. The two choices after that are made in the Xcode window. They are not checked.
 
-1. Mac App Store → Xcode → Get. Manual step `xcode-app`.
+1. Fleet Desktop menu bar → My device → Self service, then install full Xcode. Not the Mac App Store, mas, or an Apple developer download. Manual step `xcode-app`.
 2. `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`. Manual step `xcode-select`.
 3. `sudo xcodebuild -license accept`, or open Xcode and accept the licence. Manual step `xcode-license`.
-4. Open Xcode once and let first launch finish, or `sudo xcodebuild -runFirstLaunch`. Manual step `xcode-first-launch`.
+4. Open Xcode once and let first launch finish, or `sudo xcodebuild -runFirstLaunch`. Manual step `xcode-first-launch`. The terminal command does not show the next two choices.
+5. Components: macOS only. It is built in. Leave iOS, watchOS, tvOS, and visionOS unticked. They can be added later. Download sizes are not listed. Manual step `xcode-components`.
+6. External Agent Access: While Xcode is Open. Change it later in Xcode → Settings → Intelligence. Manual step `xcode-agent-access`.
 
 A macOS or Xcode update can point `xcode-select -p` back at the Command Line Tools, and a new major version asks for the licence again. The check compares the major of `IDEXcodeVersionForAgreedToGMLicense` with the major of `CFBundleShortVersionString` in `Xcode.app/Contents/version.plist`. Run the same commands again. `--fix` will not clear the drift.
 

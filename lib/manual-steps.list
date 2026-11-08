@@ -96,15 +96,23 @@ youtube-music|Apps not in the Brewfile|Install YouTube Music as a Chrome app|Chr
 whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web as a Safari web app|Open Safari → go to https://web.whatsapp.com → File → Add to Dock… (only on a normal web page, not a blank tab or a Private window) → keep the name "WhatsApp Web" and the WhatsApp icon → Add. On the Android phone: WhatsApp → ⋮ → Linked devices → Link a device → scan the QR code. Linking the phone can't be checked. Then run dock.sh, so WhatsApp Web sits between Slack and Granola on Desktop 1. dock.sh also applies that Desktop pin.|safari:https://web.whatsapp.com|whatsapp-web
 
 # ---- Xcode ----
-# Full Xcode, not the Command Line Tools. Installing Xcode from the Mac App
-# Store with mas install needs an administrator on this Mac. Switching the
-# developer directory, accepting the licence, and finishing first launch need
-# an administrator or the Xcode window. Nothing in bootstrap, install.sh, or
-# macconfig --fix runs those. The four checks only read.
-xcode-app|Xcode|Install full Xcode from the Mac App Store. Command Line Tools are not full Xcode|Mac App Store → Xcode → Get. mas install needs an administrator, so setup does not run it|macappstore://apps.apple.com/app/id497799835|@macconfig:apps
+# Full Xcode, not the Command Line Tools. Install it from Fleet Self service
+# (Fleet Desktop menu bar → My device → Self service), not the Mac App Store,
+# mas, or an Apple developer download. It is a company app in
+# lib/mdm-apps.list. Setup does not install it, and it is not a Brewfile or
+# --fix install. Switching the developer directory, accepting the licence,
+# and finishing first launch need an administrator or the Xcode window.
+# Nothing in bootstrap, install.sh, or macconfig --fix runs those. The four
+# checks only read. Components and External Agent Access are chosen in the
+# Xcode window. They cannot be read, so those two steps stay by hand.
+# sudo xcodebuild -runFirstLaunch does not show them. Download sizes change,
+# so they are not written here.
+xcode-app|Xcode|Install full Xcode from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not the Mac App Store, mas, or an Apple developer download. Command Line Tools are not full Xcode|Fleet Desktop menu bar → My device → Self service|app:Fleet Desktop|@macconfig:apps
 xcode-select|Xcode|Select full Xcode as the active developer directory|Terminal, yourself: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer|app:Xcode|@macconfig:apps
 xcode-license|Xcode|Accept the Xcode licence|Open Xcode and accept the licence, or in a terminal yourself: sudo xcodebuild -license accept|app:Xcode|@macconfig:apps
-xcode-first-launch|Xcode|Finish Xcode's first launch|Open Xcode once and let the first launch finish, or in a terminal yourself: sudo xcodebuild -runFirstLaunch|app:Xcode|@macconfig:apps
+xcode-first-launch|Xcode|Finish Xcode's first launch|Open Xcode once and let the first launch finish, or in a terminal yourself: sudo xcodebuild -runFirstLaunch. That command does not show Components or External Agent Access (the next two steps)|app:Xcode|@macconfig:apps
+xcode-components|Xcode|On first launch, install the macOS component only. Leave iOS, watchOS, tvOS, and visionOS unticked|Xcode first launch → Components. macOS is built in. The other platforms can be added later. Download sizes are not listed|app:Xcode|
+xcode-agent-access|Xcode|Set External Agent Access to While Xcode is Open|Xcode first launch. Change it later in Xcode → Settings → Intelligence|app:Xcode|
 
 # ---- Privacy & Security permissions ----
 hammerspoon-ax|Privacy & Security permissions|Allow Hammerspoon, then restart it and choose Reload Config|Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|hammerspoon-ax

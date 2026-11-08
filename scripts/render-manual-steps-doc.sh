@@ -81,7 +81,7 @@ Each note lives with the setting:
 - Logi Options+ and the wheel direction: [Logi Options+](settings.md#logi-options).
 - Raycast: [Raycast](settings.md#raycast).
 - Focus modes and Shortcuts: [Modes](modes.md).
-- Full Xcode (manual steps `xcode-app`, `xcode-select`, `xcode-license`, `xcode-first-launch`): [Xcode](settings.md#xcode). Command Line Tools are not full Xcode. The Mac App Store install, `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, `sudo xcodebuild -license accept`, and first launch (`sudo xcodebuild -runFirstLaunch`, or opening Xcode once) need an administrator or the Xcode window. `bootstrap.sh` and `macconfig --fix` do not run them.
+- Full Xcode (manual steps `xcode-app`, `xcode-select`, `xcode-license`, `xcode-first-launch`, and by hand `xcode-components`, `xcode-agent-access`): [Xcode](settings.md#xcode). Command Line Tools are not full Xcode. Install it from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not the Mac App Store, mas, or an Apple developer download. It is a company app in `lib/mdm-apps.list`, not a Brewfile or `--fix` install. `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`, `sudo xcodebuild -license accept`, and first launch (`sudo xcodebuild -runFirstLaunch`, or opening Xcode once) need an administrator or the Xcode window. `sudo xcodebuild -runFirstLaunch` does not show the two first-launch choices. Components stays macOS only (built in; leave iOS, watchOS, tvOS, and visionOS unticked; they can be added later; download sizes are not listed). External Agent Access is While Xcode is Open (later: Xcode → Settings → Intelligence). Those two stay by hand. `bootstrap.sh` and `macconfig --fix` do not install Xcode and do not run those.
 EOF
 }
 
