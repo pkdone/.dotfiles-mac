@@ -5,9 +5,12 @@
 # scripts/manual-steps.sh calls check_step_xcode_app, check_step_xcode_select,
 # check_step_xcode_license, and check_step_xcode_first_launch (@macconfig:apps).
 #
-# Full Xcode is checked and not installed. On this Mac, `mas install` of Xcode
-# needs an administrator, and so do `xcode-select -s`, licence acceptance, and
-# first launch. Those commands appear below only as the line Paul runs himself.
+# Full Xcode is checked and not installed. Install it from Fleet Self service
+# (Fleet Desktop menu bar → My device → Self service), not the Mac App Store,
+# mas, or an Apple developer download. It is a company app in
+# lib/mdm-apps.list, not a Brewfile or --fix install. `xcode-select -s`,
+# licence acceptance, and first launch need an administrator or the Xcode
+# window. Those commands appear below only as the line Paul runs himself.
 # This file never executes them, never calls sudo, and never runs mas.
 # Homebrew's preflight still only needs some developer directory so the
 # Brewfile can install. Command Line Tools do not pass this section.
@@ -117,7 +120,7 @@ xcode_major() {
 }
 
 xcode_hand_install() {
-  printf '%s\n' "Install Xcode from the Mac App Store. macconfig does not install it and does not use sudo."
+  printf '%s\n' "Install full Xcode from Fleet Self service (Fleet Desktop menu bar → My device → Self service), not the Mac App Store, not mas, and not an Apple developer download. macconfig does not install it and does not use sudo."
 }
 
 xcode_hand_select() {

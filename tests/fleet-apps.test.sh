@@ -100,6 +100,7 @@ EOF
 apps_data="$(grep -v '^[[:space:]]*#' "$DIR/lib/mdm-apps.list" || true)"
 has "Zoom is a required company app" "Zoom|/Applications/zoom.us.app|" "$apps_data"
 has "1Password is a required company app" "1Password|/Applications/1Password.app|" "$apps_data"
+has "Xcode is a required company app" "Xcode|/Applications/Xcode.app|" "$apps_data"
 eq "a missing company app stays Needs Paul" "PAUL" \
   "$(awk -F'|' '$1=="mdm" { print $2; exit }' "$DIR/lib/autofix.list")"
 has "bootstrap offers the page after install" "fleet_company_apps_prompt" "$(cat "$DIR/bootstrap.sh")"
