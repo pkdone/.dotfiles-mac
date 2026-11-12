@@ -357,6 +357,10 @@ has "allow list mentions Cursor BackgroundActivityCheck" \
   "com.todesktop.230313mzl4w4u92.BackgroundActivityCheck" "$(cat "$DIR/lib/login-items-allow.list")"
 has "allow list mentions Cursor Nightly" \
   "co.anysphere.cursor.nightly" "$(cat "$DIR/lib/login-items-allow.list")"
+tools_block="$(awk '/^# ---- Tools this repo sets up/,/^# ---- Company/' "$DIR/lib/login-items-allow.list")"
+has "Notion opens at login in the tools block" "bundle|notion.id|Notion opens at login" "$tools_block"
+has "notion cask is in the Brewfile" 'cask "notion"' "$(cat "$DIR/Brewfile")"
+miss "no Notion open-at-login manual step" "notion|" "$(grep -v '^#' "$DIR/lib/manual-steps.list" || true)"
 
 printf 'login-items-allow tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

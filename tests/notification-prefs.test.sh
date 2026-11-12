@@ -71,11 +71,13 @@ has "Messages Critical is still off" "Critical Alerts stay allowed" "$where"
 off_entries="$(grep -E '^[^#[:space:]]' "$OFF" || true)"
 for gone in "Cursor Nightly" Mail "Microsoft Teams" Slack Spotify Tailscale \
   "Logi Options+" Cog "Grok Bot" Multipass "Yubico Authenticator" \
-  "YouTube Music" Sonos Santa Sentinel Kerberos Chrome Ghostty Zoom Hammerspoon \
+  "YouTube Music" Sonos Santa Sentinel Kerberos Chrome Ghostty Zoom Hammerspoon Notion \
   "Find My" Finder
 do
   miss "off list does not name $gone" "$gone" "$off_entries"
 done
+has "Notion is reviewed so a new install is not an info line" "notion.id" \
+  "$(grep -E '^[^#[:space:]]' "$REVIEWED")"
 eq "notifications-apps is checked by macconfig-check.sh" "@macconfig:notifications" \
   "$(awk -F'|' '$1 == "notifications-apps" { print $6; exit }' "$STEPS")"
 for step in notifications-previews notifications-display-sleep notifications-lock-screen notifications-mirroring; do

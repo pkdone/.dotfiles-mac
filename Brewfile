@@ -82,6 +82,7 @@ cask "spotify"
 cask "sonos"          # Sonos S2 desktop controller
 cask "granola"
 cask "slack"
+cask "notion"         # Notion desktop
 cask "acorn"
 cask "docker-desktop"
 cask "multipass"
