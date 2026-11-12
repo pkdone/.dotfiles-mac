@@ -114,8 +114,8 @@ jobs:
       - name: Run the suite with configured-Mac stubs
         run: |
           # Stubs at the front of PATH answer the way a fully configured Mac
-          # does (printer present, sleep already correct, Focus Shortcuts
-          # exist). A test that falls through to the inherited PATH gets ok
+          # does (printer present, sleep already correct, a sample Shortcut
+          # listed). A test that falls through to the inherited PATH gets ok
           # instead of "tool missing", which is the failure seen on a real
           # Mac, so it fails here too. lua5.4 is for the Hammerspoon specs. gcc builds
           # the Tailscale view used by the second run.

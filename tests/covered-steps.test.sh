@@ -77,7 +77,6 @@ section_out="$(
   CHECKED=0
   pass() { printf 'ok|%s\n' "$1"; }
   warn() { printf 'warn|%s\n' "$1"; }
-  bad() { printf 'warn|%s\n' "$1"; }
   # shellcheck disable=SC2317
   info() { :; }
   # shellcheck disable=SC2317
@@ -126,7 +125,6 @@ section_ok="$(
   CHECKED=0
   pass() { printf 'ok|%s\n' "$1"; }
   warn() { printf 'warn|%s\n' "$1"; }
-  bad() { printf 'warn|%s\n' "$1"; }
   # shellcheck disable=SC2317
   info() { :; }
   # shellcheck disable=SC2317
