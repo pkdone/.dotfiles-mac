@@ -97,5 +97,5 @@ Apps and tools come from three places:
 - [Settings](docs/settings.md) — what each managed setting does and why
 - [Manual steps](docs/manual-steps.md) — by-hand checklist (`lib/manual-steps.list`)
 - [Troubleshooting](docs/troubleshooting.md) — after a software update, hotkey pins, sleep on mains power
-- [Modes](docs/modes.md) — Hammerspoon modes
+- [Hammerspoon](docs/hammerspoon.md) — Slack on the ARZOPA monitor, and the Finder hotkey
 - [Shortcuts](SHORTCUTS.md) — keyboard-shortcut cheat-sheets

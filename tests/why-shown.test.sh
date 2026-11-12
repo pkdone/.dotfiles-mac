@@ -166,8 +166,8 @@ has "a step with no check keeps the press s guidance" "press s." "$plain"
 
 # shellcheck source=../lib/why-shown.sh disable=SC1091
 . "$DIR/lib/why-shown.sh"
-eq "warn detail is NOTSET" "NOTSET: Shortcuts missing: 'Mode WebConf On'" \
-  "$(why_shown_line warn "Shortcuts missing: 'Mode WebConf On'")"
+eq "warn detail is NOTSET" "NOTSET: Calendar notifications are still on" \
+  "$(why_shown_line warn "Calendar notifications are still on")"
 eq "an empty warn is still NOTSET" "NOTSET: Not set yet" "$(why_shown_line warn "")"
 eq "an empty hand line is the generic MANUAL line" \
   "MANUAL: Can't check this automatically. If it's already set, press s." \

@@ -187,7 +187,7 @@ EOF
   cat > "$dest/shortcuts" <<'EOF'
 #!/bin/sh
 if [ "${1:-}" = "list" ]; then
-  printf '%s\n' "Mode WebConf On" "Mode WebConf Off" "Mode DeepWork On" "Mode DeepWork Off"
+  printf '%s\n' "Sample Shortcut"
 fi
 exit 0
 EOF

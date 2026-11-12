@@ -88,7 +88,7 @@ has "configured lpstat names the home printer" "HP_ENVY_6000" "$printer"
 power="$(PATH="$conf:$safe" pmset -g custom)"
 has "configured pmset has AC sleep 0" "sleep                0" "$power"
 short="$(PATH="$conf:$safe" shortcuts list)"
-has "configured shortcuts list Mode WebConf On" "Mode WebConf On" "$short"
+has "configured shortcuts list answers" "Sample Shortcut" "$short"
 eq "configured brightness stub is executable" "yes" \
   "$([ -x "$conf/corebrightnessdiag" ] && echo yes || echo no)"
 

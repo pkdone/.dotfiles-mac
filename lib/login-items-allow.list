@@ -32,7 +32,6 @@ bundle|com.granola.app|Granola opens at login
 bundle|com.tinyspeck.slackmacgap|Slack opens at login
 bundle|com.anysphere.sand|Grok Bot opens at login (/Applications/Grok Bot.app; replaced the stale 'Sand' entry)
 bundle|com.spotify.client.startuphelper|Spotify StartUpHelper: opens Spotify at login (kept on purpose)
-app|~/Applications/WhatsApp Web.app|WhatsApp Web opens at login (Safari web app, manual step whatsapp-web; its bundle id is new on each Mac)
 label-prefix|com.microsoft.teams2|Microsoft Teams agent (cask microsoft-teams)
 team|X4QN7LTP59|Multipass daemon (cask multipass)
 team|9BNSXJN65R|Docker Desktop helper (com.docker.helper, cask docker-desktop)

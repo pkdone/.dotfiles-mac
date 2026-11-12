@@ -28,7 +28,7 @@
 #                                           lib/logi-settings.py; never written)
 #            @macconfig:<area>            same read-only check as that macconfig-check.sh
 #                                           section (mdm, karabiner, display, power,
-#                                           notifications, login-items, finder, modes,
+#                                           notifications, login-items, finder,
 #                                           menubar, apps).
 #                                           manualsteps open/check run that step's
 #                                           function. macconfig's Manual steps section
@@ -38,7 +38,7 @@
 #            @macconfig-check.sh            legacy: report covered, do not run a section
 #            hammerspoon-ax | karabiner-driver | pointer-size | input-british | op-cli | gh-auth
 #            | spotlight-results | remove-widgets | home-printer | tailscale-signin
-#            | edge-light | whatsapp-web
+#            | edge-light
 #                                           named checks. pointer-size, input-british, op-cli,
 #                                           gh-auth, and spotlight-results live in
 #                                           lib/session-checks.sh, sourced here. macconfig-check.sh
@@ -67,11 +67,6 @@
 #                                           group holds no preferences, so the
 #                                           result is check by hand. open always
 #                                           shows the step. Nothing is written.
-#                                           whatsapp-web: ~/Applications/WhatsApp Web.app
-#                                           exists and its CFBundleIdentifier
-#                                           starts with com.apple.Safari.WebApp.
-#                                           The UUID in that id is not stored.
-#                                           Linking the phone cannot be read.
 # Blank lines and lines beginning with # are ignored. Fields must not contain '|'.
 
 # ---- Company apps (MDM) ----
@@ -93,7 +88,6 @@ tailscale-login|Sign-ins|Add Tailscale to Open at Login. It has no launch-at-log
 # ---- Apps not in the Brewfile ----
 cursor-nightly|Apps not in the Brewfile|Install Cursor Nightly (separate app, next to the stable Cursor)|cursor.com/nightlydownload|https://cursor.com/nightlydownload|app:/Applications/Cursor Nightly.app
 youtube-music|Apps not in the Brewfile|Install YouTube Music as a Chrome app|Chrome → music.youtube.com → ⋮ → Cast, save, and share → Install page as app|https://music.youtube.com|app:@HOME@/Applications/Chrome Apps.localized/YouTube Music.app
-whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web as a Safari web app|Open Safari → go to https://web.whatsapp.com → File → Add to Dock… (only on a normal web page, not a blank tab or a Private window) → keep the name "WhatsApp Web" and the WhatsApp icon → Add. On the Android phone: WhatsApp → ⋮ → Linked devices → Link a device → scan the QR code. Linking the phone can't be checked. Then run dock.sh, so WhatsApp Web sits between Slack and Granola on Desktop 1. dock.sh also applies that Desktop pin.|safari:https://web.whatsapp.com|whatsapp-web
 
 # ---- Xcode ----
 # Full Xcode, not the Command Line Tools. Install it from Fleet Self service
@@ -115,7 +109,7 @@ xcode-components|Xcode|On first launch, install the macOS component only. Leave 
 xcode-agent-access|Xcode|Set External Agent Access to While Xcode is Open|Xcode first launch. Change it later in Xcode → Settings → Intelligence|app:Xcode|
 
 # ---- Privacy & Security permissions ----
-hammerspoon-ax|Privacy & Security permissions|Allow Hammerspoon, then restart it and choose Reload Config|Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|hammerspoon-ax
+hammerspoon-ax|Privacy & Security permissions|Allow Hammerspoon, then reload its config|Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications. There is no menu-bar icon. Reload with `hs -c 'hs.reload()'`, or open Hammerspoon from Spotlight or Raycast and choose Reload Config. The Console is `hs -c 'hs.openConsole()'`|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|hammerspoon-ax
 karabiner-driver|Privacy & Security permissions|Turn on the Karabiner driver|Open Karabiner-Elements first so it asks for its driver. Then System Settings → General → Login Items & Extensions: scroll to Extensions, choose By Category, click ⓘ next to Driver Extensions, and turn on .Karabiner-VirtualHIDDevice-Manager (org.pqrs.Karabiner-DriverKit-VirtualHIDDevice). Enter your password if asked, then click Done|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|karabiner-driver
 karabiner-ax|Privacy & Security permissions|Allow Karabiner-Elements and Karabiner-Core-Service|Open Karabiner-Elements first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|tcc:Accessibility:org.pqrs.Karabiner-Core-Service
 karabiner-login-items|Privacy & Security permissions|Allow Karabiner-Elements to run in the background. It is not changed automatically.|Open Karabiner-Elements first. System Settings → General → Login Items & Extensions → Allow in the Background. Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon should be enabled and allowed. Karabiner-Elements Privileged Daemons v2 may stay disabled|x-apple.systempreferences:com.apple.LoginItems-Settings.extension|@macconfig:karabiner
@@ -275,12 +269,6 @@ finder-sidebar-tags|Login Items & Finder|No tags shown in the sidebar|Finder →
 # Do not click Replace Spotlight. That turns off Command+Space (symbolic hotkey 64).
 raycast-hotkey|App settings|Raycast hotkey: Shift+Control+Command+R (off Option+Space)|Open Raycast → Settings (Command+,) → General → Raycast Hotkey → click the hotkey recorder and press Shift+Control+Command+R. Don't click the Replace Spotlight button next to it (it turns off Spotlight's Command+Space)|app:Raycast|defaults:com.raycast.macos:raycastGlobalHotkey=Shift-Control-Command-15
 raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command+V, keep history 1 day, disable 1Password and 1Password for Safari|Open Raycast, run Clipboard History once and allow Accessibility if asked. Then Raycast Settings → Clipboard History (in the left sidebar; there is no Extensions tab) → Keep history for = 1 Day → under Disabled Applications click + and add 1Password and 1Password for Safari (Keychain Access and Passwords are already listed) → in Commands, on the Clipboard History row click Add Hotkey and press Control+Command+V|app:Raycast|
-
-# ---- Modes (Hammerspoon menu-bar switcher; see docs/modes.md) ----
-mode-focus-modes|Modes (menu-bar switcher)|Create Focus modes WebConf and DeepWork|System Settings → Focus → click Add Focus… (opens a sheet) → Custom → name WebConf (or DeepWork) → pick any icon → Done → Allowed Apps → Add. WebConf allows Granola. DeepWork allows Hammerspoon, so the end-of-session notification gets through. Allowed People can stay None. An app only appears in that Add list after it has asked macOS for notification permission at least once (open the app and allow notifications first).|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig:modes
-mode-focus-shortcuts|Modes (menu-bar switcher)|Create four Shortcuts, each with one Set Focus action|Shortcuts → + → Search Actions "Set Focus". In Shortcuts, click + in the toolbar, click the title at the top and rename it exactly, then in Search Actions on the right type Set Focus and double-click it. Click the blue placeholder words to set them, then close the window to save. The action starts as Turn Do Not Disturb On, so click Do Not Disturb and pick WebConf or DeepWork. Names must match exactly: "Mode WebConf On" is Turn WebConf On until Turned Off; "Mode WebConf Off" is Turn WebConf Off; "Mode DeepWork On" is Turn DeepWork On until Turned Off; "Mode DeepWork Off" is Turn DeepWork Off.|app:Shortcuts|@macconfig:modes
-mode-hammerspoon-alerts|Modes (menu-bar switcher)|Hammerspoon notifications: style Alerts, so the DeepWork end-of-session buttons (Take a break / Back to Normal / Another session) show|System Settings → Notifications → Hammerspoon → Alerts|x-apple.systempreferences:com.apple.Notifications-Settings.extension|@macconfig:notifications
-mode-menubar-pin|Modes (menu-bar switcher)|Pin the mode-switcher menu-bar icon so it stays visible: hold Command (⌘) and drag it toward Control Centre / the clock, because icons further from them get auto-hidden behind <<|Menu bar → ⌘-drag the mode icon (desktop computer / red ⏺ / brain)||
 
 # ---- Menu bar ----
 # Bundle ids live in lib/menubar-allow.list. On macOS 26 the toggles are

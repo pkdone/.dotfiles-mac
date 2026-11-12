@@ -77,15 +77,12 @@ docker-path-block|PAUL||Docker Desktop put its own "added by Docker Desktop" PAT
 hostname|PAUL||hostname change needs sudo — hostname.sh
 auto-brightness|PAUL||Automatically adjust brightness — System Settings → Displays. Readable without sudo via corebrightnessdiag; the saved CoreBrightness plist is root-owned and its keys move between macOS versions, so --fix never writes it. True Tone and battery dim are left alone
 ac-sleep|PAUL||Power — AC sleep 0 is System Settings → Battery → Options → Prevent automatic sleeping on power adapter when the display is off (sudo pmset -c sleep 0). Also AC display sleep 10, battery display sleep 2, and AC wake for network access (manual step ac-sleep). pmset -g custom is readable without sudo; --fix never runs sudo. Battery idle sleep is not changed. Closing the lid still sleeps the Mac
-notifications|PAUL||Allow Notifications for apps in lib/notifications-off.list, and Hammerspoon notification style Alerts — System Settings → Notifications. Read from the usernoted group plist; --fix never writes it
+notifications|PAUL||Allow Notifications for apps in lib/notifications-off.list — System Settings → Notifications. Read from the usernoted group plist; --fix never writes it
 menubar-allow|PAUL||Allow in the Menu Bar for apps in lib/menubar-allow.list — System Settings → Menu Bar → Allow in the Menu Bar. Read from the Control Center group plist (trackedApplications, a nested binary plist); --fix never writes it
 url-handler|PAUL||default-app changes can raise a macOS confirmation dialog — handlers.sh
 app-config|PAUL||an app config in the repo is invalid or overridden — fix ghostty/config, or merge and remove the override by hand
 logi-settings|PAUL||a Logi Options+ setting (MX Master 3S) drifted from lib/logi-expected.list — set it back in the app; settings.db is never written
 logi-unreadable|PAUL||Logi Options+ settings.db missing or in an unreadable format — open the app once, or update lib/logi-settings.py
-modes-config|PAUL||hammerspoon/modes.lua invalid or state.json unreadable — fix modes.lua and reload Hammerspoon / switch to Normal from the menu bar
-modes-setup|PAUL||a Focus mode or Focus Shortcut named in modes.lua is missing — create it (manualsteps open)
-mode-long|PAUL||a non-Normal mode has been on longer than HEALTH_MODE_MAX_HOURS — switch back from the menu bar (never switched automatically)
 karabiner-rules|PAUL||karabiner.json is a repo file — restore it from git (dotfiles git state)
 karabiner-background|PAUL||Karabiner-Core-Service and Karabiner-VirtualHIDDevice-Daemon enabled and allowed (the same records sfltool dumpbtm prints). Check-only: --fix never changes Login Items. Karabiner-Elements Privileged Daemons v2 may stay disabled
 repo-file|PAUL||a repo script is missing — restore it from git (dotfiles git state)

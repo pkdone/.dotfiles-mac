@@ -56,31 +56,27 @@ export AUTO_BRIGHTNESS_DIAG="$tmp/bin/no-such-corebrightnessdiag"
 # shellcheck disable=SC1091
 . "$DIR/lib/covered-steps.sh"
 
-focus_db="$tmp/home/Library/DoNotDisturb/DB/ModeConfigurations.json"
 one="$tmp/one.list"
 printf '%s\n' \
-  'mode-focus-modes|Modes|Create Focus modes|System Settings → Focus|x-apple.systempreferences:com.apple.Focus-Settings.extension|@macconfig:modes' \
+  'ac-sleep|Power|AC sleep|System Settings → Battery|x-apple.systempreferences:com.apple.Battery-Settings.extension|@macconfig:power' \
   > "$one"
 
-printf '%s\n' '{"name":"Other"}' > "$focus_db"
 bad_porc="$(HOME="$tmp/home" MANUAL_STEPS_LIST="$one" "$MS" check --porcelain 2>"$tmp/bad.err")"
 bad_rc=$?
-eq "a missing Focus mode warns" 1 "$bad_rc"
+eq "missing pmset warns" 1 "$bad_rc"
 eq "stderr stays empty" "" "$(cat "$tmp/bad.err")"
 eq "porcelain status is warn" "warn" "$(printf '%s\n' "$bad_porc" | cut -d'|' -f1)"
-has "porcelain detail names the missing modes" "Focus modes missing:" "$bad_porc"
-has "porcelain detail names WebConf" "WebConf" "$bad_porc"
+has "porcelain detail names the missing tool" "pmset missing" "$bad_porc"
 
 bad_open="$(printf 's\n' | HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$one" \
   PATH="$tmp/bin:$PATH" "$MS" open 2>"$tmp/open.err")"
-has "open shows the failing step" "Create Focus modes" "$bad_open"
-has "open says not set yet" "NOTSET: Focus modes missing:" "$bad_open"
+has "open shows the failing step" "AC sleep" "$bad_open"
+has "open says not set yet" "NOTSET: Pmset missing" "$bad_open"
 
 section_out="$(
   CHECKED=0
   pass() { printf 'ok|%s\n' "$1"; }
   warn() { printf 'warn|%s\n' "$1"; }
-  bad() { printf 'warn|%s\n' "$1"; }
   # shellcheck disable=SC2317
   info() { :; }
   # shellcheck disable=SC2317
@@ -90,8 +86,8 @@ section_out="$(
   DOTDIR="$DIR" HOME="$tmp/home" DOT_PYTHON="$(command -v python3)" \
     MACCONFIG_CHECKS_DEFINE_ONLY=1
   # shellcheck disable=SC1091
-  . "$DIR/checks/modes.sh"
-  check_step_mode_focus_modes
+  . "$DIR/checks/power.sh"
+  check_step_ac_sleep
 )"
 eq "section function and manualsteps agree (failing)" \
   "warn" "$(printf '%s\n' "$section_out" | head -n 1 | cut -d'|' -f1)"
@@ -99,21 +95,36 @@ eq "manualsteps status matches the section function" \
   "$(printf '%s\n' "$section_out" | head -n 1 | cut -d'|' -f1)" \
   "$(printf '%s\n' "$bad_porc" | cut -d'|' -f1)"
 
-printf '%s\n' '{"a":{"name":"WebConf"},"b":{"name":"DeepWork"}}' > "$focus_db"
-ok_porc="$(HOME="$tmp/home" MANUAL_STEPS_LIST="$one" "$MS" check --porcelain 2>"$tmp/ok.err")"
+cat > "$tmp/bin/pmset" <<'EOF'
+#!/bin/sh
+if [ "$1" = -g ] && [ "$2" = custom ]; then
+  cat <<'CUSTOM'
+Battery Power:
+ displaysleep         2
+ sleep                45
+AC Power:
+ displaysleep         10
+ sleep                0
+ womp                 1
+CUSTOM
+  exit 0
+fi
+exit 1
+EOF
+chmod +x "$tmp/bin/pmset"
+ok_porc="$(PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_LIST="$one" "$MS" check --porcelain 2>"$tmp/ok.err")"
 ok_rc=$?
-eq "Focus modes present exits 0" 0 "$ok_rc"
+eq "AC sleep already set exits 0" 0 "$ok_rc"
 eq "porcelain status is ok" "ok" "$(printf '%s\n' "$ok_porc" | cut -d'|' -f1)"
-ok_open="$(printf 's\n' | HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$one" \
-  PATH="$tmp/bin:$PATH" "$MS" open 2>"$tmp/okopen.err")"
-miss "open skips a passing macconfig step" "Create Focus modes" "$ok_open"
+ok_open="$(printf 's\n' | PATH="$tmp/bin:$PATH" HOME="$tmp/home" MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$one" \
+  "$MS" open 2>"$tmp/okopen.err")"
+miss "open skips a passing macconfig step" "AC sleep" "$ok_open"
 has "open says there is nothing to do" "Nothing to do:" "$ok_open"
 
 section_ok="$(
   CHECKED=0
   pass() { printf 'ok|%s\n' "$1"; }
   warn() { printf 'warn|%s\n' "$1"; }
-  bad() { printf 'warn|%s\n' "$1"; }
   # shellcheck disable=SC2317
   info() { :; }
   # shellcheck disable=SC2317
@@ -123,11 +134,12 @@ section_ok="$(
   DOTDIR="$DIR" HOME="$tmp/home" DOT_PYTHON="$(command -v python3)" \
     MACCONFIG_CHECKS_DEFINE_ONLY=1
   # shellcheck disable=SC1091
-  . "$DIR/checks/modes.sh"
-  check_step_mode_focus_modes
+  . "$DIR/checks/power.sh"
+  check_step_ac_sleep
 )"
 eq "section function and manualsteps agree (passing)" \
   "ok" "$(printf '%s\n' "$section_ok" | head -n 1 | cut -d'|' -f1)"
+rm -f "$tmp/bin/pmset"
 
 owned="$(HOME="$tmp/home" MACCONFIG_OWNS_SECTIONS=1 MANUAL_STEPS_LIST="$one" \
   "$MS" check --porcelain 2>"$tmp/owned.err")"
@@ -205,8 +217,7 @@ while read -r id area; do
   want=""
   case "$id" in
     karabiner-login-items|user-picture|finder-sidebar) want=hand ;;
-    auto-brightness|display-more-space|arzopa-display|ac-sleep|mode-focus-shortcuts|wallpaper|notifications-apps|menubar-third-party-hide|xcode-app|xcode-select|xcode-license|xcode-first-launch) want=warn ;;
-    mode-focus-modes) want=ok ;;
+    auto-brightness|display-more-space|arzopa-display|ac-sleep|wallpaper|notifications-apps|menubar-third-party-hide|xcode-app|xcode-select|xcode-license|xcode-first-launch) want=warn ;;
   esac
   if [ -n "$want" ]; then
     eq "$id does not read this machine" "$want" "$porc_status"

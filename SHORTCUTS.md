@@ -77,7 +77,7 @@ Cheat-sheets for macOS, the terminal, and Ghostty. Setup docs live in [README.md
 
 #### Hammerspoon
 
-Hammerspoon binds these in `hammerspoon/finder_hotkey.lua` and `hammerspoon/external_slack.lua`, which `init.lua` loads. Shift + Control + Command + F launches Finder, or brings it to the front when Finder is already running. Shift + Control + Option + Command + S moves Slack onto the ARZOPA display, or brings it back to the built-in display.
+Hammerspoon binds these in `hammerspoon/finder_hotkey.lua` and `hammerspoon/external_slack.lua`, which `init.lua` loads. What they do is in [Hammerspoon](docs/hammerspoon.md). Shift + Control + Command + F launches Finder, or brings it to the front when Finder is already running. Shift + Control + Option + Command + S moves Slack onto the ARZOPA display, or brings it back to the built-in display. There is no menu-bar icon. The Console is `hs -c 'hs.openConsole()'`. Reload is `hs -c 'hs.reload()'`.
 
 | Action | Shortcut |
 |------|------|

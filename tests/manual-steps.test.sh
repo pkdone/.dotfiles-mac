@@ -52,13 +52,20 @@ doc_rows="$(grep -E '^\| [0-9]+ \|' "$DIR/../docs/manual-steps.md")"
 eq "docs/manual-steps.md table matches lib/manual-steps.list" \
   "$("$MS" list --markdown | grep -E '^\| [0-9]+ \|')" "$doc_rows"
 doc="$(cat "$DIR/../docs/manual-steps.md")"
-ax_where="$(awk -F'|' '$1 == "hammerspoon-ax" || $1 == "karabiner-ax" || $1 == "raycast-ax" { print $1 "|" $4 }' "$LIST")"
+ax_where="$(awk -F'|' '$1 == "karabiner-ax" || $1 == "raycast-ax" { print $1 "|" $4 }' "$LIST")"
 eq "accessibility steps use Privacy & Security → Accessibility" \
   "$(printf '%s\n' \
-    'hammerspoon-ax|Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications' \
     'karabiner-ax|Open Karabiner-Elements first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications' \
     'raycast-ax|Open Raycast first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications')" \
   "$ax_where"
+hs_where="$(awk -F'|' '$1 == "hammerspoon-ax" { print $4 }' "$LIST")"
+has "hammerspoon step opens Accessibility" \
+  "Open Hammerspoon first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications." \
+  "$hs_where"
+has "hammerspoon step says there is no menu-bar icon" "There is no menu-bar icon." "$hs_where"
+has "hammerspoon step names reload" "hs.reload()" "$hs_where"
+has "hammerspoon step names the console" "hs.openConsole()" "$hs_where"
+has "hammerspoon step names Spotlight or Raycast" "Spotlight or Raycast" "$hs_where"
 eq "driver step says to open Karabiner-Elements first" \
   "Open Karabiner-Elements first so it asks for its driver." \
   "$(awk -F'|' '$1=="karabiner-driver" { print $4 }' "$LIST" | cut -d. -f1)."
@@ -129,42 +136,6 @@ has "dragging names the Trackpad Options sheet" \
   "click Trackpad Options… (opens a sheet)" "$(grep '^trackpad-dragging|' "$LIST")"
 has "input sources name the Edit sheet" \
   "click Edit… next to Input Sources (opens a sheet)" "$(grep '^input-british|' "$LIST")"
-focus_modes="$(grep '^mode-focus-modes|' "$LIST")"
-has "focus names the Add Focus sheet" \
-  "click Add Focus… (opens a sheet)" "$focus_modes"
-has "focus mode is named then given any icon" \
-  "name WebConf (or DeepWork) → pick any icon → Done → Allowed Apps → Add" "$focus_modes"
-has "WebConf Focus allows Granola" "WebConf allows Granola" "$focus_modes"
-has "DeepWork Focus allows Hammerspoon" "DeepWork allows Hammerspoon" "$focus_modes"
-has "Allowed People can stay None" "Allowed People can stay None" "$focus_modes"
-has "an app must have asked for notifications" \
-  "notification permission at least once" "$focus_modes"
-focus_shortcuts="$(grep '^mode-focus-shortcuts|' "$LIST")"
-has "focus shortcuts where starts at Search Actions" \
-  'Shortcuts → + → Search Actions "Set Focus"' \
-  "$(printf '%s\n' "$focus_shortcuts" | cut -d'|' -f4)"
-has "shortcut step clicks + and renames the title" \
-  "click + in the toolbar, click the title at the top and rename it exactly" "$focus_shortcuts"
-has "shortcut step double-clicks Set Focus" \
-  "type Set Focus and double-click it" "$focus_shortcuts"
-has "shortcut step sets the blue placeholders" \
-  "Click the blue placeholder words" "$focus_shortcuts"
-has "shortcut step closes the window to save" "close the window to save" "$focus_shortcuts"
-has "Set Focus starts as Do Not Disturb" "Turn Do Not Disturb On" "$focus_shortcuts"
-has "WebConf On is until Turned Off" "Turn WebConf On until Turned Off" "$focus_shortcuts"
-has "WebConf Off turns that Focus off" '"Mode WebConf Off" is Turn WebConf Off' "$focus_shortcuts"
-has "DeepWork On is until Turned Off" "Turn DeepWork On until Turned Off" "$focus_shortcuts"
-has "DeepWork Off turns that Focus off" '"Mode DeepWork Off" is Turn DeepWork Off' "$focus_shortcuts"
-miss "shortcut step does not tell you to open Shortcuts" "open the Shortcuts app" "$focus_shortcuts"
-miss "shortcut step does not send you through Spotlight" "Spotlight" "$focus_shortcuts"
-miss "shortcut step does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$focus_shortcuts"
-miss "focus modes step does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$focus_modes"
-modes_doc="$(cat "$DIR/../docs/modes.md")"
-has "modes doc points at the Focus mode step" "mode-focus-modes" "$modes_doc"
-has "modes doc points at the Focus shortcut step" "mode-focus-shortcuts" "$modes_doc"
-has "modes doc points at the manual-steps click path" "manual-steps.md" "$modes_doc"
-miss "modes doc does not require Mode Upcoming Meetings" "Mode Upcoming Meetings" "$modes_doc"
-miss "modes doc does not tell you to open Shortcuts" "open the Shortcuts app" "$modes_doc"
 miss "look up note does not mention Force Click" "Force Click" "$(grep '^trackpad-lookup|' "$LIST")"
 
 # Exact rows macos.sh applies and macconfig-check.sh checks. restart=logout.
@@ -386,107 +357,29 @@ has "control centre open says it can't be checked" "MANUAL: Can't check this aut
 has "control centre open has nothing to open" "(nothing to open)" "$cc_open"
 rm -rf "$ccdir"
 
-# WhatsApp Web: done when the Safari web app exists and its bundle id has the
-# prefix. Missing is "NOTSET:", not "Can't check this automatically".
-# Linking the phone is named in the step because it cannot be read.
-wa_where="$(awk -F'|' '$1=="whatsapp-web" { print $4; exit }' "$LIST")"
-has "whatsapp step opens Safari to the site" "https://web.whatsapp.com" "$wa_where"
-has "whatsapp step names Add to Dock" "File → Add to Dock" "$wa_where"
-has "whatsapp step says a blank tab will not do" "not a blank tab or a Private window" "$wa_where"
-has "whatsapp step keeps the name" 'keep the name "WhatsApp Web"' "$wa_where"
-has "whatsapp step names Linked devices" "Linked devices" "$wa_where"
-has "whatsapp step says the phone link can't be checked" "Linking the phone can't be checked." "$wa_where"
-has "whatsapp step names dock.sh" "dock.sh" "$wa_where"
-miss "whatsapp step does not send you to macconfig --fix for the Desktop pin" "macconfig --fix" "$wa_where"
-has "whatsapp step puts it between Slack and Granola" "between Slack and Granola on Desktop 1" "$wa_where"
-eq "whatsapp step check is the named check" "whatsapp-web" \
-  "$(awk -F'|' '$1=="whatsapp-web" { print $6; exit }' "$LIST")"
-eq "whatsapp step opens in Safari, not the default browser" \
-  "safari:https://web.whatsapp.com" \
-  "$(awk -F'|' '$1=="whatsapp-web" { print $5; exit }' "$LIST")"
-eq "whatsapp step does not hard-code a web app UUID" "" \
-  "$(awk -F'|' '$1=="whatsapp-web" { print }' "$LIST" | grep -E 'WebApp\.[0-9A-Fa-f]{8}-' || true)"
-miss "notifications-off does not list WhatsApp Web" "WhatsApp" \
-  "$(cat "$DIR/../lib/notifications-off.list")"
-miss "notifications-reviewed does not hard-code a Safari web app id" "Safari.WebApp." \
-  "$(grep -v '^[[:space:]]*#' "$DIR/../lib/notifications-reviewed.list" || true)"
-
-wa_dir="$(mktemp -d)"
-wa_bin="$wa_dir/bin"
-mkdir -p "$wa_bin"
-printf '%s\n' '#!/bin/sh' 'exit 0' > "$wa_bin/open"
-chmod +x "$wa_bin/open"
-printf '%s\n' \
-  'whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web|Open Safari → File → Add to Dock|https://web.whatsapp.com|whatsapp-web' \
-  > "$wa_dir/steps.list"
-write_webapp() { # bundle id, or empty to leave the app missing
-  rm -rf "${wa_dir:?}/home"
-  mkdir -p "$wa_dir/home"
-  [ -n "$1" ] || return 0
-  mkdir -p "$wa_dir/home/Applications/WhatsApp Web.app/Contents"
-  cat > "$wa_dir/home/Applications/WhatsApp Web.app/Contents/Info.plist" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>CFBundleIdentifier</key><string>$1</string>
-  <key>CFBundleName</key><string>WhatsApp Web</string>
-</dict></plist>
-EOF
-}
-wa_check() {
-  HOME="$wa_dir/home" PATH="$wa_bin:$PATH" MANUAL_STEPS_LIST="$wa_dir/steps.list" \
-    "$MS" check --porcelain
-}
-CANT="MANUAL: Can't check this automatically"
-write_webapp ""
-wa_out="$(wa_check)"; wa_rc=$?
-eq "a missing WhatsApp Web warns" warn "$(printf '%s\n' "$wa_out" | cut -d'|' -f1)"
-eq "a missing WhatsApp Web exits 1" 1 "$wa_rc"
-has "a missing WhatsApp Web names the path" "not found at ~/Applications/WhatsApp Web.app" "$wa_out"
-wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
-  MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
-has "open says WhatsApp Web is not set yet" "NOTSET:" "$wa_open"
-has "open names the missing app" "Not found at ~/Applications/WhatsApp Web.app" "$wa_open"
-miss "a missing WhatsApp Web is not labelled can't-check" "$CANT" "$wa_open"
-
-write_webapp "com.apple.Safari.WebApp.11111111-2222-3333-4444-555555555555"
-wa_out="$(wa_check)"; wa_rc=$?
-eq "a Safari web app is done" ok "$(printf '%s\n' "$wa_out" | cut -d'|' -f1)"
-eq "a Safari web app exits 0" 0 "$wa_rc"
-has "a done WhatsApp Web says the phone link can't be checked" \
-  "Linking the phone can't be checked." "$wa_out"
-wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
-  MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
-miss "open skips a WhatsApp Web that is already a Safari web app" "Add WhatsApp Web" "$wa_open"
-
-write_webapp "com.example.not-whatsapp"
-wa_out="$(wa_check)"
-eq "a non-Safari bundle id warns" warn "$(printf '%s\n' "$wa_out" | cut -d'|' -f1)"
-has "a non-Safari bundle id names the prefix" "does not start with com.apple.Safari.WebApp." "$wa_out"
-wa_open="$(printf 's\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
-  MANUAL_STEPS_OPEN_TTY=1 MANUAL_STEPS_LIST="$wa_dir/steps.list" "$MS" open)"
-has "open says a wrong bundle id is not set yet" "NOTSET:" "$wa_open"
-miss "a wrong bundle id is not labelled can't-check" "$CANT" "$wa_open"
-
-# Chrome is the default https handler. Add to Dock exists only in Safari,
-# so the walk-through must pass -a Safari and not a bare URL.
-cat > "$wa_bin/open" <<'EOF'
+# safari: opens in Safari, not the default browser. No real step uses it.
+# The opener stays for a page that has to be added from Safari.
+safari_dir="$(mktemp -d)"
+safari_bin="$safari_dir/bin"
+mkdir -p "$safari_bin"
+cat > "$safari_bin/open" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >> "${OPEN_LOG:?}"
 exit 0
 EOF
-chmod +x "$wa_bin/open"
+chmod +x "$safari_bin/open"
 printf '%s\n' \
-  'whatsapp-web|Apps not in the Brewfile|Add WhatsApp Web|Open Safari|safari:https://web.whatsapp.com|whatsapp-web' \
-  > "$wa_dir/safari.list"
-write_webapp ""
-: > "$wa_dir/open.log"
-printf '\n' | HOME="$wa_dir/home" PATH="$wa_bin:$PATH" NO_COLOR=1 \
-  OPEN_LOG="$wa_dir/open.log" MANUAL_STEPS_OPEN_TTY=1 \
-  MANUAL_STEPS_LIST="$wa_dir/safari.list" "$MS" open >/dev/null
-eq "walk-through opens the page in Safari" "-a Safari https://web.whatsapp.com" \
-  "$(cat "$wa_dir/open.log")"
-rm -rf "$wa_dir"
+  'sample-safari|Apps not in the Brewfile|Open a page in Safari|Open Safari|safari:https://example.com|' \
+  > "$safari_dir/steps.list"
+: > "$safari_dir/open.log"
+printf '\n' | PATH="$safari_bin:$PATH" NO_COLOR=1 \
+  OPEN_LOG="$safari_dir/open.log" MANUAL_STEPS_OPEN_TTY=1 \
+  MANUAL_STEPS_LIST="$safari_dir/steps.list" "$MS" open >/dev/null
+eq "walk-through opens the page in Safari" "-a Safari https://example.com" \
+  "$(cat "$safari_dir/open.log")"
+rm -rf "$safari_dir"
+miss "notifications-reviewed does not hard-code a Safari web app id" "Safari.WebApp." \
+  "$(grep -v '^[[:space:]]*#' "$DIR/../lib/notifications-reviewed.list" || true)"
 
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
