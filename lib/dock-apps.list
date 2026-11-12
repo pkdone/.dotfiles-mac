@@ -6,7 +6,6 @@
 #   manual step hasn't been done. That is not drift. Other missing apps stay drift.
 # Blank lines and lines beginning with # are ignored.
 Slack|/Applications/Slack.app
-WhatsApp Web|@HOME@/Applications/WhatsApp Web.app|manual:whatsapp-web
 Granola|/Applications/Granola.app
 Google Chrome|/Applications/Google Chrome.app
 Ghostty|/Applications/Ghostty.app

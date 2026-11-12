@@ -230,143 +230,16 @@ eq "drift does not restart Finder" 0 "$miss_finder"
 
 eq "dock-apps.list unchanged" "$dockapps_before" "$(cksum "$DOCKAPPS")"
 
-# WhatsApp Web sits between Slack and Granola. A missing copy is the manual
-# step, not a hard error. The Safari web-app UUID is not stored in the list.
+# Slack is first and Granola is second. The list stores paths, not a
+# per-Mac Safari web-app UUID.
 names="$(awk -F'|' '$1 !~ /^[[:space:]]*#/ && $1 !~ /^[[:space:]]*$/ { print $1 }' "$DOCKAPPS")"
-eq "dock order starts Slack, WhatsApp Web, Granola" \
-  "$(printf '%s\n' Slack 'WhatsApp Web' Granola)" \
-  "$(printf '%s\n' "$names" | head -n 3)"
-eq "WhatsApp Web dock row is the manual step" \
-  "WhatsApp Web|@HOME@/Applications/WhatsApp Web.app|manual:whatsapp-web" \
-  "$(awk -F'|' '$1=="WhatsApp Web" { print; exit }' "$DOCKAPPS")"
+eq "dock order starts Slack, Granola" \
+  "$(printf '%s\n' Slack Granola)" \
+  "$(printf '%s\n' "$names" | head -n 2)"
 eq "dock list does not hard-code a Safari web app UUID" "" \
   "$(grep -E 'com\.apple\.(Safari|safari)\.WebApp\.[0-9A-Fa-f]{8}-' "$DOCKAPPS" || true)"
 list_out="$("$DIR/dock.sh" --list)"
-has "dock.sh --list names WhatsApp Web second" $' 1. Slack\n 2. WhatsApp Web\n 3. Granola' "$list_out"
-
-docktmp="$(mktemp -d)"
-dockbin="$docktmp/bin"
-mkdir -p "$dockbin"
-cat > "$dockbin/dockutil" <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "${DOCK_LOG:?}"
-if [ "$1" = "--list" ]; then
-  cat "${DOCK_LIST:?}"
-fi
-exit 0
-EOF
-cat > "$dockbin/killall" <<'EOF'
-#!/usr/bin/env bash
-printf 'killall %s\n' "$*" >> "${DOCK_LOG:?}"
-exit 0
-EOF
-cat > "$dockbin/defaults" <<'EOF'
-#!/bin/sh
-# com.apple.spaces is the fixture, so dock.sh can apply Desktop pins without
-# touching a real Dock. Every other defaults command is the system one, so the
-# Dock check still reads autohide and orientation on a Mac.
-if [ "${2:-}" = "com.apple.spaces" ]; then
-  if [ "${1:-}" = "export" ]; then
-    if [ "${3:-}" = "-" ]; then
-      cat "${FAKE_PLIST:?}"
-    else
-      cp "${FAKE_PLIST:?}" "$3"
-    fi
-    exit 0
-  fi
-  exit 0
-fi
-if [ -x /usr/bin/defaults ]; then
-  exec /usr/bin/defaults "$@"
-fi
-exit 0
-EOF
-chmod +x "$dockbin/dockutil" "$dockbin/killall" "$dockbin/defaults"
-python3 - "$docktmp/spaces.plist" <<'PY'
-import plistlib, sys
-def desk(uuid, typ=0):
-    return {"type": typ, "uuid": uuid}
-p = {
-  "app-bindings": {},
-  "SpacesDisplayConfiguration": {"Management Data": {"Monitors": [
-    {"Display Identifier": "Main", "Spaces": [
-      desk(""), desk("UUID-2"), desk("UUID-3"), desk("UUID-4"),
-    ]},
-  ]}},
-}
-with open(sys.argv[1], "wb") as fh:
-    plistlib.dump(p, fh)
-PY
-dock_list() { # home, omit_manual (1 to drop manual: rows)
-  awk -F'|' -v home="$1" -v omit="$2" '
-    $1 ~ /^[[:space:]]*#/ || $1 ~ /^[[:space:]]*$/ { next }
-    {
-      path = $2
-      gsub(/@HOME@/, home, path)
-      if (omit == "1" && $3 ~ /^manual:/) next
-      enc = path
-      gsub(/ /, "%20", enc)
-      printf "%s\tfile://%s/\tpersistent-apps\n", $1, enc
-    }
-  ' "$DOCKAPPS"
-}
-run_dock() { # home
-  : > "$docktmp/log"
-  HOME="$1" PATH="$dockbin:$PATH" DOCK_LOG="$docktmp/log" \
-    FAKE_PLIST="$docktmp/spaces.plist" \
-    DESKTOP_BINDINGS_BACKUP_DIR="$docktmp/backups" \
-    "$DIR/dock.sh"
-}
-run_check() { # home, omit_manual
-  dock_list "$1" "$2" > "$docktmp/list"
-  HOME="$1" PATH="$dockbin:$PATH" DOCK_LOG="$docktmp/log" DOCK_LIST="$docktmp/list" \
-    "$DIR/macconfig-check.sh" --only dock --no-color
-}
-
-miss_home="$docktmp/miss-home"
-mkdir -p "$miss_home"
-out="$(run_dock "$miss_home")"; rc=$?
-eq "dock.sh skips a missing WhatsApp Web" 0 "$rc"
-has "dock.sh points at the manual step" \
-  "[skip] WhatsApp Web is missing because the manual step hasn't been done (whatsapp-web)" "$out"
-eq "dock.sh does not add the missing app" "" \
-  "$(grep -F 'WhatsApp Web.app' "$docktmp/log" || true)"
-
-have_home="$docktmp/have-home"
-mkdir -p "$have_home/Applications/WhatsApp Web.app/Contents"
-# A real Safari web app has a bundle id. An empty directory is not one, and
-# the Desktop pin refuses to guess. This fixture is enough for dock.sh to add
-# the app and to write the pin.
-python3 - "$have_home/Applications/WhatsApp Web.app/Contents/Info.plist" <<'PY'
-import plistlib, sys
-with open(sys.argv[1], "wb") as fh:
-    plistlib.dump({"CFBundleIdentifier": "com.apple.Safari.WebApp.test"}, fh)
-PY
-out="$(run_dock "$have_home")"; rc=$?
-eq "dock.sh adds WhatsApp Web when the app exists" 0 "$rc"
-has "dock.sh adds the web app path" \
-  "--add $have_home/Applications/WhatsApp Web.app" "$(cat "$docktmp/log")"
-eq "dock.sh does not skip WhatsApp Web when it exists" "" \
-  "$(printf '%s\n' "$out" | grep '\[skip\] WhatsApp Web' || true)"
-
-out="$(run_check "$miss_home" 1)"; rc=$?
-eq "macconfig does not fail when WhatsApp Web is missing" 0 "$rc"
-has "macconfig says the manual step hasn't been done" \
-  "WhatsApp Web is missing because the manual step hasn't been done (whatsapp-web)" "$out"
-eq "a missing WhatsApp Web is not drift" "" \
-  "$(printf '%s\n' "$out" | grep 'DRIFT' || true)"
-
-out="$(run_check "$have_home" 0)"; rc=$?
-eq "macconfig passes when WhatsApp Web is in the Dock" 0 "$rc"
-eq "an installed WhatsApp Web is not called missing" "" \
-  "$(printf '%s\n' "$out" | grep "manual step hasn't been done" || true)"
-has "dock order matches with WhatsApp Web included" "Dock matches lib/dock-apps.list" "$out"
-
-out="$(run_check "$have_home" 1)"; rc=$?
-eq "an installed WhatsApp Web missing from the Dock is drift" 1 "$rc"
-has "drift names WhatsApp Web" "WhatsApp Web" "$out"
-
-rm -rf "$docktmp"
+has "dock.sh --list names Granola second" $' 1. Slack\n 2. Granola' "$list_out"
 
 printf 'dock-minimize tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

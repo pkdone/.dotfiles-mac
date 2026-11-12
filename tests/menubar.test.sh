@@ -68,8 +68,8 @@ eq "manual step is the menubar check" "@macconfig:menubar" \
 
 settings="$(cat "$DIR/docs/settings.md")"
 has "settings names the intended menu bar" \
-  "clock, the mode icon, battery percentage, Wi-Fi, Bluetooth and Control Centre" "$settings"
-has "settings names kept third-party icons" "Tailscale, Hammerspoon and Fleet Desktop" "$settings"
+  "clock, battery percentage, Wi-Fi, Bluetooth and Control Centre" "$settings"
+has "settings names kept third-party icons" "plus Tailscale and Fleet Desktop" "$settings"
 miss "settings does not keep 1Password and Granola in the menu bar" \
   "Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop" "$settings"
 

@@ -313,7 +313,7 @@ def read_allow(path: str) -> list[dict]:
                 value = os.path.normpath(os.path.expanduser(value))
                 if not os.path.isabs(value) or not value.endswith(".app"):
                     print(f"allowlist: line {n}: an app row needs the full path of a .app, "
-                          "such as ~/Applications/WhatsApp Web.app", file=sys.stderr)
+                          "such as ~/Applications/Example.app", file=sys.stderr)
                     continue
             rules.append({"type": kinds[parts[0]], "value": value, "team": ""})
     return rules

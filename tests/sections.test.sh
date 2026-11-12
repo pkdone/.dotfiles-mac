@@ -102,7 +102,6 @@ Show Finder shortcut
 CotEditor
 Ghostty config
 Logi Options+
-Modes (Hammerspoon)
 Notifications
 Allow in the Menu Bar
 Leftover app backups

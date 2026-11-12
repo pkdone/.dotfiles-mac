@@ -2,7 +2,7 @@
 
 See [README.md](../README.md).
 
-The three paste blocks for a fresh Mac are at the top of the README. This is the rest of the walkthrough: what each step runs, how to check the machine afterwards, and where the repo files live. What a managed setting does is in [Settings](settings.md). The by-hand checklist is [Manual steps](manual-steps.md). After a software update, hotkey pins, and AC sleep are in [Troubleshooting](troubleshooting.md). Hammerspoon modes are in [Modes](modes.md).
+The three paste blocks for a fresh Mac are at the top of the README. This is the rest of the walkthrough: what each step runs, how to check the machine afterwards, and where the repo files live. What a managed setting does is in [Settings](settings.md). The by-hand checklist is [Manual steps](manual-steps.md). After a software update, hotkey pins, and AC sleep are in [Troubleshooting](troubleshooting.md). Hammerspoon is in [Hammerspoon](hammerspoon.md).
 
 ## What's in the repo
 
@@ -10,7 +10,7 @@ The three paste blocks for a fresh Mac are at the top of the README. This is the
 - `fish/` — Fish shell config and functions
 - `ghostty/` — Ghostty terminal config
 - `karabiner/` — Karabiner-Elements config (directory-symlinked into `~/.config/karabiner`)
-- `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads modules such as `external_slack.lua`, `finder_hotkey.lua`, and the menu-bar mode switcher `mode_switcher.lua` + `modes.lua`)
+- `hammerspoon/` — Hammerspoon Lua automations (directory-symlinked into `~/.hammerspoon`; `init.lua` loads `external_slack.lua` and `finder_hotkey.lua`)
 - `gitconfig` — Git user and behaviour settings
 - `mise/` — pinned tool versions (Node 22)
 - `lib/` — lists and helpers the scripts read. The file header has the format
@@ -18,7 +18,7 @@ The three paste blocks for a fresh Mac are at the top of the README. This is the
 - `scripts/` — helpers the other scripts call. The file header has the format
 - `launchagents/` — user LaunchAgent plists. Installed as regular files in `~/Library/LaunchAgents` (`@HOME@` in `WatchPaths` is replaced with `$HOME`; launchd does not expand `~` or `$HOME`)
 - Scripts: `bootstrap.sh`, `install.sh`, `macos.sh`, `dock.sh`, `handlers.sh`, `prune-apps.sh`, `shell.sh`, `hostname.sh`, `macconfig-check.sh`, `check.sh`, `defaults-diff.sh` (see [Scripts](#scripts))
-- `docs/` — this walkthrough, [settings](settings.md), [manual steps](manual-steps.md), [troubleshooting](troubleshooting.md), and [modes](modes.md)
+- `docs/` — this walkthrough, [settings](settings.md), [manual steps](manual-steps.md), [troubleshooting](troubleshooting.md), and [hammerspoon](hammerspoon.md)
 - `tests/`, `hooks/` — unit tests (`tests/run-all.sh` discovers `tests/*.test.sh`) and the pre-push lint/test gate
 - `SHORTCUTS.md` — keyboard-shortcut cheat-sheets
 
@@ -58,7 +58,6 @@ These are not in those lists. Set them up by hand after bootstrapping:
 
 - **Cursor Nightly** — download and install it from the [Cursor Nightly download page](https://cursor.com/nightlydownload), as a separate app. The Brewfile installs only the stable Cursor, so the stable build and Nightly sit side by side.
 - **YouTube Music** — a Chrome app. In Chrome, open `music.youtube.com`, then click the install icon in the address bar (or **⋮ menu → Cast, save, and share → Install page as app**).
-- **WhatsApp Web** — a Safari web app. The company's app policy blocks the WhatsApp app, so this is the website instead. In Safari, open `https://web.whatsapp.com` (a normal page, not a blank tab or a Private window), then **File → Add to Dock…**. Keep the name "WhatsApp Web" and the WhatsApp icon. On the Android phone, WhatsApp → ⋮ → Linked devices → Link a device, and scan the QR code. Linking the phone can't be checked from this repo. The click-by-click list is manual step `whatsapp-web`.
 
 Company apps are the names in `lib/mdm-apps.list`. Zoom and 1Password are required, and so is every other name in that list. Install each one from Fleet Self service, not Homebrew. Fleet Desktop, the menu-bar app, has a My device item. Choose Self service there. The page needs company single sign-on, so nothing in this repo installs those apps unattended, and it does not call the Fleet API.
 
@@ -106,9 +105,9 @@ Pin the apps to the Dock in order, then apply the Desktop assignments in `lib/de
 ~/.dotfiles-mac/dock.sh             # apply
 ```
 
-Left to right, the order is Slack, WhatsApp Web, Granola, Google Chrome, Ghostty, CotEditor, Cursor, Cursor Nightly, Grok Bot, Spotify, YouTube Music. WhatsApp Web is the Safari web app from the manual step above (`~/Applications/WhatsApp Web.app`). If that app is not there yet, `dock.sh` skips it and says it is missing because the manual step hasn't been done. The other apps are still pinned. That missing app's Desktop pin is not written. Run `dock.sh` again after the manual step.
+Left to right, the order is Slack, Granola, Google Chrome, Ghostty, CotEditor, Cursor, Cursor Nightly, Grok Bot, Spotify, YouTube Music.
 
-Slack, WhatsApp Web and Granola are Desktop 1. Chrome is Desktop 2. Cursor, Cursor Nightly and Grok Bot are Desktop 3. Spotify and YouTube Music are Desktop 4. Ghostty and CotEditor are not assigned. WhatsApp Web's bundle id is read from the app's Info.plist (`@APP@` in `lib/desktop-bindings.list`), so the UUID Safari generates is not stored in the repo. If the app is missing, that pin is reported as not set up yet and is not written.
+Slack and Granola are Desktop 1. Chrome is Desktop 2. Cursor, Cursor Nightly and Grok Bot are Desktop 3. Spotify and YouTube Music are Desktop 4. Ghostty and CotEditor are not assigned.
 
 ## URL handlers (Chrome, not Apple apps)
 
@@ -152,13 +151,9 @@ System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contain
 
 ## Hammerspoon
 
-[Hammerspoon](https://www.hammerspoon.org/) (Brewfile cask `hammerspoon`) runs small Lua automations. `hammerspoon/` → `~/.hammerspoon/` as a **directory** symlink (`lib/links.list`), so `init.lua` and its sibling modules load straight from the repo. `init.lua` loads the modules listed in `MODULES`. Add new automations as their own `*.lua` file there. It also sets: start at login, menu-bar icon only (no Dock icon), no crash-report upload, and loads `hs.ipc` so the `hs` CLI works. After that symlink and the cask install, `install.sh` runs `open -g -a Hammerspoon` when the app is installed and not already running (same helper as `macconfig --fix`). A second run leaves it alone when it is already running. `--dry-run` describes that start and does not open the app.
+[Hammerspoon](https://www.hammerspoon.org/) (Brewfile cask `hammerspoon`) runs small Lua automations. `hammerspoon/` → `~/.hammerspoon/` as a **directory** symlink (`lib/links.list`), so `init.lua` and its sibling modules load straight from the repo. `init.lua` loads the modules listed in `MODULES`. Add new automations as their own `*.lua` file there. It also sets: start at login, no menu-bar icon, no Dock icon, no crash-report upload, and loads `hs.ipc` so the `hs` CLI works. `lib/macos-defaults.list` pins the same Dock and menu-bar keys (`MJShowDockIconKey` and `MJShowMenuIconKey`, both false). Open Hammerspoon from Spotlight or Raycast to show its Preferences. The Console is `hs -c 'hs.openConsole()'`. Reload is `hs -c 'hs.reload()'`. After that symlink and the cask install, `install.sh` runs `open -g -a Hammerspoon` when the app is installed and not already running (same helper as `macconfig --fix`). A second run leaves it alone when it is already running. `--dry-run` describes that start and does not open the app.
 
-What `external_slack.lua` and `finder_hotkey.lua` do is in [Modes](modes.md#slack-on-the-arzopa-monitor). Accessibility is manual step `hammerspoon-ax` in [Manual steps](manual-steps.md).
-
-## Modes (menu-bar switcher)
-
-A Hammerspoon menu-bar dropdown switches between three modes. Switching is **manual only**: no hotkey, no automatic triggers. The modes, the safety rails, and the Focus Shortcuts are in [Modes](modes.md).
+What `external_slack.lua` and `finder_hotkey.lua` do is in [Hammerspoon](hammerspoon.md#slack-on-the-arzopa-monitor). Accessibility is manual step `hammerspoon-ax` in [Manual steps](manual-steps.md).
 
 ## App settings as code (Ghostty, Raycast)
 
@@ -240,7 +235,7 @@ SAFE is a reversible preference write. Needs Paul is reported and not written: H
 | Dotfiles in sync | `git status --porcelain` (gitignored `.agent-logs/` doesn't count) and `git rev-list HEAD...origin/main` | uncommitted / untracked changes, or ahead of / behind `origin/main`. **No network:** it compares with `origin/main` as of the last fetch or push (shown in the ok line), so `macconfig-check.sh` stays offline and read-only; run `git fetch` first if you need it fresh |
 | Login / background items | `lib/btm-login-items.py --audit lib/login-items-allow.list` | an enabled item is neither on `lib/login-items-allow.list` nor approved by an MDM Service Management rule (Fleet pushes these; the helper reads them from the BTM store), or a stale item points to an app that no longer exists. An item whose team id is already on an MDM rule is not told to turn off: add it to the allow list |
 
-FileVault and pending software updates are covered under **Security hygiene**. To accept a new login item, add a `team|`, `bundle|`, `label|`, `label-prefix|` or `app|` row to `lib/login-items-allow.list` (format in its header). An `app|` row is the full path of one app under Open at Login, for an app whose bundle id is different on each Mac, such as the WhatsApp Web Safari web app at `~/Applications/WhatsApp Web.app`. Other Safari web apps are still reported. To see every enabled item and how it's classified: `python3 lib/btm-login-items.py --audit lib/login-items-allow.list`. Reading the BTM store needs Full Disk Access for the terminal (Ghostty) or agent running `macconfig-check.sh`.
+FileVault and pending software updates are covered under **Security hygiene**. To accept a new login item, add a `team|`, `bundle|`, `label|`, `label-prefix|` or `app|` row to `lib/login-items-allow.list` (format in its header). An `app|` row is the full path of one app under Open at Login, for an app whose bundle id is different on each Mac. The list has no `app|` row, so a Safari web app is reported. To see every enabled item and how it's classified: `python3 lib/btm-login-items.py --audit lib/login-items-allow.list`. Reading the BTM store needs Full Disk Access for the terminal (Ghostty) or agent running `macconfig-check.sh`.
 
 `./macconfig-check.sh --health-json` prints only JSON, with the same exit status. The field names are in `macconfig-check.sh`. The weekly health note is built from that JSON.
 
@@ -327,7 +322,7 @@ dotpush "your message"
 - **Display auto-brightness:** checked, not written. System Settings → Displays. See [Settings](settings.md#macos-defaults).
 - **Power:** `macos.sh` runs the sudo `pmset` commands that are still wrong. `--fix` does not. See [Troubleshooting](troubleshooting.md#ac-idle-sleep).
 - **Built-in display More Space:** the mode list is `lib/display-resolution.list`. `macos.sh` and `macconfig --fix` set it. See [Settings](settings.md#macos-defaults).
-- **ARZOPA portable monitor:** the same list and the same command, when the monitor is plugged in. Slack on that screen is in [Modes](modes.md#slack-on-the-arzopa-monitor). See [Settings](settings.md#macos-defaults).
+- **ARZOPA portable monitor:** the same list and the same command, when the monitor is plugged in. Slack on that screen is in [Hammerspoon](hammerspoon.md#slack-on-the-arzopa-monitor). See [Settings](settings.md#macos-defaults).
 - **Notifications:** edit `lib/notifications-off.list` or `lib/notifications-reviewed.list`. The check only reads. If the bit moves, change `ALLOW_NOTIFICATIONS_BIT` in `lib/notification-prefs.py`. See [Notifications](settings.md#notifications).
 - **Account picture:** the hash is `lib/user-picture.sha256`. The check only reads. See [Settings](settings.md#macos-defaults).
 - **Karabiner background:** checked, not written. See [Settings](settings.md#keyboard-dictation-fn).

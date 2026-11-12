@@ -93,7 +93,8 @@ com.apple.ImageCapture|disableHotPlug|bool|true||Photos|Open Photos for devices|
 @host/com.apple.controlcenter|BatteryShowPercentage|bool|true|ControlCenter|Menu Bar|Battery percentage|`true` (On)
 com.apple.HIToolbox|AppleFnUsageType|int|0||Keyboard|Press fn/Globe key to|`0` (Do Nothing)
 com.apple.assistant.support|Dictation Enabled|bool|false||Keyboard|Dictation|`false` (Off)
-org.hammerspoon.Hammerspoon|MJShowDockIconKey|bool|false||Hammerspoon|Dock icon|`false` (Off — menu-bar icon only)
+org.hammerspoon.Hammerspoon|MJShowDockIconKey|bool|false||Hammerspoon|Dock icon|`false` (Off)
+org.hammerspoon.Hammerspoon|MJShowMenuIconKey|bool|false||Hammerspoon|Menu bar icon|`false` (Off). Hammerspoon stores the menu icon under this key. Open Hammerspoon from Spotlight or Raycast for Preferences. Console: `hs -c 'hs.openConsole()'`. Reload: `hs -c 'hs.reload()'`.
 org.hammerspoon.Hammerspoon|HSUploadCrashData|bool|false||Hammerspoon|Upload crash data|`false` (Off)
 # Trackpad. Values match this Mac today, so applying them changes nothing until one drifts.
 # restart=logout: if activateSettings is missing or fails, a logout/login may be

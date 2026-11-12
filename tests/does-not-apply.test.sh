@@ -209,7 +209,7 @@ eq "manualsteps leaves an unplugged ARZOPA unopened" "ok|" "$az_step"
 cat > "$tmp/bin/desktop-py" <<'EOF'
 #!/bin/sh
 printf '%s\n' 'ok|com.example.Keep|Keep is on Desktop 1'
-printf '%s\n' 'skip||WhatsApp Web is not set up yet (manual step whatsapp-web)'
+printf '%s\n' 'skip||Sample Web is not set up yet (manual step sample-web)'
 EOF
 chmod +x "$tmp/bin/desktop-py"
 desk="$(
@@ -236,63 +236,7 @@ eq "a missing app's desktop pin is not counted" \
   "COUNTS checked=1 ok=1 drift=0 warn=0 hand=0" \
   "$(printf '%s\n' "$desk" | grep '^COUNTS ')"
 has "the missing app still prints" \
-  "  info  WhatsApp Web is not set up yet (manual step whatsapp-web)" "$desk"
-
-# Focus modes that cannot be read are a note: printed, and in neither count.
-# A database that names the modes is still a counted ok.
-focus_note="$(
-  set -eu
-  CHECKED=0; OKS=0; DRIFT=0; WARN=0; HAND=0
-  C_OK=; C_BAD=; C_WARN=; C_HDR=; C_DIM=; C_OFF=
-  US=$'\037'
-  FIX_ID=unclassified; FIX_ARG=
-  DRIFT_MSGS=(); WARN_MSGS=(); FIX_ITEMS=(); ATTN_ITEMS=()
-  record() { :; }
-  attn_push() { :; }
-  fixid() { FIX_ID="$1"; FIX_ARG="${2:-}"; }
-  hdr() { :; }
-  # shellcheck disable=SC1090
-  eval "$COUNTERS"
-  export DOTDIR="$DIR" DOT_PYTHON="$PY" HOME="$tmp/home" PATH="$SAFE"
-  MACCONFIG_CHECKS_DEFINE_ONLY=1
-  # shellcheck disable=SC1091
-  . "$DIR/checks/modes.sh"
-  check_step_mode_focus_modes
-  printf 'COUNTS checked=%s ok=%s drift=%s warn=%s hand=%s\n' \
-    "$CHECKED" "$OKS" "$DRIFT" "$WARN" "$HAND"
-)"
-eq "unreadable Focus modes are not counted" \
-  "COUNTS checked=0 ok=0 drift=0 warn=0 hand=0" \
-  "$(printf '%s\n' "$focus_note" | grep '^COUNTS ')"
-has "unreadable Focus modes still print" "  info  Focus modes not readable" "$focus_note"
-
-mkdir -p "$tmp/focus-home/Library/DoNotDisturb/DB"
-printf '%s\n' '{"a":{"name":"WebConf"},"b":{"name":"DeepWork"}}' \
-  > "$tmp/focus-home/Library/DoNotDisturb/DB/ModeConfigurations.json"
-focus_ok="$(
-  set -eu
-  CHECKED=0; OKS=0; DRIFT=0; WARN=0; HAND=0
-  C_OK=; C_BAD=; C_WARN=; C_HDR=; C_DIM=; C_OFF=
-  US=$'\037'
-  FIX_ID=unclassified; FIX_ARG=
-  DRIFT_MSGS=(); WARN_MSGS=(); FIX_ITEMS=(); ATTN_ITEMS=()
-  record() { :; }
-  attn_push() { :; }
-  fixid() { FIX_ID="$1"; FIX_ARG="${2:-}"; }
-  hdr() { :; }
-  # shellcheck disable=SC1090
-  eval "$COUNTERS"
-  export DOTDIR="$DIR" DOT_PYTHON="$PY" HOME="$tmp/focus-home" PATH="$SAFE"
-  MACCONFIG_CHECKS_DEFINE_ONLY=1
-  # shellcheck disable=SC1091
-  . "$DIR/checks/modes.sh"
-  check_step_mode_focus_modes
-  printf 'COUNTS checked=%s ok=%s drift=%s warn=%s hand=%s\n' \
-    "$CHECKED" "$OKS" "$DRIFT" "$WARN" "$HAND"
-)"
-eq "Focus modes that exist are counted ok" \
-  "COUNTS checked=1 ok=1 drift=0 warn=0 hand=0" \
-  "$(printf '%s\n' "$focus_ok" | grep '^COUNTS ')"
+  "  info  Sample Web is not set up yet (manual step sample-web)" "$desk"
 
 printf 'does-not-apply tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

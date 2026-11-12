@@ -12,7 +12,9 @@ require('hs.ipc')
 -- App behaviour (Hammerspoon persists these in org.hammerspoon.Hammerspoon).
 hs.autoLaunch(true)        -- start at login
 hs.consoleOnTop(false)
-hs.menuIcon(true)          -- menu-bar icon is the way in (console, reload)
+-- No menu-bar icon. Open Hammerspoon from Spotlight or Raycast to show its
+-- Preferences, or run `hs -c 'hs.openConsole()'` and `hs -c 'hs.reload()'`.
+hs.menuIcon(false)
 hs.dockIcon(false)         -- no Dock icon (not in lib/dock-apps.list)
 hs.uploadCrashData(false)  -- don't send crash reports from a work Mac
 
@@ -22,7 +24,6 @@ local log = hs.logger.new('init', 'info')
 local MODULES = {
   'external_slack', -- ARZOPA connected: Slack full screen on it; disconnected: restore
   'finder_hotkey',  -- Shift+Ctrl+Cmd+F: launch or focus Finder
-  'mode_switcher',  -- menu-bar modes: Normal / WebConf / DeepWork (settings: modes.lua)
 }
 
 -- Global so started modules (and their watchers/hotkeys) are never garbage-collected.

@@ -72,7 +72,7 @@ off_entries="$(grep -E '^[^#[:space:]]' "$OFF" || true)"
 for gone in "Cursor Nightly" Mail "Microsoft Teams" Slack Spotify Tailscale \
   "Logi Options+" Cog "Grok Bot" Multipass "Yubico Authenticator" \
   "YouTube Music" Sonos Santa Sentinel Kerberos Chrome Ghostty Zoom Hammerspoon \
-  "Find My" Finder WhatsApp
+  "Find My" Finder
 do
   miss "off list does not name $gone" "$gone" "$off_entries"
 done
@@ -94,15 +94,9 @@ centre="$(NO_COLOR=1 MANUAL_STEPS_LIST="$tmp/centre.list" "$DIR/scripts/manual-s
 eq "Notification Centre steps use the MANUAL line" 4 \
   "$(printf '%s\n' "$centre" | grep -c "MANUAL: Can't check this automatically. If it's already set, press s.")"
 miss "Notification Centre steps are not NOTSET" "NOTSET:" "$centre"
-eq "mode-hammerspoon-alerts is checked by macconfig-check.sh" "@macconfig:notifications" \
-  "$(awk -F'|' '$1 == "mode-hammerspoon-alerts" { print $6; exit }' "$STEPS")"
 
 eq "allow bit constant is 25" "ALLOW_NOTIFICATIONS_BIT = 25" \
   "$(grep -E '^ALLOW_NOTIFICATIONS_BIT = ' "$HELPER")"
-eq "alert style bit constant is 4" "ALERT_STYLE_BIT = 4" \
-  "$(grep -E '^ALERT_STYLE_BIT = ' "$HELPER")"
-eq "banner style bit constant is 3" "BANNER_STYLE_BIT = 3" \
-  "$(grep -E '^BANNER_STYLE_BIT = ' "$HELPER")"
 has "helper default plist is the usernoted group store" \
   'group.com.apple.usernoted.plist' "$(cat "$HELPER")"
 miss "helper does not read the old ncprefs path as its store" \
@@ -160,7 +154,6 @@ ok|com.apple.tips|Tips (com.apple.tips): flags=294125584, bit 25 clear, not conf
 ok|com.apple.Passbook|Wallet (com.apple.Passbook): flags=814219270, bit 25 clear, not confirmed off in System Settings
 info|com.apple.MobileSMS|Messages (com.apple.MobileSMS): not registered for notifications yet, nothing to turn off
 info|com.example.newapp|com.example.newapp: third-party app is not in lib/notifications-reviewed.list or lib/notifications-off.list (flags=1, bit 25 clear, not confirmed off in System Settings) — review it in System Settings → Notifications, then add the bundle id to one of those lists
-ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=8396822, bit 4 set, bit 3 clear)
 EOF
 )" "$out"
 
@@ -180,8 +173,7 @@ do
   miss "reviewed $quiet stays quiet while Allow Notifications is on" "$quiet" "$out"
 done
 # Apps Paul left on, and company tools, are not drift when Allow Notifications is on.
-# 33554432 is bit 25 alone. 33554448 is bit 25 plus bit 4 (Hammerspoon Alerts).
-# Find My, Finder, Kerberos, and WhatsApp Web are com.apple.* and stay quiet.
+# 33554432 is bit 25 alone. Find My, Finder, and Kerberos are com.apple.* and stay quiet.
 ON_OK='{
   "apps": [
     {"bundle-id": "com.apple.iCal", "flags": 814219286},
@@ -222,13 +214,11 @@ for quiet in \
   com.apple.findmy \
   com.apple.finder \
   com.apple.KerberosMenuExtra \
-  com.apple.Safari.WebApp
+  com.apple.Safari.WebApp \
+  org.hammerspoon.Hammerspoon
 do
   miss "on is not drift for $quiet" "$quiet" "$on_ok"
 done
-has "Hammerspoon on with Alerts still passes the style check" \
-  "ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=33554448, bit 4 set, bit 3 clear)" \
-  "$on_ok"
 
 # Messages shows Critical: bit 25 clear, another bit set. That is off.
 # 67108864 is 1 << 26, the older ncprefs critical-alerts bit. The check does
@@ -279,35 +269,8 @@ write_plist "$tmp/slack-on.plist" "$SLACK_ON"
 out="$(run "$tmp/slack-on.plist" "$tmp/off.list" "$tmp/reviewed.list")"
 eq "bit 25 set is a warning" \
   "ok|com.apple.iCal|Calendar (com.apple.iCal): flags=814219286, bit 25 clear, not confirmed off in System Settings
-warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is on (flags=310386702, bit 25 set) — System Settings → Notifications → turn it off. macconfig-check.sh --fix does not change this
-info|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): not registered for notifications yet, so the Alerts style can't be checked until Hammerspoon has posted a notification" \
+warn|com.tinyspeck.slackmacgap|Slack (com.tinyspeck.slackmacgap): Allow Notifications is on (flags=310386702, bit 25 set) — System Settings → Notifications → turn it off. macconfig-check.sh --fix does not change this" \
   "$out"
-
-# Style bits. 8396822 is this Mac (bit 4 set, bit 3 clear = Alerts).
-# Bit 3 alone is Banners. Both clear, or both set, is None (Hush Off).
-style_plist() {  # flags
-  write_plist "$tmp/style.plist" "{\"apps\": [{\"bundle-id\": \"org.hammerspoon.Hammerspoon\", \"flags\": $1}]}"
-  run "$tmp/style.plist" "$tmp/off.list" "$tmp/reviewed.list"
-}
-out="$(style_plist 16)"
-has "bit 4 alone is Alerts" "ok|org.hammerspoon.Hammerspoon|Hammerspoon (org.hammerspoon.Hammerspoon): notification style is Alerts (flags=16, bit 4 set, bit 3 clear)" "$out"
-out="$(style_plist 8)"
-has "bit 3 alone is Banners" "notification style is Banners (flags=8, bit 4 is Alerts when bit 3 is clear)" "$out"
-has "Banners is a warning" "warn|org.hammerspoon.Hammerspoon|" "$out"
-out="$(style_plist 0)"
-has "both style bits clear is None" "notification style is None (flags=0," "$out"
-out="$(style_plist 24)"
-has "both style bits set is None" "notification style is None (flags=24," "$out"
-out="$(style_plist 8396822)"
-has "this Mac's Hammerspoon flags are Alerts" "notification style is Alerts (flags=8396822, bit 4 set, bit 3 clear)" "$out"
-write_plist "$tmp/style-mix.plist" '{
-  "apps": [
-    {"bundle-id": "org.hammerspoon.Hammerspoon", "flags": 16},
-    {"bundle-id": "org.hammerspoon.Hammerspoon", "flags": 8},
-  ]
-}'
-out="$(run "$tmp/style-mix.plist" "$tmp/off.list" "$tmp/reviewed.list")"
-has "a Banners copy keeps the style a warning" "notification style is Alerts/Banners (flags=16/8," "$out"
 
 # Any copy with the bit set counts, even if another copy is clear.
 write_plist "$tmp/dup.plist" '{

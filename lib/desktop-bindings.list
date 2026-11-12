@@ -16,7 +16,6 @@
 #   field is the manual-step id). It is not drift, and --fix does not write a pin.
 # Blank lines and lines beginning with # are ignored.
 Slack|com.tinyspeck.slackmacgap|1
-WhatsApp Web|@APP@@HOME@/Applications/WhatsApp Web.app|1|whatsapp-web
 Granola|com.granola.app|1
 Google Chrome|com.google.Chrome|2
 Cursor|com.todesktop.230313mzl4w4u92|3

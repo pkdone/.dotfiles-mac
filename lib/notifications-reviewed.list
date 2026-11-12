@@ -12,9 +12,7 @@
 # because notifications are on. Company and MDM tools (Santa, SentinelAgent)
 # stay here so the check never asks for them to be turned off. Kerberos, Find
 # My, and Finder are com.apple.* ids, so they are ignored unless someone adds
-# them to the Off list. Do not add them. WhatsApp Web is
-# com.apple.Safari.WebApp.<uuid>. The UUID is not stored here, and com.apple.*
-# is ignored, so it is not drift.
+# them to the Off list. Do not add them.
 
 # Allow Notifications left on. Reviewed, so they are not info lines.
 com.todesktop.230313mzl4w4u92 # Cursor
@@ -23,7 +21,7 @@ com.mitchellh.ghostty # Ghostty
 com.google.Chrome # Chrome
 com.google.Chrome.framework.AlertNotificationService # Chrome alerts
 com.anysphere.sand # Grok Bot
-org.hammerspoon.Hammerspoon # Hammerspoon (alert style is checked: manual step mode-hammerspoon-alerts)
+org.hammerspoon.Hammerspoon # Hammerspoon
 com.microsoft.teams2 # Microsoft Teams
 com.northpolesec.santa # Santa (company tool; never require off)
 com.sentinelone.SentinelAgent # SentinelAgent (company tool; never require off)

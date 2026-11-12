@@ -92,9 +92,7 @@ Docker Desktop's CLI tools setting is under Settings → Advanced. User keeps th
 
 To recalibrate after a macOS update: toggle Allow Notifications for one app, read that app's `flags` again, and set `ALLOW_NOTIFICATIONS_BIT` to the bit that flipped. Then run `./tests/notification-prefs.test.sh`.
 
-To recalibrate the style bits: set Hammerspoon to Banners, then back to Alerts, and point `ALERT_STYLE_BIT` at the bit that is set only for Alerts. Then run `./tests/notification-prefs.test.sh`.
-
-How those bits are read, and what a warning means, is in [Settings](settings.md#notifications).
+How that bit is read, and what a warning means, is in [Settings](settings.md#notifications).
 
 ## A Finder folder is not sorted by name
 

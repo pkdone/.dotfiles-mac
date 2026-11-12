@@ -98,7 +98,7 @@ jobs:
           # tests/run-all.sh discovers tests/*.test.sh and runs them in parallel.
           # That includes manual-steps.test.sh, which checks that
           # docs/manual-steps.md matches scripts/render-manual-steps-doc.sh.
-          # modes.test.sh needs Lua; without it that suite skips.
+          # external_slack and finder_hotkey specs need Lua; without it those suites skip.
           # fish runs the brewsync terminal test. `fish -n` alone does not.
           sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc fish >/dev/null
           ./tests/run-all.sh
@@ -117,7 +117,7 @@ jobs:
           # does (printer present, sleep already correct, Focus Shortcuts
           # exist). A test that falls through to the inherited PATH gets ok
           # instead of "tool missing", which is the failure seen on a real
-          # Mac, so it fails here too. lua5.4 is for modes.test.sh. gcc builds
+          # Mac, so it fails here too. lua5.4 is for the Hammerspoon specs. gcc builds
           # the Tailscale view used by the second run.
           sudo apt-get update -qq && sudo apt-get install -y -qq lua5.4 gcc fish >/dev/null
           ./tests/run-all.sh --configured-mac

@@ -12,7 +12,7 @@
 
 covered_step_file() { # area
   case "$1" in
-    mdm|karabiner|display|power|notifications|login-items|finder|modes|menubar|apps)
+    mdm|karabiner|display|power|notifications|login-items|finder|menubar|apps)
       printf '%s\n' "$DOTDIR/checks/$1.sh"
       return 0
       ;;
@@ -36,9 +36,8 @@ covered_section_heading() { # id
     ac-sleep) printf '%s\n' "Power (sleep and wake)" ;;
     remove-widgets) printf '%s\n' "Desktop widgets" ;;
     user-picture) printf '%s\n' "User picture" ;;
-    notifications-apps|mode-hammerspoon-alerts) printf '%s\n' "Notifications" ;;
+    notifications-apps) printf '%s\n' "Notifications" ;;
     finder-sidebar) printf '%s\n' "Finder sidebar rows" ;;
-    mode-focus-modes|mode-focus-shortcuts) printf '%s\n' "Modes (Hammerspoon)" ;;
     menubar-third-party-hide) printf '%s\n' "Allow in the Menu Bar" ;;
     xcode-app|xcode-select|xcode-license|xcode-first-launch) printf '%s\n' "Xcode" ;;
     *) return 1 ;;
@@ -63,8 +62,6 @@ covered_checked_part() { # id
     finder-sidebar) printf '%s' "the sidebar rows the files name" ;;
     notifications-apps) printf '%s' "Allow Notifications for the listed apps" ;;
     karabiner-login-items) printf '%s' "the Karabiner background items that can be read" ;;
-    mode-focus-modes) printf '%s' "the Focus modes that can be read" ;;
-    mode-hammerspoon-alerts) printf '%s' "Hammerspoon's notification style" ;;
     menubar-third-party-hide) printf '%s' "Allow in the Menu Bar for the listed apps" ;;
     user-picture) printf '%s' "the account picture" ;;
     *) printf '%s' "the part this check can read" ;;

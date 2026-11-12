@@ -159,6 +159,10 @@ pin_home="$tmp/home-pin"
 pin_sandbox="$tmp/pin-repo"
 make_sandbox "$pin_sandbox"
 cp "$DIR/lib/dock-apps.list" "$pin_sandbox/lib/dock-apps.list"
+# The shipped Dock list has no manual: row. A fixture row keeps the
+# "not set up yet" path covered.
+printf '%s\n' 'Sample Web|/no/such/Sample Web.app|manual:sample-web' \
+  >> "$pin_sandbox/lib/dock-apps.list"
 pin_out="$(HOME="$pin_home" "$pin_sandbox/bootstrap.sh" --dry-run --yes 2>&1)"
 pin_rc=$?
 eq "dry-run with the Dock list exits 0" 0 "$pin_rc"
