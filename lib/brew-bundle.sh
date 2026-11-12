@@ -53,6 +53,17 @@ brew_missing_from_verbose() {
   done
 }
 
+# True when NAME is one whole line of TEXT.
+# grep -q on a pipe exits at the first hit. With pipefail, and with SIGPIPE
+# ignored the way GitHub Actions inherits it from Node, printf then reports
+# EPIPE and a name that is present looks absent. A here-string leaves the
+# status as grep's.
+brew_line_has() {
+  local name="$1" text="$2"
+  [ -n "$name" ] || return 1
+  grep -qxF "$name" <<<"$text"
+}
+
 # Fallback when `brew bundle check --verbose` fails but its wording is unfamiliar:
 # Brewfile names minus `brew list`.
 brew_missing_by_list() {
@@ -71,7 +82,7 @@ brew_missing_by_list() {
         '==>'*|\#*) continue ;;
       esac
       short="${name##*/}"
-      if ! printf '%s\n' "$installed" | grep -qxF "$short"; then
+      if ! brew_line_has "$short" "$installed"; then
         printf '%s %s\n' "$kind" "$short"
       fi
     done
@@ -498,7 +509,7 @@ brew_pkg_casks_pending() {
   printf '%s\n' "$pkg" | while IFS= read -r name || [ -n "$name" ]; do
     [ -n "$name" ] || continue
     short="${name##*/}"
-    if printf '%s\n' "$actionable" | grep -qxF "$short"; then
+    if brew_line_has "$short" "$actionable"; then
       printf '%s\n' "$short"
       continue
     fi
@@ -507,7 +518,7 @@ brew_pkg_casks_pending() {
       continue
     fi
     if [ "$list_rc" -eq 0 ]; then
-      if ! printf '%s\n' "$listed" | grep -qxF "$short"; then
+      if ! brew_line_has "$short" "$listed"; then
         printf '%s\n' "$short"
       fi
       continue

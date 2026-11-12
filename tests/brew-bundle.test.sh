@@ -395,6 +395,33 @@ eq "outdated lines keep the token" \
     "==> Upgrading" \
     "Error: ignored")")"
 
+# A list longer than the pipe buffer, with SIGPIPE ignored the way Actions
+# inherits it from Node. grep -q on a pipe used to exit at the first hit,
+# printf reported EPIPE, and the name looked absent.
+fat="$tmp/fat-names"
+{
+  printf '%s\n' karabiner-elements
+  i=0
+  while [ "$i" -lt 9000 ]; do
+    printf 'noise-%s\n' "$i"
+    i=$((i + 1))
+  done
+} > "$fat"
+pipe_trap="$(trap -p PIPE || true)"
+trap '' PIPE
+check "a long list still contains the pkg cask" brew_line_has karabiner-elements "$(cat "$fat")"
+if brew_line_has karabiner "$(cat "$fat")"; then
+  fail=$((fail + 1))
+  echo "FAIL: a prefix matched a whole line"
+else
+  pass=$((pass + 1))
+fi
+if [ -n "$pipe_trap" ]; then
+  eval "$pipe_trap"
+else
+  trap - PIPE
+fi
+
 harmless_doc="$(printf '%s\n' "Warning: A newer Command Line Tools release is available." "" "Warning: You have unlinked kegs.")"
 eq "harmless doctor notes are dropped" "" "$(printf '%s\n' "$harmless_doc" | brew_doctor_filter)"
 serious_doc="$(printf '%s\n' "Warning: /opt/homebrew/bin is not in your PATH." "A shell restart may be needed.")"
@@ -613,6 +640,27 @@ eq "outdated pkg cask in a terminal exits 0" 0 "$rc"
 has "outdated pkg cask in a terminal names it" "karabiner-elements" "$out"
 has "outdated pkg cask in a terminal asks" "admin password" "$out"
 eq "outdated pkg cask asks sudo once" 1 "$(count_line "-v" "$STUB_DIR/sudo.log")"
+
+# Same warning when the outdated list is larger than a pipe and SIGPIPE is
+# ignored. That is how Actions runs the suite. The short list above can win
+# the race; this one used to drop the warning and say everything was installed.
+new_case outdated_pkg_long
+cp "$tmp/full.Brewfile" "$brewfile"
+seed_installed
+cp "$tmp/fat-names" "$STUB_DIR/outdated"
+pipe_trap="$(trap -p PIPE || true)"
+trap '' PIPE
+run_case
+if [ -n "$pipe_trap" ]; then
+  eval "$pipe_trap"
+else
+  trap - PIPE
+fi
+eq "long outdated list exits 0" 0 "$rc"
+has "long outdated list still warns" "not a terminal" "$out"
+has "long outdated list still names karabiner-elements" "karabiner-elements" "$out"
+miss "long outdated list does not print a broken pipe" "Broken pipe" "$out"
+check "long outdated list does not call sudo" test ! -s "$STUB_DIR/sudo.log"
 
 # A non-pkg cask going outdated does not need the password.
 new_case outdated_app
