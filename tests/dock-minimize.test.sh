@@ -230,16 +230,19 @@ eq "drift does not restart Finder" 0 "$miss_finder"
 
 eq "dock-apps.list unchanged" "$dockapps_before" "$(cksum "$DOCKAPPS")"
 
-# Slack is first and Granola is second. The list stores paths, not a
+# Slack, Granola, Chrome, then Notion. The list stores paths, not a
 # per-Mac Safari web-app UUID.
 names="$(awk -F'|' '$1 !~ /^[[:space:]]*#/ && $1 !~ /^[[:space:]]*$/ { print $1 }' "$DOCKAPPS")"
-eq "dock order starts Slack, Granola" \
-  "$(printf '%s\n' Slack Granola)" \
-  "$(printf '%s\n' "$names" | head -n 2)"
+eq "dock order starts Slack, Granola, Chrome, Notion" \
+  "$(printf '%s\n' Slack Granola "Google Chrome" Notion)" \
+  "$(printf '%s\n' "$names" | head -n 4)"
 eq "dock list does not hard-code a Safari web app UUID" "" \
   "$(grep -E 'com\.apple\.(Safari|safari)\.WebApp\.[0-9A-Fa-f]{8}-' "$DOCKAPPS" || true)"
 list_out="$("$DIR/dock.sh" --list)"
 has "dock.sh --list names Granola second" $' 1. Slack\n 2. Granola' "$list_out"
+has "dock.sh --list names Notion after Chrome" $' 3. Google Chrome\n 4. Notion' "$list_out"
+has "setup lists Notion after Chrome" "Slack, Granola, Google Chrome, Notion, Ghostty" "$(cat "$DIR/docs/setup.md")"
+has "setup puts Notion on Desktop 2" "Chrome and Notion are Desktop 2" "$(cat "$DIR/docs/setup.md")"
 
 printf 'dock-minimize tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]

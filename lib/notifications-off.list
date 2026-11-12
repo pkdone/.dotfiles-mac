@@ -6,7 +6,7 @@
 #
 # This is the whole list. Anything else may stay on. Do not add Cursor, Cursor
 # Nightly, Find My, Finder, Ghostty, Google Chrome, Grok Bot, Hammerspoon,
-# Microsoft Teams, Slack, Spotify, Tailscale, the Safari web app, Zoom, or company
+# Microsoft Teams, Slack, Notion, Spotify, Tailscale, the Safari web app, Zoom, or company
 # tools (Santa, SentinelAgent, Kerberos). On is not drift for those.
 #
 # Messages shows "Critical" in System Settings when Allow notifications is off

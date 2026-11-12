@@ -26,6 +26,7 @@ com.microsoft.teams2 # Microsoft Teams
 com.northpolesec.santa # Santa (company tool; never require off)
 com.sentinelone.SentinelAgent # SentinelAgent (company tool; never require off)
 com.tinyspeck.slackmacgap # Slack
+notion.id # Notion
 com.spotify.client # Spotify
 # Tailscale's System Settings row may not be io.tailscale.ipn.macsys.
 # That id read flags=268443662 (bit 25 clear) while Settings showed
