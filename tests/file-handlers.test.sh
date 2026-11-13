@@ -233,7 +233,7 @@ print("count %d" % n)' "$1"
 rows() { awk -F'|' '$1 !~ /^#/ && NF { print $1 "|" $2 "|" $3 }' "$REAL_LIST"; }
 exts() { rows | cut -d'|' -f1 | sort; }
 eq "extensions, one per line" "$(printf '%s\n' \
-  bash conf css csv fish ini js json log markdown md plist sh swift text toml txt xml yaml yml zsh)" \
+  bash conf css csv ini js json log markdown md plist sh swift text toml txt xml yaml yml zsh)" \
   "$(exts)"
 eq "extensions are unique" "" "$(exts | uniq -d)"
 eq "cursor extensions are js and swift" "$(printf '%s\n' js swift)" \
@@ -241,7 +241,7 @@ eq "cursor extensions are js and swift" "$(printf '%s\n' js swift)" \
 eq "cursor bundle is the stable cask" "com.todesktop.230313mzl4w4u92" \
   "$(rows | awk -F'|' '$2 == "Cursor" { print $3 }' | sort -u)"
 eq "every other row is CotEditor" "" "$(rows | awk -F'|' '$2 != "Cursor" && !($2 == "CotEditor" && $3 == "com.coteditor.CotEditor") { print }')"
-eq "21 extensions" 21 "$(rows | grep -c .)"
+eq "20 extensions" 20 "$(rows | grep -c .)"
 eq "html is not managed" "" "$(exts | grep -x html || true)"
 eq "no unpinnable extensions" "" \
   "$(awk -F'|' '$4 == "unpinnable" { print $1 }' "$REAL_LIST" | sort)"
@@ -491,60 +491,50 @@ eq "handlers --list does not call duti" "" "$(cat "$DUTI_LOG")"
 : > "$DUTI_LOG"
 out="$(run --apply "$REAL_LIST")"; rc=$?
 eq "real list apply exits 0" 0 "$rc"
-eq "real list sets every pinnable extension" 21 "$(printf '%s\n' "$out" | grep -c '^chg|')"
+eq "real list sets every pinnable extension" 20 "$(printf '%s\n' "$out" | grep -c '^chg|')"
 eq "real list reports no unpinnable rows" 0 "$(printf '%s\n' "$out" | grep -c '^info|')"
-eq "real list duti -s count" 23 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
+eq "real list duti -s count" 22 "$(s_calls "$DUTI_LOG" | awk 'END { print }' | awk '{ print $2 }')"
 has "plist sets com.apple.property-list" '["-s", "com.coteditor.CotEditor", "com.apple.property-list", "all"]' "$(s_calls "$DUTI_LOG")"
 has "plist sets com.apple.xml-property-list" '["-s", "com.coteditor.CotEditor", "com.apple.xml-property-list", "all"]' "$(s_calls "$DUTI_LOG")"
 eq "real list does not set html cfg env or list" "" "$(s_calls "$DUTI_LOG" | grep -F -e '".html"' -e '".cfg"' -e '".env"' -e '".list"' -e 'public.html' || true)"
 out="$(run "$REAL_LIST")"
 eq "real list has no drift" "" "$(printf '%s\n' "$out" | grep '^bad|' || true)"
-eq "real list pinnable rows ok" 21 "$(printf '%s\n' "$out" | grep -c '^ok|')"
+eq "real list pinnable rows ok" 20 "$(printf '%s\n' "$out" | grep -c '^ok|')"
 eq "real list has no info rows" 0 "$(printf '%s\n' "$out" | grep -c '^info|')"
 
-# .fish has no declared UTI. The check does not call that drift, and apply
-# warns instead of failing. A later -50 on dyn.* is the same warning when
-# duti -e did not already say the type was dynamic.
-export DUTI_DYN_EXTS=fish
-printf '%s\n' 'fish|CotEditor|com.coteditor.CotEditor' 'txt|CotEditor|com.coteditor.CotEditor' > "$tmp/fish.list"
+# A fixture extension with only a dyn.* UTI is a warning, not drift, and
+# apply skips it. A later -50 on dyn.* is the same warning when duti -e did
+# not already say the type was dynamic. zzz is not a row in the real list.
+export DUTI_DYN_EXTS=zzz
+printf '%s\n' 'zzz|CotEditor|com.coteditor.CotEditor' 'txt|CotEditor|com.coteditor.CotEditor' > "$tmp/dyn-uti.list"
 "$PY" -c 'import json,sys; json.dump({"txt":"com.coteditor.CotEditor"}, open(sys.argv[1],"w"))' "$DUTI_DB"
 : > "$DUTI_LOG"
-out="$(run "$tmp/fish.list")"; rc=$?
-eq "dynamic .fish check exits 0" 0 "$rc"
-has "dynamic .fish is a named warning" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
-eq "dynamic .fish is not drift" "" "$(printf '%s\n' "$out" | grep '^bad|fish|' || true)"
+out="$(run "$tmp/dyn-uti.list")"; rc=$?
+eq "dynamic UTI check exits 0" 0 "$rc"
+has "dynamic UTI is a named warning" "warn|zzz|no app declares a file type for .zzz yet; skipped" "$out"
+eq "dynamic UTI is not drift" "" "$(printf '%s\n' "$out" | grep '^bad|zzz|' || true)"
 has "a declared type is still checked" "ok|txt|.txt -> CotEditor / com.coteditor.CotEditor" "$out"
 : > "$DUTI_LOG"
-out="$(run --apply "$tmp/fish.list")"; rc=$?
-eq "dynamic .fish apply exits 0" 0 "$rc"
-has "dynamic .fish apply warns" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
-eq "dynamic .fish apply does not claim a change" "" "$(printf '%s\n' "$out" | grep '^chg|fish|' || true)"
-eq "dynamic .fish apply does not call duti -s" "" "$(s_calls "$DUTI_LOG" | grep -F '".fish"' || true)"
+out="$(run --apply "$tmp/dyn-uti.list")"; rc=$?
+eq "dynamic UTI apply exits 0" 0 "$rc"
+has "dynamic UTI apply warns" "warn|zzz|no app declares a file type for .zzz yet; skipped" "$out"
+eq "dynamic UTI apply does not claim a change" "" "$(printf '%s\n' "$out" | grep '^chg|zzz|' || true)"
+eq "dynamic UTI apply does not call duti -s" "" "$(s_calls "$DUTI_LOG" | grep -F '".zzz"' || true)"
 has "txt was already set" "ok|txt|.txt already CotEditor / com.coteditor.CotEditor" "$out"
 
 export DUTI_E_BARE=1
-out="$(run "$tmp/fish.list")"
-has "a bare dyn UTI is the same warning" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
+out="$(run "$tmp/dyn-uti.list")"
+has "a bare dyn UTI is the same warning" "warn|zzz|no app declares a file type for .zzz yet; skipped" "$out"
 export DUTI_E_BARE=""
 export DUTI_DYN_EXTS=""
 
-export DUTI_S_DYN=fish
+export DUTI_S_DYN=zzz
 : > "$DUTI_LOG"
-out="$(run --apply --only fish "$tmp/fish.list")"; rc=$?
+out="$(run --apply --only zzz "$tmp/dyn-uti.list")"; rc=$?
 eq "error -50 on dyn.* exits 0" 0 "$rc"
-has "error -50 on dyn.* is the named warning" "warn|fish|no app declares a file type for .fish yet; skipped" "$out"
-has "error -50 still tried duti -s" '["-s", "com.coteditor.CotEditor", ".fish", "all"]' "$(s_calls "$DUTI_LOG")"
+has "error -50 on dyn.* is the named warning" "warn|zzz|no app declares a file type for .zzz yet; skipped" "$out"
+has "error -50 still tried duti -s" '["-s", "com.coteditor.CotEditor", ".zzz", "all"]' "$(s_calls "$DUTI_LOG")"
 export DUTI_S_DYN=""
-
-# handlers.sh prints that warning, not an error, and keeps going.
-export DUTI_DYN_EXTS=fish
-: > "$DUTI_LOG"
-fish_dry="$("$DIR/handlers.sh" --dry-run)"
-fish_dry_rc=$?
-eq "handlers dry-run with .fish exits 0" 0 "$fish_dry_rc"
-has "handlers names the .fish skip" "warn    no app declares a file type for .fish yet; skipped" "$fish_dry"
-miss "handlers does not call the .fish skip an error" "error   " "$fish_dry"
-export DUTI_DYN_EXTS=""
 
 # handlers.sh --dry-run uses the same helper (bootstrap step 6). URL schemes
 # hit the fake duti's -d and come back unset; file rows are already applied.
