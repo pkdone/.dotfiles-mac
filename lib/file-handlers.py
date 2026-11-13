@@ -35,7 +35,7 @@ type. `duti -e` then lists only a `dyn.*` UTI, and `duti -s` fails with
 error -50 on that dynamic UTI. That row is a warning
 ("no app declares a file type for .EXT yet; skipped"), not a failure and
 not drift. The row stays in the list so a later app that declares the type
-can be set. `.fish` is the one that hits this on a fresh Mac.
+can be set.
 
 html / htm / xhtml, the UTIs public.html and public.xhtml, and any URL scheme
 are refused. Setting public.html switches the default web browser. URL schemes

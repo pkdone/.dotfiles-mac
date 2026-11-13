@@ -128,7 +128,7 @@ git pull && ./macconfig-check.sh --fix
 
 The `duti` command can return before macOS shows the new app, especially when that app was just installed. The script checks every half second for up to 20 seconds, and tries the set once more if it still has not changed. When duti accepted the change and macOS has not caught up, that is a warning and setup keeps going. Run macconfig later to confirm. An actual duti error still fails that extension.
 
-`.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`. `.fish` often has no declared file type, so `duti` fails with error -50 on a dynamic UTI. That is a warning and is skipped, and the check does not call it drift. The row stays, so once some app declares a type for `.fish` the next run sets CotEditor.
+`.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`. An extension with no declared file type is a warning and is skipped, and the check does not call it drift. `duti` fails with error -50 on a dynamic UTI. The row stays, so a later run sets it once some app declares the type.
 
 ## Unwanted apps (GarageBand, iMovie, Pages)
 
