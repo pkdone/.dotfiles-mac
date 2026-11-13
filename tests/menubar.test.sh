@@ -59,7 +59,7 @@ has "autofix comment names ControlCenter" "SystemUIServer / ControlCenter" \
   "$(cat "$DIR/lib/autofix.list")"
 
 has "manual step turns off the pinned apps" \
-  "menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Granola, Microsoft Teams, Slack, Zoom, Raycast and Logi Options+." \
+  "menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Granola, Microsoft Teams, Slack, Zoom, Raycast, Logi Options+ and Notion." \
   "$(grep -v '^#' "$DIR/lib/manual-steps.list")"
 has "manual step leaves the unpinned icons" "Leave Tailscale, Hammerspoon, Fleet Desktop and the rest as they are" \
   "$(grep '^menubar-third-party-hide|' "$DIR/lib/manual-steps.list")"

@@ -67,7 +67,7 @@ PY
 }
 run() { "$PY" "$HELPER" --plist "$1" --list "${2:-$LIST}"; }
 
-# The ten pinned apps, in list order. Others stay unpinned.
+# The eleven pinned apps, in list order. Others stay unpinned.
 eq "allow list bundles" \
   "com.1password.1password
 com.todesktop.230313mzl4w4u92
@@ -78,7 +78,8 @@ com.microsoft.teams2
 com.tinyspeck.slackmacgap
 us.zoom.xos
 com.raycast.macos
-com.logi.cp-dev-mgr" \
+com.logi.cp-dev-mgr
+notion.id" \
   "$(awk -F'|' '$1 !~ /^#/ && NF == 3 { print $1 }' "$LIST")"
 eq "every pinned app is off" "" \
   "$(awk -F'|' '$1 !~ /^#/ && NF == 3 && $2 != "off" { print }' "$LIST")"
@@ -107,7 +108,7 @@ eq "check and helper never write the menu bar store" "" "$writers"
 has "helper default plist is the control center group store" \
   "group.com.apple.controlcenter.plist" "$(cat "$HELPER")"
 
-# Paul's Mac: the ten are off. Tailscale stays on and is not pinned.
+# Paul's Mac: the eleven are off. Tailscale stays on and is not pinned.
 # Docker's menu item bundle is com.electron.dockerdesktop, not the toggle.
 cat > "$tmp/off.spec" <<'EOF'
 com.1password.1password|false|
@@ -120,6 +121,7 @@ com.tinyspeck.slackmacgap|false|
 us.zoom.xos|false|
 com.raycast.macos|false|
 com.logi.cp-dev-mgr|false|
+notion.id|false|
 io.tailscale.ipn.macsys|true|
 org.hammerspoon.Hammerspoon|true|
 com.fleetdm.desktop|true|
@@ -257,7 +259,7 @@ run_section() { # plist path
 }
 
 off_lines="$(run_section "$tmp/off.plist")"
-eq "section passes when every pinned app is off" 10 \
+eq "section passes when every pinned app is off" 11 \
   "$(printf '%s\n' "$off_lines" | grep -c '^pass|' || true)"
 miss "section does not drift when every pinned app is off" "bad|" "$off_lines"
 miss "section does not warn when the plist is readable" "warn|" "$off_lines"

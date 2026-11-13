@@ -277,7 +277,7 @@ raycast-clipboard|App settings|Raycast Clipboard History: hotkey Control+Command
 # An app that is not installed, or not in the blob yet, is info. A missing
 # or unreadable plist is a warning. Writing the blob is undocumented and
 # Control Center may overwrite it, so there is no SAFE fix.
-menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Granola, Microsoft Teams, Slack, Zoom, Raycast and Logi Options+. Leave Tailscale, Hammerspoon, Fleet Desktop and the rest as they are|System Settings → Menu Bar → Allow in the Menu Bar|x-apple.systempreferences:com.apple.ControlCenter-Settings.extension|@macconfig:menubar
+menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Granola, Microsoft Teams, Slack, Zoom, Raycast, Logi Options+ and Notion. Leave Tailscale, Hammerspoon, Fleet Desktop and the rest as they are|System Settings → Menu Bar → Allow in the Menu Bar|x-apple.systempreferences:com.apple.ControlCenter-Settings.extension|@macconfig:menubar
 # Control Centre tiles are Edit Controls in the menu-bar Control Centre, not
 # the allow-list above and not the @host/com.apple.controlcenter menu-bar
 # icon rows. Keep Screen Mirroring, Wi-Fi, Bluetooth, Now Playing, Display,
