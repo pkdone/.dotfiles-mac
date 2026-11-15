@@ -219,7 +219,7 @@ Hammerspoon brings Finder to the front with `Shift + Control + Command + F` ([Ha
 
 ## Grok Bot privacy
 
-Screen Recording (manual step `grokbot-screen-recording`) lets Grok Bot see the screen to do or verify GUI-only setup steps. Accessibility (manual step `grokbot-accessibility`) lets it click and type in Mac apps. Both grants are read from the system TCC database (`/Library/Application Support/com.apple.TCC/TCC.db`), the same place as Full Disk Access (manual step `grokbot-fda`): `kTCCServiceScreenCapture` and `kTCCServiceAccessibility` for `com.anysphere.sand`. The per-user TCC database does not hold those services. The check only reads. Nothing writes a TCC grant. Open Grok Bot first so Screen Recording lists it, or accept the prompt when Grok Bot Computer Use asks.
+Screen Recording (manual step `grokbot-screen-recording`) lets Grok Bot Computer Use see the screen to do or verify GUI-only setup steps. Accessibility (manual step `grokbot-accessibility`) lets it click and type in Mac apps. Both grants are read from the system TCC database (`/Library/Application Support/com.apple.TCC/TCC.db`): `kTCCServiceScreenCapture` and `kTCCServiceAccessibility` for `co.anysphere.grok-bot-computer-use`, the name System Settings shows as Grok Bot Computer Use. Full Disk Access (manual step `grokbot-fda`) stays `kTCCServiceSystemPolicyAllFiles` for `com.anysphere.sand`. The per-user TCC database does not hold those services. The check only reads. Nothing writes a TCC grant. Open Grok Bot Computer Use first so Screen Recording lists it, or accept the prompt when it asks.
 
 ## By hand
 

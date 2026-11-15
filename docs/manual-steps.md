@@ -53,8 +53,8 @@ British input (`com.apple.HIToolbox` `AppleEnabledInputSources` and `AppleSelect
 | 19 | Allow Raycast for Clipboard History | Open Raycast first. System Settings → Privacy & Security → Accessibility. If it is not listed, click + and add it from Applications | auto |
 | 20 | Give Ghostty Full Disk Access | Open Ghostty first. System Settings → Privacy & Security → Full Disk Access → Ghostty. This lets macconfig read Login Items and Finder Recents | auto |
 | 21 | Give Grok Bot Full Disk Access | Open Grok Bot first. System Settings → Privacy & Security → Full Disk Access → Grok Bot. Needed for its unattended macconfig runs | auto |
-| 22 | Give Grok Bot Screen Recording | Open Grok Bot first. System Settings → Privacy & Security → Screen & System Audio Recording → Grok Bot (or accept the prompt when Grok Bot Computer Use asks). Lets Grok Bot see the screen to do or verify GUI-only setup steps. | auto |
-| 23 | Give Grok Bot Accessibility | System Settings → Privacy & Security → Accessibility → Grok Bot. Lets Grok Bot click and type in Mac apps. | auto |
+| 22 | Give Grok Bot Computer Use Screen Recording | Open Grok Bot Computer Use first. System Settings → Privacy & Security → Screen & System Audio Recording → Grok Bot Computer Use (or accept the prompt when Grok Bot Computer Use asks). Lets Grok Bot Computer Use see the screen to do or verify GUI-only setup steps. | auto |
+| 23 | Give Grok Bot Computer Use Accessibility | System Settings → Privacy & Security → Accessibility → Grok Bot Computer Use. Lets Grok Bot Computer Use click and type in Mac apps. | auto |
 | 24 | Trackpad: Look up & data detectors Off | System Settings → Trackpad → Point & Click | auto |
 | 25 | Use trackpad for dragging On (Without Drag Lock) | System Settings → Accessibility → Pointer Control → click Trackpad Options… (opens a sheet) → Use trackpad for dragging On (Without Drag Lock) → Done | auto |
 | 26 | Pointer size one notch above Normal | System Settings → Accessibility → Display → Pointer → Pointer size | auto |
