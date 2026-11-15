@@ -217,6 +217,10 @@ The hotkey is `Shift + Control + Command + R`, not `Option + Space`. Don't click
 
 Hammerspoon brings Finder to the front with `Shift + Control + Command + F` ([Hammerspoon](hammerspoon.md#finder-hotkey)).
 
+## Grok Bot privacy
+
+Screen Recording (manual step `grokbot-screen-recording`) lets Grok Bot see the screen to do or verify GUI-only setup steps. Accessibility (manual step `grokbot-accessibility`) lets it click and type in Mac apps. Both grants are read from the system TCC database (`/Library/Application Support/com.apple.TCC/TCC.db`), the same place as Full Disk Access (manual step `grokbot-fda`): `kTCCServiceScreenCapture` and `kTCCServiceAccessibility` for `com.anysphere.sand`. The per-user TCC database does not hold those services. The check only reads. Nothing writes a TCC grant. Open Grok Bot first so Screen Recording lists it, or accept the prompt when Grok Bot Computer Use asks.
+
 ## By hand
 
 These stay by hand because nothing reliable can read or write them. The click path is the row in [Manual steps](manual-steps.md).
