@@ -139,8 +139,14 @@ res() { R_STATUS="$1"; R_DETAIL="$2"; }
 # shellcheck source=../lib/why-shown.sh disable=SC1091
 . "$DOTDIR/lib/why-shown.sh"
 
-# Allowed in the system TCC database? Reading it needs Full Disk Access for whatever
-# runs this (Ghostty / Grok Bot); without it, fall back to check by hand.
+# Allowed in the system TCC database
+# (/Library/Application Support/com.apple.TCC/TCC.db)? Reading it needs Full
+# Disk Access for whatever runs this (Ghostty / Grok Bot); without it, fall
+# back to check by hand. Screen Recording (kTCCServiceScreenCapture) and
+# Accessibility (kTCCServiceAccessibility) are rows in that system database,
+# the same place as Full Disk Access (kTCCServiceSystemPolicyAllFiles). The
+# per-user TCC.db does not hold them. A tcc: check names the service without
+# the kTCCService prefix, the same way SystemPolicyAllFiles is written.
 check_tcc() {  # service bundle-id
   local svc="$1" bundle="$2" out rc
   if ! command -v sqlite3 >/dev/null 2>&1; then res hand "sqlite3 not found"; return; fi

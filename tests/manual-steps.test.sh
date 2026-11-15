@@ -381,5 +381,143 @@ rm -rf "$safari_dir"
 miss "notifications-reviewed does not hard-code a Safari web app id" "Safari.WebApp." \
   "$(grep -v '^[[:space:]]*#' "$DIR/../lib/notifications-reviewed.list" || true)"
 
+# Grok Bot Screen Recording and Accessibility sit immediately after Full Disk
+# Access. The service name is the kTCCService suffix, same as SystemPolicyAllFiles.
+# Both services live in the system TCC.db, which is the database check_tcc reads.
+row_of() { awk -F'|' -v id="$1" '$1 == id { print; exit }' "$LIST"; }
+eq "screen recording follows full disk access" "grokbot-screen-recording" \
+  "$(awk -F'|' '
+    $0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/ { next }
+    prev == "grokbot-fda" { print $1; exit }
+    { prev = $1 }
+  ' "$LIST")"
+eq "accessibility follows screen recording" "grokbot-accessibility" \
+  "$(awk -F'|' '
+    $0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/ { next }
+    prev == "grokbot-screen-recording" { print $1; exit }
+    { prev = $1 }
+  ' "$LIST")"
+screen_row="$(row_of grokbot-screen-recording)"
+ax_row="$(row_of grokbot-accessibility)"
+eq "screen recording title" "Give Grok Bot Screen Recording" \
+  "$(printf '%s\n' "$screen_row" | cut -d'|' -f3)"
+eq "screen recording where" \
+  "Open Grok Bot first. System Settings → Privacy & Security → Screen & System Audio Recording → Grok Bot (or accept the prompt when Grok Bot Computer Use asks). Lets Grok Bot see the screen to do or verify GUI-only setup steps." \
+  "$(printf '%s\n' "$screen_row" | cut -d'|' -f4)"
+eq "screen recording opens ScreenCapture" \
+  "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" \
+  "$(printf '%s\n' "$screen_row" | cut -d'|' -f5)"
+eq "screen recording check matches the FDA service form" \
+  "tcc:ScreenCapture:com.anysphere.sand" \
+  "$(printf '%s\n' "$screen_row" | cut -d'|' -f6)"
+eq "accessibility title" "Give Grok Bot Accessibility" \
+  "$(printf '%s\n' "$ax_row" | cut -d'|' -f3)"
+eq "accessibility where" \
+  "System Settings → Privacy & Security → Accessibility → Grok Bot. Lets Grok Bot click and type in Mac apps." \
+  "$(printf '%s\n' "$ax_row" | cut -d'|' -f4)"
+eq "accessibility opens Accessibility" \
+  "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" \
+  "$(printf '%s\n' "$ax_row" | cut -d'|' -f5)"
+eq "accessibility check matches the FDA service form" \
+  "tcc:Accessibility:com.anysphere.sand" \
+  "$(printf '%s\n' "$ax_row" | cut -d'|' -f6)"
+eq "full disk access still uses the system service suffix" \
+  "tcc:SystemPolicyAllFiles:com.anysphere.sand" \
+  "$(row_of grokbot-fda | cut -d'|' -f6)"
+# shellcheck disable=SC2016  # the default assignment is compared literally
+has "tcc check reads the system database" \
+  'TCC_DB="${MANUAL_STEPS_TCC_DB:-/Library/Application Support/com.apple.TCC/TCC.db}"' \
+  "$(cat "$MS")"
+has "checker names ScreenCapture as a system service" "kTCCServiceScreenCapture" "$(cat "$MS")"
+has "checker names Accessibility as a system service" "kTCCServiceAccessibility" "$(cat "$MS")"
+# shellcheck disable=SC2016  # the user-database path is compared literally
+miss "tcc check does not default to the user database" \
+  '$HOME/Library/Application Support/com.apple.TCC/TCC.db' "$(cat "$MS")"
+has "manual-steps policy keeps by-hand GUI steps" \
+  "GUI steps may be done or verified by Grok Bot computer use, but every such step keeps its by-hand instructions in \`lib/manual-steps.list\`, because Grok Bot isn't always available; Grok Bot computer use cannot drive System Settings, terminals, password apps, or Cursor/Grok Bot themselves." \
+  "$(cat "$DIR/../AGENTS.md")"
+# shellcheck disable=SC2016  # needles are markdown, compared literally
+has "settings names Grok Bot Screen Recording" 'manual step `grokbot-screen-recording`' "$settings"
+# shellcheck disable=SC2016  # needles are markdown, compared literally
+has "settings names Grok Bot Accessibility" 'manual step `grokbot-accessibility`' "$settings"
+has "settings says both grants are in the system TCC database" \
+  "The per-user TCC database does not hold those services." "$settings"
+
+# A stub sqlite3 records the query. The real script's default database is the
+# system TCC.db; this does not open that file and does not grant anything.
+tccdir="$(mktemp -d)"
+mkdir -p "$tccdir/bin"
+cat > "$tccdir/bin/sqlite3" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >> "${TCC_SQLITE_LOG:?}"
+sql=""
+for arg in "$@"; do
+  case "$arg" in
+    SELECT*) sql="$arg" ;;
+  esac
+done
+case "$sql" in
+  *kTCCServiceScreenCapture*) val="${TCC_SCREEN-}" ;;
+  *kTCCServiceAccessibility*) val="${TCC_AX-}" ;;
+  *) val="" ;;
+esac
+if [ "${TCC_SQLITE_RC:-0}" -ne 0 ]; then
+  exit "$TCC_SQLITE_RC"
+fi
+printf '%s\n' "$val"
+exit 0
+EOF
+chmod +x "$tccdir/bin/sqlite3"
+printf '%s\n' \
+  'grokbot-screen-recording|Privacy & Security permissions|Give Grok Bot Screen Recording|Where|x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture|tcc:ScreenCapture:com.anysphere.sand' \
+  'grokbot-accessibility|Privacy & Security permissions|Give Grok Bot Accessibility|Where|x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility|tcc:Accessibility:com.anysphere.sand' \
+  > "$tccdir/steps.list"
+: > "$tccdir/sqlite.log"
+tcc_check() {
+  TCC_SCREEN="$1" TCC_AX="$2" TCC_SQLITE_RC="${3:-0}" \
+    TCC_SQLITE_LOG="$tccdir/sqlite.log" \
+    PATH="$tccdir/bin:$PATH" NO_COLOR=1 \
+    MANUAL_STEPS_LIST="$tccdir/steps.list" \
+    "$MS" check --porcelain 2>"$tccdir/err"
+}
+tcc_status() { printf '%s\n' "$1" | awk -F'|' -v id="$2" '$3 == id { print $1; exit }'; }
+tcc_detail() { printf '%s\n' "$1" | awk -F'|' -v id="$2" '$3 == id { print $5; exit }'; }
+tcc_out="$(tcc_check 2 2)"
+tcc_rc=$?
+eq "granted screen recording and accessibility exit 0" 0 "$tcc_rc"
+eq "screen recording auth 2 is allowed" ok "$(tcc_status "$tcc_out" grokbot-screen-recording)"
+eq "accessibility auth 2 is allowed" ok "$(tcc_status "$tcc_out" grokbot-accessibility)"
+has "screen recording query uses the system database" \
+  "-readonly /Library/Application Support/com.apple.TCC/TCC.db SELECT auth_value FROM access WHERE service='kTCCServiceScreenCapture' AND client='com.anysphere.sand' AND client_type=0 LIMIT 1;" \
+  "$(cat "$tccdir/sqlite.log")"
+has "accessibility query uses the system database" \
+  "-readonly /Library/Application Support/com.apple.TCC/TCC.db SELECT auth_value FROM access WHERE service='kTCCServiceAccessibility' AND client='com.anysphere.sand' AND client_type=0 LIMIT 1;" \
+  "$(cat "$tccdir/sqlite.log")"
+miss "queries do not open the user TCC database" \
+  "$HOME/Library/Application Support/com.apple.TCC/TCC.db" \
+  "$(cat "$tccdir/sqlite.log")"
+: > "$tccdir/sqlite.log"
+tcc_out="$(tcc_check 3 0)"
+eq "screen recording auth 3 is allowed" ok "$(tcc_status "$tcc_out" grokbot-screen-recording)"
+eq "accessibility switched off warns" warn "$(tcc_status "$tcc_out" grokbot-accessibility)"
+eq "switched off names the state" "listed but switched off" \
+  "$(tcc_detail "$tcc_out" grokbot-accessibility)"
+: > "$tccdir/sqlite.log"
+tcc_out="$(tcc_check '' '')"
+tcc_rc=$?
+eq "a missing TCC row warns" 1 "$tcc_rc"
+eq "missing screen recording is not in the list" "not in the list yet" \
+  "$(tcc_detail "$tcc_out" grokbot-screen-recording)"
+eq "missing accessibility is not in the list" "not in the list yet" \
+  "$(tcc_detail "$tcc_out" grokbot-accessibility)"
+tcc_out="$(tcc_check 2 2 1)"
+tcc_rc=$?
+eq "an unreadable TCC database is check by hand" hand \
+  "$(tcc_status "$tcc_out" grokbot-screen-recording)"
+eq "an unreadable TCC database does not fail the run" 0 "$tcc_rc"
+has "an unreadable TCC database names Full Disk Access" \
+  "needs Full Disk Access" "$(tcc_detail "$tcc_out" grokbot-accessibility)"
+rm -rf "$tccdir"
+
 printf 'manual-steps tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
