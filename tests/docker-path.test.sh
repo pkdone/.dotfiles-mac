@@ -3,11 +3,12 @@
 # SC2317: the section's helpers are stubs called by the sourced checks/shell.sh.
 # shellcheck disable=SC2016,SC2317
 #
-# Docker Desktop's CLI tools in fish. fish/config.fish appends ~/.docker/bin
-# to PATH, after Homebrew, only when that folder exists, with no fixed home
-# path. The Login shell check warns when Docker Desktop's own "added by Docker
-# Desktop" export block is back in config.fish. HOME is a temp folder, and
-# brew / dscl are shell functions, so nothing on this machine is read.
+# Docker Desktop's CLI tools in fish. fish/config.fish keeps Docker Desktop's
+# own PATH block at the top, with the comment markers its shellspath manager
+# looks for, so a later rewrite is a no-op and the repo stays clean. The export
+# appends ~/.docker/bin (Docker writes a fixed home path). The Login shell
+# check treats a missing block as drift. HOME is a temp folder, and brew /
+# dscl are shell functions, so nothing on this machine is read.
 # Run: ./tests/docker-path.test.sh
 #
 set -uo pipefail
@@ -41,34 +42,50 @@ export PATH="$PATH:/Users/someone/.docker/bin"
 
 # ---- config.fish -----------------------------------------------------------
 config="$(cat "$CONFIG")"
-has "config.fish appends ~/.docker/bin when it exists" \
-  'test -d $HOME/.docker/bin; and fish_add_path --append --path $HOME/.docker/bin' "$config"
-miss "config.fish has no Docker Desktop block" "were added by Docker Desktop" "$config"
-miss "config.fish has no export PATH line" "export PATH" "$config"
-miss "config.fish names no home folder" "/Users/" "$config"
-has "config.fish says to remove the block if it comes back" "If it adds that block again, remove it" "$config"
-brew_line="$(grep -n -F 'brew shellenv' "$CONFIG" | head -n 1 | cut -d: -f1)"
-docker_at="$(grep -n -F 'fish_add_path --append --path $HOME/.docker/bin' "$CONFIG" | head -n 1 | cut -d: -f1)"
-if [ -n "$brew_line" ] && [ -n "$docker_at" ] && [ "$docker_at" -gt "$brew_line" ]; then
+has "config.fish starts with Docker Desktop's start comment" \
+  '# The following lines were added by Docker Desktop to add commands to your PATH.' "$config"
+has "config.fish has Docker Desktop's end comment" \
+  '# End of Docker Desktop section.' "$config"
+has "config.fish uses Docker's fixed home-path export" \
+  'export PATH="$PATH:/Users/paul.done/.docker/bin"' "$config"
+miss "config.fish no longer adds ~/.docker/bin itself" \
+  'fish_add_path --append --path $HOME/.docker/bin' "$config"
+first="$(head -n 1 "$CONFIG")"
+eq "the Docker start comment is line 1" \
+  '# The following lines were added by Docker Desktop to add commands to your PATH.' "$first"
+# One blank line between the end comment and the Homebrew heading, matching
+# the spacing Docker writes: end comment, blank line, then the rest of the file.
+end_line="$(grep -n -F '# End of Docker Desktop section.' "$CONFIG" | head -n 1 | cut -d: -f1)"
+heading_line="$(grep -n -F '# Homebrew' "$CONFIG" | head -n 1 | cut -d: -f1)"
+if [ -n "$end_line" ] && [ -n "$heading_line" ] && [ "$heading_line" -eq $((end_line + 2)) ]; then
   pass=$((pass + 1))
 else
-  fail=$((fail + 1)); printf 'FAIL: the Docker line comes after Homebrew (brew %s, docker %s)\n' "$brew_line" "$docker_at"
+  fail=$((fail + 1)); printf 'FAIL: Homebrew heading should be one blank line after the Docker end comment (end %s, heading %s)\n' "$end_line" "$heading_line"
 fi
 
-# ---- docker_path_block ----------------------------------------------------
+# ---- docker_path_block / docker_path_markers --------------------------------
 export MACCONFIG_CHECKS_DEFINE_ONLY=1
 # shellcheck source=../checks/shell.sh disable=SC1091
 . "$DIR/checks/shell.sh"
 unset MACCONFIG_CHECKS_DEFINE_ONLY
 
-eq "the repo config.fish has no Docker block" "" "$(docker_path_block "$CONFIG")"
-printf '%s\n%s\n' "$docker_block" "$config" > "$tmp/top.fish"
+eq "the repo config.fish block is found on line 1" 1 "$(docker_path_block "$CONFIG")"
+eq "the repo config.fish has both Docker markers on line 1" 1 "$(docker_path_markers "$CONFIG")"
+printf '%s\n%s\n' "$docker_block" "# Homebrew" > "$tmp/top.fish"
 eq "a block at the top is found on line 1" 1 "$(docker_path_block "$tmp/top.fish")"
+eq "a block at the top has markers on line 1" 1 "$(docker_path_markers "$tmp/top.fish")"
 printf '# Homebrew\neval "$(/opt/homebrew/bin/brew shellenv)"\n%s\n' "$docker_block" > "$tmp/later.fish"
 eq "a block further down is found on its first line" 3 "$(docker_path_block "$tmp/later.fish")"
+eq "a block further down has markers on its first line" 3 "$(docker_path_markers "$tmp/later.fish")"
 printf 'set -g x 1\nexport PATH="$PATH:$HOME/.docker/bin"\n' > "$tmp/export-only.fish"
 eq "an export of ~/.docker/bin without the comment is found" 2 "$(docker_path_block "$tmp/export-only.fish")"
-eq "a missing file prints nothing" "" "$(docker_path_block "$tmp/no-such.fish")"
+eq "an export without both markers is not complete" "" "$(docker_path_markers "$tmp/export-only.fish")"
+printf '# The following lines were added by Docker Desktop to add commands to your PATH.\nexport PATH="$PATH:$HOME/.docker/bin"\n' > "$tmp/start-only.fish"
+eq "a start comment without the end comment is not complete" "" "$(docker_path_markers "$tmp/start-only.fish")"
+printf '# End of Docker Desktop section.\n' > "$tmp/end-only.fish"
+eq "an end comment without the start comment is not complete" "" "$(docker_path_markers "$tmp/end-only.fish")"
+eq "a missing file prints nothing for docker_path_block" "" "$(docker_path_block "$tmp/no-such.fish")"
+eq "a missing file prints nothing for docker_path_markers" "" "$(docker_path_markers "$tmp/no-such.fish")"
 
 # ---- the Login shell section ------------------------------------------------
 # run_shell_section HOME — run checks/shell.sh with brew and dscl answering
@@ -100,17 +117,19 @@ home="$tmp/home"
 mkdir -p "$home/.config/fish"
 ln -s "$CONFIG" "$home/.config/fish/config.fish"
 out="$(run_shell_section "$home")"
-has "linked repo config.fish passes" "ok fish/config.fish has no Docker Desktop PATH block" "$out"
+has "linked repo config.fish passes" \
+  "ok fish/config.fish has Docker Desktop's PATH block (Docker's rewrite is a no-op)" "$out"
+miss "linked repo config.fish is not drift" "DRIFT" "$out"
 miss "linked repo config.fish does not warn" "warn " "$out"
 has "login shell, Docker, and origin all count" "checked 3" "$out"
 
 rm "$home/.config/fish/config.fish"
-cp "$tmp/top.fish" "$home/.config/fish/config.fish"
+# A config.fish with no Docker markers is drift.
+printf '# Homebrew\neval "$(/opt/homebrew/bin/brew shellenv)"\n' > "$home/.config/fish/config.fish"
 out="$(run_shell_section "$home")"
-has "Docker's block is a warning that names the line" \
-  "warn fish/config.fish line 1: Docker Desktop added its own PATH block. Remove it" "$out"
-has "the warning is tagged docker-path-block" "fixid docker-path-block" "$out"
-miss "Docker's block is not drift" "DRIFT" "$out"
+has "a missing Docker block is drift" \
+  "DRIFT fish/config.fish is missing Docker Desktop's PATH block" "$out"
+has "the drift is tagged docker-path-block" "fixid docker-path-block" "$out"
 eq "docker-path-block is report only" \
   "docker-path-block|PAUL|" "$(grep '^docker-path-block|' "$DIR/lib/autofix.list" | cut -d'|' -f1-3)"
 
@@ -119,9 +138,9 @@ out="$(run_shell_section "$home")"
 miss "no config.fish, no Docker line" "Docker" "$out"
 has "no config.fish still checks the login shell and origin" "checked 2" "$out"
 
-# ---- fish puts ~/.docker/bin last, and only when it exists ------------------
+# ---- fish accepts Docker's export and appends ~/.docker/bin -----------------
 if FISH_BIN="$(hermetic_fish)"; then
-  line="$(grep -F '.docker/bin' "$CONFIG" | grep -v '^[[:space:]]*#')"
+  line='export PATH="$PATH:$HOME/.docker/bin"'
   fhome="$tmp/fish-home"
   mkdir -p "$fhome/xdg"
   fish_path() {
@@ -129,11 +148,11 @@ if FISH_BIN="$(hermetic_fish)"; then
       PATH="/opt/homebrew/bin:/usr/bin:/bin" \
       "$FISH_BIN" --no-config -c "$line; string join : \$PATH"
   }
-  eq "no ~/.docker/bin leaves PATH alone" "/opt/homebrew/bin:/usr/bin:/bin" "$(fish_path)"
+  eq "a missing ~/.docker/bin still appends the path (harmless)" \
+    "/opt/homebrew/bin:/usr/bin:/bin:$fhome/.docker/bin" "$(fish_path)"
   mkdir -p "$fhome/.docker/bin"
   eq "the Docker bin folder goes after Homebrew and the system folders" \
     "/opt/homebrew/bin:/usr/bin:/bin:$fhome/.docker/bin" "$(fish_path)"
-  eq "fish_add_path --path writes no universal variables" "" "$(find "$fhome/xdg" -name fish_variables)"
 else
   printf 'docker-path tests: fish not found, PATH order checks skipped\n'
 fi
