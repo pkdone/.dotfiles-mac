@@ -256,6 +256,7 @@ notifications-apps|Notifications & Spotlight|Turn notifications Off for Calendar
 spotlight-results|Notifications & Spotlight|Spotlight: turn off results from Books, Calendar, Contacts, Mail, Messages, Music, Notes, Photos, Podcasts, Reminders, Safari, Shortcuts, Stocks, Tips, and Voice Memos. Leave App Store, Calculator, Dictionary, and System Settings on.|System Settings → Spotlight → Results from Apps|x-apple.systempreferences:com.apple.Spotlight-Settings.extension|spotlight-results
 
 # ---- Login Items & Finder ----
+granola-login|Login Items & Finder|Stop Granola opening at login. Leave the app installed. In Granola → Preferences → General, turn off Open Granola when you log in (macOS may ask for Touch ID or your password). Also turn Granola Off under System Settings → General → Login Items & Extensions → Open at Login|Granola → Preferences → General → Open Granola when you log in Off, and System Settings → General → Login Items & Extensions → Open at Login → Granola Off|app:Granola|@macconfig:login-items
 finder-sidebar|Login Items & Finder|Finder sidebar: the Tags group stays collapsed, Recents and Shared stay hidden, and, when the sidebar files name the row, AirDrop and iCloud Drive are hidden, and your home folder, Macintosh HD, Network, and Trash are visible. A row the files do not name stays by hand. macconfig does not change the sidebar|Finder → Settings → Sidebar|app:Finder|@macconfig:finder
 # FavoriteTagNames is not what the sidebar shows. On pdone-mac2 every box
 # under Show these tags in the sidebar is unticked and the sidebar has no

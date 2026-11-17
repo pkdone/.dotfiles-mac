@@ -28,7 +28,8 @@ bundle|org.hammerspoon.Hammerspoon|Hammerspoon opens at login (Slack on the ARZO
 bundle|com.raycast.macos|Raycast opens at login
 team|QED4VVPZWA|Logi Options+ agents and updater
 bundle|com.mitchellh.ghostty|Ghostty opens at login
-bundle|com.granola.app|Granola opens at login
+# Granola (com.granola.app) stays installed but must not open at login.
+# The Login Items check warns if it is enabled.
 bundle|com.tinyspeck.slackmacgap|Slack opens at login
 bundle|notion.id|Notion opens at login
 bundle|com.anysphere.sand|Grok Bot opens at login (/Applications/Grok Bot.app; replaced the stale 'Sand' entry)
