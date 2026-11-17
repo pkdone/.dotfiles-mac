@@ -499,14 +499,17 @@ apply_dictation_hotkey() {
     return 0
   fi
   hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
-  blk="$(printf '%s\n' "$hk" | awk '
+  # awk exits as soon as the block ends. A pipe would then raise SIGPIPE in
+  # the writer, and pipefail would abort this step before the pin runs.
+  # A here-string is a file, so the early exit is harmless.
+  blk="$(awk '
     $0 ~ /^[[:space:]]*164 =/ {grab=1}
     grab {print}
     grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
-  ')"
-  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
-  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
-  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  ' <<<"$hk")"
+  enabled="$(awk '/enabled/ {print $3; exit}' <<<"$blk" | tr -d ';')"
+  ptype="$(awk '/type/ {print $3; exit}' <<<"$blk" | tr -d '";')"
+  p1="$(awk '/parameters/ {getline; print $1; exit}' <<<"$blk" | tr -d ',')"
   if [ "$enabled" = "$desired_enabled" ] && [ "$ptype" = "$desired_type" ] && [ "$p1" = "$desired_p1" ]; then
     if [ "$DRY_RUN" = 1 ]; then
       say_ok "dictation hotkey 164 already Right Command twice (dry-run)"
@@ -545,14 +548,17 @@ apply_quicknote_hotkey() {
     return 0
   fi
   hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null || true)"
-  blk="$(printf '%s\n' "$hk" | awk '
+  # awk exits as soon as the block ends. A pipe would then raise SIGPIPE in
+  # the writer, and pipefail would abort this step before the pin runs.
+  # A here-string is a file, so the early exit is harmless.
+  blk="$(awk '
     $0 ~ /^[[:space:]]*190 =/ {grab=1}
     grab {print}
     grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
-  ')"
-  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
-  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
-  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  ' <<<"$hk")"
+  enabled="$(awk '/enabled/ {print $3; exit}' <<<"$blk" | tr -d ';')"
+  ptype="$(awk '/type/ {print $3; exit}' <<<"$blk" | tr -d '";')"
+  p1="$(awk '/parameters/ {getline; print $1; exit}' <<<"$blk" | tr -d ',')"
   case "${enabled:-}" in 0|false|False) en_ok=1 ;; *) en_ok=0 ;; esac
   if [ "$en_ok" = 1 ] && [ "$ptype" = standard ] && [ "$p1" = 65535 ]; then
     if [ "$DRY_RUN" = 1 ]; then

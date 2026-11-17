@@ -295,15 +295,12 @@ hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null |
 if [ -z "$hk" ]; then
   bad "symbolichotkeys not readable"
 else
-  # Extract the 164 = { ... }; block (enabled + type + first parameter).
-  blk="$(printf '%s\n' "$hk" | awk '
-    $0 ~ /^[[:space:]]*164 =/ {grab=1}
-    grab {print}
-    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
-  ')"
-  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
-  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
-  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  # Same parser as Game Overlay. A pipe plus pipefail aborts the whole
+  # macconfig run when awk exits at the end of this one hotkey.
+  read_symbolic_hotkey 164 "$hk"
+  enabled="$hk_enabled"
+  ptype="$hk_type"
+  p1="$hk_p1"
   if [ "$enabled" = "1" ] && [ "$ptype" = "modifier" ] && [ "$p1" = "1048592" ]; then
     pass "dictation hotkey 164 = Right Command twice (not Fn/mic)"
   else
@@ -333,14 +330,10 @@ hk="$(defaults read com.apple.symbolichotkeys AppleSymbolicHotKeys 2>/dev/null |
 if [ -z "$hk" ]; then
   bad "symbolichotkeys not readable"
 else
-  blk="$(printf '%s\n' "$hk" | awk '
-    $0 ~ /^[[:space:]]*190 =/ {grab=1}
-    grab {print}
-    grab && $0 ~ /^[[:space:]]*};[[:space:]]*$/ {exit}
-  ')"
-  enabled="$(printf '%s\n' "$blk" | awk '/enabled/ {print $3; exit}' | tr -d ';' )"
-  ptype="$(printf '%s\n' "$blk" | awk '/type/ {print $3; exit}' | tr -d '";' )"
-  p1="$(printf '%s\n' "$blk" | awk '/parameters/ {getline; print $1; exit}' | tr -d ',' )"
+  read_symbolic_hotkey 190 "$hk"
+  enabled="$hk_enabled"
+  ptype="$hk_type"
+  p1="$hk_p1"
   case "${enabled:-}" in 0|false|False) en_ok=1 ;; *) en_ok=0 ;; esac
   if [ "$en_ok" = 1 ] && [ "${ptype:-}" = "standard" ] && [ "${p1:-}" = "65535" ]; then
     pass "Quick Note hotkey 190 = disabled (not Globe/Fn+Q)"
