@@ -3,6 +3,7 @@
 # Sourced by macconfig-check.sh. Runs in the current shell (not a subshell)
 # so a failing command still stops the check the way it did before the split.
 # scripts/manual-steps.sh calls check_step_tailscale_login (@macconfig:login-items).
+# Notion also stays in Open at Login (check_step_notion_login). There is no manual step: the app registers itself, like Slack, Ghostty, and Raycast.
 # The Tailscale heading below is the running / exit-node check, and Allow
 # Local Network Access when an exit node is selected. It is its own heading
 # so a warning there does not change the Login Items rollup.
@@ -225,12 +226,79 @@ check_tailscale_lan() {
   fi
 }
 
+
+NOTION_LOGIN_HOW="System Settings → General → Login Items & Extensions → under Open at Login click + → Applications → Notion → Open"
+
+notion_login_named() { # comma-separated System Events names
+  case ", $1," in
+    *", Notion,"*) return 0 ;;
+  esac
+  return 1
+}
+
+# Notion (Homebrew cask notion, /Applications/Notion.app) opens at login.
+# Paul added it under Open at Login. This only reads. The repo does not add
+# login items (osascript "make login item" needs an Automation prompt; the
+# other apps register themselves). --fix never adds it. Missing app: leave
+# it alone.
+check_step_notion_login() {
+  local app bid classic classic_rc btm_raw btm_rc btm_st
+  fixid login-items
+  app="${NOTION_APP_PATH:-/Applications/Notion.app}"
+  if [ ! -d "$app" ]; then
+    skip "Notion is not installed yet, so Open at Login is left alone"
+    return 0
+  fi
+  bid=""
+  if [ -n "${DOT_PYTHON:-}" ] && [ -r "$app/Contents/Info.plist" ]; then
+    bid="$("$DOT_PYTHON" -c 'import plistlib,sys
+print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleIdentifier") or "")' \
+      "$app/Contents/Info.plist" 2>/dev/null || true)"
+  fi
+  [ -n "$bid" ] || bid="notion.id"
+  classic=""
+  classic_rc=0
+  if classic="$(with_timeout 8 osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null)"; then
+    classic_rc=0
+  else
+    classic_rc=$?
+    classic=""
+  fi
+  if [ "$classic_rc" -eq 0 ] && notion_login_named "$classic"; then
+    CHECKED=$((CHECKED + 1))
+    pass "Notion is in Open at Login"
+    return 0
+  fi
+  btm_st=""
+  if [ -n "${DOT_PYTHON:-}" ] && [ -r "$DOTDIR/lib/btm-login-items.py" ]; then
+    btm_raw="$("$DOT_PYTHON" "$DOTDIR/lib/btm-login-items.py" "$bid" 2>/dev/null)" && btm_rc=0 || btm_rc=$?
+    btm_st="$(printf '%s\n' "$btm_raw" | awk -F= -v b="$bid" '$1==b { print $2; exit }')"
+    case "$btm_st" in
+      enabled)
+        CHECKED=$((CHECKED + 1))
+        pass "Notion is in Open at Login"
+        return 0
+        ;;
+    esac
+    if [ "$btm_rc" = 3 ]; then
+      btm_st="unreadable"
+    fi
+  fi
+  if [ "$classic_rc" -eq 0 ] || [ "$btm_st" = "disabled" ]; then
+    CHECKED=$((CHECKED + 1))
+    warn "Notion is not in Open at Login — $NOTION_LOGIN_HOW. macconfig --fix does not add it"
+    return 0
+  fi
+  info "Open at Login could not be read, so Notion stays by hand — $NOTION_LOGIN_HOW"
+}
+
 if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
   return 0
 fi
 
 hdr "Login Items"
 check_step_tailscale_login
+check_step_notion_login
 check_step_granola_login
 hdr "Tailscale"
 check_tailscale_exit
