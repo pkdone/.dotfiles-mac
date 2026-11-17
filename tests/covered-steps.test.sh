@@ -53,6 +53,11 @@ export PATH="$tmp/bin:$SAFE"
 export DOT_PYTHON="$PY"
 export BTM_DIR="$tmp/btm-empty"
 export AUTO_BRIGHTNESS_DIAG="$tmp/bin/no-such-corebrightnessdiag"
+# Xcode checks read these paths directly, not via PATH. Point them at
+# missing stubs so a real /Applications/Xcode.app on this Mac is not visible.
+export XCODE_APP_PATH="$tmp/no-such-Xcode.app"
+export XCODE_LICENSE_PLIST="$tmp/no-such-dt-Xcode.plist"
+export XCODE_CLT_DIR="$tmp/no-such-CommandLineTools"
 # shellcheck disable=SC1091
 . "$DIR/lib/covered-steps.sh"
 
