@@ -186,6 +186,46 @@ write_state() {  # 164en 164type 164p1 190en 190type 190p1
 }
 EOF
 }
+# AppleSymbolicHotKeys is much larger than a pipe. awk exits at the first
+# closing brace and again at `enabled`. With SIGPIPE ignored (GitHub Actions
+# inherits that from Node), a pipe makes printf report EPIPE and pipefail
+# aborts the pin before defaults write. Padding sits after `enabled` and
+# after key 164 so both early exits leave unread text.
+write_long_state() {  # 164en 164type 164p1 190en 190type 190p1
+  python3 - "$state" "$1" "$2" "$3" "$4" "$5" "$6" <<'PY'
+import sys
+path, en164, ty164, p164, en190, ty190, p190 = sys.argv[1:]
+pad = "            pad = 1;\n" * 60000
+tail = "    noise = 1;\n" * 60000
+text = """{
+    164 =     {
+        enabled = %s;
+        value =         {
+            parameters =             (
+                %s,
+                54,
+                0
+            );
+            type = %s;
+%s        };
+    };
+    190 =     {
+        enabled = %s;
+        value =         {
+            parameters =             (
+                %s,
+                65535,
+                0
+            );
+            type = %s;
+%s        };
+    };
+%s}
+""" % (en164, p164, ty164, pad, en190, p190, ty190, pad, tail)
+with open(path, "w") as fh:
+    fh.write(text)
+PY
+}
 run_pin() {
   : > "$dlog"
   HOME="$home" PATH="$bin:$PATH" DEFAULTS_LOG="$dlog" HOTKEY_STATE="$state" "$@"
@@ -248,6 +288,96 @@ out="$(run_pin "$PIN164" --check)"
 rc=$?
 eq "164 --check fails when unbound" 1 "$rc"
 has "164 --check names the drift" "drift" "$out"
+
+# Long plist, SIGPIPE ignored, the way the configured-Mac CI job runs.
+pin_err="$tmp/pin.err"
+pipe_trap="$(trap -p PIPE || true)"
+trap '' PIPE
+run_long() {  # script
+  : > "$pin_err"
+  run_pin "$1" 2>"$pin_err"
+}
+run_macos() {  # @id
+  : > "$pin_err"
+  : > "$dlog"
+  PATH="$bin:$PATH" HOME="$home" DEFAULTS_LOG="$dlog" HOTKEY_STATE="$state" \
+    "$DIR/macos.sh" --no-color --dry-run --only "$1" 2>"$pin_err"
+}
+write_long_state 1 modifier 1048592 1 standard 65535
+out="$(run_long "$PIN190")"
+rc=$?
+ok "190 long plist drift exits 0" "$rc"
+miss "190 long plist drift does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+eq "190 long plist drift writes once" 1 "$(write_count)"
+has "190 long plist drift uses dict-add" \
+  "WRITE write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 190 " "$(cat "$dlog")"
+out="$(run_macos @quicknote-190)"
+rc=$?
+ok "macos quicknote long plist dry-run exits 0" "$rc"
+miss "macos quicknote long plist does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+has "macos quicknote long plist names the drift" "Quick Note hotkey 190 enabled=1" "$out"
+has "macos quicknote long plist is a dry-run" "(dry-run)" "$out"
+eq "macos quicknote dry-run does not write" 0 "$(write_count)"
+write_long_state 1 modifier 1048592 0 standard 65535
+out="$(run_long "$PIN190")"
+rc=$?
+ok "190 long plist already disabled exits 0" "$rc"
+miss "190 long plist already disabled does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+eq "190 long plist already disabled does not write" 0 "$(write_count)"
+has "190 long plist already disabled leaves it alone" "left alone" "$out"
+out="$(run_macos @quicknote-190)"
+rc=$?
+ok "macos quicknote long plist match exits 0" "$rc"
+miss "macos quicknote long plist match does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+has "macos quicknote long plist match is already disabled" "already disabled (dry-run)" "$out"
+eq "macos quicknote match does not write" 0 "$(write_count)"
+write_long_state 0 standard 65535 0 standard 65535
+out="$(run_long "$PIN164")"
+rc=$?
+ok "164 long plist drift exits 0" "$rc"
+miss "164 long plist drift does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+eq "164 long plist drift writes once" 1 "$(write_count)"
+has "164 long plist drift uses dict-add" \
+  "WRITE write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 164 " "$(cat "$dlog")"
+out="$(run_macos @dictation-164)"
+rc=$?
+ok "macos dictation long plist dry-run exits 0" "$rc"
+miss "macos dictation long plist does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+has "macos dictation long plist names the drift" "dictation hotkey 164 enabled=0" "$out"
+has "macos dictation long plist is a dry-run" "(dry-run)" "$out"
+eq "macos dictation dry-run does not write" 0 "$(write_count)"
+write_long_state 1 modifier 1048592 0 standard 65535
+out="$(run_long "$PIN164")"
+rc=$?
+ok "164 long plist already correct exits 0" "$rc"
+miss "164 long plist already correct does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+eq "164 long plist already correct does not write" 0 "$(write_count)"
+has "164 long plist already correct leaves it alone" "left alone" "$out"
+out="$(run_macos @dictation-164)"
+rc=$?
+ok "macos dictation long plist match exits 0" "$rc"
+miss "macos dictation long plist match does not report a broken pipe" "Broken pipe" "$(cat "$pin_err")"
+has "macos dictation long plist match is already correct" "already Right Command twice (dry-run)" "$out"
+eq "macos dictation match does not write" 0 "$(write_count)"
+
+export MACCONFIG_CHECKS_DEFINE_ONLY=1 DOTDIR="$DIR"
+# shellcheck disable=SC1091
+. "$DIR/checks/hotkeys.sh"
+unset MACCONFIG_CHECKS_DEFINE_ONLY
+hk_text="$(cat "$state")"
+read_symbolic_hotkey 190 "$hk_text"
+eq "190 long plist check reads enabled" 0 "$hk_enabled"
+eq "190 long plist check reads type" standard "$hk_type"
+eq "190 long plist check reads p1" 65535 "$hk_p1"
+read_symbolic_hotkey 164 "$hk_text"
+eq "164 long plist check reads enabled" 1 "$hk_enabled"
+eq "164 long plist check reads type" modifier "$hk_type"
+eq "164 long plist check reads p1" 1048592 "$hk_p1"
+if [ -n "$pipe_trap" ]; then
+  eval "$pipe_trap"
+else
+  trap - PIPE
+fi
 
 printf 'pin-hotkey-launchagent tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
