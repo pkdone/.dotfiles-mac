@@ -1,3 +1,7 @@
+# The following lines were added by Docker Desktop to add commands to your PATH.
+export PATH="$PATH:/Users/paul.done/.docker/bin"
+# End of Docker Desktop section.
+
 # Homebrew
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
@@ -12,10 +16,6 @@ set -gx GIT_EDITOR "coteditor --wait"
 
 # Paths
 fish_add_path $HOME/.local/bin
-# Docker Desktop's CLI tools, after Homebrew's. This replaces the "added by Docker
-# Desktop" export block that Docker Desktop otherwise inserts at the top of this
-# file. If it adds that block again, remove it (macconfig warns when it is back).
-test -d $HOME/.docker/bin; and fish_add_path --append --path $HOME/.docker/bin
 
 # Auto-switches tool versions (Node, Python, etc.) per project
 mise activate fish | source

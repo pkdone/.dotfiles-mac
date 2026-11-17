@@ -22,10 +22,37 @@ has() {
     fail=$((fail + 1)); printf 'FAIL: %s\n  missing: [%s]\n' "$1" "$2" ;; esac
 }
 
-user=pdone
-needle="$(printf '%s%s' '/Users/' "$user")"
-hits="$(git grep -n -F -I "$needle" -- . || true)"
-eq "no tracked file contains the personal home path" "" "$hits"
+# Home paths are built from two pieces so this file does not contain the
+# strings it forbids. One exception is required: Docker Desktop writes a
+# fixed home path into its PATH block in fish/config.fish, and the repo
+# keeps that exact export so a rewrite is a no-op. Tests and docs may quote
+# the same line.
+user_old=pdone
+user_now=paul.done
+prefix="/Users/"
+needle_old="${prefix}${user_old}"
+needle_now="${prefix}${user_now}"
+hits_old="$(git grep -n -F -I "$needle_old" -- . || true)"
+eq "no tracked file contains the old personal home path" "" "$hits_old"
+
+# shellcheck disable=SC2016  # the allowed export is assembled at runtime
+allowed="$(printf 'export PATH="$PATH:%s/.docker/bin"' "${prefix}${user_now}")"
+hits_now="$(git grep -n -F -I "$needle_now" -- . || true)"
+unexpected=""
+while IFS= read -r line; do
+  [ -n "$line" ] || continue
+  case "$line" in
+    *"$allowed"*) ;;
+    *)
+      unexpected="${unexpected}${unexpected:+
+}${line}"
+      ;;
+  esac
+done <<EOF
+$hits_now
+EOF
+eq "the only personal home-path hits are Docker Desktop's PATH export (or quotes of it)" "" "$unexpected"
+has "fish/config.fish keeps Docker Desktop's fixed home-path export"   "fish/config.fish:" "$hits_now"
 
 # shellcheck disable=SC2016  # the helper text is compared literally
 helpers="$(git grep -F '!$HOME/.local/bin/origin credential-helper' -- gitconfig || true)"

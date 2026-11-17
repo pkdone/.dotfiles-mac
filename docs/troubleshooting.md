@@ -84,9 +84,13 @@ Homebrew can still install with only the Command Line Tools. That preflight is `
 
 ## Docker Desktop and fish/config.fish
 
-On its first start, Docker Desktop may put its own block at the top of `~/.config/fish/config.fish`, which is a link to this repo's `fish/config.fish`. The block starts with the comment "The following lines were added by Docker Desktop" and adds a fixed `export PATH` line with your home folder in it. Don't commit it. `fish/config.fish` already adds `~/.docker/bin` the fish way, after Homebrew, and only when that folder exists. Delete Docker's block, from its first comment through "End of Docker Desktop section". `macconfig` warns under Login shell while the block is there. `--fix` does not remove it, because it never edits repo files.
+`~/.config/fish/config.fish` is a link to this repo's `fish/config.fish`. Docker Desktop, in the User CLI-tools install mode, writes its own PATH block at the top of that file. The block is three lines: the comment "The following lines were added by Docker Desktop to add commands to your PATH.", `export PATH="$PATH:/Users/paul.done/.docker/bin"`, and "End of Docker Desktop section.", then one blank line.
 
-Docker Desktop's CLI tools setting is under Settings → Advanced. User keeps the tools in `~/.docker/bin`, the folder `config.fish` adds. System links them into `/usr/local/bin` instead and asks for the Mac password.
+Docker Desktop's backend (`com.docker.backend`, package `internal/shellspath`) looks for those two comment markers. If they are missing, it prepends a fresh copy of the block, including a fixed home path, and the repo is dirty. The repo keeps Docker's own block, byte-identical, so a later rewrite is a no-op. The export appends, and Homebrew below prepends, so Docker's CLI stays after Homebrew. A missing `~/.docker/bin` on a fresh Mac is harmless.
+
+`macconfig` treats a missing block as drift under Login shell. `--fix` does not put it back, because it never edits repo files.
+
+Docker Desktop's CLI tools setting is under Settings → Advanced ("Docker binary install path"). User keeps the tools in `~/.docker/bin` and edits shell profiles. System links them into `/usr/local/bin` instead, asks for the Mac password, and does not edit this file. Leave that setting as it is.
 
 ## Recalibrating notification bits
 

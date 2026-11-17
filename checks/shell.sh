@@ -12,6 +12,20 @@ docker_path_block() {
   awk '/^[[:space:]]*(# The following lines were added by Docker Desktop|export PATH=.*\/\.docker\/bin)/ { print NR; exit }' "$1"
 }
 
+# docker_path_markers FILE — line number of the start comment when FILE also
+# has Docker Desktop's end comment. Prints nothing unless both markers are
+# present. Always exits 0: macconfig-check.sh runs under set -euo pipefail.
+# Those two comments are what Docker Desktop's shellspath manager looks for
+# before it prepends a fresh copy of the block.
+docker_path_markers() {
+  [ -r "$1" ] || return 0
+  awk '
+    /^[[:space:]]*# The following lines were added by Docker Desktop/ && start == 0 { start = NR }
+    /^[[:space:]]*# End of Docker Desktop section\./ { end = 1 }
+    END { if (start && end) print start }
+  ' "$1"
+}
+
 if [ "${MACCONFIG_CHECKS_DEFINE_ONLY:-}" = 1 ]; then
   return 0
 fi
@@ -28,17 +42,19 @@ else
   bad "login shell = ${cur_shell:-unknown} (expected $FISH)"
 fi
 
-# fish/config.fish adds ~/.docker/bin itself. Docker Desktop can still insert
-# its own export block at the top of the file it finds at this path.
+# fish/config.fish keeps Docker Desktop's own PATH block at the top, with the
+# "added by Docker Desktop" and "End of Docker Desktop section" comments
+# Docker's shellspath manager looks for. If those markers are missing, Docker
+# prepends a fresh copy (and a fixed home path) and leaves the repo dirty.
 fish_config="$HOME/.config/fish/config.fish"
 if [ -f "$fish_config" ]; then
   fixid docker-path-block
   CHECKED=$((CHECKED + 1))
-  docker_line="$(docker_path_block "$fish_config")"
+  docker_line="$(docker_path_markers "$fish_config")"
   if [ -n "$docker_line" ]; then
-    warn "fish/config.fish line $docker_line: Docker Desktop added its own PATH block. Remove it; config.fish already adds ~/.docker/bin"
+    pass "fish/config.fish has Docker Desktop's PATH block (Docker's rewrite is a no-op)"
   else
-    pass "fish/config.fish has no Docker Desktop PATH block"
+    bad "fish/config.fish is missing Docker Desktop's PATH block — keep the 'added by Docker Desktop' section at the top so Docker's rewrite does not dirty the repo"
   fi
 fi
 

@@ -71,6 +71,16 @@ Homebrew has no formula or cask for the Cursor `origin` command. `gitconfig` cal
 
 The published installer has no switch to skip git config. On this Mac it rewrote `~/.gitconfig`: both `!$HOME/.local/bin/origin credential-helper` lines became an absolute home path, and the blank `helper =` lines moved. That path is a symlink to this repo's `gitconfig`, so the rewrite edits the tracked file and leaves the repo dirty. The helper copies `gitconfig` before the installer runs and writes that copy back when the bytes differ. It restores only that file. It does not check out the repo. A run that does not change the file does not write it.
 
+## Docker Desktop CLI PATH
+
+**Scripted + checked** (`install.sh` links `fish/config.fish` / the **Login shell** section of `macconfig-check.sh`).
+
+`fish/config.fish` starts with Docker Desktop's own PATH block: the comments "The following lines were added by Docker Desktop to add commands to your PATH." and "End of Docker Desktop section.", and `export PATH="$PATH:/Users/paul.done/.docker/bin"` in between. Docker Desktop looks for those comment markers (its `com.docker.backend` `internal/shellspath` manager) and prepends a fresh copy if they are missing. Keeping the block Docker writes, including the fixed home path, makes that rewrite a no-op so the repo stays clean. The export is harmless when `~/.docker/bin` does not exist yet. It appends, and Homebrew later prepends, so Docker's CLI stays after Homebrew.
+
+The check passes when both comment markers are in `~/.config/fish/config.fish`. A missing block is drift. `macconfig --fix` does not edit repo files (`docker-path-block` in `lib/autofix.list` is Needs Paul). If Docker puts the block back on a machine whose home path differs, the export line will change; put the new line in the repo so the next rewrite is a no-op again.
+
+The gotcha, and the User vs System CLI-tools setting, is in [Troubleshooting](troubleshooting.md#docker-desktop-and-fishconfigfish).
+
 ## Tailscale
 
 **Scripted + checked** (`install.sh` / the **Tailscale** section of `macconfig-check.sh`).
