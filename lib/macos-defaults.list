@@ -46,6 +46,7 @@ com.apple.finder|_FXShowPosixPathInTitle|bool|true|Finder|Finder|Full POSIX path
 NSGlobalDomain|AppleShowAllExtensions|bool|true|Finder|Finder|Show all filename extensions|`true` (On)
 NSGlobalDomain|NSTableViewDefaultSizeMode|int|3||Appearance|Sidebar icon size|`3` (Large)
 com.apple.finder|ShowStatusBar|bool|true|Finder|Finder|Show Status Bar|`true` (On)
+com.apple.finder|ShowPathbar|bool|true|Finder|Finder|Show Path Bar|`true` (On)
 # Apple's own spelling of this key drops the e in Section. 0 / false keeps the
 # Tags group in the sidebar closed. Recents hidden is the sidebar Recents
 # check. Shared, AirDrop, iCloud Drive, and the Locations rows are checked
