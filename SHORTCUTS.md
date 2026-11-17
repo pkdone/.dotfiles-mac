@@ -126,11 +126,7 @@ This repo pins drag-to-left-or-right-edge On and tiled-window margins Off (`lib/
 
 #### Finder
 
-| Action | Shortcut |
-|------|------|
-| Copy selected item's full path (POSIX pathname) to the clipboard | Option + Command + C |
-
-Or right-click the item, hold Option, and choose **Copy "item" as Pathname**. To copy a folder's own path, select it in its parent folder first (the path shown in the window title bar is display-only).
+The path bar stays on (`com.apple.finder ShowPathbar`; **View → Show Path Bar**, or Option + Command + P). To copy the current folder's path, right-click the folder's name in the path bar at the bottom of the window, hold Option, and choose **Copy "…" as Pathname**.
 
 #### Terminal and Shell Differences
 
