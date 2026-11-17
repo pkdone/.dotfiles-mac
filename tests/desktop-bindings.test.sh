@@ -243,7 +243,7 @@ eq "real-list bindings" "$(printf '%s\n' \
   'com.spotify.client=UUID-4' \
   'com.tinyspeck.slackmacgap=' \
   'com.todesktop.230313mzl4w4u92=UUID-3' \
-  'notion.id=UUID-2')" "$(binds "$tmp/real.out")"
+  'notion.id=')" "$(binds "$tmp/real.out")"
 eq "real-list apply leaves Spaces alone" "$sig_real" "$(space_sig "$tmp/real.out")"
 mkdir -p "$tmp/empty-home"
 out="$(HOME="$tmp/empty-home" run --plist "$tmp/real.out" "$REAL_LIST")"; rc=$?
@@ -263,7 +263,7 @@ eq "Desktop 4 pins were not invented" "" "$(binds "$tmp/short.out" | grep -e spo
 has "Desktop 1 still written" "com.tinyspeck.slackmacgap=" "$(binds "$tmp/short.out")"
 eq "short display gains no Space" "$sig_short" "$(space_sig "$tmp/short.out")"
 has "Chrome still written onto Desktop 2" "com.google.chrome=UUID-2" "$(binds "$tmp/short.out")"
-has "Notion still written onto Desktop 2" "notion.id=UUID-2" "$(binds "$tmp/short.out")"
+eq "Notion still written onto Desktop 1" "notion.id=" "$(binds "$tmp/short.out" | grep "^notion.id=" || true)"
 
 # ---- live defaults path: fake defaults/killall, backup, one Dock restart ----
 live() { # extra env assignments via the inherited vars; args are helper args

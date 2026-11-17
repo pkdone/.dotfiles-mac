@@ -230,19 +230,21 @@ eq "drift does not restart Finder" 0 "$miss_finder"
 
 eq "dock-apps.list unchanged" "$dockapps_before" "$(cksum "$DOCKAPPS")"
 
-# Slack, Granola, Chrome, then Notion. The list stores paths, not a
-# per-Mac Safari web-app UUID.
+# Slack, Notion, then Chrome. The list stores paths, not a
+# per-Mac Safari web-app UUID. Granola stays installed and is not in the Dock.
 names="$(awk -F'|' '$1 !~ /^[[:space:]]*#/ && $1 !~ /^[[:space:]]*$/ { print $1 }' "$DOCKAPPS")"
-eq "dock order starts Slack, Granola, Chrome, Notion" \
-  "$(printf '%s\n' Slack Granola "Google Chrome" Notion)" \
-  "$(printf '%s\n' "$names" | head -n 4)"
+eq "dock order starts Slack, Notion, Chrome" \
+  "$(printf '%s\n' Slack Notion "Google Chrome")" \
+  "$(printf '%s\n' "$names" | head -n 3)"
+eq "dock-apps.list does not pin Granola" "" "$(awk -F'|' '$1=="Granola" { print }' "$DOCKAPPS")"
 eq "dock list does not hard-code a Safari web app UUID" "" \
   "$(grep -E 'com\.apple\.(Safari|safari)\.WebApp\.[0-9A-Fa-f]{8}-' "$DOCKAPPS" || true)"
 list_out="$("$DIR/dock.sh" --list)"
-has "dock.sh --list names Granola second" $' 1. Slack\n 2. Granola' "$list_out"
-has "dock.sh --list names Notion after Chrome" $' 3. Google Chrome\n 4. Notion' "$list_out"
-has "setup lists Notion after Chrome" "Slack, Granola, Google Chrome, Notion, Ghostty" "$(cat "$DIR/docs/setup.md")"
-has "setup puts Notion on Desktop 2" "Chrome and Notion are Desktop 2" "$(cat "$DIR/docs/setup.md")"
+has "dock.sh --list names Notion second" $' 1. Slack\n 2. Notion' "$list_out"
+has "dock.sh --list names Chrome after Notion" $' 2. Notion\n 3. Google Chrome' "$list_out"
+has "setup lists Notion left of Chrome" "Slack, Notion, Google Chrome, Ghostty" "$(cat "$DIR/docs/setup.md")"
+has "setup puts Notion on Desktop 1" "Slack, Granola and Notion are Desktop 1" "$(cat "$DIR/docs/setup.md")"
+has "setup puts Chrome on Desktop 2" "Chrome is Desktop 2" "$(cat "$DIR/docs/setup.md")"
 
 printf 'dock-minimize tests: %d passed, %d failed\n' "$pass" "$fail"
 [ "$fail" -eq 0 ]
