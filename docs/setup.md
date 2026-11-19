@@ -130,9 +130,9 @@ The `duti` command can return before macOS shows the new app, especially when th
 
 `.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`. An extension with no declared file type is a warning and is skipped, and the check does not call it drift. `duti` fails with error -50 on a dynamic UTI. The row stays, so a later run sets it once some app declares the type.
 
-## Unwanted apps (GarageBand, iMovie, Pages)
+## Unwanted apps (GarageBand, iMovie, Pages, Keynote, Numbers)
 
-`prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, and Pages can. `macconfig-check.sh` drifts if they reappear.
+`prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, Pages, Keynote, and Numbers can. `macconfig-check.sh` drifts if they reappear.
 
 Nothing in this repo is installed from the Mac App Store. This Mac can't sign in with a personal Apple ID, so the Brewfile has no `mas` app lines. Company apps are `lib/mdm-apps.list`, installed from Fleet Self service, not the Brewfile.
 
@@ -278,7 +278,7 @@ The checklist, the `NOTSET:` / `MANUAL:` legend, and the commands are in [Manual
 | `macos.sh` | Apply managed `defaults` plus Dictation hotkey 164, Quick Note hotkey 190, Game Overlay hotkey 260, Spotlight hotkey 64, the Services shortcuts in `lib/services-off.list`, CotEditor theme/font, Finder sidebar Recents, the Show Finder shortcut, power settings (sudo `pmset`, skipped when sudo isn't available or isn't wanted), the built-in display's More Space mode, and the ARZOPA portable monitor when it is plugged in (`displayplacer`; other displays unchanged). A full run re-asserts a matching list row. `--only` leaves a match. Hotkeys 64 and 260, and Services, are written only when the value differs. Dark mode is also turned on live with System Events when it is not already on. A changed trackpad setting is reloaded with `activateSettings -u` when that tool is present. Finder Favorites are checked from the sidebar file and not changed. The Tahoe Night wallpaper stays by hand. `--dry-run` / `--list`. `--only <id>` (repeatable) and `--yes` (restart without prompting) are what `macconfig-check.sh --fix` uses. Creates `~/Pictures/Screenshots` with `mkdir -p` before writing `com.apple.screencapture location`. Idempotent. |
 | `dock.sh` | Pin the Dock apps in order, then apply `lib/desktop-bindings.list`. Run after the apps are installed and whenever you edit `lib/dock-apps.list`. `--list` previews the apps and the Desktop pins. Idempotent; needs `dockutil`. |
 | `handlers.sh` | Set URL-scheme defaults (`lib/url-handlers.list`) and Finder file defaults (`lib/file-handlers.list`, role `all`). `--dry-run` / `--list`. Idempotent; needs `duti`. |
-| `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie, Pages). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
+| `prune-apps.sh` | Remove apps listed in `lib/unwanted-apps.list` (GarageBand, iMovie, Pages, Keynote, Numbers). `--dry-run` / `--list`. Idempotent; needs `sudo` / `mas`. |
 | `shell.sh` | Make fish the login shell. Run once on a fresh machine (see "Set login shell"). Idempotent; sudo/`chsh` only if needed. |
 | `hostname.sh` | Set HostName/LocalHostName/ComputerName. Run once on a fresh machine (see "Set Hostname"). Idempotent; sudo only if a name differs. |
 | `defaults-diff.sh` | Discover which `defaults` key backs a System Settings toggle, to add to `lib/macos-defaults.list`. Run when you want to manage a new setting. Read-only. |
