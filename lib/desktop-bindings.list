@@ -16,7 +16,6 @@
 #   field is the manual-step id). It is not drift, and --fix does not write a pin.
 # Blank lines and lines beginning with # are ignored.
 Slack|com.tinyspeck.slackmacgap|1
-Granola|com.granola.app|1
 Google Chrome|com.google.Chrome|2
 Notion|notion.id|1
 Cursor|com.todesktop.230313mzl4w4u92|3

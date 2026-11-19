@@ -359,8 +359,6 @@ has "allow list mentions Cursor Nightly" \
   "co.anysphere.cursor.nightly" "$(cat "$DIR/lib/login-items-allow.list")"
 tools_block="$(awk '/^# ---- Tools this repo sets up/,/^# ---- Company/' "$DIR/lib/login-items-allow.list")"
 has "Notion opens at login in the tools block" "bundle|notion.id|Notion opens at login" "$tools_block"
-miss "allow list does not let Granola open at login" "com.granola.app" "$(printf '%s\n' "$tools_block" | grep -v '^#' || true)"
-has "granola cask is in the Brewfile" 'cask "granola"' "$(cat "$DIR/Brewfile")"
 has "notion cask is in the Brewfile" 'cask "notion"' "$(cat "$DIR/Brewfile")"
 miss "no Notion open-at-login manual step" "notion|" "$(grep -v '^#' "$DIR/lib/manual-steps.list" || true)"
 

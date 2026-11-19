@@ -83,72 +83,6 @@ print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleIdentifier") or "")' \
 }
 
 
-GRANOLA_LOGIN_HOW="Granola → Preferences → General → turn off Open Granola when you log in (macOS may ask for Touch ID or your password). Also System Settings → General → Login Items & Extensions → Open at Login → Granola Off. The app stays installed"
-
-granola_login_named() { # comma-separated System Events names
-  case ", $1," in
-    *", Granola,"*) return 0 ;;
-  esac
-  return 1
-}
-
-# Granola stays installed and must not be in Open at Login. This only reads.
-# --fix never removes a login item. Granola registers itself with Electron
-# setLoginItemSettings (including as an SMAppService item). A classic login
-# item can be deleted; the remaining item is turned off in the app and in
-# System Settings.
-check_step_granola_login() {
-  local app bid classic classic_rc btm_raw btm_rc btm_st
-  fixid login-items
-  app="${GRANOLA_APP_PATH:-/Applications/Granola.app}"
-  if [ ! -d "$app" ]; then
-    skip "Granola is not installed yet, so Open at Login is left alone"
-    return 0
-  fi
-  bid=""
-  if [ -n "${DOT_PYTHON:-}" ] && [ -r "$app/Contents/Info.plist" ]; then
-    bid="$("$DOT_PYTHON" -c 'import plistlib,sys
-print(plistlib.load(open(sys.argv[1], "rb")).get("CFBundleIdentifier") or "")' \
-      "$app/Contents/Info.plist" 2>/dev/null || true)"
-  fi
-  [ -n "$bid" ] || bid="com.granola.app"
-  classic=""
-  classic_rc=0
-  if classic="$(with_timeout 8 osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null)"; then
-    classic_rc=0
-  else
-    classic_rc=$?
-    classic=""
-  fi
-  btm_st=""
-  btm_rc=0
-  if [ -n "${DOT_PYTHON:-}" ] && [ -r "$DOTDIR/lib/btm-login-items.py" ]; then
-    btm_raw="$("$DOT_PYTHON" "$DOTDIR/lib/btm-login-items.py" "$bid" 2>/dev/null)" && btm_rc=0 || btm_rc=$?
-    btm_st="$(printf '%s\n' "$btm_raw" | awk -F= -v b="$bid" '$1==b { print $2; exit }')"
-    if [ "$btm_rc" = 3 ]; then
-      btm_st="unreadable"
-    fi
-  fi
-  if { [ "$classic_rc" -eq 0 ] && granola_login_named "$classic"; } || [ "$btm_st" = "enabled" ]; then
-    CHECKED=$((CHECKED + 1))
-    warn "Granola is in Open at Login — $GRANOLA_LOGIN_HOW. macconfig --fix does not remove it"
-    return 0
-  fi
-  # Present and off: a successful classic list that does not name Granola,
-  # and BTM either disabled, missing, or not queried. If BTM is unreadable,
-  # an SMAppService item may still be on, so that stays by hand.
-  if [ "$btm_st" = "unreadable" ]; then
-    info "Open at Login could not be fully read, so Granola stays by hand — $GRANOLA_LOGIN_HOW"
-    return 0
-  fi
-  if [ "$classic_rc" -eq 0 ] || [ "$btm_st" = "disabled" ] || [ "$btm_st" = "missing" ]; then
-    CHECKED=$((CHECKED + 1))
-    pass "Granola is not in Open at Login"
-    return 0
-  fi
-  info "Open at Login could not be read, so Granola stays by hand — $GRANOLA_LOGIN_HOW"
-}
-
 # Tailscale should be running with an exit node selected, and Allow Local
 # Network Access should be on once a node is selected. Any selected node
 # passes, including one managed policy chose. Not installed, not signed in,
@@ -299,7 +233,6 @@ fi
 hdr "Login Items"
 check_step_tailscale_login
 check_step_notion_login
-check_step_granola_login
 hdr "Tailscale"
 check_tailscale_exit
 check_tailscale_lan
