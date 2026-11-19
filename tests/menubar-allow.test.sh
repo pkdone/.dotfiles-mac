@@ -67,13 +67,12 @@ PY
 }
 run() { "$PY" "$HELPER" --plist "$1" --list "${2:-$LIST}"; }
 
-# The eleven pinned apps, in list order. Others stay unpinned.
+# The ten pinned apps, in list order. Others stay unpinned.
 eq "allow list bundles" \
   "com.1password.1password
 com.todesktop.230313mzl4w4u92
 co.anysphere.cursor.nightly
 com.docker.docker
-com.granola.app
 com.microsoft.teams2
 com.tinyspeck.slackmacgap
 us.zoom.xos
@@ -108,14 +107,13 @@ eq "check and helper never write the menu bar store" "" "$writers"
 has "helper default plist is the control center group store" \
   "group.com.apple.controlcenter.plist" "$(cat "$HELPER")"
 
-# Paul's Mac: the eleven are off. Tailscale stays on and is not pinned.
+# Paul's Mac: the ten are off. Tailscale stays on and is not pinned.
 # Docker's menu item bundle is com.electron.dockerdesktop, not the toggle.
 cat > "$tmp/off.spec" <<'EOF'
 com.1password.1password|false|
 com.todesktop.230313mzl4w4u92|false|
 co.anysphere.cursor.nightly|false|
 com.docker.docker|false|com.electron.dockerdesktop
-com.granola.app|false|
 com.microsoft.teams2|false|
 com.tinyspeck.slackmacgap|false|
 us.zoom.xos|false|
@@ -163,12 +161,12 @@ has "allowed docker is drift" \
 miss "electron bundle is not reported when docker is allowed" "com.electron.dockerdesktop" "$out"
 
 # An app missing from trackedApplications is info, not drift.
-grep -v '^com.granola.app|' "$tmp/off.spec" > "$tmp/missing.spec"
+grep -v '^com.microsoft.teams2|' "$tmp/off.spec" > "$tmp/missing.spec"
 write_store "$tmp/missing.plist" "$tmp/missing.spec"
 out="$(run "$tmp/missing.plist")"; rc=$?
 eq "missing app exits 0" 0 "$rc"
 eq "missing app is info" \
-  "info|com.granola.app|Granola (com.granola.app): not installed, or not in Allow in the Menu Bar yet" \
+  "info|com.microsoft.teams2|Microsoft Teams (com.microsoft.teams2): not installed, or not in Allow in the Menu Bar yet" \
   "$(printf '%s\n' "$out" | grep '^info|')"
 miss "missing app is not drift" "drift|" "$out"
 has "a present app is still off" "ok|com.1password.1password|" "$out"
@@ -259,7 +257,7 @@ run_section() { # plist path
 }
 
 off_lines="$(run_section "$tmp/off.plist")"
-eq "section passes when every pinned app is off" 11 \
+eq "section passes when every pinned app is off" 10 \
   "$(printf '%s\n' "$off_lines" | grep -c '^pass|' || true)"
 miss "section does not drift when every pinned app is off" "bad|" "$off_lines"
 miss "section does not warn when the plist is readable" "warn|" "$off_lines"
@@ -272,7 +270,7 @@ has "section tags the drift" "fixid|menubar-allow" "$slack_lines"
 
 miss_lines="$(run_section "$tmp/missing.plist")"
 has "section info for a missing app" \
-  "note|Granola (com.granola.app): not installed, or not in Allow in the Menu Bar yet" \
+  "note|Microsoft Teams (com.microsoft.teams2): not installed, or not in Allow in the Menu Bar yet" \
   "$miss_lines"
 miss "section does not drift a missing app" "bad|" "$miss_lines"
 

@@ -382,17 +382,11 @@ else
         mdm)     H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_MDM=$((H_LI_MDM + 1)) ;;
         unknown)
           H_LI_ENABLED=$((H_LI_ENABLED + 1))
-          # Granola must stay off Open at Login. The Login Items section
-          # already warns; do not also say to add it to the allow list.
-          if [ "$li_id" = "com.granola.app" ]; then
-            H_LI_DENIED=$((H_LI_DENIED + 1))
+          H_LI_UNKNOWN+=("$li_name ($li_kind, $li_id)")
+          if [ "$li_detail" = company-team ]; then
+            warn "unexpected login item: $li_name ($li_kind; ${li_dev:-unknown developer}${li_team:+, team $li_team}; $li_id) — this team belongs to a company app managed by MDM. Add it to lib/login-items-allow.list"
           else
-            H_LI_UNKNOWN+=("$li_name ($li_kind, $li_id)")
-            if [ "$li_detail" = company-team ]; then
-              warn "unexpected login item: $li_name ($li_kind; ${li_dev:-unknown developer}${li_team:+, team $li_team}; $li_id) — this team belongs to a company app managed by MDM. Add it to lib/login-items-allow.list"
-            else
-              warn "unexpected login item: $li_name ($li_kind; ${li_dev:-unknown developer}${li_team:+, team $li_team}; $li_id) — turn it Off in System Settings → General → Login Items & Extensions, or add it to lib/login-items-allow.list"
-            fi
+            warn "unexpected login item: $li_name ($li_kind; ${li_dev:-unknown developer}${li_team:+, team $li_team}; $li_id) — turn it Off in System Settings → General → Login Items & Extensions, or add it to lib/login-items-allow.list"
           fi ;;
         stale)
           H_LI_ENABLED=$((H_LI_ENABLED + 1)); H_LI_STALE+=("$li_name ($li_id): $li_detail")

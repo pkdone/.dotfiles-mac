@@ -97,7 +97,7 @@ run_check() {
   printf '%s' "$lines"
 }
 
-out="$(run_check "Google Chrome, Granola, Grok Bot, Hammerspoon, Notion, Raycast, Slack, Tailscale")"
+out="$(run_check "Google Chrome, Grok Bot, Hammerspoon, Notion, Raycast, Slack, Tailscale")"
 eq "a listed Notion passes" "ok" "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
 has "a listed Notion says it is in Open at Login" "Notion is in Open at Login" "$out"
 CHECKED=0

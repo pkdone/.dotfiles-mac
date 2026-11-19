@@ -144,7 +144,7 @@ run_check() {
   printf '%s' "$lines"
 }
 
-out="$(run_check "Google Chrome, Granola, Grok Bot, Hammerspoon, Okta Verify, Raycast, Slack, Tailscale")"
+out="$(run_check "Google Chrome, Grok Bot, Hammerspoon, Okta Verify, Raycast, Slack, Tailscale")"
 eq "a listed Tailscale passes" "ok" "$(printf '%s\n' "$out" | head -n 1 | cut -d'|' -f1)"
 has "a listed Tailscale says it is in Open at Login" "Tailscale is in Open at Login" "$out"
 # run_check prints from a subshell, so the count is read from a direct call.

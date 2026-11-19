@@ -59,7 +59,7 @@ has "autofix comment names ControlCenter" "SystemUIServer / ControlCenter" \
   "$(cat "$DIR/lib/autofix.list")"
 
 has "manual step turns off the pinned apps" \
-  "menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Granola, Microsoft Teams, Slack, Zoom, Raycast, Logi Options+ and Notion." \
+  "menubar-third-party-hide|Menu bar|Allow in the Menu Bar: turn Off 1Password, Cursor, Cursor Nightly, Docker, Microsoft Teams, Slack, Zoom, Raycast, Logi Options+ and Notion." \
   "$(grep -v '^#' "$DIR/lib/manual-steps.list")"
 has "manual step leaves the unpinned icons" "Leave Tailscale, Hammerspoon, Fleet Desktop and the rest as they are" \
   "$(grep '^menubar-third-party-hide|' "$DIR/lib/manual-steps.list")"
@@ -70,8 +70,8 @@ settings="$(cat "$DIR/docs/settings.md")"
 has "settings names the intended menu bar" \
   "clock, battery percentage, Wi-Fi, Bluetooth and Control Centre" "$settings"
 has "settings names kept third-party icons" "plus Tailscale and Fleet Desktop" "$settings"
-miss "settings does not keep 1Password and Granola in the menu bar" \
-  "Tailscale, 1Password, Granola, Hammerspoon and Fleet Desktop" "$settings"
+miss "settings does not keep 1Password in the menu bar" \
+  "Tailscale, 1Password, Hammerspoon and Fleet Desktop" "$settings"
 
 # ---- repo karabiner.json (the file the directory symlink installs) ----
 kb="$(python3 - "$KJ" <<'PY'

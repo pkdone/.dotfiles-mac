@@ -107,7 +107,7 @@ Pin the apps to the Dock in order, then apply the Desktop assignments in `lib/de
 
 Left to right, the order is Slack, Notion, Google Chrome, Ghostty, CotEditor, Cursor, Cursor Nightly, Grok Bot, Spotify, YouTube Music.
 
-Slack, Granola and Notion are Desktop 1. Chrome is Desktop 2. Cursor, Cursor Nightly and Grok Bot are Desktop 3. Spotify and YouTube Music are Desktop 4. Ghostty and CotEditor are not assigned. Notion is the Homebrew cask `notion` (`/Applications/Notion.app`). It is not a Fleet app. Granola stays installed (Brewfile cask `granola`) but is not in the Dock, and it must not open at login. It stays assigned to Desktop 1 when it is opened.
+Slack and Notion are Desktop 1. Chrome is Desktop 2. Cursor, Cursor Nightly and Grok Bot are Desktop 3. Spotify and YouTube Music are Desktop 4. Ghostty and CotEditor are not assigned. Notion is the Homebrew cask `notion` (`/Applications/Notion.app`). It is not a Fleet app.
 
 ## URL handlers (Chrome, not Apple apps)
 

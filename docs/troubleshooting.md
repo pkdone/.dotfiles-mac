@@ -45,10 +45,6 @@ A `com.pdone.*` file in `~/Library/LaunchAgents` that does not match the repo, o
 
 A symlink under `~/.config`, `~/Library/LaunchAgents`, or a home dotfile that points into this repo but whose target is gone is a warning. `--fix` does not recreate it. Restore the file from git, or run `install.sh` again for the links it manages.
 
-## Granola opens at login again
-
-Granola stays installed, but it should not be in the Dock and should not open at login. The app can put itself back under Open at Login the next time it launches, if it has not yet recorded that the launch-at-login switch was set. Turning it Off only in System Settings → General → Login Items & Extensions may not last. Turn off **Open Granola when you log in** in Granola → Preferences → General (macOS may ask for Touch ID or your password: "stop Granola from opening when you log in"), then confirm it is Off under Open at Login in System Settings. The Login Items check warns when it is enabled. `macconfig --fix` does not remove it.
-
 ## Windows fill under the Dock
 
 The Dock is showing, but double-clicking a title bar (Fill) makes the window go under it. macOS has stopped keeping space for the Dock. This can happen after a macOS update or after a display is plugged back in. On the MacBook, the screen is 1800x1169 and the usable area was 1800x1130, so only the menu bar was taken off. After the Dock was restarted, the usable area was 1800x1082: the Dock got its 48 points back.
