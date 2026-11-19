@@ -9,7 +9,7 @@ This is what each managed setting does, and why. Applying them is the [setup wal
 System apps (Music, Photos, News, …) can't be deleted (SIP). This repo contains them where scripting is reliable. The keys are under [macOS defaults](#macos-defaults) unless a line below names the file.
 
 - **URL handlers** → Chrome (`handlers.sh` / `lib/url-handlers.list`). See [Setup](setup.md#url-handlers-chrome-not-apple-apps).
-- **GarageBand / iMovie / Pages** removed (`prune-apps.sh`)
+- **GarageBand / iMovie / Pages / Keynote / Numbers** removed (`prune-apps.sh`)
 - **Photos auto-open on device connect** Off (`com.apple.ImageCapture disableHotPlug` in `lib/macos-defaults.list`)
 - **Menu bar, Control Centre, and Allow in the Menu Bar** — [macOS defaults](#macos-defaults)
 - **Dock minimize, bounce, and the desktop-switch delay** — [macOS defaults](#macos-defaults)

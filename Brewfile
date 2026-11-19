@@ -92,6 +92,6 @@ cask "yubico-authenticator"  # Yubico Authenticator
 # ---- Mac App Store -------------------------------------------------------
 # No App Store apps currently. This Mac can't sign in with a personal Apple ID.
 # brew "mas" above stays: prune-apps.sh uses `mas uninstall`.
-# Unwanted App Store apps (GarageBand, iMovie, Pages) are lib/unwanted-apps.list.
+# Unwanted App Store apps (GarageBand, iMovie, Pages, Keynote, Numbers) are lib/unwanted-apps.list.
 # Okta Verify and 1Password desktop are
 # lib/mdm-apps.list (Fleet Self service). mas can't upgrade those copies.
