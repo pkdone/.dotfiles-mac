@@ -4,6 +4,7 @@
 # Needs `duti` from the Brewfile.
 #   lib/url-handlers.list   URL schemes (mailto → Chrome, so Apple apps don't claim them)
 #   lib/file-handlers.list  Finder double-click extensions (CotEditor / Cursor), role all
+#   lib/ls-handlers.list    types duti can't set (public.data, .env.* extensions), via LSHandlers
 #
 # Flags:
 #   --dry-run    Show what would change; make no changes.
@@ -118,6 +119,32 @@ apply_file_handlers() {
   return "$file_rc"
 }
 apply_file_handlers
+
+# Types duti can't set (public.data, dyn.* extensions) go straight into LSHandlers.
+apply_ls_handlers() {
+  local py out rc status key msg cmd
+  py="$(dot_python || true)"
+  if [ -z "$py" ]; then
+    echo "Error: python3 not found — can't apply lib/ls-handlers.list" >&2
+    return 1
+  fi
+  cmd=("$py" "$DOTDIR/lib/ls-handlers.py" --apply)
+  if [ "$DRY_RUN" = 1 ]; then cmd+=(--dry-run); fi
+  cmd+=("$DOTDIR/lib/ls-handlers.list")
+  rc=0
+  out="$("${cmd[@]}" 2>&1)" || rc=$?
+  while IFS='|' read -r status key msg; do
+    [ -z "$status" ] && continue
+    case "$status" in
+      ok)  printf 'ok      %s\n' "$msg" ;;
+      chg) printf 'change  %s\n' "$msg"; changed=1 ;;
+      dry) printf 'would   %s\n' "$msg" ;;
+      *)   printf 'error   %s\n' "${msg:-$status}" >&2 ;;
+    esac
+  done <<< "$out"
+  return "$rc"
+}
+apply_ls_handlers
 
 if [ "$DRY_RUN" = 1 ]; then
   echo "Dry run complete."

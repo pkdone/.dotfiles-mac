@@ -130,6 +130,11 @@ The `duti` command can return before macOS shows the new app, especially when th
 
 `.html` is not in that list. It is `public.html`, and setting it switches the default web browser. The fixer refuses `html` / `htm` / `xhtml`, `public.html` / `public.xhtml`, and any URL scheme. `.plist` is also set on `com.apple.property-list` and `com.apple.xml-property-list`, because `duti -x plist` follows `com.apple.property-list`. An extension with no declared file type is a warning and is skipped, and the check does not call it drift. `duti` fails with error -50 on a dynamic UTI. The row stays, so a later run sets it once some app declares the type.
 
+
+### Files with no suffix, `.env.*` and unknown types (CotEditor)
+
+`duti` fails with error -50 on an abstract type such as `public.data`, so `handlers.sh` also writes the rows in `lib/ls-handlers.list` straight into LSHandlers (`com.apple.launchservices.secure`) through `lib/ls-handlers.py`. `public.data` is the unknown-file type: `.env`, `.gitignore`, `.gitattributes`, `.gitconfig`, `.editorconfig`, `.npmrc`, `.nvmrc`, `.tool-versions`, `.prettierrc`, `.zshrc`, `.bashrc`, `.profile`, `Dockerfile` and `Brewfile` all resolve to it, and so open in CotEditor. `public.plain-text` (`LICENSE`, `.txt`) and `public.make-source` (`Makefile`) are set too. `.env.local`, `.env.example` and so on get their own extension type, so the extensions `local`, `example`, `production`, `development`, `staging`, `test` and `sample` are set as well. Files with a known type (source code, images, PDF) keep their own app. `macconfig` checks every row; `--fix` does not write them, so a drift is repaired with `./handlers.sh`.
+
 ## Unwanted apps (GarageBand, iMovie, Pages, Keynote, Numbers)
 
 `prune-apps.sh` removes App Store apps listed in `lib/unwanted-apps.list` (idempotent; needs sudo). System apps like Music/Photos can't be deleted; GarageBand, iMovie, Pages, Keynote, and Numbers can. `macconfig-check.sh` drifts if they reappear.

@@ -30,6 +30,21 @@ else
   done < <("$PY" "$DOTDIR/lib/file-handlers.py" "$FILE_HANDLERS_LIST")
 fi
 
+# Types duti cannot set (public.data, dyn.* extensions): lib/ls-handlers.py reads
+# LSHandlers. handlers.sh writes them; --fix does not (PAUL row).
+if PY="$(dot_python)" && [ -r "$DOTDIR/lib/ls-handlers.list" ]; then
+  fixid ls-handler
+  while IFS='|' read -r status key msg; do
+    [ -z "$status" ] && continue
+    CHECKED=$((CHECKED + 1))
+    case "$status" in
+      ok)  pass "$msg" ;;
+      bad) bad "$msg — run ./handlers.sh" ;;
+      *)   warn "${msg:-$key}" ;;
+    esac
+  done < <("$PY" "$DOTDIR/lib/ls-handlers.py" "$DOTDIR/lib/ls-handlers.list")
+fi
+
 # ---- Developer folder ---------------------------------------------------
 # All repos are cloned under ~/Developer. install.sh creates it.
 hdr "Folders"
