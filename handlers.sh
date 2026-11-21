@@ -122,7 +122,7 @@ apply_file_handlers
 
 # Types duti can't set (public.data, dyn.* extensions) go straight into LSHandlers.
 apply_ls_handlers() {
-  local py out rc status key msg cmd
+  local py out rc status _key msg cmd
   py="$(dot_python || true)"
   if [ -z "$py" ]; then
     echo "Error: python3 not found — can't apply lib/ls-handlers.list" >&2
@@ -133,7 +133,7 @@ apply_ls_handlers() {
   cmd+=("$DOTDIR/lib/ls-handlers.list")
   rc=0
   out="$("${cmd[@]}" 2>&1)" || rc=$?
-  while IFS='|' read -r status key msg; do
+  while IFS='|' read -r status _key msg; do
     [ -z "$status" ] && continue
     case "$status" in
       ok)  printf 'ok      %s\n' "$msg" ;;
