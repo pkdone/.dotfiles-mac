@@ -549,6 +549,22 @@ eq "handlers dry-run does not call duti -s" "" "$(s_calls "$DUTI_LOG" | grep '^\
 # handlers.sh apply: duti -s for .swift exits 0, but Launch Services never
 # shows Cursor. The line is a warning, the script exits 0, and it does not
 # print the old "error" prefix. URL schemes go through the fake duti -d / -s.
+# lib/ls-handlers.list is read from a plist that already matches it (no real LSHandlers).
+"$PY" - "$DIR/lib/ls-handlers.list" "$tmp/ls.plist" <<'PYEOF'
+import plistlib, sys
+hs = []
+for line in open(sys.argv[1]):
+    p = [x.strip() for x in line.split("|")]
+    if len(p) != 4 or line.startswith("#"):
+        continue
+    b = p[3]
+    if p[0] == "uti":
+        hs.append({"LSHandlerContentType": p[1], "LSHandlerRoleAll": b})
+    else:
+        hs.append({"LSHandlerContentTag": p[1], "LSHandlerContentTagClass": "public.filename-extension", "LSHandlerRoleAll": b})
+plistlib.dump({"LSHandlers": hs}, open(sys.argv[2], "wb"))
+PYEOF
+export LS_HANDLERS_PLIST="$tmp/ls.plist"
 export DUTI_S_LIE="swift"
 export FILE_HANDLERS_SETTLE_SECS=0.4
 printf '0\n' > "$FILE_HANDLERS_CLOCK"

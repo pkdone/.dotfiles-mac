@@ -1,0 +1,24 @@
+# Launch Services defaults that duti cannot set (it fails with error -50 on an
+# abstract type such as public.data or a dyn.* extension type). handlers.sh writes
+# these straight into LSHandlers (com.apple.launchservices.secure) with
+# `defaults write ... -array-add`, through lib/ls-handlers.py. macconfig-check.sh
+# reads them back. Nothing here is written by `macconfig --fix`.
+# Format (pipe-delimited): kind | key | app | bundle-id
+#   kind: uti  key is a UTI (role all, editor and viewer)
+#         ext  key is a bare filename extension (no dot)
+#
+# public.data is the "unknown file" type: .env, .gitignore, .gitattributes,
+# .gitconfig, .editorconfig, .npmrc, .nvmrc, .tool-versions, .prettierrc, .zshrc,
+# .bashrc, .profile, Dockerfile and Brewfile all resolve to it. Files with a known
+# type (source code, images, PDFs, Office) keep their own handler.
+uti|public.data|CotEditor|com.coteditor.CotEditor
+uti|public.plain-text|CotEditor|com.coteditor.CotEditor
+uti|public.make-source|CotEditor|com.coteditor.CotEditor
+# .env.* variants have an extension of their own, which macOS gives a dyn.* type.
+ext|local|CotEditor|com.coteditor.CotEditor
+ext|example|CotEditor|com.coteditor.CotEditor
+ext|production|CotEditor|com.coteditor.CotEditor
+ext|development|CotEditor|com.coteditor.CotEditor
+ext|staging|CotEditor|com.coteditor.CotEditor
+ext|test|CotEditor|com.coteditor.CotEditor
+ext|sample|CotEditor|com.coteditor.CotEditor
